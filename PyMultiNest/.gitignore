@@ -1,0 +1,13 @@
+*.o
+*.mod
+*.a
+*~
+*.pyc
+eggbox
+gauss_shell
+obj_detect
+libnest3.so
+build
+dist
+doc/_build
+*.egg-info

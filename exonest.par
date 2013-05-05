@@ -1,0 +1,134 @@
+[General]
+#verbose or not 
+verbose = True
+
+#use c++ path_integral version for transmission
+#True: c++ version, False: python version
+trans_cpp = True
+
+
+[Input]
+#Observed spectrum to be fitted
+spectrum_file = Input/tau_output.dat
+
+#file containing pre-determined T-P profile and mixing ratios
+atm_file = Input/profile.atm
+
+#folder containing absorption cores-section files
+abs_path = Input/
+
+#files containing absorption cores-sections 
+#you can specify several file names separated by commas
+abs_files = h2o_1500K.abs
+
+#include varying stellar radii file. True/False 
+include_rad = False 
+
+#file from which to read stellar radius R*(lambda)
+rad_file = Input/rad_star.rad
+
+#include H2-H2 collision induced absorption. True/False 
+include_cia = False 
+
+#file from which to read CIA coefficients
+cia_file = Input/h2_h2_1000K.cia
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+cld_file = Input/cloud1.cld
+
+
+[Output]
+#path for output files
+path = Output/
+
+#output file name
+file_name = test.txt
+
+
+[Star]
+#defines stellar specific (fixed or starting) parameters)
+
+#Stellar radius (R_sun)
+radius = 0.788
+
+
+[Planet]
+#defines planetary specific (fixed or starting) parameters)
+
+#Planetary radius (R_jupiter)
+radius = 1.138
+
+#Orbital semi-major axis (AU)
+sma = 0.03142
+
+#Planetary surface gravity (ms^-2)
+grav = 23.45
+
+#Planetary temperature (K)
+temp = 1500
+
+#molecular weight of atmosphere 
+mu = 2.3
+
+#molecules considered
+molec = H20, CH4, CO2
+
+
+[T-P profile]
+#let mixing ratios and T-P profile vary
+#True: free parameters allowed and lower/upper limits taken from .atm, 
+#False: all fixed to input .atm file
+var_atm = True
+
+#number of atmospheric levels. 
+#If var_atm = False, atm_levels is taken from .atm file
+atm_levels = 40
+
+#set temperature as variables
+var_temp = True
+
+#set pressure as variable
+var_pres = True
+
+#set mixing ratios as variables
+var_mix = True
+
+
+[Fitting]
+#defines general fittings parameters 
+#independent of method
+
+#free parameters
+param_free = 0
+
+
+[MCMC]
+#defines MCMC specific parameters
+
+#update data standard deviation from dynamic fit. Yes = True, No = False
+#please keep set on True, otherwise fitting may be wrong
+update_std = True
+
+#set data standard deviation if mcmc_update_std = False
+data_std = 0.01
+
+#MCMC number of total iterations
+iter = 2000
+
+#MCMC burn in period 
+burn = 100
+
+#MCMC thinning factor
+thin = 2
+
+
+[MultiNest]
+#defines MultiNest specific parameters
+
+
+[NeuralNet]
+#defines Neural Network specific parameters
+
