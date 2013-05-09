@@ -32,7 +32,7 @@ starttime = time.clock()
 from classes.parameters import *
 from classes.emission import *
 from classes.transmission import *
-from classes.likelihood import *
+#from classes.fitting import *
 from classes.profile import *
 from classes.data import *
 

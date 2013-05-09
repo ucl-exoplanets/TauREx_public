@@ -59,7 +59,7 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 		double integral = 0.0;
 		for(int j=0; j<nlayers; j++){
 		  //HOTFIX TO EQUAL TAU.CPP. TAU.CPP does not calculate the upper layer correctly
-		  if (j == nlayers-1) exptau[j] = 0.0;
+//		  if (j == nlayers-1) exptau[j] = 0.0;
 		  // END OF HOTFIX
 		   integral += ((Rp+z[j])*(1.0-exptau[j])*dz[j]);
 //		   cout << j << ' '<< dz[j] << ' ' << z[j] << ' ' << exptau[j] << endl;
