@@ -343,7 +343,7 @@ const double prog_start=omp_get_wtime();
 			tau[j] = 0.0;					// total optical depth
 
 
-			for (int k=1; k < (nlayers-j); k++) // loop through each layer to sum up path length
+			for (int k=1; k < (nlayers); k++) // loop through each layer to sum up path length
 			{
 				dl = 2.0 * (sqrt(pow((Rp + z[k+j]),2) - pow((Rp + z[j]),2)) - sqrt(pow((Rp + z[k-1+j]),2) - pow((Rp + z[j]),2)));
 					// Calculate half-path length, and double (from system geometry) to get full path distance
