@@ -8,7 +8,7 @@ except:
 
 setup(
     name = "pymultinest",
-    version = "0.1",
+    version = "0.3",
     description = "Access modules for MultiNest and APEMoST",
     author = "Johannes Buchner",
     author_email = "johannes.buchner.acad [@t] gmx.com",
@@ -18,6 +18,7 @@ setup(
     license = "GPLv3",
     packages = ["pymultinest", "pyapemost", "pycuba"],
     provides = ["pymultinest", "pyapemost", "pycuba"],
-    requires = ["ctypesGsl", "numpy (>=1.5)", "matplotlib", "scipy"]
+    requires = ["ctypesGsl", "numpy (>=1.5)", "matplotlib", "scipy"],
+    scripts=['multinest_marginals.py'],
 )
 

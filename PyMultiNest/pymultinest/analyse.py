@@ -1,5 +1,6 @@
+from __future__ import absolute_import, unicode_literals, print_function
 import numpy
-from StringIO import StringIO
+from io import StringIO
 import re
 
 def loadtxt2d(intext):
@@ -27,7 +28,7 @@ class Analyzer(object):
 		likelihood & normalized by the evidence.
 		"""
 		self.data_file = "%s.txt" % self.outputfiles_basename
-		print '  analysing data from %s' % self.data_file
+		print(('  analysing data from %s' % self.data_file))
 
 		"""[root]post_separate.dat
 		This file is only created if mmodal is set to T. Posterior 
@@ -66,9 +67,12 @@ class Analyzer(object):
 		return self.equal_weighted_posterior
 	
 	def _read_error_line(self, l):
-		#print '_read_error_line', l
-		name, values = l.split('  ', 1)
+		#print('_read_error_line -> line>', l)
+		name, values = l.split('   ', 1)
+		#print('_read_error_line -> name>', name)
+		#print('_read_error_line -> values>', values)
 		name = name.strip(': ').strip()
+		values = values.strip(': ').strip()
 		v, error = values.split(" +/- ")
 		return name, float(v), float(error)
 	def _read_error_into_dict(self, l, d):
@@ -92,7 +96,7 @@ class Analyzer(object):
 		stats = []
 		
 		for i in range(2, posterior.shape[1]):
-			b = zip(posterior[:,0], posterior[:,i])
+			b = list(zip(posterior[:,0], posterior[:,i]))
 			b.sort(key=lambda x: x[1])
 			b = numpy.array(b)
 			b[:,0] = b[:,0].cumsum()
@@ -142,36 +146,72 @@ class Analyzer(object):
 			information about the modes found:
 			mean, sigma, maximum a posterior in each dimension
 		"""
-		lines = file(self.stats_file).readlines()
-		text = "".join(lines)
-		parts = text.split("\n\n\n")
-		del parts[0]
-		stats = {'modes':[]}
-		
+		#lines = file(self.stats_file).readlines()
+		with open(self.stats_file) as file:
+			lines = file.readlines()
 		# Global Evidence
+		stats = {'modes':[]}
 		self._read_error_into_dict(lines[0], stats)
-		i = 0
-		for p in parts:
-			modelines = p.split("\n\n")
+		
+		# backwards compability
+		stats['global evidence'] = stats['Nested Sampling Global Log-Evidence'.lower()]
+		stats['global evidence error'] = stats['Nested Sampling Global Log-Evidence error'.lower()]
+
+		if 'Nested Importance Sampling Global Log-Evidence' in lines[1]:
+			# INS global evidence
+			self._read_error_into_dict(lines[1], stats)
+			Z = stats['Nested Importance Sampling Global Log-Evidence'.lower()]
+			Zerr = stats['Nested Importance Sampling Global Log-Evidence error'.lower()]
+			# there is only one 'mode'
+			text = ''.join(lines[3:])
+			
+			i = 0
+			modelines = text.split("\n\n")
 			mode = {
 				'index':i
 			}
-			i = i + 1
-			modelines1 = modelines[0].split("\n")
+			# no preamble; construct it
 			# Strictly local evidence
-			self._read_error_into_dict(modelines1[1], mode)
-			self._read_error_into_dict(modelines1[2], mode)
-			t = self._read_table(modelines[1], title = "Parameters")
+			mode['Strictly Local Log-Evidence'.lower()] = Z
+			mode['Strictly Local Log-Evidence error'.lower()] = Zerr
+			mode['Local Log-Evidence'.lower()] = Z
+			mode['Local Log-Evidence error'.lower()] = Zerr
+			t = self._read_table(modelines[0], title = "Parameters")
 			mode['mean'] = t[:,1].tolist()
 			mode['sigma'] = t[:,2].tolist()
 			mode['maximum'] = self._read_table(modelines[1])[:,1].tolist()
-			mode['maximum a posterior'] = self._read_table(modelines[1])[:,1].tolist()
+			mode['maximum a posterior'] = self._read_table(modelines[2])[:,1].tolist()
 			stats['modes'].append(mode)
+		else:
+			text = ''.join(lines)
+			# without INS:
+			parts = text.split("\n\n\n")
+			del parts[0]
+		
+			i = 0
+			for p in parts:
+				modelines = p.split("\n\n")
+				mode = {
+					'index':i
+				}
+				i = i + 1
+				modelines1 = modelines[0].split("\n")
+				# Strictly local evidence
+				self._read_error_into_dict(modelines1[1], mode)
+				self._read_error_into_dict(modelines1[2], mode)
+				t = self._read_table(modelines[1], title = "Parameters")
+				mode['mean'] = t[:,1].tolist()
+				mode['sigma'] = t[:,2].tolist()
+				mode['maximum'] = self._read_table(modelines[2])[:,1].tolist()
+				mode['maximum a posterior'] = self._read_table(modelines[3])[:,1].tolist()
+				stats['modes'].append(mode)
 		return stats
 
 	def get_best_fit(self):
-		lastrow = self.get_data()[-1]
-		return {'log_likelihood': float(-0.5 * lastrow[1]), 
+		data = self.get_data()
+		i = (-0.5 * data[:,1]).argmax()
+		lastrow = data[i]
+		return {'log_likelihood': float(-0.5 * lastrow[1]),
 			'parameters': list(lastrow[2:])}
 
 

@@ -32,7 +32,7 @@ starttime = time.clock()
 from classes.parameters import *
 from classes.emission import *
 from classes.transmission import *
-#from classes.fitting import *
+from classes.fitting import *
 from classes.profile import *
 from classes.data import *
 
@@ -77,20 +77,33 @@ print dataob.atmosphere['mol']
 print dataob.atmosphere['info']['mu']
 print dataob.atmosphere['mol'].keys()
 
+profileob = profile(params,dataob)
+
+
+
 transob = transmission(params,dataob)
 
-if params.trans_cpp == True:
-    absorption = transob.cpath_integral()
-else:
-    absorption = transob.path_integral()
+# if params.trans_cpp == True:
+#     absorption = transob.cpath_integral(rho=profileob.get_rho())
+# else:
+#     absorption = transob.path_integral()
+
+
+fitob = fitting(params,dataob,profileob,transob)
+
+# ble = fitob.downhill_fit()
+ble = fitob.mcmc_fit()
+
+print ble.stats()
+
+absorption = transob.cpath_integral(rho=profileob.get_rho(T=ble[0]),X=ble[1:].reshape(fitob.Pshape[0],fitob.Pshape[1]-1))
+
 
 # print absorption
 
 figure(1)
-plot(dataob.spectrum[:,1])
-plot(transpose(absorption),c='r')
+errorbar(dataob.spectrum[:,0],dataob.spectrum[:,1],dataob.spectrum[:,2])
+plot(dataob.spectrum[:,0],transpose(absorption),c='r')
 
-figure(2)
-plot(transpose(absorption),c='r')
 
 show()

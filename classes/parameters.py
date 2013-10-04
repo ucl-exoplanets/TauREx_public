@@ -4,6 +4,8 @@
 #parameters for run
 ################################################
 from ConfigParser import SafeConfigParser
+from numpy import genfromtxt,arange,size
+from StringIO import StringIO
 
 class parameters(object):
 #instantiation
@@ -53,15 +55,19 @@ class parameters(object):
         self.planet_molec          = parser.get('Planet','molec')
         
         self.tp_var_atm            = parser.getboolean('T-P profile','var_atm')
+        self.tp_num_scale          = parser.getfloat('T-P profile', 'num_scaleheights')
         self.tp_atm_levels         = parser.getfloat('T-P profile', 'atm_levels')
+        self.tp_num_gas            = parser.getfloat('T-P profile', 'num_gas')
         self.tp_var_temp           = parser.getboolean('T-P profile', 'var_temp')
         self.tp_var_pres           = parser.getboolean('T-P profile', 'var_pres')
+        self.tp_max_pres           = parser.getfloat('T-P profile', 'atm_max_pressure')
         self.tp_var_mix            = parser.getboolean('T-P profile', 'var_mix')
         
-        self.fit_param_free        = parser.get('Fitting', 'param_free')
+        self.fit_param_free        = genfromtxt(StringIO(parser.get('Fitting', 'param_free')), delimiter = ',')
+        self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
+        self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)
         
         self.mcmc_update_std       = parser.getboolean('MCMC','update_std')
-        self.mcmc_data_std         = parser.getfloat('MCMC', 'data_std')
         self.mcmc_iter             = parser.getfloat('MCMC', 'iter')
         self.mcmc_burn             = parser.getfloat('MCMC','burn')
         self.mcmc_thin             = parser.getfloat('MCMC', 'thin')

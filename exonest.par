@@ -9,7 +9,9 @@ trans_cpp = True
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/tau_output.dat
+spectrum_file = Input/testspec.txt
+
+
 
 #file containing pre-determined T-P profile and mixing ratios
 atm_file = Input/profile.atm
@@ -49,14 +51,14 @@ file_name = test.txt
 
 
 [Star]
-#defines stellar specific (fixed or starting) parameters)
+#defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
 radius = 0.788
 
 
 [Planet]
-#defines planetary specific (fixed or starting) parameters)
+#defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
 radius = 1.138
@@ -65,7 +67,7 @@ radius = 1.138
 sma = 0.03142
 
 #Planetary surface gravity (ms^-2)
-grav = 23.45
+grav = 21.2
 
 #Planetary temperature (K)
 temp = 1500
@@ -83,15 +85,25 @@ molec = H20, CH4, CO2
 #False: all fixed to input .atm file
 var_atm = True
 
+#thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
+num_scaleheights = 22
+
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
-atm_levels = 40
+atm_levels = 42
+
+#number of gasses in atmosphere. 
+#If var_atm = False, num_gas is taken from .atm file
+num_gas = 1
 
 #set temperature as variables
 var_temp = True
 
 #set pressure as variable
 var_pres = True
+
+#set maximum pressure level (if set variable) (Pa)
+atm_max_pressure = 1e6
 
 #set mixing ratios as variables
 var_mix = True
@@ -101,22 +113,20 @@ var_mix = True
 #defines general fittings parameters 
 #independent of method
 
-#free parameters
-param_free = 0
+#free parameters, temperature, abundance
+param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
+
 
 
 [MCMC]
 #defines MCMC specific parameters
 
 #update data standard deviation from dynamic fit. Yes = True, No = False
-#please keep set on True, otherwise fitting may be wrong
-update_std = True
+update_std = False
 
-#set data standard deviation if mcmc_update_std = False
-data_std = 0.01
 
 #MCMC number of total iterations
-iter = 2000
+iter = 500
 
 #MCMC burn in period 
 burn = 100

@@ -9,7 +9,8 @@ What is MultiNest?
 MultiNest is a program and a sampling technique. As a Bayesian inference technique,
 it allows parameter estimation and model selection. (find out more in the 
 MultiNest paper, http://arxiv.org/abs/0809.3437, or in a classic MCMC sampler, 
-http://apemost.sf.net/ ).
+http://apemost.sf.net/ ). Recently, MultiNest added Importance Nested Sampling 
+(INS, see http://arxiv.org/abs/1306.2144) which is now also supported.
 
 The efficient Monte Carlo algorithm for sampling the parameter space is based 
 on nested sampling and the idea of disjoint multi-dimensional ellipse sampling.
@@ -56,8 +57,8 @@ In the Bayesian sense, it is possible to use Cuba for model selection.
 Q: Python callback functions are too slow!
 -------------------------------------------
 If you really identified that your callback functions are too slow, even
-when using the usual tricks (numpy, etc.), you can just program them into
-cnest.c, effectively making them part of the cnest library.
+when using the usual tricks (numpy, etc.), you can implement and compile 
+them as C functions.
 
 You still have the neat python interface (default parameters, etc.), but
 achieve full execution speed, as only native code is executed while

@@ -1,6 +1,8 @@
+from __future__ import absolute_import, unicode_literals, print_function
 import pymultinest
 import math
-import os, threading, subprocess
+import os
+import threading, subprocess
 if not os.path.exists("chains"): os.mkdir("chains")
 def show(filepath): 
 	""" open the output (pdf) file for the user """
@@ -33,7 +35,7 @@ n_params = len(parameters)
 progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
 threading.Timer(2, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
 # run MultiNest
-pymultinest.run(myloglike, myprior, n_params, resume = True, verbose = True, sampling_efficiency = 0.3)
+pymultinest.run(myloglike, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = True, sampling_efficiency = 'model', n_live_points = 1000)
 # ok, done. Stop our progress watcher
 progress.stop()
 
@@ -42,10 +44,15 @@ a = pymultinest.Analyzer(n_params = n_params)
 s = a.get_stats()
 
 import json
-json.dump(s, file('%s.json' % a.outputfiles_basename, 'w'), indent=2)
-print
-print "-" * 30, 'ANALYSIS', "-" * 30
-print "Global Evidence:\n\t%.15e +- %.15e" % ( s['global evidence'], s['global evidence error'] )
+# store name of parameters, always useful
+with file('%sparams.json' % a.outputfiles_basename, 'w') as f:
+	json.dump(parameters, f, indent=2)
+# store derived stats
+with open('%sstats.json' % a.outputfiles_basename, mode='w') as f:
+	json.dump(s, f, indent=2)
+print()
+print("-" * 30, 'ANALYSIS', "-" * 30)
+print("Global Evidence:\n\t%.15e +- %.15e" % ( s['nested sampling global log-evidence'], s['nested sampling global log-evidence error'] ))
 
 import matplotlib.pyplot as plt
 plt.clf()
@@ -72,8 +79,9 @@ for i in range(n_params):
 		plt.xlabel(parameters[i])
 		plt.ylabel(parameters[j])
 
-plt.savefig("marginals_multinest.pdf") #, bbox_inches='tight')
-show("marginals_multinest.pdf")
+plt.savefig("chains/marginals_multinest.pdf") #, bbox_inches='tight')
+show("chains/marginals_multinest.pdf")
+
 for i in range(n_params):
 	outfile = '%s-mode-marginal-%d.pdf' % (a.outputfiles_basename,i)
 	p.plot_modes_marginal(i, with_ellipses = True, with_points = False)
@@ -89,7 +97,7 @@ for i in range(n_params):
 	plt.savefig(outfile, format='pdf', bbox_inches='tight')
 	plt.close()
 
-print "take a look at the pdf files in chains/" 
+print("Take a look at the pdf files in chains/") 
 
 
 
