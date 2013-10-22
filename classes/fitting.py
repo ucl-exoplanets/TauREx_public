@@ -80,8 +80,7 @@ class fitting(object):
         res = (DATA-MODEL) / DATASTD
         return sum(res**2)
         
-        
-        
+
         
     def downhill_fit(self):
     # fits a Mandel & Agol lightcurve using simplex downhill minimisation

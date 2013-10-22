@@ -8,7 +8,7 @@ def show(filepath):
 	""" open the output (pdf) file for the user """
 	if os.name == 'mac': subprocess.call(('open', filepath))
 	elif os.name == 'nt': os.startfile(filepath)
-	elif os.name == 'posix': subprocess.call(('xdg-open', filepath))
+#	elif os.name == 'posix': subprocess.call(('xdg-open', filepath))
 
 # our probability functions
 # Taken from the eggbox problem.
@@ -80,7 +80,7 @@ for i in range(n_params):
 		plt.ylabel(parameters[j])
 
 plt.savefig("chains/marginals_multinest.pdf") #, bbox_inches='tight')
-show("chains/marginals_multinest.pdf")
+#show("chains/marginals_multinest.pdf")
 
 for i in range(n_params):
 	outfile = '%s-mode-marginal-%d.pdf' % (a.outputfiles_basename,i)
