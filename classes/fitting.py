@@ -37,8 +37,9 @@ class fitting(object):
         self.transmod    = transmod
         self.profileob   = profile
         self.observation = data.spectrum
-        self.nlayers = params.tp_atm_levels
-        self.ngas    = params.tp_num_gas
+        self.nlayers     = params.tp_atm_levels
+        self.ngas        = params.tp_num_gas
+        self.numparams   = self.ngas * self.nlayers + 1 #+1 for only one temperature so far
 
               
         
@@ -60,9 +61,9 @@ class fitting(object):
        
 #         figure(1)
 #         plot(self.observation[:,1])
-#         plot(self.transmod.cpath_integral(rho=self.profileob.get_rho(T=100)),'r')
+# #         plot(self.transmod.cpath_integral(rho=self.profileob.get_rho(T=100)),'r')
 #         show()
-#         
+#          
 #         exit()
         
 #         rho = self.profileob.get_rho(T=self.PINIT[:,0]) 
@@ -95,6 +96,27 @@ class fitting(object):
         return PFIT
     
     
+    def coalate_mcmc_result(self,MCMCout):
+        #function unpacking the 
+        PINIT = self.PINIT3
+        MCMCstats = MCMCout.stats()
+        
+        Xout_mean = zeros((self.nlayers*self.ngas))
+        Xout_std  = zeros((self.nlayers*self.ngas))
+        
+        Tout_mean = MCMCstats['temp_prior']['mean']
+        Tout_std  = MCMCstats['temp_prior']['standard deviation']
+        
+        for i in range(int(self.nlayers*self.ngas)):
+            Xout_mean[i] = MCMCstats['mixing_prior_%i' % i]['mean']
+            Xout_std[i]  = MCMCstats['mixing_prior_%i' % i]['standard deviation']
+         
+        Xout_mean = Xout_mean.reshape(self.nlayers,self.ngas)
+        Xout_std = Xout_std.reshape(self.nlayers,self.ngas)
+         
+        return Tout_mean, Tout_std, Xout_mean, Xout_std
+    
+    
     def mcmc_fit(self):
     # adaptive Markov Chain Monte Carlo
     
@@ -102,11 +124,12 @@ class fitting(object):
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
         
+        
         # setting prior distributions
         priors = empty(size(PINIT),dtype=object)
         priors[0] = pymc.Uniform('temp_prior',self.params.planet_temp-300.0,self.params.planet_temp+300.0) #uniform temperature prior
         for i in range(1,size(PINIT)):
-            priors[i] = pymc.Uniform('mixing_prior_%i' % i, 0.0,1e-4)  # uniform mixing ratio prior 
+            priors[i] = pymc.Uniform('mixing_prior_%i' % (i-1), 0.0,1e-4)  # uniform mixing ratio prior 
         
 
         #setting up data error prior if specified
@@ -124,16 +147,24 @@ class fitting(object):
         # log-likelihood function
         @pymc.stochastic(observed=True, plot=False)
         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
-             
-            chi_t = self.chisq_trans(PFIT,DATASTD,DATA)
+            
+            chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
             # llterms = len(DATA) * log(1.0 / sqrt(2.0 * pi)) - len(DATA) * log(DATASTD) - 0.5 * chi_t
             llterms =  - 0.5* chi_t
             return llterms
 
         # executing MCMC sampling
-        R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=2)  # build the model
+        R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=1)  # build the model
         R.sample(iter=self.params.mcmc_iter, burn=self.params.mcmc_burn,
                  thin=self.params.mcmc_thin)              # populate and run it
-
+        
+        #coallating results into arrays
+        Tout_mean, Tout_std, Xout_mean, Xout_std = self.coalate_mcmc_result(R)
+        #saving arrays to object 
+        self.MCMC_T_mean = Tout_mean
+        self.MCMC_T_std  = Tout_std
+        self.MCMC_X_mean = Xout_mean
+        self.MCMC_X_std  = Xout_std
+        
     
         return R

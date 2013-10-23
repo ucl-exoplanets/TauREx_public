@@ -94,9 +94,7 @@ fitob = fitting(params,dataob,profileob,transob)
 # ble = fitob.downhill_fit()
 ble = fitob.mcmc_fit()
 
-print ble.stats()
-
-absorption = transob.cpath_integral(rho=profileob.get_rho(T=ble[0]),X=ble[1:].reshape(fitob.Pshape[0],fitob.Pshape[1]-1))
+absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
 
 
 # print absorption

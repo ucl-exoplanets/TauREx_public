@@ -129,7 +129,7 @@ update_std = False
 iter = 500
 
 #MCMC burn in period 
-burn = 100
+burn = 50
 
 #MCMC thinning factor
 thin = 2
