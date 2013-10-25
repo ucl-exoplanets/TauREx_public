@@ -116,6 +116,13 @@ var_mix = True
 #free parameters, temperature, abundance
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
+#Upper and lower bounds for temperature (equilibrium +- value)
+T_up  = 1000
+T_low = 1000
+
+#Upper and lower bounds for mixing ratios 
+X_up  = 5e-4
+X_low = 0.0
 
 
 [MCMC]
@@ -126,10 +133,10 @@ update_std = False
 
 
 #MCMC number of total iterations
-iter = 500
+iter = 200
 
 #MCMC burn in period 
-burn = 50
+burn = 30
 
 #MCMC thinning factor
 thin = 2

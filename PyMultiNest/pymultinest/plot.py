@@ -220,7 +220,7 @@ class PlotMarginalModes(object):
 		plt.plot(x, y, '-')
 		if with_points:
 			plt.plot(dim1_column, values, 'x')
-		
+#		plt.xticks(rotation=90)
 		# can add ellipses too:
 		# x-mean, x-sigma is from mode parameters
 		# y-height = Z_mode, y is cumulative (sum of previous Z_modes)
@@ -308,6 +308,7 @@ class PlotMarginal(object):
 		probdiff = (b[1:,0] + b[:-1,0]) / 2.
 		bincenter = (b[1:,1] + b[:-1,1]) / 2.
 		return plt.plot(bincenter, probdiff, **kwargs)
+		
 	
 	def plot_conditional(self, dim1, dim2, grid_points = 40, **kwargs):
 		values = self.analyser.get_equal_weighted_posterior()

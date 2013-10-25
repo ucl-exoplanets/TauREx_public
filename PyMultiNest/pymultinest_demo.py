@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 from __future__ import absolute_import, unicode_literals, print_function
 import pymultinest
 import math
@@ -14,18 +16,20 @@ def show(filepath):
 # Taken from the eggbox problem.
 
 def myprior(cube, ndim, nparams):
-	#print "cube before", [cube[i] for i in range(ndim)]
+#	print('cube before', [cube[i] for i in range(ndim)])
 	for i in range(ndim):
 		cube[i] = cube[i] * 10 * math.pi
-	#print "python cube after", [cube[i] for i in range(ndim)]
+#	print('python cube after', [cube[i] for i in range(ndim)])
 
 def myloglike(cube, ndim, nparams):
 	chi = 1.
-	#print "cube", [cube[i] for i in range(ndim)], cube
+#	print("cube", [cube[i] for i in range(ndim)], cube)
 	for i in range(ndim):
 		chi *= math.cos(cube[i] / 2.)
-	#print "returning", math.pow(2. + chi, 5)
+#	print("returning", math.pow(2. + chi, 5))
 	return math.pow(2. + chi, 5)
+
+
 
 # number of dimensions our problem has
 parameters = ["x", "y"]
@@ -35,7 +39,7 @@ n_params = len(parameters)
 progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
 threading.Timer(2, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
 # run MultiNest
-pymultinest.run(myloglike, myprior, n_params, importance_nested_sampling = False, resume = True, verbose = True, sampling_efficiency = 'model', n_live_points = 1000)
+pymultinest.run(myloglike, myprior, n_params, importance_nested_sampling = False, resume = False, verbose = True, sampling_efficiency = 'model', n_live_points = 1000)
 # ok, done. Stop our progress watcher
 progress.stop()
 

@@ -92,7 +92,14 @@ transob = transmission(params,dataob)
 fitob = fitting(params,dataob,profileob,transob)
 
 # ble = fitob.downhill_fit()
-ble = fitob.mcmc_fit()
+# ble = fitob.mcmc_fit()
+
+# figure(2)
+# plot(ble.trace('temp')[:])
+
+ble = fitob.multinest_fit()
+
+exit()
 
 absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
 

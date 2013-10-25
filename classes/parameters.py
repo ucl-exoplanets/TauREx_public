@@ -66,6 +66,10 @@ class parameters(object):
         self.fit_param_free        = genfromtxt(StringIO(parser.get('Fitting', 'param_free')), delimiter = ',')
         self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
         self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)
+        self.fit_T_up              = parser.getfloat('Fitting','T_up')
+        self.fit_T_low             = parser.getfloat('Fitting','T_low')
+        self.fit_X_up              = parser.getfloat('Fitting','X_up')
+        self.fit_X_low             = parser.getfloat('Fitting','X_low')
         
         self.mcmc_update_std       = parser.getboolean('MCMC','update_std')
         self.mcmc_iter             = parser.getfloat('MCMC', 'iter')
