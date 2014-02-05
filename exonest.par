@@ -133,7 +133,7 @@ update_std = False
 
 
 #MCMC number of total iterations
-iter = 200
+iter = 1000
 
 #MCMC burn in period 
 burn = 30
