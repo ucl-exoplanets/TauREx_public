@@ -43,7 +43,7 @@ class parameters(object):
         self.in_cld_file           = parser.get('Input','cld_file')
         
         self.out_path              = parser.get('Output','path')
-        self.out_file              = parser.get('Output','file_name')
+        self.out_file_prefix       = parser.get('Output','file_prefix')
         
         self.star_radius           = parser.getfloat('Star', 'radius')    *RSOL
         
@@ -62,7 +62,9 @@ class parameters(object):
         self.tp_var_pres           = parser.getboolean('T-P profile', 'var_pres')
         self.tp_max_pres           = parser.getfloat('T-P profile', 'atm_max_pressure')
         self.tp_var_mix            = parser.getboolean('T-P profile', 'var_mix')
-        
+
+        self.fit_transmission      = parser.getboolean('Fitting','transmission')
+        self.fit_emission          = parser.getboolean('Fitting', 'emission')
         self.fit_param_free        = genfromtxt(StringIO(parser.get('Fitting', 'param_free')), delimiter = ',')
         self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
         self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)

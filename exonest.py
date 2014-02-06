@@ -30,28 +30,30 @@ starttime = time.clock()
 
 #loading classes
 from classes.parameters import *
-from classes.emission import *
+# from classes.emission import *
 from classes.transmission import *
+from classes.output import *
 from classes.fitting import *
 from classes.profile import *
 from classes.data import *
 
 #loading libraries
-from library.library_emission import *
+# from library.library_emission import *
 from library.library_transmission import *
 from library.library_general import *
+from library.library_plotting import *
 
 
 parser = optparse.OptionParser()
-parser.add_option('-p', '--parfile', 
-                  dest="param_filename", 
+parser.add_option('-p', '--parfile',
+                  dest="param_filename",
                   default="exonest.par",
-                  )
+)
 parser.add_option('-v', '--verbose',
                   dest="verbose",
                   default=False,
                   action="store_true",
-                  )
+)
 options, remainder = parser.parse_args()
 
 #Initialise parameters object
@@ -69,50 +71,46 @@ if params.verbose == True:
 dataob = data(params)
 
 #adding some molecules to the atmosphere
-dataob.add_molecule('H2',2.0,2.0e-9,1.0001384,0.85)
-dataob.add_molecule('He',4.0,1.0e-9,1.0000350,0.15)
+dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
+#printing a few data object attributes
 print dataob.atmosphere['mol']
-
 print dataob.atmosphere['info']['mu']
 print dataob.atmosphere['mol'].keys()
 
-profileob = profile(params,dataob)
+#initialising TP profile object
+profileob = profile(params, dataob)
+
+#initialising transmission radiative transfer code object
+transob = transmission(params, dataob)
 
 
 
-transob = transmission(params,dataob)
+#initialising fitting object
+fitob = fitting(params, dataob, profileob, transob)
 
-# if params.trans_cpp == True:
-#     absorption = transob.cpath_integral(rho=profileob.get_rho())
-# else:
-#     absorption = transob.path_integral()
+#fit data
+fitob.downhill_fit()    #simplex downhill fit
+fitob.mcmc_fit()        #MCMC fit
+fitob.multinest_fit()   #Nested sampling fit
 
-
-fitob = fitting(params,dataob,profileob,transob)
-
-# fitob.downhill_fit()
-# fitob.mcmc_fit()
-fitob.multinest_fit()
-
-# figure(2)
-# plot(ble.trace('temp')[:])
-
-
-
-
-# exit()
-
-
+#manually call transmission spectrum code
 # absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
-absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.NEST_T_mean),X=fitob.NEST_X_mean)
 
 
-# print absorption
 
-figure()
-errorbar(dataob.spectrum[:,0],dataob.spectrum[:,1],dataob.spectrum[:,2])
-plot(dataob.spectrum[:,0],transpose(absorption),c='r')
+outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
+
+#plotting fits and data
+outputob.plot_all()
+# outputob.plot_spectrum()   #plotting data only
+# outputob.plot_multinest()  #plotting multinest posteriors
+# outputob.plot_mcmc()       #plotting mcmc posterios
+# outputob.plot_fit()        #plotting model fits
+
+outputob.save_model()       #saving models to ascii
+
 
 
 show()

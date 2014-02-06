@@ -44,9 +44,9 @@ class fitting(object):
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = params.tp_num_gas
-        self.n_params    = int(self.ngas * self.nlayers + 1) #+1 for only one temperature so far
+        # self.n_params    = int(self.ngas * self.nlayers + 1) #+1 for only one temperature so far
         
-        self.n_params    = 2
+        self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
 
         #defining prior bounds
         self.X_up        = self.params.fit_X_up
@@ -70,43 +70,50 @@ class fitting(object):
         self.PINIT3 = self.PINIT2[(self.Pshape[0]-1):] #restricting temperature to one free parameter only
 
        
-#         figure(1)
-#         plot(self.observation[:,1])
-# #         plot(self.transmod.cpath_integral(rho=self.profileob.get_rho(T=100)),'r')
-#         show()
-#          
-#         exit()
-        
-#         rho = self.profileob.get_rho(T=self.PINIT[:,0]) 
-#         print rho
-#         exit()
+        #initialising output tags
+        self.DOWNHILL = False
+        self.MCMC     = False
+        self.NEST     = False
+
         
         
-    def chisq_trans(self,PFIT,DATA,DATASTD):       
-        
-#         print PFIT
-        
+    def chisq_trans(self,PFIT,DATA,DATASTD):
+        #chisquare minimisation bit
+
         rho = self.profileob.get_rho(T=PFIT[0])
 #         print PFIT[0]
 #         X   = PFIT[1:].reshape(self.Pshape[0],self.Pshape[1]-1)
         X   = zeros((self.nlayers,self.ngas))
         X  += PFIT[1]
-        
-        
+
         MODEL = self.transmod.cpath_integral(rho=rho,X=X)
-        
-#         ion()
-#         figure(1)
-#         plot(DATA,'x')
-#         plot(MODEL,'r')
-#         draw()
-        
+
         res = (DATA-MODEL) / DATASTD
         return sum(res**2)
         
 ############################################################################### 
 #simplex downhill algorithm
-        
+
+    def collate_downhill_results(self,PFIT):
+        #function unpacking the downhill minimization results
+        Xout_mean = zeros((self.nlayers*self.ngas))
+        # Tout_mean = zeros((self.nlayers*self.ngas))
+
+        Tout_mean= PFIT[0]
+
+        if len(PFIT)-1 < self.nlayers*self.ngas:
+            Xout_mean[:] += PFIT[1:]
+            for i in range(1,len(PFIT)-1):
+                Xout_mean[i] = PFIT[i]
+        else:
+            Xout_mean[:] = PFIT[1:]
+
+        Xout_mean = Xout_mean.reshape(self.nlayers,self.ngas)
+        # print 'downhill ', shape(Xout_mean), shape(Tout_mean)
+
+        return Tout_mean,Xout_mean
+
+
     def downhill_fit(self):
     # fits data using simplex downhill minimisation
 
@@ -117,8 +124,10 @@ class fitting(object):
         
         PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), disp=1, full_output=1)
 
-        self.DOWNHILL_Tmean = PFIT[0]
-        self.DOWNHILL_Xmean = PFIT[1:]
+        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT)
+        self.DOWNHILL = True
+        self.DOWNHILL_T_mean = Tout_mean
+        self.DOWNHILL_X_mean = Xout_mean
 
 
     
@@ -129,8 +138,6 @@ class fitting(object):
         #function unpacking the MCMC results
         
         MCMCstats = MCMCout.stats()
-        print MCMCstats
-        
         Xout_mean = zeros((self.nlayers*self.ngas))
         Xout_std  = zeros((self.nlayers*self.ngas))
 
@@ -149,11 +156,9 @@ class fitting(object):
                 Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
                 Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
 
-
-         
         Xout_mean = Xout_mean.reshape(self.nlayers,self.ngas)
         Xout_std = Xout_std.reshape(self.nlayers,self.ngas)
-         
+
         return Tout_mean, Tout_std, Xout_mean, Xout_std
     
     
@@ -201,13 +206,15 @@ class fitting(object):
         
         #coallating results into arrays
         Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_mcmc_result(R)
-        #saving arrays to object 
+        #saving arrays to object
+        self.MCMC        = True
         self.MCMC_T_mean = Tout_mean
         self.MCMC_T_std  = Tout_std
         self.MCMC_X_mean = Xout_mean
         self.MCMC_X_std  = Xout_std
         self.MCMC_STATS  = R.stats()
         self.MCMC_FITDATA= R
+
 
 
     
@@ -305,6 +312,7 @@ class fitting(object):
         Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_multinest_result(OUT)
 
         #saving arrays to object
+        self.NEST        = True
         self.NEST_T_mean = Tout_mean
         self.NEST_T_std  = Tout_std
         self.NEST_X_mean = Xout_mean

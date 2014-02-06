@@ -46,8 +46,8 @@ cld_file = Input/cloud1.cld
 #path for output files
 path = Output/
 
-#output file name
-file_name = test.txt
+#output file prefix
+file_prefix = test_
 
 
 [Star]
@@ -113,6 +113,12 @@ var_mix = True
 #defines general fittings parameters 
 #independent of method
 
+#fit transmission model
+transmission = True
+
+#fit emission model
+emission     = False
+
 #free parameters, temperature, abundance
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
@@ -133,7 +139,7 @@ update_std = False
 
 
 #MCMC number of total iterations
-iter = 1000
+iter = 3000
 
 #MCMC burn in period 
 burn = 30
