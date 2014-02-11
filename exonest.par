@@ -11,8 +11,6 @@ trans_cpp = True
 #Observed spectrum to be fitted
 spectrum_file = Input/testspec.txt
 
-
-
 #file containing pre-determined T-P profile and mixing ratios
 atm_file = Input/profile.atm
 
@@ -40,6 +38,10 @@ include_cld = False
 
 #file from which to read optical depths for extra opacities (e.g. clouds)
 cld_file = Input/cloud1.cld
+
+#preselector library (contains pre-computed spectra for preselector class)
+pre_file = Input/pre_speclib.dat
+
 
 
 [Output]
@@ -142,7 +144,7 @@ update_std = False
 iter = 3000
 
 #MCMC burn in period 
-burn = 30
+burn = 300
 
 #MCMC thinning factor
 thin = 2

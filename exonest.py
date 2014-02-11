@@ -36,6 +36,7 @@ from classes.output import *
 from classes.fitting import *
 from classes.profile import *
 from classes.data import *
+from classes.preselector import *
 
 #loading libraries
 # from library.library_emission import *
@@ -66,6 +67,11 @@ if params.verbose == True:
 
 #####################################################################
 
+#initiating preselector class
+# preob = preselector(params)
+
+
+# exit()
 
 #initialising data object
 dataob = data(params)
@@ -91,7 +97,7 @@ transob = transmission(params, dataob)
 fitob = fitting(params, dataob, profileob, transob)
 
 #fit data
-fitob.downhill_fit()    #simplex downhill fit
+# fitob.downhill_fit()    #simplex downhill fit
 fitob.mcmc_fit()        #MCMC fit
 fitob.multinest_fit()   #Nested sampling fit
 

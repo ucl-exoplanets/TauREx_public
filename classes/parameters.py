@@ -41,6 +41,7 @@ class parameters(object):
         self.in_cia_file           = parser.get('Input','cia_file')  
         self.in_include_cld        = parser.getboolean('Input','include_cld')
         self.in_cld_file           = parser.get('Input','cld_file')
+        self.in_pre_file           = parser.get('Input','pre_file')
         
         self.out_path              = parser.get('Output','path')
         self.out_file_prefix       = parser.get('Output','file_prefix')
