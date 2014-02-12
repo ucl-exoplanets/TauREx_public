@@ -2,3 +2,5 @@
 rawfiles/
 compiledcode/
 setup.sh
+chains/
+output/
