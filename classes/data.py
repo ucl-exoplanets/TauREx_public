@@ -124,31 +124,49 @@ class data(object):
     
     
     
-    def readABSfiles(self):
+    def readABSfiles(self,filename=None, interpolate2data=True):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
-        
-        #reading in list of abs files from parameter file
-        absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
-        try:
-            abslist = [absfiles.item()] #necessary for 0d numpy arrays
-        except ValueError:
-            abslist = absfiles
-        
-        #checking if number of gasses in parameters file is consistent with gass columns in atm file
-        if len(abslist) != self.ngas:
-            print len(abslist)
-            print self.ngas
-            raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
-            exit()
-        
-        
-        #setting up array
-        OUT = zeros((self.ngas,self.nwave))
+    #
+    # if filename = None, the absorption coefficient files will be read from the parameter file
+    # if filename = [ascii list], absorption coefficient files will be read from user specified list
 
-        #reading in individual rows/abs-files
-        for i in range(self.ngas):
-            OUT[i,:] = transpose(self.readfile(self.params.in_abs_path+abslist[i],INTERPOLATE=True)[:,1])* 1e-4 #converting cm^2 to m^2
-        
+
+        if filename== None:
+            #reading in list of abs files from parameter file
+            absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
+            try:
+                abslist = [absfiles.item()] #necessary for 0d numpy arrays
+            except ValueError:
+                abslist = absfiles
+
+            #checking if number of gasses in parameters file is consistent with gass columns in atm file
+            if len(abslist) != self.ngas:
+                print len(abslist)
+                print self.ngas
+                raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
+                exit()
+
+
+            #setting up array
+            if interpolate2data == True:
+                OUT = zeros((self.ngas,self.nwave))
+            else:
+                ABSsize = len(self.readfile(self.params.in_abs_path+abslist[0],INTERPOLATE=False)[:,1])
+                OUT = zeros((self.ngas,ABSsize))
+
+            #reading in individual rows/abs-files
+            for i in range(self.ngas):
+                OUT[i,:] = transpose(self.readfile(self.params.in_abs_path+abslist[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
+
+        else:
+            if interpolate2data == True:
+                OUT = zeros((self.ngas,self.nwave))
+            else:
+                ABSsize = len(self.readfile(filename[0],INTERPOLATE=False)[:,1])
+                OUT = zeros((self.ngas,ABSsize))
+            for i in range(len(filename)):
+                OUT[i,:] = transpose(self.readfile(filename[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
+
         return OUT
         
   
