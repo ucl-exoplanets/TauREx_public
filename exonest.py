@@ -99,7 +99,7 @@ fitob = fitting(params, dataob, profileob, transob)
 #fit data
 # fitob.downhill_fit()    #simplex downhill fit
 # fitob.mcmc_fit()        #MCMC fit
-fitob.multinest_fit()   #Nested sampling fit
+# fitob.multinest_fit()   #Nested sampling fit
 
 #manually call transmission spectrum code
 # absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)

@@ -108,8 +108,14 @@ class data(object):
             MMW += (self.atmosphere['mol'][M]['weight'] * self.atmosphere['mol'][M]['frac'])
         
         return MMW
-    
-    
+
+
+    def set_ABSfile(self,filename=None,interpolate = False):
+    #manually overwrites absorption coefficients from new file
+        self.sigma_array,self.wavegrid = self.readABSfiles(filename=filename,interpolate2data=interpolate,outputwavegrid=True)
+
+
+
     def readATMfile(self):
     #reads in .atm file
         try:
@@ -124,11 +130,12 @@ class data(object):
     
     
     
-    def readABSfiles(self,filename=None, interpolate2data=True):
+    def readABSfiles(self,filename=None, interpolate2data=True,outputwavegrid=False):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
     #
     # if filename = None, the absorption coefficient files will be read from the parameter file
     # if filename = [ascii list], absorption coefficient files will be read from user specified list
+    # if outputwavegrid = True, it takes the first column of the ABS file and outputs as separate wavelength grid
 
 
         if filename== None:
@@ -158,6 +165,9 @@ class data(object):
             for i in range(self.ngas):
                 OUT[i,:] = transpose(self.readfile(self.params.in_abs_path+abslist[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
 
+            if outputwavegrid == True:
+                WAVE = transpose(self.readfile(self.params.in_abs_path+abslist[i],INTERPOLATE=interpolate2data)[:,0])
+
         else:
             if interpolate2data == True:
                 OUT = zeros((self.ngas,self.nwave))
@@ -167,7 +177,13 @@ class data(object):
             for i in range(len(filename)):
                 OUT[i,:] = transpose(self.readfile(filename[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
 
-        return OUT
+            if outputwavegrid == True:
+                WAVE = transpose(self.readfile(filename[0],INTERPOLATE=interpolate2data)[:,0])
+
+        if outputwavegrid == True:
+            return OUT, WAVE
+        else:
+            return OUT
         
   
     def readfile(self,NAME,INTERPOLATE=False):

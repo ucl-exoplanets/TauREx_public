@@ -15,7 +15,7 @@ spectrum_file = Input/testspec.txt
 atm_file = Input/profile.atm
 
 #folder containing absorption cores-section files
-abs_path = Input/
+abs_path = Input/exonest_abs/
 
 #files containing absorption cores-sections 
 #you can specify several file names separated by commas
