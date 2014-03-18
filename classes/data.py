@@ -108,8 +108,20 @@ class data(object):
             MMW += (self.atmosphere['mol'][M]['weight'] * self.atmosphere['mol'][M]['frac'])
         
         return MMW
-    
-    
+
+
+    def set_ABSfile(self,path=None,filelist=None,interpolate = False):
+    #manually overwrites absorption coefficients from new file
+    #input path needs to be given and list of filename strings
+        if path == None:
+            extpath = self.params.in_abs_path
+        if filelist == None:
+            raise IOError('No input ABS file specified')
+
+        self.sigma_array,self.wavegrid = self.readABSfiles(extpath=path,extfilelist=filelist,interpolate2data=interpolate,outputwavegrid=True)
+        self.nwave = len(self.wavegrid)
+
+
     def readATMfile(self):
     #reads in .atm file
         try:
@@ -124,37 +136,62 @@ class data(object):
     
     
     
-    def readABSfiles(self):
+    def readABSfiles(self,extfilelist=None, extpath= None,interpolate2data=True,outputwavegrid=False):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
-        
-        #reading in list of abs files from parameter file
-        absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
-        try:
-            abslist = [absfiles.item()] #necessary for 0d numpy arrays
-        except ValueError:
-            abslist = absfiles
-        
-        #checking if number of gasses in parameters file is consistent with gass columns in atm file
-        if len(abslist) != self.ngas:
-            print len(abslist)
-            print self.ngas
-            raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
-            exit()
-        
-        
-        #setting up array
-        OUT = zeros((self.ngas,self.nwave))
+    #
+    # if filename = None, the absorption coefficient files will be read from the parameter file
+    # if filename = [ascii list], absorption coefficient files will be read from user specified list
+    # if outputwavegrid = True, it takes the first column of the ABS file and outputs as separate wavelength grid
 
-        #reading in individual rows/abs-files
-        for i in range(self.ngas):
-            OUT[i,:] = transpose(self.readfile(self.params.in_abs_path+abslist[i],INTERPOLATE=True)[:,1])* 1e-4 #converting cm^2 to m^2
+
+        if extfilelist== None:
+            #reading in list of abs files from parameter file
+            absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
+            try:
+                abslist = [absfiles.item()] #necessary for 0d numpy arrays
+            except ValueError:
+                abslist = absfiles
+
+            #checking if number of gasses in parameters file is consistent with gass columns in atm file
+            if len(abslist) != self.ngas:
+                print len(abslist)
+                print self.ngas
+                raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
+                exit()
+
+            OUT, WAVE = self.__readABSfiles_sub(path=self.params.in_abs_path,filelist=abslist,interpolate2data=interpolate2data,num=self.ngas)
+
+        else:
+            OUT, WAVE = self.__readABSfiles_sub(path=extpath,filelist=extfilelist,interpolate2data=interpolate2data,num=len(extfilelist))
+
+        if outputwavegrid == True:
+            return OUT, WAVE
+        else:
+            return OUT
         
-        return OUT
-        
-  
+
+    def __readABSfiles_sub(self,path, filelist, interpolate2data,num):
+        if interpolate2data == True:
+            OUT = zeros((self.ngas,self.nwave))
+            WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
+        else:
+            tmp = self.readfile(path+filelist[0],INTERPOLATE=False)
+            ABSsize = len(tmp[:,1])
+            OUT = zeros((num,ABSsize))
+            WAVE = transpose(tmp[:,0])
+
+        for i in range(num):
+            OUT[i,:] = transpose(self.readfile(path+filelist[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
+
+        return OUT, WAVE
+
+
     def readfile(self,NAME,INTERPOLATE=False):
     #reads in data file with columns wavelength and data
-        OUT = loadtxt(NAME)
+        try:
+            OUT = loadtxt(NAME)
+        except ValueError:
+            OUT = loadtxt(NAME,delimiter=',')
         if len(OUT[:,0]) < len(OUT[0,:]):
             OUT = transpose(OUT)
         
