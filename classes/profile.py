@@ -68,7 +68,11 @@ class profile(object):
     
     def __getitem__(self,name):
         return self.__dict__[name] 
-        
+
+    def reset(self,data):
+    #allows to reset the original instance to reflect changes in the data instance
+    #this avoids an initialisation of a separate instance.
+        self.__init__(self.params,data)
         
     def get_scaleheight(self,T_aver,surf_g,mmw):
         

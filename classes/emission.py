@@ -38,4 +38,9 @@ class emission(object):
         return object.__getattribute__(self, name)
     
     def __getitem__(self,name):
-        return self.__dict__[name] 
+        return self.__dict__[name]
+
+    def reset(self,data):
+    #allows to reset the original instance to reflect changes in the data instance
+    #this avoids an initialisation of a separate instance.
+        self.__init__(self.params,data)

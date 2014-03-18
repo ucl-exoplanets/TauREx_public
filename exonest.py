@@ -91,32 +91,48 @@ profileob = profile(params, dataob)
 #initialising transmission radiative transfer code object
 transob = transmission(params, dataob)
 
+# #manually reading in ABS file and computing transmission spectrum
+dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
+                   filelist=['1H2-16O_0-29999_600K_0.010000.sigma.abs'])
+transob.reset(dataob)
+#
+print 'ble'
+MODEL = transob.cpath_integral()
+print MODEL
+
+print size(MODEL)
+print size(dataob.wavegrid)
+print size(dataob.spectrum)
 
 
-#initialising fitting object
-fitob = fitting(params, dataob, profileob, transob)
-
-#fit data
-# fitob.downhill_fit()    #simplex downhill fit
-# fitob.mcmc_fit()        #MCMC fit
-# fitob.multinest_fit()   #Nested sampling fit
-
-#manually call transmission spectrum code
-# absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
-
-
-
-outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
-
-#plotting fits and data
-outputob.plot_all()
-# outputob.plot_spectrum()   #plotting data only
-# outputob.plot_multinest()  #plotting multinest posteriors
-# outputob.plot_mcmc()       #plotting mcmc posterios
-# outputob.plot_fit()        #plotting model fits
-
-outputob.save_model()       #saving models to ascii
-
-
-
+figure()
+plot(MODEL)
 show()
+
+# #initialising fitting object
+# fitob = fitting(params, dataob, profileob, transob)
+#
+# #fit data
+# # fitob.downhill_fit()    #simplex downhill fit
+# # fitob.mcmc_fit()        #MCMC fit
+# fitob.multinest_fit()   #Nested sampling fit
+#
+# #manually call transmission spectrum code
+# # absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
+#
+#
+#
+# outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
+#
+# #plotting fits and data
+# outputob.plot_all()
+# # outputob.plot_spectrum()   #plotting data only
+# # outputob.plot_multinest()  #plotting multinest posteriors
+# # outputob.plot_mcmc()       #plotting mcmc posterios
+# # outputob.plot_fit()        #plotting model fits
+#
+# # outputob.save_model()       #saving models to ascii
+#
+#
+#
+# show()

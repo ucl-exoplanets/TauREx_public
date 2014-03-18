@@ -41,7 +41,6 @@ class transmission(object):
         self.nwave         = data['nwave']
         self.X             = data['X']
         self.atmosphere    = data['atmosphere']
-        
 
         #calculating optical path lengths
         self.dlarray,self.iteridx = self.get_path_length()
@@ -77,7 +76,13 @@ class transmission(object):
     
     def __getitem__(self,name):
         return self.__dict__[name] 
-    
+
+    def reset(self,data):
+    #allows to reset the original instance to reflect changes in the data instance
+    #this avoids an initialisation of a separate instance.
+        self.__init__(self.params,data)
+
+
 #class methods
 
     def get_path_length(self):
