@@ -41,10 +41,17 @@ class parameters(object):
         self.in_cia_file           = parser.get('Input','cia_file')  
         self.in_include_cld        = parser.getboolean('Input','include_cld')
         self.in_cld_file           = parser.get('Input','cld_file')
-        self.in_pre_file           = parser.get('Input','pre_file')
-        
+
         self.out_path              = parser.get('Output','path')
         self.out_file_prefix       = parser.get('Output','file_prefix')
+
+        self.pre_cross_path        = parser.get('Preselector','cross_path')
+        self.pre_speclib_path      = parser.get('Preselector','speclib_path')
+        self.pre_pca_path          = parser.get('Preselector','pca_path')
+        self.pre_conver2microns    = parser.getboolean('Preselector','convert2microns')
+        self.pre_gen_speclib       = parser.getboolean('Preselector','generate_speclib')
+        self.pre_mixing_ratios     = genfromtxt(StringIO(parser.get('Preselector', 'mixing_ratio')), delimiter = ',')
+        self.pre_gen_pca           =parser.getboolean('Preselector','generate_pca')
         
         self.star_radius           = parser.getfloat('Star', 'radius')    *RSOL
         

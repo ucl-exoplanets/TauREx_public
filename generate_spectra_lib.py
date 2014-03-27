@@ -10,7 +10,7 @@
 ###########################################################
 
 #loading libraries
-import numpy, pylab, optparse, glob,string
+import numpy, pylab, optparse, glob,string,os
 from numpy import * #nummerical array library
 from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
@@ -76,9 +76,11 @@ transob = transmission(params, dataob)
 
 #reading available cross section lists in PATH
 PATH = '/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/'
+OUTPATH = '/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/speclib/'
 globlist = glob.glob(PATH+'*.abs')
 
-
+if os.path.isdir(OUTPATH) == False:
+    os.mkdir(OUTPATH)
 
 
 for FILE in globlist:
@@ -99,9 +101,14 @@ for FILE in globlist:
 
         #manually setting mixing ratio and T-P profile
         MODEL = transob.cpath_integral(rho=rho_in,X=X_in) #computing transmission
+        # print OUTPATH+fname[:-4]+'_'+str(1.0/10**exponent)+'d.spec'
+        savetxt(OUTPATH+fname[:-4]+'_'+str(1.0/10**exponent)+'d.spec',column_stack((dataob.wavegrid,MODEL)))
 
-        ion()
-        clf()
-        figure(1)
-        plot(dataob.wavegrid,MODEL)
-        draw()
+        # print shape(dataob.wavegrid), shape(MODEL), shape(column_stack([dataob.wavegrid,MODEL]))
+
+        # ion()
+        # clf()
+        # figure(1)
+        # plot(dataob.wavegrid,MODEL)
+        # draw()
+        # exit()

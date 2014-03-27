@@ -24,67 +24,44 @@
 import numpy as np
 import pickle
 import os
+from library.library_preselector import *
 
 
 class preselector(object):
     def __init__(self, params):
-        #question on how autonomous this class should be... should most pre-processing be done
-        #on start up or on explicit demand? Needs some form of history to avoid unnecessary duplication.
+        #
         self.params = params
 
-        self.LIB = self.load_spectrum_library
-        self.save_spectrum_library()
 
 
-    def load_spectrum_library(self):
-        #checks if spectrum library exists if it does it is loaded. if not it is created
-        if os.path.isfile(self.params.in_pre_file):
-            with open(self.params.in_pre_file, 'rb') as LIBfilehandle:
-                LIB = pickle.load(LIBfilehandle)
-            print 'loaded from file'
-        else:
-            LIB = {}
-            LIB.history = {}
-            LIB.type = {}
-            LIB.type.trans = {}
-            LIB.type.trans.mol = {}
-            LIB.type.emis = {}
-            LIB.type.emis.mol = {}
-            print 'created library'
-        return LIB
+
+    def run_preprocess(self,convertLinelist=None,generateSpectra=None,generatePCA=None):
+        #function running pre-processing steps
+        #convertLinelist will convert ExoMol cross sections from wavenumbers to microns
+        #generateSpectra will generate library of transmission spectra from linelists
+        #generatePCA will run PCA on spectral library and compile final dictionary
+
+        #getting booleans from parameter file if not set manually
+        if convertLinelist == None:
+            convertLinelist = self.params.pre_conver2microns
+        if generateSpectra == None:
+            generateSpectra = self.params.pre_gen_speclib
+        if generatePCA == None:
+            generatePCA = self.params.pre_gen_pca
+
+        #doing the pre-processing
+        if convertLinelist == True:
+            convert2microns(self.params.pre_cross_path+'*')
+            print '1 done'
+        if generateSpectra == True:
+            generate_spectra_lib(self.params,self.params.pre_cross_path,self.params.pre_speclib_path,
+                                 MIXING=self.params.pre_mixing_ratios)
+            print '2 done'
+        if generatePCA == True:
+            generate_PCA_library(self.params.pre_speclib_path+'*',self.params.pre_pca_path)
+            print '3 done'
 
 
-    def save_spectrum_library(self):
-        #saving library to file
-        with open(self.params.in_pre_file, 'wb') as LIBfilehandle:
-            pickle.dump(self.LIB, LIBfilehandle)
+    def generate_mask(self):
+        ble = True
 
-
-    def check_history(self):
-        #checking if preprocessing steps have already been exectured in past
-        ble = 1
-
-    def generate_priors(self):
-        #collects priors from correlation analysis and passes them to main code in standardised format
-        ble = 1
-
-    def correlate(self):
-        ble = 1
-
-    def create_masks(self):
-        #search for 'important' features in molecule line list by thresholding (?!)
-        #create wavelength grid of important features per molecule to be used for correlation analysis
-        ble = 1
-
-    def generate_library_grid(self):
-        #genrate temperature, mixing ratio grid for available molecules
-        #generate indexing map of library (dictionaries or arrays?)
-        ble = 1
-
-    def generate_library(self):
-        #load preexisting
-        #load grid and input ABS files
-        #save generated to pickled object
-        #save generated to ascii files
-
-        ble = 1
