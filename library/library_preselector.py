@@ -1,5 +1,5 @@
 import numpy as np
-import pylab as py
+import pylab as pl
 import sklearn.decomposition as sk
 import glob,string, pickle,gzip
 
@@ -119,16 +119,17 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=3):
                 DATA[:,j] = tmp[:,1]
                 if j == 0:
                     wavegrid = tmp[:,0]
-                    j += 1
+                j += 1
 
-        pca = sk.RandomizedPCA(n_components=comp_num)
+        pca = sk.RandomizedPCA(n_components=comp_num,whiten=False)
         pca.fit(np.transpose(DATA))
 
         meanspec = np.mean(DATA,axis=1)
 
         normPCA = np.zeros((mollenlist[i],comp_num))
         for jj in range(comp_num):
-            normPCA[:,jj] = (pca.components_[jj]-np.min(pca.components_[jj])) /np.max(pca.components_[jj])
+            normPCA[:,jj] = (pca.components_[jj]-np.min(pca.components_[jj])) /np.max((pca.components_[jj]-np.min(pca.components_[jj])))
+
 
         #add to OUTdic
         OUTdic[molnamelist[i]] = {}
@@ -141,8 +142,10 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=3):
         OUTdic[molnamelist[i]]['PCA']['full'] = pca
         OUTdic[molnamelist[i]]['PCA']['norm'] = normPCA
 
-        if OUTPATH != False:
-            with gzip.GzipFile(OUTPATH+'spec_pcalib.pkl.zip','wb') as outhandle:
-                pickle.dump(OUTdic,outhandle)
 
-        return OUTdic
+
+    if OUTPATH != False:
+        with gzip.GzipFile(OUTPATH+'spec_pcalib.pkl.zip','wb') as outhandle:
+            pickle.dump(OUTdic,outhandle)
+
+    return OUTdic

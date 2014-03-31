@@ -67,17 +67,24 @@ if params.verbose == True:
 
 #####################################################################
 
+#initialising data object
+dataob = data(params)
+
+
 #initiating preselector class
-preob = preselector(params)
-preob.run_preprocess()
+preob = preselector(params,dataob)
+# preob.run_preprocess()
+# preob.run_preprocess(convertLinelist=False,generateSpectra=False,generatePCA=True)
+preob.load_library()
+preob.interpolate2data()
+preob.generate_mask()
 
 print 'end'
 
 
 exit()
 
-#initialising data object
-dataob = data(params)
+
 
 #adding some molecules to the atmosphere
 dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
