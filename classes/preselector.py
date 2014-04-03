@@ -25,6 +25,7 @@ import numpy as np
 import pylab as pl
 import pickle,gzip,os
 from library.library_preselector import *
+import scipy.stats.stats as st
 
 
 class preselector(object):
@@ -102,28 +103,101 @@ class preselector(object):
 
 
 
-    def generate_mask(self):
+    def generate_mask(self,thres=0.6):
         #generates mask for the correlation processs
         #the masks are generated from the first normalised PC
 
         molkeys = self.PCALIB.keys()
         for molecule in molkeys:
             pc1 = self.PCALIB[molecule]['PCA']['norm'][:,0]
-            pc2 = self.PCALIB[molecule]['PCA']['norm'][:,1]
 
-            mask = pc1 > 0.6
+            #adding mask to object
+            self.PCALIB[molecule]['PCA']['mask'] = pc1 >thres
 
-            print mask
+            try:
+                pc1_interp = self.PCALIB[molecule]['PCA']['norm_interp'][:,0]
+                self.PCALIB[molecule]['PCA']['interp_mask'] = pc1_interp > thres
+            except(KeyError):
+                pass
 
-            # print pc1
+
+            # print mask
+
+            # xaxis = np.zeros((len(pc1),1))
+            # for j in range(len(pc1)):
+            #     xaxis[j] = j
+            # # print pc1
+            # # exit()
+            # pl.figure(1)
+            # pl.plot(xaxis,pc1,'b')
+            # pl.plot(xaxis,pc2,'g')
+            # pl.plot(xaxis[mask],pc1[mask],'r')
+            #
+            # # pl.figure(2)
+            # # pl.plot(pc1[mask])
+            # pl.show()
             # exit()
-            pl.figure(1)
-            pl.plot(pc1)
-            pl.plot(pc2)
 
-            pl.figure(2)
-            pl.plot(pc1[mask])
-            pl.show()
+    def correlate(self):
 
 
 
+        #normalise data
+        data = self.spectrum[:,1]
+        datanorm = data - np.min(data)
+        datanorm /= np.max(datanorm)
+
+
+        molkeys = self.PCALIB.keys()
+        for molecule in molkeys:
+            #adding layer to PCALIB
+            self.PCALIB[molecule]['preselect'] = {}
+
+            #loading mask
+            mask = self.PCALIB[molecule]['PCA']['interp_mask']
+
+            datanorm_m = datanorm[mask]-np.mean(datanorm[mask])
+            pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
+            pc2_inv = -1.0*pc2
+
+
+            corrcoeff = st.pearsonr(datanorm_m,pc2)
+            print molecule,': ',corrcoeff, '... ',np.sum(sqrt((datanorm_m-pc2)**2)/self.spectrum[mask,2])/len(datanorm[mask]),'... ',np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+
+            # pl.figure(1)
+            # pl.plot(datanorm_m,'b')
+            # # pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
+            # pl.plot(pc2,'g')
+            # pl.plot(pc2_inv,'y')
+            # #
+            # pl.figure(2)
+            # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+            # pl.show()
+
+            self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff
+            # self.PCALIB[molecule]['preselect']['euclid_dist'] = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
+            if corrcoeff[0] <0.0:
+                self.PCALIB[molecule]['preselect']['euclid_dist'] = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+            else:
+                self.PCALIB[molecule]['preselect']['euclid_dist'] = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
+
+
+    def rank_molecules(self):
+
+        molkeys = self.PCALIB.keys()
+        distance = []
+        for molecule in molkeys:
+            distance.append(self.PCALIB[molecule]['preselect']['euclid_dist'])
+        print ''
+
+        idx = np.argsort(distance)
+        print distance
+        print np.asarray(distance)[idx]
+        print np.asarray(molkeys)
+        print ''
+        print np.asarray(molkeys)[idx]
+
+        pl.figure(3)
+        pl.plot(np.asarray(distance)[idx])
+        show()

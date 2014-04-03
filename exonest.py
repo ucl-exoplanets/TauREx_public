@@ -78,6 +78,8 @@ preob = preselector(params,dataob)
 preob.load_library()
 preob.interpolate2data()
 preob.generate_mask()
+preob.correlate()
+preob.rank_molecules()
 
 print 'end'
 
