@@ -73,18 +73,7 @@ dataob = data(params)
 
 #initiating preselector class
 preob = preselector(params,dataob)
-# preob.run_preprocess()
-# preob.run_preprocess(convertLinelist=False,generateSpectra=False,generatePCA=True)
-preob.load_library()
-preob.interpolate2data()
-preob.generate_mask()
-preob.correlate()
-preob.rank_molecules()
-
-print 'end'
-
-
-exit()
+preob.run(runpreprocess=False)
 
 
 

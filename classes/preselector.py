@@ -40,6 +40,26 @@ class preselector(object):
         self.wavegrid = self.spectrum[:,0]
 
 
+    def run(self,runpreprocess=True):
+        #script running the preselector
+
+        if runpreprocess == True:
+            #running pre_processing routines using parameter file specifications
+            self.run_preprocess()
+        #loading generated spectral library and running PCA
+        self.load_library()
+        #interpolating PCA vectors onto data vector
+        self.interpolate2data()
+        #generating mask for correlation using first principal component
+        self.generate_mask()
+        #computing euclidian distance and correlation coefficients between library and data
+        self.correlate()
+        #rank molecules according to their lowest euclidian distance to data
+        #also estimate number of likely molecules in data
+        self.rank_molecules()
+        print self.mol_rank
+        print self.mol_idx
+
 
 
     def run_preprocess(self,convertLinelist=None,generateSpectra=None,generatePCA=None):
@@ -122,7 +142,6 @@ class preselector(object):
 
 
             # print mask
-
             # xaxis = np.zeros((len(pc1),1))
             # for j in range(len(pc1)):
             #     xaxis[j] = j
@@ -139,8 +158,8 @@ class preselector(object):
             # exit()
 
     def correlate(self):
-
-
+        #applies pre-determined masks and correlates the data to the second
+        #principal component of the spectral library
 
         #normalise data
         data = self.spectrum[:,1]
@@ -160,27 +179,33 @@ class preselector(object):
             pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
             pc2_inv = -1.0*pc2
 
+            eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
+            eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
 
             corrcoeff = st.pearsonr(datanorm_m,pc2)
-            print molecule,': ',corrcoeff, '... ',np.sum(sqrt((datanorm_m-pc2)**2)/self.spectrum[mask,2])/len(datanorm[mask]),'... ',np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
 
+
+            self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff
+            self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist
+            # if corrcoeff[0] <0.0:
+            # if eucdist_inv < eucdist:
+            #     self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist_inv
+            # else:
+            #     self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist
+
+
+
+            # print molecule,': ',corrcoeff, '... ',eucdist,'... ',eucdist_inv
             # pl.figure(1)
             # pl.plot(datanorm_m,'b')
             # # pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
             # pl.plot(pc2,'g')
-            # pl.plot(pc2_inv,'y')
+            # # pl.plot(pc2_inv,'y')
             # #
-            # pl.figure(2)
-            # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+            # # pl.figure(2)
+            # # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+            # # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
             # pl.show()
-
-            self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff
-            # self.PCALIB[molecule]['preselect']['euclid_dist'] = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
-            if corrcoeff[0] <0.0:
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
-            else:
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
 
 
     def rank_molecules(self):
@@ -189,15 +214,29 @@ class preselector(object):
         distance = []
         for molecule in molkeys:
             distance.append(self.PCALIB[molecule]['preselect']['euclid_dist'])
-        print ''
 
         idx = np.argsort(distance)
-        print distance
-        print np.asarray(distance)[idx]
-        print np.asarray(molkeys)
-        print ''
-        print np.asarray(molkeys)[idx]
 
-        pl.figure(3)
-        pl.plot(np.asarray(distance)[idx])
-        show()
+        diff = 0
+        diffidx = 0
+        sortdist = np.asarray(distance)[idx]
+        for i in range(len(sortdist)-1):
+            if (sortdist[i+1]-sortdist[i]) > diff:
+                diff = (sortdist[i+1]-sortdist[i])
+                diffidx = i
+
+        self.mol_rank = np.asarray(molkeys)[idx]
+        self.mol_dist = sortdist
+        self.mol_idx  = diffidx
+
+        # print ''
+        # print distance
+        # print np.asarray(distance)[idx]
+        # print np.asarray(molkeys)
+        # print ''
+        # print np.asarray(molkeys)[idx]
+        # print diffidx, diff
+        #
+        # pl.figure(3)
+        # pl.plot(np.asarray(distance)[idx])
+        # show()
