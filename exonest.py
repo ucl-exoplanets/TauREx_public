@@ -72,8 +72,8 @@ dataob = data(params)
 
 
 #initiating preselector class
-preob = preselector(params,dataob)
-preob.run(runpreprocess=False)
+# preob = preselector(params,dataob)
+# preob.run(runpreprocess=False)
 
 
 
