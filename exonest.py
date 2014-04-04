@@ -67,14 +67,15 @@ if params.verbose == True:
 
 #####################################################################
 
-#initiating preselector class
-# preob = preselector(params)
-
-
-# exit()
-
 #initialising data object
 dataob = data(params)
+
+
+#initiating preselector class
+# preob = preselector(params,dataob)
+# preob.run(runpreprocess=False)
+
+
 
 #adding some molecules to the atmosphere
 dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
@@ -96,40 +97,53 @@ transob = transmission(params, dataob)
 ###example of how to manually reading in ABS file and computing transmission spectrum
 # dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
 #                    filelist=['1H2-16O_0-29999_600K_0.010000.sigma.abs'])
-# transob.reset(dataob) #resets transob to reflect changes in dataob
-# MODEL = transob.cpath_integral() #computing transmission
-#
-# figure()
-# plot(MODEL)
-# show()
+
+X_in   = zeros((profileob.nlayers,profileob.ngas))
+X_in  += 1e-5
+rho_in = profileob.get_rho(T=2000)
+
+
+dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
+                   filelist=['1H2-16O_300-29995_1400K_1.000000.sigma.abs'])
+transob.reset(dataob) #resets transob to reflect changes in dataob
+
+#manually setting mixing ratio and T-P profile
+X_in   = zeros((profileob.nlayers,profileob.ngas))
+X_in  += 1e-5
+rho_in = profileob.get_rho(T=2000)
+MODEL = transob.cpath_integral(rho=rho_in,X=X_in) #computing transmission
+
+figure()
+plot(dataob.wavegrid,MODEL)
+show()
 
 #########
 
 
 # #initialising fitting object
-fitob = fitting(params, dataob, profileob, transob)
-#
-#fit data
-# fitob.downhill_fit()    #simplex downhill fit
-# fitob.mcmc_fit()        #MCMC fit
-fitob.multinest_fit()   #Nested sampling fit
-#
-#manually call transmission spectrum code
-# absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
-#
-#
-#
-# outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
-#
-#plotting fits and data
-outputob.plot_all()
-# outputob.plot_spectrum()   #plotting data only
-# outputob.plot_multinest()  #plotting multinest posteriors
-# outputob.plot_mcmc()       #plotting mcmc posterios
-# outputob.plot_fit()        #plotting model fits
-#
-outputob.save_model()       #saving models to ascii
-#
-#
-#
-show()
+# fitob = fitting(params, dataob, profileob, transob)
+# #
+# #fit data
+# # fitob.downhill_fit()    #simplex downhill fit
+# # fitob.mcmc_fit()        #MCMC fit
+# fitob.multinest_fit()   #Nested sampling fit
+# #
+# #manually call transmission spectrum code
+# # absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
+# #
+# #
+# #
+# # outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
+# #
+# #plotting fits and data
+# outputob.plot_all()
+# # outputob.plot_spectrum()   #plotting data only
+# # outputob.plot_multinest()  #plotting multinest posteriors
+# # outputob.plot_mcmc()       #plotting mcmc posterios
+# # outputob.plot_fit()        #plotting model fits
+# #
+# outputob.save_model()       #saving models to ascii
+# #
+# #
+# #
+# show()

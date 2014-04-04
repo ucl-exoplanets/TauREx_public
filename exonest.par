@@ -39,9 +39,6 @@ include_cld = False
 #file from which to read optical depths for extra opacities (e.g. clouds)
 cld_file = Input/cloud1.cld
 
-#preselector library (contains pre-computed spectra for preselector class)
-pre_file = Input/pre_speclib.dat
-
 
 
 [Output]
@@ -50,6 +47,31 @@ path = Output/
 
 #output file prefix
 file_prefix = test_
+
+
+[Preselector]
+#Path of ExoMol cross section files folder
+cross_path = test-code/crosssections/
+
+#Path of spectral library folder
+speclib_path = test-code/speclib/
+
+#Path of PCA preselector .pkl file
+pca_path = test-code/
+
+#run ExoMol cross section conversion from wavenumbers to microns
+convert2microns = False
+
+#(re)generate spectral library
+generate_speclib = False
+
+#mixing ratios for which spectra are computed
+mixing_ratio = 1e-6,1e-5,1e-4,1e-3,1e-2
+
+#(re)compute PCA preselector file
+generate_pca = True
+
+
 
 
 [Star]
