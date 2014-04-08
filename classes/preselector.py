@@ -24,6 +24,7 @@
 import numpy as np
 import pylab as pl
 import pickle,gzip,os
+from copy import deepcopy
 from library.library_preselector import *
 import scipy.stats.stats as st
 
@@ -57,8 +58,11 @@ class preselector(object):
         #rank molecules according to their lowest euclidian distance to data
         #also estimate number of likely molecules in data
         self.rank_molecules()
-        print self.mol_rank
-        print self.mol_idx
+        #calculating some planetary parameters
+        self.calc_astroparams()
+
+        # print self.mol_rank
+        # print self.mol_idx
 
 
 
@@ -240,3 +244,54 @@ class preselector(object):
         # pl.figure(3)
         # pl.plot(np.asarray(distance)[idx])
         # show()
+
+
+    def calc_astroparams(self):
+    #calculating planetary parameters from stellar and orbital parameters
+
+        #calculating mean planetary surface temperature
+        self.Tplanet = self.params.star_temp * sqrt(self.params.star_radius / (
+            2. * self.params.planet_sma)) * (1 - self.params.planet_albedo) ** (1. / 4.)
+
+
+    def update_params(self):
+    #updates the parameter object with perselector derived values and returns
+    #updated copy to main code
+
+        newparams = deepcopy(self.params)
+
+        #setting planetary temperature
+        newparams.planet_temp = self.Tplanet
+
+        #setting number of gases/molecules
+        newparams.tp_num_gas = self.mol_idx+1
+
+        #setting molecules list
+        newparams.planet_molec = self.mol_rank[self.mol_idx]
+
+        #setting new abs_files path
+        newparams.in_abs_path = self.params.pre_cross_path
+
+        #determining correct abs files to be read in
+        #reading available cross section lists in PATH
+        globlist = glob.glob(self.params.pre_cross_path+'*.abs')
+
+        #determining the right abs file for correct Tplanet
+        #this needs to be changed when we want several temperatures
+        absfilelist = []
+        for molecule in (self.mol_rank[:self.mol_idx+1]):
+            temp = self.PCALIB[molecule]['temps']
+            next_temp = find_nearest(temp,self.Tplanet)[0]
+
+            for FILE in globlist:
+                fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+                splitname = string.split(fname,'_',3)
+
+                if splitname[0] == molecule:
+                    if float(splitname[2][:-1]) == next_temp:
+                        absfilelist.append(fname)
+
+        #setting new list of abs files to be read
+        newparams.in_abs_files = absfilelist
+
+        return newparams

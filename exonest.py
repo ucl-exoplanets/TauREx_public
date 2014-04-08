@@ -72,8 +72,11 @@ dataob = data(params)
 
 
 #initiating preselector class
-# preob = preselector(params,dataob)
-# preob.run(runpreprocess=False)
+if params.pre_run:
+    preob = preselector(params,dataob)
+    #preob.run_preprocess(convertLinelist=False,generateSpectra=False,generatePCA=True)
+    preob.run(runpreprocess=False)
+    params = preob.update_params()
 
 
 

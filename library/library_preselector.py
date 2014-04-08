@@ -65,6 +65,13 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
             np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob.wavegrid,MODEL)))
 
 
+def find_nearest(arr, value):
+    # find nearest value in array
+    arr = np.array(arr)
+    idx = (abs(arr-value)).argmin()
+    return [arr[idx], idx]
+
+
 def PCA(DATA0,PCnum):
 #small wrapper doing PCA using sk module
     DATA = np.transpose(DATA0)
@@ -112,11 +119,16 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=3):
     for i in range(len(molnamelist)):
         DATA = np.zeros((mollenlist[i],molnumlist[i]))
 
+        templist = []
         j=0
         for f in FILES:
             if (f.rpartition('/')[-1]).split('_')[0] == molnamelist[i]:
                 tmp = np.loadtxt(f)
                 DATA[:,j] = tmp[:,1]
+                temp  = float(string.rsplit(f,'_',3)[1][:-1]) #getting temperature from file name
+                if temp not in templist:
+                    templist.append(temp)
+
                 if j == 0:
                     wavegrid = tmp[:,0]
                 j += 1
@@ -136,11 +148,14 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=3):
         OUTdic[molnamelist[i]]['length']   = int(mollenlist[i])
         OUTdic[molnamelist[i]]['numbers']  = int(molnumlist[i])
         OUTdic[molnamelist[i]]['wavegrid'] = wavegrid
+        OUTdic[molnamelist[i]]['temps']    = sorted(templist)
         OUTdic[molnamelist[i]]['data']     = DATA
         OUTdic[molnamelist[i]]['meanspec'] = meanspec
         OUTdic[molnamelist[i]]['PCA']      = {}
         OUTdic[molnamelist[i]]['PCA']['full'] = pca
         OUTdic[molnamelist[i]]['PCA']['norm'] = normPCA
+        # OUTdic[molnamelist[i]]['filename'] =
+        # OUTdic[molnamelist[i]]['path']     = PATH
 
 
 

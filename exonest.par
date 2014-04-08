@@ -7,6 +7,45 @@ verbose = True
 trans_cpp = True
 
 
+
+[Preselector]
+
+#Run preselector module to automatically estimate
+#number and types of molecules present in spectrum.
+#If run, the following parameters will be automatically
+#determined and overwritten by the pre-selector
+# [Input]: atm_file, abs_path (overwritten by cross_path), abs_files
+# [Planet]: temp, molec, (mu not yet)
+# [T-P profile]: num_gas
+# not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
+
+#run preselector
+run_pre = True
+
+#Path of ExoMol cross section files folder
+cross_path = test-code/crosssections/
+
+#Path of spectral library folder
+speclib_path = test-code/speclib/
+
+#Path of PCA preselector .pkl file
+pca_path = test-code/
+
+#run ExoMol cross section conversion from wavenumbers to microns
+convert2microns = False
+
+#(re)generate spectral library
+generate_speclib = False
+
+#mixing ratios for which spectra are computed
+mixing_ratio = 1e-6,1e-5,1e-4,1e-3,1e-2
+
+#(re)compute PCA preselector file
+generate_pca = True
+
+
+
+
 [Input]
 #Observed spectrum to be fitted
 spectrum_file = Input/testspec.txt
@@ -49,29 +88,6 @@ path = Output/
 file_prefix = test_
 
 
-[Preselector]
-#Path of ExoMol cross section files folder
-cross_path = test-code/crosssections/
-
-#Path of spectral library folder
-speclib_path = test-code/speclib/
-
-#Path of PCA preselector .pkl file
-pca_path = test-code/
-
-#run ExoMol cross section conversion from wavenumbers to microns
-convert2microns = False
-
-#(re)generate spectral library
-generate_speclib = False
-
-#mixing ratios for which spectra are computed
-mixing_ratio = 1e-6,1e-5,1e-4,1e-3,1e-2
-
-#(re)compute PCA preselector file
-generate_pca = True
-
-
 
 
 [Star]
@@ -79,6 +95,10 @@ generate_pca = True
 
 #Stellar radius (R_sun)
 radius = 0.788
+
+#Stellar temperature (K)
+temp   = 4800
+
 
 
 [Planet]
@@ -89,6 +109,9 @@ radius = 1.138
 
 #Orbital semi-major axis (AU)
 sma = 0.03142
+
+#Planetary bond albedo (0-1)
+albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
 grav = 21.2

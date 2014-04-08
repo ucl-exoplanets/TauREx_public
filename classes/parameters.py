@@ -45,19 +45,22 @@ class parameters(object):
         self.out_path              = parser.get('Output','path')
         self.out_file_prefix       = parser.get('Output','file_prefix')
 
+        self.pre_run               = parser.getboolean('Preselector','run_pre')
         self.pre_cross_path        = parser.get('Preselector','cross_path')
         self.pre_speclib_path      = parser.get('Preselector','speclib_path')
         self.pre_pca_path          = parser.get('Preselector','pca_path')
         self.pre_conver2microns    = parser.getboolean('Preselector','convert2microns')
         self.pre_gen_speclib       = parser.getboolean('Preselector','generate_speclib')
         self.pre_mixing_ratios     = genfromtxt(StringIO(parser.get('Preselector', 'mixing_ratio')), delimiter = ',')
-        self.pre_gen_pca           =parser.getboolean('Preselector','generate_pca')
+        self.pre_gen_pca           = parser.getboolean('Preselector','generate_pca')
         
         self.star_radius           = parser.getfloat('Star', 'radius')    *RSOL
+        self.star_temp             = parser.getfloat('Star','temp')
         
         self.planet_radius         = parser.getfloat('Planet', 'radius')  *RJUP
         self.planet_sma            = parser.getfloat('Planet', 'sma')     *AU
         self.planet_grav           = parser.getfloat('Planet', 'grav')
+        self.planet_albedo         = parser.getfloat('Planet','albedo')
         self.planet_temp           = parser.getfloat('Planet', 'temp')
         self.planet_mu             = parser.getfloat('Planet', 'mu')      *AMU
         self.planet_molec          = parser.get('Planet','molec')
