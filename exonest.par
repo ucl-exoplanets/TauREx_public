@@ -20,7 +20,7 @@ trans_cpp = True
 # not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
 
 #run preselector
-run_pre = True
+run_pre = False
 
 #Path of ExoMol cross section files folder
 cross_path = test-code/crosssections/
@@ -41,7 +41,7 @@ generate_speclib = False
 mixing_ratio = 1e-6,1e-5,1e-4,1e-3,1e-2
 
 #(re)compute PCA preselector file
-generate_pca = True
+generate_pca = False
 
 
 
@@ -49,6 +49,9 @@ generate_pca = True
 [Input]
 #Observed spectrum to be fitted
 spectrum_file = Input/testspec.txt
+
+#use T-P profile and mixing ratios ATM file
+use_ATMfile = True
 
 #file containing pre-determined T-P profile and mixing ratios
 atm_file = Input/profile.atm

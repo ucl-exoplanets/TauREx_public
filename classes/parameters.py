@@ -31,6 +31,7 @@ class parameters(object):
         self.trans_cpp             = parser.getboolean('General', 'trans_cpp')
         
         self.in_spectrum_file      = parser.get('Input','spectrum_file')
+        self.in_use_ATMfile        = parser.getboolean('Input','use_ATMfile')
         self.in_atm_file           = parser.get('Input','atm_file')
         self.in_abs_path           = parser.get('Input','abs_path')
         self.in_abs_files          = parser.get('Input','abs_files')
@@ -66,9 +67,9 @@ class parameters(object):
         self.planet_molec          = parser.get('Planet','molec')
         
         self.tp_var_atm            = parser.getboolean('T-P profile','var_atm')
-        self.tp_num_scale          = parser.getfloat('T-P profile', 'num_scaleheights')
-        self.tp_atm_levels         = parser.getfloat('T-P profile', 'atm_levels')
-        self.tp_num_gas            = parser.getfloat('T-P profile', 'num_gas')
+        self.tp_num_scale          = parser.getint('T-P profile', 'num_scaleheights')
+        self.tp_atm_levels         = parser.getint('T-P profile', 'atm_levels')
+        self.tp_num_gas            = parser.getint('T-P profile', 'num_gas')
         self.tp_var_temp           = parser.getboolean('T-P profile', 'var_temp')
         self.tp_var_pres           = parser.getboolean('T-P profile', 'var_pres')
         self.tp_max_pres           = parser.getfloat('T-P profile', 'atm_max_pressure')

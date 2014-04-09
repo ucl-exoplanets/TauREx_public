@@ -1,7 +1,8 @@
 import numpy as np
 import pylab as pl
 import sklearn.decomposition as sk
-import glob,string, pickle,gzip
+import glob,string,gzip
+import cPickle as pickle
 
 from classes.transmission import *
 from classes.profile import *

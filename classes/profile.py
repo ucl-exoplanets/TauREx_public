@@ -44,7 +44,7 @@ class profile(object):
             self.P       = self.pta[:,0]
             self.T       = self.pta[:,1]
             self.Z       = self.pta[:,2]
-            self.X       = zeros((self.nlayers,self.ngas))
+            self.X       = zeros((self.ngas,self.nlayers))
             self.X      += 1e-5  #setting up initial mixing ratios
             
         else:           

@@ -23,7 +23,8 @@
 #loading libraries
 import numpy as np
 import pylab as pl
-import pickle,gzip,os
+import gzip,os
+import cPickle as pickle
 from copy import deepcopy
 from library.library_preselector import *
 import scipy.stats.stats as st
@@ -264,7 +265,7 @@ class preselector(object):
         newparams.planet_temp = self.Tplanet
 
         #setting number of gases/molecules
-        newparams.tp_num_gas = self.mol_idx+1
+        newparams.tp_num_gas = int(self.mol_idx+1)
 
         #setting molecules list
         newparams.planet_molec = self.mol_rank[self.mol_idx]

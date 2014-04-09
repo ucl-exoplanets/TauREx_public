@@ -152,6 +152,7 @@ class transmission(object):
         Ctau = zeros((self.nlayers))
         exptau = zeros((self.nlayers))
 
+        molnum = len(X[:,0])
         #running loop over wavelengths     
         for wl in range(self.nwave):
             tau[:] = 0.0 
@@ -160,7 +161,8 @@ class transmission(object):
          
             for c,j,k in self.iteridx:
                 #optical depth due to gasses
-                tau[j] += (self.sigma_array[:,wl] * X[:,j+k] * rho[j+k] * self.dlarray[c])
+                for i in range(molnum):
+                    tau[j] += (self.sigma_array[i,wl] * X[i,j+k] * rho[j+k] * self.dlarray[c])
                 
                 Rtau[j] = self.Rsig[wl] * rho[j+k] * self.dlarray[c] #optical depth due to Rayleigh scattering
                 Ctau[j] = self.Csig[wl] * (rho[j+k] **2) * self.dlarray[c]  # calculating CIA optical depth
@@ -204,7 +206,7 @@ class transmission(object):
         cRs = C.c_double(self.Rs)
         clinecount = C.c_int(self.nwave)
         cnlayers = C.c_int(self.nlayers)
-        cn_gas = C.c_int(self.n_gas)
+        cn_gas = C.c_int(len(X[:,0]))
         
         #setting up output array
         absorption = zeros((self.nwave),dtype=float64)

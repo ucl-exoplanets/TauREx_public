@@ -28,24 +28,35 @@ class data(object):
 #initialisation
     def __init__(self,params):
         self.params = params
-        KBOLTZ=1.380648813e-23
+        self.KBOLTZ=1.380648813e-23
         
         #reading in spectrum data to be fitted
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
-        
+
+        #calculating atmospheric scale height
+        self.scaleheight = self.get_scaleheight()
+
         #reading in atmospheric profile file
+        #or generating it from parameter file values
         #pta = pressure, temp, alt
         #X = mixing ratios of molecules
-        self.pta,self.X = self.readATMfile()
-        self.nlayers = len(self.pta[:,0])
-        self.ngas = len(self.X[:,0])
-        
+        if self.params.in_use_ATMfile:
+            self.pta,self.X = self.readATMfile()
+            self.nlayers = len(self.pta[:,0])
+            self.ngas = len(self.X[:,0])
+        else:
+            self.nlayers = self.params.tp_atm_levels
+            self.ngas    = self.params.tp_num_gas
+            self.pta     = self.setup_pta_grid()
+            self.X       = zeros((self.ngas,self.nlayers))
+            self.X      += 1e-5  #setting up initial mixing ratios
+
         #calculating densities
-        self.rho = (self.pta[:,0])/(KBOLTZ*self.pta[:,1])
+        self.rho = (self.pta[:,0])/(self.KBOLTZ*self.pta[:,1])
         self.rho_tot = sum(self.rho)
-        
+
         #setting up dictionary with atmosphere parameters
         self.atmosphere = self.init_atmosphere()
         
@@ -76,7 +87,10 @@ class data(object):
     def __getitem__(self,name):
         return self.__dict__[name] 
 
-
+    def reset(self,params):
+    #allows to reset the original instance to reflect changes in the data instance
+    #this avoids an initialisation of a separate instance.
+        self.__init__(params)
 
 #class functions    
     def init_atmosphere(self, mu=0.0, def_mu=2.3):
@@ -89,7 +103,36 @@ class data(object):
         ATM['info']['nmol']    = 0      #number of molecule index
         
         return ATM
-    
+
+    def get_scaleheight(self,T_aver=None,surf_g=None,mmw=None):
+        #compute scaleheight of atmosphere
+        if T_aver==None:
+            T_aver = self.params.planet_temp
+        if surf_g == None:
+            surf_g = self.params.planet_grav
+        if mmw == None:
+            mmw = self.params.planet_mu
+
+        return (self.KBOLTZ*T_aver)/(mmw*surf_g)
+
+    def setup_pta_grid(self):
+    #generating atmospheric Pressure, Temperature, Altitude (PTA)
+    #grid if not read in from ATM file
+        MAX_P    = self.params.tp_max_pres
+        N_SCALE  = self.params.tp_num_scale
+        N_LAYERS = self.params.tp_atm_levels
+
+        max_z    = N_SCALE * self.scaleheight
+#         dz       = max_z / N_LAYERS
+
+        #generatinng altitude-pressure array
+        PTA_arr = zeros((N_LAYERS,3))
+        PTA_arr[:,2] = linspace(0,max_z,num=N_LAYERS)
+        PTA_arr[:,0] = MAX_P * exp(-PTA_arr[:,2]/self.scaleheight)
+        PTA_arr[:,1] = self.params.planet_temp
+
+        return PTA_arr
+
     def add_molecule(self,NAME, WT, RAD, RIDX,FRAC):
     #adding a molecule to the atmosphere dictionary
         self.atmosphere['mol'][NAME] = {}
@@ -172,7 +215,7 @@ class data(object):
 
     def __readABSfiles_sub(self,path, filelist, interpolate2data,num):
         if interpolate2data == True:
-            OUT = zeros((self.ngas,self.nwave))
+            OUT = zeros((num,self.nwave))
             WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
         else:
             tmp = self.readfile(path+filelist[0],INTERPOLATE=False)
