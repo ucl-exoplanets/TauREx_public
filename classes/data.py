@@ -189,14 +189,17 @@ class data(object):
 
         if extfilelist== None:
             #reading in list of abs files from parameter file
-            absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
-            try:
-                abslist = [absfiles.item()] #necessary for 0d numpy arrays
-            except ValueError:
-                abslist = absfiles
+            if isinstance(self.params.in_abs_files,str):
+                absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
+                try:
+                    abslist = [absfiles.item()] #necessary for 0d numpy arrays
+                except ValueError:
+                    abslist = absfiles
+            else:
+                abslist = self.params.in_abs_files
 
             #checking if number of gasses in parameters file is consistent with gass columns in atm file
-            if len(abslist) != self.ngas:
+            if self.params.in_use_ATMfile and len(abslist) != self.ngas:
                 print len(abslist)
                 print self.ngas
                 raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
@@ -214,6 +217,7 @@ class data(object):
         
 
     def __readABSfiles_sub(self,path, filelist, interpolate2data,num):
+        print filelist
         if interpolate2data == True:
             OUT = zeros((num,self.nwave))
             WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
@@ -224,6 +228,7 @@ class data(object):
             WAVE = transpose(tmp[:,0])
 
         for i in range(num):
+            # print filelist[i]
             OUT[i,:] = transpose(self.readfile(path+filelist[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
 
         return OUT, WAVE
@@ -240,8 +245,7 @@ class data(object):
         
         #sorting data along ascending first column    
         OUT = OUT[argsort(OUT[:,0]),:]
-        
-        
+
 #         figure()
 #         plot(OUT[:,0], OUT[:,1])
         

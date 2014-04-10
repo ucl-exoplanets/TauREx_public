@@ -54,7 +54,7 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
         # print fname
 
         for mix in MIXING:
-            X_in   = zeros((int(profileob.nlayers),int(profileob.ngas))) #setting up mixing ratio array
+            X_in   = zeros((int(profileob.ngas),int(profileob.nlayers))) #setting up mixing ratio array
             X_in  += mix #setting mixing ratio
             rho_in = profileob.get_rho(T=temp) #calculating T-P profile
 

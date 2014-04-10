@@ -81,6 +81,7 @@ class profile(object):
         
         
     def setup_pta_grid(self):
+        #calculate pressure, temperature, altitude grid
         
         MAX_P    = self.params.tp_max_pres
         N_SCALE  = self.params.tp_num_scale
@@ -98,10 +99,10 @@ class profile(object):
         
         return PTA_arr
         
-        
-                
+
         
     def get_rho(self,T=None,P=None):
+        #calculate atmospheric densities for given temperature and pressure
         
         if P == None:
             P = self.P
@@ -110,5 +111,5 @@ class profile(object):
             
         return  (P)/(self.botlzman*T)   
         
-        
+    # def cast_FIT_array(self,FIT,):
         

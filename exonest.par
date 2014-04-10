@@ -15,12 +15,13 @@ trans_cpp = True
 #If run, the following parameters will be automatically
 #determined and overwritten by the pre-selector
 # [Input]: atm_file, abs_path (overwritten by cross_path), abs_files
+# [Input]: use_ATMfile = False,
 # [Planet]: temp, molec, (mu not yet)
 # [T-P profile]: num_gas
 # not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
 
 #run preselector
-run_pre = False
+run_pre = True
 
 #Path of ExoMol cross section files folder
 cross_path = test-code/crosssections/
@@ -38,7 +39,7 @@ convert2microns = False
 generate_speclib = False
 
 #mixing ratios for which spectra are computed
-mixing_ratio = 1e-6,1e-5,1e-4,1e-3,1e-2
+mixing_ratio = 1e-6,1e-5,1e-4,1e-3
 
 #(re)compute PCA preselector file
 generate_pca = False
@@ -48,10 +49,10 @@ generate_pca = False
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/testspec.txt
+spectrum_file = Input/its_a_mystery2.dat
 
 #use T-P profile and mixing ratios ATM file
-use_ATMfile = True
+use_ATMfile = False
 
 #file containing pre-determined T-P profile and mixing ratios
 atm_file = Input/profile.atm
@@ -140,7 +141,7 @@ num_scaleheights = 22
 
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
-atm_levels = 42
+atm_levels = 35
 
 #number of gasses in atmosphere. 
 #If var_atm = False, num_gas is taken from .atm file
@@ -173,11 +174,11 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 1000
-T_low = 1000
+T_up  = 300
+T_low = 300
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 5e-4
+X_up  = 5e-3
 X_low = 0.0
 
 

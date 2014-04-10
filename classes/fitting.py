@@ -60,14 +60,20 @@ class fitting(object):
 #             self.params.fit_param_free_X = self.params.tp_atm_levels*self.params.tp_num_gas
         
         #setting up initial parameter array
-        self.PINIT = zeros((self.nlayers,self.ngas+1))
-        self.PINIT[:,0] = self.profileob.T
-        self.PINIT[:,1:] = self.profileob.X
-        
+        # self.PINIT = zeros((self.ngas+1,self.nlayers))
+        # self.PINIT[0,:] = self.profileob.T
+        # self.PINIT[1:,:] = self.profileob.X
+
+        self.PINIT     = zeros((self.ngas+1))
+        self.PINIT[0]  = self.profileob.T[0]
+        for i in range(1,self.ngas):
+            self.PINIT[i] = self.profileob.X[i,0]
+
         self.Pshape = shape(self.PINIT)
         
         self.PINIT2 = self.PINIT.flatten(order='F')
-        self.PINIT3 = self.PINIT2[(self.Pshape[0]-1):] #restricting temperature to one free parameter only
+        # self.PINIT3 = self.PINIT2[(self.Pshape[0]-1):] #restricting temperature to one free parameter only
+        self.PINIT3 = self.PINIT2
 
        
         #initialising output tags
@@ -80,11 +86,16 @@ class fitting(object):
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
+        # print np.shape(PFIT)
+
         rho = self.profileob.get_rho(T=PFIT[0])
 #         print PFIT[0]
 #         X   = PFIT[1:].reshape(self.Pshape[0],self.Pshape[1]-1)
-        X   = zeros((self.nlayers,self.ngas))
-        X  += PFIT[1]
+
+        X   = zeros((self.ngas,self.nlayers))
+        for i in range(1,self.ngas):
+            X[i,:] += PFIT[i]
+
 
         MODEL = self.transmod.cpath_integral(rho=rho,X=X)
 
@@ -96,19 +107,19 @@ class fitting(object):
 
     def collate_downhill_results(self,PFIT):
         #function unpacking the downhill minimization results
-        Xout_mean = zeros((self.nlayers*self.ngas))
+        Xout_mean = zeros((self.ngas,self.nlayers))
         # Tout_mean = zeros((self.nlayers*self.ngas))
 
         Tout_mean= PFIT[0]
 
         if len(PFIT)-1 < self.nlayers*self.ngas:
-            Xout_mean[:] += PFIT[1:]
+            # Xout_mean[:] += PFIT[1:]
             for i in range(1,len(PFIT)-1):
-                Xout_mean[i] = PFIT[i]
+                Xout_mean[i,:] += PFIT[i]
         else:
             Xout_mean[:] = PFIT[1:]
 
-        Xout_mean = Xout_mean.reshape(self.nlayers,self.ngas)
+        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
         # print 'downhill ', shape(Xout_mean), shape(Tout_mean)
 
         return Tout_mean,Xout_mean
@@ -156,8 +167,8 @@ class fitting(object):
                 Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
                 Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
 
-        Xout_mean = Xout_mean.reshape(self.nlayers,self.ngas)
-        Xout_std = Xout_std.reshape(self.nlayers,self.ngas)
+        Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
+        Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
         return Tout_mean, Tout_std, Xout_mean, Xout_std
     
@@ -248,8 +259,8 @@ class fitting(object):
                 Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
 
 
-        Xout_mean = Xout_mean.reshape(self.nlayers,self.ngas)
-        Xout_std = Xout_std.reshape(self.nlayers,self.ngas)
+        Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
+        Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
         return Tout_mean, Tout_std, Xout_mean, Xout_std
 
@@ -270,7 +281,7 @@ class fitting(object):
             PFIT = asarray(PFIT)
             
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
-            llterms =   (-ndim/2.0)*log(pi) -log(DATASTDmean) -0.5* chi_t
+            llterms =   (-ndim/2.0)*np.log(pi) -np.log(DATASTDmean) -0.5* chi_t
 #             llterms =    -0.5* chi_t
             return llterms
     

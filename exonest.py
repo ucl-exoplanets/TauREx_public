@@ -77,7 +77,10 @@ if params.pre_run:
     preob = preselector(params,dataob)
     #preob.run_preprocess(convertLinelist=False,generateSpectra=False,generatePCA=True)
     preob.run()
-    dataob.reset(preob.update_params())
+    # print preob.mol_rank, preob.mol_idx
+    params = preob.update_params()
+    dataob.reset(params)
+
 
 
 
@@ -109,9 +112,9 @@ transob = transmission(params, dataob)
 # rho_in = profileob.get_rho(T=1000)
 
 
-dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
-                   filelist=['12C-16O_300-8499_1000K_1.000000.sigma.abs','1H2-16O_300-29995_1000K_1.000000.sigma.abs'],interpolate=True)
-transob.reset(dataob) #resets transob to reflect changes in dataob
+# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
+#                    filelist=['12C-16O_300-8499_1000K_1.000000.sigma.abs','1H2-16O_300-29995_1000K_1.000000.sigma.abs'],interpolate=True)
+# transob.reset(dataob) #resets transob to reflect changes in dataob
 
 # figure(200)
 # plot(dataob.sigma_array[0,:])
@@ -119,27 +122,28 @@ transob.reset(dataob) #resets transob to reflect changes in dataob
 # show()
 
 
-#manually setting mixing ratio and T-P profile
-X_in   = zeros((2,profileob.nlayers))
-print np.shape(X_in)
-X_in[0,:]  += 1e-1
-X_in[1,:]  += 1e-5
-rho_in = profileob.get_rho(T=1000)
-MODEL = transob.cpath_integral(rho=rho_in,X=X_in)  # computing transmission
-
-figure()
-plot(dataob.wavegrid,MODEL)
-show()
-
-exit()
-
-#########
+# #manually setting mixing ratio and T-P profile
+# X_in   = zeros((profileob.ngas,profileob.nlayers))
+# print np.shape(X_in)
+# X_in  += 1e-5
+#
+# rho_in = profileob.get_rho(T=1000)
+# MODEL = transob.cpath_integral(rho=rho_in,X=X_in)  # computing transmission
+#
+# figure()
+# plot(dataob.wavegrid,MODEL)
+# show()
+#
+# exit()
+#
+# #########
 
 
 #initialising fitting object
 print 'loading fitting'
 fitob = fitting(params, dataob, profileob, transob)
 #
+print 'fitting data'
 #fit data
 fitob.downhill_fit()    #simplex downhill fit
 # fitob.mcmc_fit()        #MCMC fit
