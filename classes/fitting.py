@@ -44,9 +44,9 @@ class fitting(object):
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = params.tp_num_gas
-        # self.n_params    = int(self.ngas * self.nlayers + 1) #+1 for only one temperature so far
+        self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         
-        self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
+        # self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
 
         #defining prior bounds
         self.X_up        = self.params.fit_X_up
@@ -81,12 +81,15 @@ class fitting(object):
         self.MCMC     = False
         self.NEST     = False
 
-        
+
         
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
-        # print np.shape(PFIT)
+        if PFIT[0] < self.params.fit_T_low:
+            PFIT[0] = self.params.fit_T_low
+        elif PFIT[0] > self.params.fit_T_up:
+            PFIT[0] = self.params.fit_T_up
 
         rho = self.profileob.get_rho(T=PFIT[0])
 #         print PFIT[0]
@@ -94,12 +97,27 @@ class fitting(object):
 
         X   = zeros((self.ngas,self.nlayers))
         for i in range(1,self.ngas):
+            if PFIT[i]< self.params.fit_X_low:
+                PFIT[i] = self.params.fit_X_low
+            elif PFIT[i] > self.params.fit_X_up:
+                PFIT[i] = self.params.fit_X_up
             X[i,:] += PFIT[i]
 
-
         MODEL = self.transmod.cpath_integral(rho=rho,X=X)
+        MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
 
-        res = (DATA-MODEL) / DATASTD
+        # ion()
+        # # clf()
+        # # figure(100)
+        # # plot(MODEL)
+        # # draw()
+        # clf()
+        # figure(101)
+        # plot(DATA,'g')
+        # plot(MODEL_interp)
+        # draw()
+
+        res = (DATA-MODEL_interp) / DATASTD
         return sum(res**2)
         
 ############################################################################### 
@@ -265,7 +283,7 @@ class fitting(object):
         return Tout_mean, Tout_std, Xout_mean, Xout_std
 
     
-    def multinest_fit(self):
+    def multinest_fit(self,RESUME=False):
         #multinest fitting routine (wrapper around PyMultiNest)
         def show(filepath): 
             """ open the output (pdf) file for the user """
@@ -311,7 +329,7 @@ class fitting(object):
         # progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         # threading.Timer(10, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
         pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,
-                        importance_nested_sampling = False, resume = True,
+                        importance_nested_sampling = False, resume = RESUME,
                         verbose = True,sampling_efficiency = 'parameter',
                         n_live_points = 1000,max_iter= 0)
         # progress.stop()

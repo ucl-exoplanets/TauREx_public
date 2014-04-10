@@ -45,12 +45,15 @@ class output(object):
             self.trans = transmission(params,data)
             if self.MCMC:
                 self.transspec_mcmc = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean)
+                self.transspec_mcmc = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_mcmc)
             if self.NEST:
                 self.transspec_nest = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.NEST_T_mean),X=fit.NEST_X_mean)
+                self.transspec_nest = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_nest)
                 # print shape(fit.NEST_T_mean), shape(fit.NEST_X_mean)
             if self.DOWN:
                 # print shape(fit.DOWNHILL_T_mean), shape(fit.DOWNHILL_X_mean)
                 self.transspec_down = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean)
+                self.transspec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_down)
         elif self.params.fit_emission:
             print 'Emission not implemented yet'
 

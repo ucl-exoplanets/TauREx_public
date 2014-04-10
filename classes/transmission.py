@@ -39,6 +39,7 @@ class transmission(object):
         self.sigma_array   = data['sigma_array']
         self.wavegrid      = data['wavegrid']
         self.nwave         = data['nwave']
+        self.nspecgrid     = data['nspecgrid']
         self.X             = data['X']
         self.atmosphere    = data['atmosphere']
 
@@ -94,7 +95,8 @@ class transmission(object):
         count = 0
         for j in range(self.nlayers-1):    
             for k in range(1,self.nlayers-j):
-                dl = 2.0 * (sqrt(pow((self.Rp + self.z[k+j]),2) - pow((self.Rp + self.z[j]),2)) - sqrt(pow((self.Rp + self.z[k-1+j]),2) - pow((self.Rp + self.z[j]),2)))
+                dl = 2.0 * (sqrt(pow((self.Rp + self.z[k+j]),2) - pow((self.Rp + self.z[j]),2)) -
+                            sqrt(pow((self.Rp + self.z[k-1+j]),2) - pow((self.Rp + self.z[j]),2)))
                 dlarray.append(dl)
                 jl.append(j)
                 kl.append(k)
@@ -146,7 +148,7 @@ class transmission(object):
             rho = self.rho
         
         #setting up arrays
-        absorption = zeros((self.nwave))
+        absorption = zeros((self.nspecgrid))
         tau = zeros((self.nlayers))  
         Rtau = zeros((self.nlayers))
         Ctau = zeros((self.nlayers))
@@ -154,7 +156,7 @@ class transmission(object):
 
         molnum = len(X[:,0])
         #running loop over wavelengths     
-        for wl in range(self.nwave):
+        for wl in range(self.nspecgrid):
             tau[:] = 0.0 
             exptau[:] = 0.0
             Rtau[:] = 0.0
@@ -204,12 +206,12 @@ class transmission(object):
         cCsig, cs1 = cast2cpp(self.Csig)
         cRp = C.c_double(self.Rp)
         cRs = C.c_double(self.Rs)
-        clinecount = C.c_int(self.nwave)
+        clinecount = C.c_int(self.nspecgrid)
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
         
         #setting up output array
-        absorption = zeros((self.nwave),dtype=float64)
+        absorption = zeros((self.nspecgrid),dtype=float64)
         
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int

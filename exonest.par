@@ -164,6 +164,9 @@ var_mix = True
 #defines general fittings parameters 
 #independent of method
 
+#resolution of model runs (R)
+spec_res = 2000
+
 #fit transmission model
 transmission = True
 
@@ -174,11 +177,11 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 300
-T_low = 300
+T_up  = 500
+T_low = 500
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 5e-3
+X_up  = 1e-2
 X_low = 0.0
 
 

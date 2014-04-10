@@ -34,6 +34,11 @@ class data(object):
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
+        # self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
+        #                                   lambda_min=self.wavegrid[0],lambda_max=self.wavegrid[-1])
+        # self.nspecgrid = len(self.specgrid)
+        self.specgrid = self.wavegrid
+        self.nspecgrid = self.nwave
 
         #calculating atmospheric scale height
         self.scaleheight = self.get_scaleheight()
@@ -115,6 +120,35 @@ class data(object):
 
         return (self.KBOLTZ*T_aver)/(mmw*surf_g)
 
+    def get_specgrid(self,R=5000,lambda_min=0.1,lambda_max=20.0):
+    #generating wavelength grid with uniform binning in log(lambda)
+    #lambda min and max are in microns, R is the spectral resolution
+    #R = lambda/delta_lamdba
+        specgrid = []
+        delta_lambda =[]
+
+        specgrid.append(lambda_min)
+        run = True
+        i=1
+        while run==True:
+            dlam= specgrid[i-1]/R
+            specgrid.append(specgrid[i-1]+dlam)
+            delta_lambda.append(dlam)
+
+            if specgrid[i] >= lambda_max:
+                run=False
+            i+=1
+
+        # figure()
+        # plot(specgrid)
+        # figure()
+        # plot(delta_lambda)
+        # show()
+        # exit()
+
+        return np.asarray(specgrid),np.asarray(delta_lambda)
+
+
     def setup_pta_grid(self):
     #generating atmospheric Pressure, Temperature, Altitude (PTA)
     #grid if not read in from ATM file
@@ -161,7 +195,7 @@ class data(object):
         if filelist == None:
             raise IOError('No input ABS file specified')
 
-        self.sigma_array,self.wavegrid = self.readABSfiles(extpath=path,extfilelist=filelist,interpolate2data=interpolate,outputwavegrid=True)
+        self.sigma_array,self.wavegrid = self.readABSfiles(extpath=path,extfilelist=filelist, interpolate2grid=interpolate,outputwavegrid=True)
         self.nwave = len(self.wavegrid)
 
 
@@ -179,7 +213,7 @@ class data(object):
     
     
     
-    def readABSfiles(self,extfilelist=None, extpath= None,interpolate2data=True,outputwavegrid=False):
+    def readABSfiles(self,extfilelist=None, extpath= None,interpolate2grid=True,outputwavegrid=False):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
     #
     # if filename = None, the absorption coefficient files will be read from the parameter file
@@ -205,10 +239,10 @@ class data(object):
                 raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
                 exit()
 
-            OUT, WAVE = self.__readABSfiles_sub(path=self.params.in_abs_path,filelist=abslist,interpolate2data=interpolate2data,num=self.ngas)
+            OUT, WAVE = self.__readABSfiles_sub(path=self.params.in_abs_path,filelist=abslist, interpolate2grid=interpolate2grid,num=self.ngas)
 
         else:
-            OUT, WAVE = self.__readABSfiles_sub(path=extpath,filelist=extfilelist,interpolate2data=interpolate2data,num=len(extfilelist))
+            OUT, WAVE = self.__readABSfiles_sub(path=extpath,filelist=extfilelist, interpolate2grid=interpolate2grid,num=len(extfilelist))
 
         if outputwavegrid == True:
             return OUT, WAVE
@@ -216,10 +250,9 @@ class data(object):
             return OUT
         
 
-    def __readABSfiles_sub(self,path, filelist, interpolate2data,num):
-        print filelist
-        if interpolate2data == True:
-            OUT = zeros((num,self.nwave))
+    def __readABSfiles_sub(self,path, filelist, interpolate2grid,num):
+        if interpolate2grid == True:
+            OUT = zeros((num,self.nspecgrid))
             WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
         else:
             tmp = self.readfile(path+filelist[0],INTERPOLATE=False)
@@ -229,7 +262,7 @@ class data(object):
 
         for i in range(num):
             # print filelist[i]
-            OUT[i,:] = transpose(self.readfile(path+filelist[i],INTERPOLATE=interpolate2data)[:,1])* 1e-4 #converting cm^2 to m^2
+            OUT[i,:] = transpose(self.readfile(path+filelist[i],INTERPOLATE=interpolate2grid)[:,1])* 1e-4 #converting cm^2 to m^2
 
         return OUT, WAVE
 
@@ -246,17 +279,18 @@ class data(object):
         #sorting data along ascending first column    
         OUT = OUT[argsort(OUT[:,0]),:]
 
-#         figure()
+        # figure()
 #         plot(OUT[:,0], OUT[:,1])
         
-        #interpolating to wavelength grid of data
-        if INTERPOLATE != False:
+        #interpolating to specgrid
+        if INTERPOLATE == True:
 #             interpflux = interp1d(OUT[:,0],OUT[:,1],axis=0,kind='cubic')(self.wavegrid)
-            interpflux = interp(self.wavegrid,OUT[:,0],OUT[:,1])
+            interpflux = interp(self.specgrid,OUT[:,0],OUT[:,1])
 #             print interpflux
-            OUT = transpose(vstack((self.wavegrid,interpflux)))
-#         plot(OUT[:,0], OUT[:,1], c='r')
-#         show()
+            OUT = transpose(vstack((self.specgrid,interpflux)))
+        # print 'ble',np.shape(OUT)
+        # plot(OUT[:,0], OUT[:,1], c='r')
+        # show()
         return OUT
 
         

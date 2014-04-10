@@ -35,17 +35,19 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #output: 2 column ascii files (.spec)
 
     #initiating objects needed
-    dataob = data(PARAMS)
-    dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+    pcadataob = data(PARAMS)
+    pcadataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 
-    profileob = profile(PARAMS, dataob)
-    transob = transmission(PARAMS, dataob)
+    pcaprofileob = profile(PARAMS, pcadataob)
+    pcatransob = transmission(PARAMS, pcadataob)
 
     #reading available cross section lists in PATH
     globlist = glob.glob(PATH+'*.abs')
 
     if os.path.isdir(OUTPATH) == False:
         os.mkdir(OUTPATH)
+    # else:
+
 
     for FILE in globlist:
         fname = string.rsplit(FILE,'/',1)[1] #splitting the name
@@ -54,16 +56,22 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
         # print fname
 
         for mix in MIXING:
-            X_in   = zeros((int(profileob.ngas),int(profileob.nlayers))) #setting up mixing ratio array
+            X_in   = zeros((1,int(pcaprofileob.nlayers))) #setting up mixing ratio array
             X_in  += mix #setting mixing ratio
-            rho_in = profileob.get_rho(T=temp) #calculating T-P profile
+            rho_in = pcaprofileob.get_rho(T=temp) #calculating T-P profile
 
-            dataob.set_ABSfile(path=PATH,filelist=[fname]) #reading in cross section file
-            transob.reset(dataob) #resets transob to reflect changes in dataob
+            pcadataob.set_ABSfile(path=PATH,filelist=[fname]) #reading in cross section file
+            pcadataob.specgrid = pcadataob.wavegrid
+            pcadataob.nspecgrid = pcadataob.nwave
+            pcatransob.reset(pcadataob) #resets transob to reflect changes in dataob
 
             #manually setting mixing ratio and T-P profile
-            MODEL = transob.cpath_integral(rho=rho_in,X=X_in) #computing transmission
-            np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob.wavegrid,MODEL)))
+            MODEL = pcatransob.cpath_integral(rho=rho_in,X=X_in) #computing transmission
+            if np.isnan(MODEL.any()) or np.isinf(MODEL.any()):
+                pl.figure(900)
+                pl.plot(MODEL)
+                pl.show()
+            np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((pcadataob.specgrid,MODEL)))
 
 
 def find_nearest(arr, value):
@@ -86,7 +94,7 @@ def PCA(DATA0,PCnum):
 
 
 
-def generate_PCA_library(PATH,OUTPATH=False,comp_num=3):
+def generate_PCA_library(PATH,OUTPATH=False,comp_num=2):
     FILES = glob.glob(PATH)
 
     filename = FILES[0].rpartition('/')[-1]

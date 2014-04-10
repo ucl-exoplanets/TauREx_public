@@ -75,6 +75,7 @@ class parameters(object):
         self.tp_max_pres           = parser.getfloat('T-P profile', 'atm_max_pressure')
         self.tp_var_mix            = parser.getboolean('T-P profile', 'var_mix')
 
+        self.fit_spec_res          = parser.getfloat('Fitting','spec_res')
         self.fit_transmission      = parser.getboolean('Fitting','transmission')
         self.fit_emission          = parser.getboolean('Fitting', 'emission')
         self.fit_param_free        = genfromtxt(StringIO(parser.get('Fitting', 'param_free')), delimiter = ',')

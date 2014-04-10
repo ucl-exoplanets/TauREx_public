@@ -128,7 +128,7 @@ class preselector(object):
 
 
 
-    def generate_mask(self,thres=0.8):
+    def generate_mask(self,thres=0.5):
         #generates mask for the correlation processs
         #the masks are generated from the first normalised PC
 
@@ -183,9 +183,9 @@ class preselector(object):
             #loading mask
             mask = self.PCALIB[molecule]['PCA']['interp_mask']
 
-            datanorm_m = datanorm[mask]-np.median(datanorm[mask])
+            datanorm_m = datanorm[mask]-np.mean(datanorm[mask])
             # datanorm_m /= np.max(datanorm[mask])
-            pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.median(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
+            pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
             # pc2 /= np.max(pc2)
             pc2_inv = (-1.0*(pc2-np.mean(pc2)))+np.mean(pc2)
 
@@ -205,17 +205,17 @@ class preselector(object):
 
 
 
-            print molecule,': ',corrcoeff, '... ',eucdist,'... ',eucdist_inv
-            pl.figure(1)
-            pl.plot(datanorm_m,'b')
-            pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
-            pl.plot(pc2,'g')
-            # pl.plot(pc2_inv,'y')
-            #
-            # pl.figure(2)
-            # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
-            pl.show()
+            # print molecule,': ',corrcoeff, '... ',eucdist,'... ',eucdist_inv
+            # pl.figure(1)
+            # pl.plot(datanorm_m,'b')
+            # pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
+            # pl.plot(pc2,'g')
+            # # pl.plot(pc2_inv,'y')
+            # #
+            # # pl.figure(2)
+            # # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+            # # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+            # pl.show()
 
 
     def rank_molecules(self):
@@ -258,6 +258,7 @@ class preselector(object):
         #calculating mean planetary surface temperature
         self.Tplanet = self.params.star_temp * sqrt(self.params.star_radius / (
             2. * self.params.planet_sma)) * (1 - self.params.planet_albedo) ** (1. / 4.)
+        # self.Tplanet = 1400
 
 
     def update_params(self):
