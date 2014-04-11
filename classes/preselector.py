@@ -237,7 +237,7 @@ class preselector(object):
 
         self.mol_rank = np.asarray(molkeys)[idx]
         self.mol_dist = sortdist
-        self.mol_idx  = diffidx
+        self.mol_idx  = diffidx+3
 
         # print ''
         # print distance

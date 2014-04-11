@@ -34,11 +34,9 @@ class data(object):
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
-        # self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
-        #                                   lambda_min=self.wavegrid[0],lambda_max=self.wavegrid[-1])
-        # self.nspecgrid = len(self.specgrid)
-        self.specgrid = self.wavegrid
-        self.nspecgrid = self.nwave
+        self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
+                                          lambda_min=self.wavegrid[0],lambda_max=self.wavegrid[-1])
+        self.nspecgrid = len(self.specgrid)
 
         #calculating atmospheric scale height
         self.scaleheight = self.get_scaleheight()
@@ -195,8 +193,8 @@ class data(object):
         if filelist == None:
             raise IOError('No input ABS file specified')
 
-        self.sigma_array,self.wavegrid = self.readABSfiles(extpath=path,extfilelist=filelist, interpolate2grid=interpolate,outputwavegrid=True)
-        self.nwave = len(self.wavegrid)
+        self.sigma_array,self.specgrid = self.readABSfiles(extpath=path,extfilelist=filelist, interpolate2grid=interpolate,outputwavegrid=True)
+        self.nspecgrid = len(self.specgrid)
 
 
     def readATMfile(self):
@@ -256,7 +254,7 @@ class data(object):
             WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
         else:
             tmp = self.readfile(path+filelist[0],INTERPOLATE=False)
-            ABSsize = len(tmp[:,1])
+            ABSsize = len(tmp[:,0])
             OUT = zeros((num,ABSsize))
             WAVE = transpose(tmp[:,0])
 
@@ -281,7 +279,7 @@ class data(object):
 
         # figure()
 #         plot(OUT[:,0], OUT[:,1])
-        
+
         #interpolating to specgrid
         if INTERPOLATE == True:
 #             interpflux = interp1d(OUT[:,0],OUT[:,1],axis=0,kind='cubic')(self.wavegrid)

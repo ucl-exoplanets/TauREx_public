@@ -101,42 +101,51 @@ print 'loading transmission'
 transob = transmission(params, dataob)
 
 
+# figure(200)
+# plot(transpose(dataob.sigma_array))
+# show()
+# exit()
+
 ########
 ###example of how to manually reading in ABS file and computing transmission spectrum
-# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
-#                    filelist=['1H2-16O_0-29999_600K_0.010000.sigma.abs'])
-#
-# X_in   = zeros((profileob.nlayers,profileob.ngas))
-# X_in  += 1e-5
-# rho_in = profileob.get_rho(T=1000)
 
 
 # dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
-#                    filelist=['12C-16O_300-8499_1000K_1.000000.sigma.abs','1H2-16O_300-29995_1000K_1.000000.sigma.abs'],interpolate=True)
+#                    filelist=['12C-16O2_300-12999_1000K_1.000000.sigma.abs', '12C-1H4_300-11999_1000K_1.000000.sigma.abs', '1H2-16O_300-29995_1000K_1.000000.sigma.abs'],interpolate=True)
 # transob.reset(dataob) #resets transob to reflect changes in dataob
-# #
-# # figure(200)
-# # plot(dataob.sigma_array[0,:])
-# # plot(dataob.sigma_array[1,:])
-# # show()
-# # exit()
-# #
-# #
+# # #
+# # # figure(200)
+# # # plot(dataob.sigma_array[0,:])
+# # # plot(dataob.sigma_array[1,:])
+# # # show()
+# # # exit()
+# # #
+# # #
 # #manually setting mixing ratio and T-P profile
-# X_in   = zeros((2,profileob.nlayers))
+# X_in   = zeros((3,profileob.nlayers))
 # print np.shape(X_in)
-# X_in  += 1e-5
+# X_in[0,:]  += 1e-3
+# X_in[1,:]  += 1e-3
+# X_in[2,:]  += 1e-4
 #
 # rho_in = profileob.get_rho(T=1000)
 # MODEL = transob.cpath_integral(rho=rho_in,X=X_in)  # computing transmission
 #
+# OUT = np.zeros((len(dataob.specgrid),3))
+# OUT[:,0] = dataob.specgrid
+# OUT[:,1] = MODEL
+# OUT[:,2] += 1e-4
+# np.savetxt('testspec2.txt',OUT)
+#
 # figure()
-# plot(dataob.specgrid,MODEL)
+# errorbar(OUT[:,0],OUT[:,1],OUT[:,2],color=[0.7,0.7,0.7])
+# plot(OUT[:,0],OUT[:,1],'b')
 # show()
 #
-# exit()
 #
-# #########
+# exit()
+
+#########
 
 
 #initialising fitting object
@@ -145,9 +154,9 @@ fitob = fitting(params, dataob, profileob, transob)
 #
 print 'fitting data'
 #fit data
-# fitob.downhill_fit()    #simplex downhill fit
+fitob.downhill_fit()    #simplex downhill fit
 # fitob.mcmc_fit()        #MCMC fit
-fitob.multinest_fit()   #Nested sampling fit
+# fitob.multinest_fit(resume=True)   #Nested sampling fit
 #
 #manually call transmission spectrum code
 # absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)

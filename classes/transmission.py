@@ -27,7 +27,7 @@ from library.library_general import *
 class transmission(object):
 
 #initialisation
-    def __init__(self,params,data):
+    def __init__(self,params,data,usedatagrid=False):
         #loading data
         self.params        = params
         self.z             = data['pta'][:,2]
@@ -37,11 +37,14 @@ class transmission(object):
         self.rho           = data['rho']
         self.n_gas         = data['ngas']
         self.sigma_array   = data['sigma_array']
-        self.wavegrid      = data['wavegrid']
-        self.nwave         = data['nwave']
-        self.nspecgrid     = data['nspecgrid']
         self.X             = data['X']
         self.atmosphere    = data['atmosphere']
+
+        if usedatagrid:
+        #use wavelengthgrid of data or internal specgrid defined in data class
+            self.set_lambdagrid(data['wavegrid'])
+        else:
+            self.set_lambdagrid(data['specgrid'])
 
         #calculating optical path lengths
         self.dlarray,self.iteridx = self.get_path_length()
@@ -57,7 +60,7 @@ class transmission(object):
             self.cia       = data['cia']
             self.Csig      = self.get_Csig()
         else:
-            self.Csig      = zeros((self.nwave))
+            self.Csig      = zeros((self.nlambda))
         
         #loading c++ pathintegral library for faster computation
         if params.trans_cpp == True:
@@ -85,6 +88,12 @@ class transmission(object):
 
 
 #class methods
+    def set_lambdagrid(self,GRID):
+    #sets internal memory of wavelength grid to be used
+        self.lambdagrid = GRID
+        self.nlambda = len(GRID)
+
+
 
     def get_path_length(self):
         #calculates the layerlength 
@@ -121,9 +130,9 @@ class transmission(object):
     
     def get_Rsig(self):
     #calculating rayleigh scattering cross-sections
-        Rsig = zeros((self.nwave))
+        Rsig = zeros((self.nlambda))
         count = 0
-        for wl in self.wavegrid:
+        for wl in self.lambdagrid:
             if wl < self.ray_thres: 
                 pass
             else:
@@ -148,7 +157,7 @@ class transmission(object):
             rho = self.rho
         
         #setting up arrays
-        absorption = zeros((self.nspecgrid))
+        absorption = zeros((self.nlambda))
         tau = zeros((self.nlayers))  
         Rtau = zeros((self.nlayers))
         Ctau = zeros((self.nlayers))
@@ -156,7 +165,7 @@ class transmission(object):
 
         molnum = len(X[:,0])
         #running loop over wavelengths     
-        for wl in range(self.nspecgrid):
+        for wl in range(self.nlambda):
             tau[:] = 0.0 
             exptau[:] = 0.0
             Rtau[:] = 0.0
@@ -206,12 +215,12 @@ class transmission(object):
         cCsig, cs1 = cast2cpp(self.Csig)
         cRp = C.c_double(self.Rp)
         cRs = C.c_double(self.Rs)
-        clinecount = C.c_int(self.nspecgrid)
+        clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
         
         #setting up output array
-        absorption = zeros((self.nspecgrid),dtype=float64)
+        absorption = zeros((self.nlambda),dtype=float64)
         
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int

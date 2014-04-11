@@ -25,6 +25,7 @@ from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
+from scipy.optimize import minimize
 import pymc
 import warnings
 
@@ -53,7 +54,15 @@ class fitting(object):
         self.X_low       = self.params.fit_X_low
         self.T_up        = self.params.planet_temp + self.params.fit_T_up
         self.T_low       = self.params.planet_temp - self.params.fit_T_low
-        
+
+        #setting bounds for downhill algorithm
+        self.bounds = []
+        self.bounds.append((self.T_low,self.T_up))
+        for i in range(self.ngas):
+            self.bounds.append((self.X_low,self.X_up))
+
+
+
         #checking if number of free parameters for X = number of gas species
 #         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
 #             warnings.warn('Number of free X parameters does not equal number of gas species and atmospheric levels')
@@ -66,14 +75,18 @@ class fitting(object):
 
         self.PINIT     = zeros((self.ngas+1))
         self.PINIT[0]  = self.profileob.T[0]
-        for i in range(1,self.ngas):
-            self.PINIT[i] = self.profileob.X[i,0]
+        # self.PINIT[1:] = float((self.params.fit_X_up-self.params.fit_X_low)/2 + self.params.fit_X_low)
+        self.PINIT[1:] = 1e-5
+
+
+        # for i in range(1,self.ngas):
+        #     self.PINIT[i] = self.profileob.X[i,0]
 
         self.Pshape = shape(self.PINIT)
         
-        self.PINIT2 = self.PINIT.flatten(order='F')
+        # self.PINIT2 = self.PINIT.flatten(order='F')
         # self.PINIT3 = self.PINIT2[(self.Pshape[0]-1):] #restricting temperature to one free parameter only
-        self.PINIT3 = self.PINIT2
+        self.PINIT3 = self.PINIT
 
        
         #initialising output tags
@@ -86,22 +99,24 @@ class fitting(object):
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
-        if PFIT[0] < self.params.fit_T_low:
-            PFIT[0] = self.params.fit_T_low
-        elif PFIT[0] > self.params.fit_T_up:
-            PFIT[0] = self.params.fit_T_up
+        # if PFIT[0] < (self.params.planet_temp-self.params.fit_T_low):
+        #     PFIT[0] = (self.params.planet_temp-self.params.fit_T_low)
+        # elif PFIT[0] > (self.params.planet_temp+self.params.fit_T_up):
+        #     PFIT[0] = (self.params.planet_temp+self.params.fit_T_up)
 
         rho = self.profileob.get_rho(T=PFIT[0])
 #         print PFIT[0]
 #         X   = PFIT[1:].reshape(self.Pshape[0],self.Pshape[1]-1)
 
+
         X   = zeros((self.ngas,self.nlayers))
-        for i in range(1,self.ngas):
-            if PFIT[i]< self.params.fit_X_low:
-                PFIT[i] = self.params.fit_X_low
-            elif PFIT[i] > self.params.fit_X_up:
-                PFIT[i] = self.params.fit_X_up
-            X[i,:] += PFIT[i]
+        for i in range(self.ngas):
+            # if PFIT[i]< self.params.fit_X_low:
+            #     PFIT[i] = self.params.fit_X_low
+            # elif PFIT[i] > self.params.fit_X_up:
+            #     PFIT[i] = self.params.fit_X_up
+            X[i,:] += PFIT[i+1]
+
 
         MODEL = self.transmod.cpath_integral(rho=rho,X=X)
         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
@@ -128,17 +143,15 @@ class fitting(object):
         Xout_mean = zeros((self.ngas,self.nlayers))
         # Tout_mean = zeros((self.nlayers*self.ngas))
 
+        print PFIT
         Tout_mean= PFIT[0]
 
         if len(PFIT)-1 < self.nlayers*self.ngas:
             # Xout_mean[:] += PFIT[1:]
-            for i in range(1,len(PFIT)-1):
-                Xout_mean[i,:] += PFIT[i]
+            for i in range(len(PFIT)-1):
+                Xout_mean[i,:] += PFIT[i+1]
         else:
             Xout_mean[:] = PFIT[1:]
-
-        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
-        # print 'downhill ', shape(Xout_mean), shape(Tout_mean)
 
         return Tout_mean,Xout_mean
 
@@ -151,9 +164,13 @@ class fitting(object):
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
         
-        PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), disp=1, full_output=1)
+        # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
+        #                                    disp=1, full_output=1)
 
-        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT)
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
+
+
+        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
         self.DOWNHILL = True
         self.DOWNHILL_T_mean = Tout_mean
         self.DOWNHILL_X_mean = Xout_mean
@@ -283,8 +300,11 @@ class fitting(object):
         return Tout_mean, Tout_std, Xout_mean, Xout_std
 
     
-    def multinest_fit(self,RESUME=False):
+    def multinest_fit(self,resume=None):
         #multinest fitting routine (wrapper around PyMultiNest)
+        if resume == None:
+            resume = self.params.nest_resume
+
         def show(filepath): 
             """ open the output (pdf) file for the user """
             if os.name == 'mac': subprocess.call(('open', filepath))
@@ -297,7 +317,7 @@ class fitting(object):
         
             PFIT = [cube[i] for i in range(self.n_params)]
             PFIT = asarray(PFIT)
-            
+
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
             llterms =   (-ndim/2.0)*np.log(pi) -np.log(DATASTDmean) -0.5* chi_t
 #             llterms =    -0.5* chi_t
@@ -307,15 +327,15 @@ class fitting(object):
         def multinest_uniform_prior(cube,ndim,nparams):
             #prior distributions called by multinest
             #implements a uniform prior
-            
+
             #converting temperatures from normalised grid to uniform prior
             cube[0] = cube[0]* (self.T_up-self.T_low)+self.T_low
     #         print cube[0]
 
             #converting mixing ratios from normalised grid to uniform prior
-    #         for i in range(1,self.n_params):
-    #             cube[i] = cube[i] * (self.X_up-self.X_low) + self.X_low
-            cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
+            for i in range(1,self.n_params):
+                cube[i] = cube[i] * (self.X_up-self.X_low) + self.X_low
+            # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
         
 
         DATA = self.observation[:,1] #observed data
@@ -327,11 +347,11 @@ class fitting(object):
         ndim = n_params
         
         # progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
-        # threading.Timer(10, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
+        # threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
         pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,
-                        importance_nested_sampling = False, resume = RESUME,
-                        verbose = True,sampling_efficiency = 'parameter',
-                        n_live_points = 1000,max_iter= 0)
+                        importance_nested_sampling = self.params.nest_imp_sampling, resume = resume,
+                        verbose = self.params.nest_verbose,sampling_efficiency = self.params.nest_samp_eff,
+                        n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter)
         # progress.stop()
         
         

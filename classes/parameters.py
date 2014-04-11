@@ -90,7 +90,13 @@ class parameters(object):
         self.mcmc_iter             = parser.getfloat('MCMC', 'iter')
         self.mcmc_burn             = parser.getfloat('MCMC','burn')
         self.mcmc_thin             = parser.getfloat('MCMC', 'thin')
-        
+
+        self.nest_resume           = parser.getboolean('MultiNest','resume')
+        self.nest_verbose          = parser.getboolean('MultiNest','verbose')
+        self.nest_samp_eff         = parser.get('MultiNest','sampling_eff')
+        self.nest_nlive            = parser.getint('MultiNest','n_live_points')
+        self.nest_max_iter         = parser.getint('MultiNest','max_iter')
+        self.nest_imp_sampling     = parser.getboolean('MultiNest','imp_sampling')
         
         
         

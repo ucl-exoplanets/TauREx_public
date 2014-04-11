@@ -49,7 +49,7 @@ generate_pca = False
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/its_a_mystery2.dat
+spectrum_file = Input/testspec2.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -141,7 +141,7 @@ num_scaleheights = 22
 
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
-atm_levels = 35
+atm_levels = 40
 
 #number of gasses in atmosphere. 
 #If var_atm = False, num_gas is taken from .atm file
@@ -165,7 +165,7 @@ var_mix = True
 #independent of method
 
 #resolution of model runs (R)
-spec_res = 2000
+spec_res = 500
 
 #fit transmission model
 transmission = True
@@ -177,11 +177,11 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 500
-T_low = 500
+T_up  = 300
+T_low = 300
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 1e-2
+X_up  = 1e-1
 X_low = 0.0
 
 
@@ -205,7 +205,28 @@ thin = 2
 [MultiNest]
 #defines MultiNest specific parameters
 
+#resume from previous run
+resume = True
+
+#verbose
+verbose = True
+
+#sampling efficiency (parameter, ...)
+sampling_eff = parameter
+
+#number of live points
+n_live_points = 2000
+
+#maximum no. of iterations (0=inf)
+max_iter = 0
+
+#importance nested sampling
+imp_sampling = False
+
+
 
 [NeuralNet]
 #defines Neural Network specific parameters
+
+
 
