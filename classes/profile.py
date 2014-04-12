@@ -37,7 +37,7 @@ class profile(object):
      
         
         
-        if params.tp_var_atm == True:
+        if params.tp_var_atm:
             self.nlayers = int(params.tp_atm_levels)
             self.ngas    = int(params.tp_num_gas)
             self.pta     = self.setup_pta_grid()
@@ -57,7 +57,7 @@ class profile(object):
                 
 #basic class methods and overloading
     def list(self,name=None):
-        if name==None:
+        if name is None:
             return dir(self)[2:-1]
         else:
             lst = dir(self)
@@ -104,9 +104,9 @@ class profile(object):
     def get_rho(self,T=None,P=None):
         #calculate atmospheric densities for given temperature and pressure
         
-        if P == None:
+        if P is None:
             P = self.P
-        if T == None:
+        if T is None:
             T = self.params.planet_temp
             
         return  (P)/(self.botlzman*T)   

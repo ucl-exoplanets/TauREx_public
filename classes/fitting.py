@@ -99,22 +99,12 @@ class fitting(object):
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
-        # if PFIT[0] < (self.params.planet_temp-self.params.fit_T_low):
-        #     PFIT[0] = (self.params.planet_temp-self.params.fit_T_low)
-        # elif PFIT[0] > (self.params.planet_temp+self.params.fit_T_up):
-        #     PFIT[0] = (self.params.planet_temp+self.params.fit_T_up)
-
         rho = self.profileob.get_rho(T=PFIT[0])
 #         print PFIT[0]
 #         X   = PFIT[1:].reshape(self.Pshape[0],self.Pshape[1]-1)
 
-
         X   = zeros((self.ngas,self.nlayers))
         for i in range(self.ngas):
-            # if PFIT[i]< self.params.fit_X_low:
-            #     PFIT[i] = self.params.fit_X_low
-            # elif PFIT[i] > self.params.fit_X_up:
-            #     PFIT[i] = self.params.fit_X_up
             X[i,:] += PFIT[i+1]
 
 
@@ -174,6 +164,7 @@ class fitting(object):
         self.DOWNHILL = True
         self.DOWNHILL_T_mean = Tout_mean
         self.DOWNHILL_X_mean = Xout_mean
+        self.DOWNHILL_PFIT   = PFIT['x']
 
 
     
@@ -184,49 +175,57 @@ class fitting(object):
         #function unpacking the MCMC results
         
         MCMCstats = MCMCout.stats()
-        Xout_mean = zeros((self.nlayers*self.ngas))
-        Xout_std  = zeros((self.nlayers*self.ngas))
+        Xout_mean = zeros((self.ngas,self.nlayers))
+        Xout_std  = zeros((self.ngas,self.nlayers))
 
         #needs to be rewritten to make assignment more dynamic for variable TP profiles.Ideas?
         Tout_mean = MCMCstats['temp']['mean']
         Tout_std  = MCMCstats['temp']['standard deviation']
 
-        if len(MCMCstats.keys())-1 < self.nlayers*self.ngas:
-            Xout_mean[:] += MCMCstats['mixing_%i' % 0]['mean']
-            Xout_std[:]  += MCMCstats['mixing_%i' % 0]['standard deviation']
-            for i in range(len(MCMCstats.keys())-1):
-                Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
-                Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
-        else:
-            for i in range(self.nlayers*self.ngas):
-                Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
-                Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
+        # print MCMCstats.keys()
+        # if len(MCMCstats.keys())-1 < self.nlayers*self.ngas:
+        #     Xout_mean[:] += MCMCstats['mixing_%i' % 0]['mean']
+        #     Xout_std[:]  += MCMCstats['mixing_%i' % 0]['standard deviation']
+        #     for i in range(len(MCMCstats.keys())-1):
+        #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
+        #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
+        # else:
+        #     for i in range(self.nlayers*self.ngas):
+        #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
+        #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
 
-        Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
-        Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
+        for i in range(self.ngas):
+            Xout_mean[i,:] = MCMCstats['mixing_%i' % i]['mean']
+            Xout_std[i,:]  = MCMCstats['mixing_%i' % i]['standard deviation']
+
+        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
+        # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
         return Tout_mean, Tout_std, Xout_mean, Xout_std
-    
-    
+
+
+    # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
     def mcmc_fit(self):
     # adaptive Markov Chain Monte Carlo
-    
-#         PINIT = self.PINIT3
-        PINIT = asarray([1500,1e-5])
+
+        if self.DOWNHILL:
+            PINIT = self.DOWNHILL_PFIT
+        else:
+            PINIT = self.PINIT3
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
         
         
         # setting prior distributions
         priors = empty(size(PINIT),dtype=object)
-        priors[0] = pymc.Uniform('temp',self.T_low,self.T_up) #uniform temperature prior
-        for i in range(1,size(PINIT)):
-            priors[i] = pymc.Uniform('mixing_%i' % (i-1), self.X_low,self.X_up)  # uniform mixing ratio prior 
+        priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+        for i in range(len(PINIT)-1):
+            priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
         
 
         #setting up data error prior if specified
         if self.params.mcmc_update_std:
-            std_dev = pymc.Uniform('std_dev',0.0,max(DATASTD),value=mean(DATASTD),size=len(DATASTD)) #uniform prior on data standard deviation
+            std_dev = pymc.Uniform('std_dev',0.0,max(DATASTD),value=DATASTD,size=len(DATASTD)) #uniform prior on data standard deviation
         else:
             std_dev = pymc.Uniform('std_dev',0.0,max(DATASTD),value=DATASTD,observed=True,size=len(DATASTD))
         
@@ -241,7 +240,7 @@ class fitting(object):
         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
             
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
-            # llterms = len(DATA) * log(1.0 / sqrt(2.0 * pi)) - len(DATA) * log(DATASTD) - 0.5 * chi_t
+            # llterms = len(DATA) * np.log(1.0 / sqrt(2.0 * pi)) - len(DATA) * np.log(DATASTD) - 0.5 * chi_t
             llterms =  - 0.5* chi_t
             return llterms
 
@@ -252,6 +251,8 @@ class fitting(object):
         
         #coallating results into arrays
         Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_mcmc_result(R)
+
+        print Xout_mean, Tout_mean
         #saving arrays to object
         self.MCMC        = True
         self.MCMC_T_mean = Tout_mean
@@ -272,37 +273,42 @@ class fitting(object):
 
         NESTstats = NESTout.get_stats()
 
-        Xout_mean = zeros((self.nlayers*self.ngas))
-        Xout_std  = zeros((self.nlayers*self.ngas))
+        Xout_mean = zeros((self.ngas,self.nlayers))
+        Xout_std  = zeros((self.ngas,self.nlayers))
 
+        # print NESTstats['modes'][0]['maximum a posterior']
         Tout_mean = NESTstats['modes'][0]['maximum a posterior'][0]
         Tout_std  = NESTstats['modes'][0]['sigma'][0]
 
-        for i in range(1,len(NESTstats['modes'][0]['maximum a posterior'])):
-            Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-            Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+        # for i in range(1,len(NESTstats['modes'][0]['maximum a posterior'])):
+        #     Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+        #     Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+        #
+        # if len(NESTstats['modes'][0]['maximum a posterior'])-1 < self.nlayers*self.ngas:
+        #     Xout_mean[:] += NESTstats['modes'][0]['maximum a posterior'][1]
+        #     Xout_std[:]  += NESTstats['modes'][0]['sigma'][1]
+        #     for i in range(len(NESTstats['modes'][0]['maximum a posterior'])-1):
+        #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+        #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+        # else:
+        #     for i in range(self.nlayers*self.ngas):
+        #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+        #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
 
-        if len(NESTstats['modes'][0]['maximum a posterior'])-1 < self.nlayers*self.ngas:
-            Xout_mean[:] += NESTstats['modes'][0]['maximum a posterior'][1]
-            Xout_std[:]  += NESTstats['modes'][0]['sigma'][1]
-            for i in range(len(NESTstats['modes'][0]['maximum a posterior'])-1):
-                Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-                Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-        else:
-            for i in range(self.nlayers*self.ngas):
-                Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-                Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+        for i in range(self.ngas):
+            Xout_mean[i,:] = NESTstats['modes'][0]['maximum a posterior'][i+1]
+            Xout_std[i,:]  = NESTstats['modes'][0]['sigma'][i+1]
 
 
-        Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
-        Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
+        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
+        # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
         return Tout_mean, Tout_std, Xout_mean, Xout_std
 
     
     def multinest_fit(self,resume=None):
         #multinest fitting routine (wrapper around PyMultiNest)
-        if resume == None:
+        if resume is None:
             resume = self.params.nest_resume
 
         def show(filepath): 

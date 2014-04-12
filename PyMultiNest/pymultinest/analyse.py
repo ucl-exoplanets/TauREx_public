@@ -194,7 +194,7 @@ class Analyzer(object):
 				mode = {
 					'index':i
 				}
-				i = i + 1
+                i += 1
 				modelines1 = modelines[0].split("\n")
 				# Strictly local evidence
 				self._read_error_into_dict(modelines1[1], mode)

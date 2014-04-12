@@ -101,7 +101,7 @@ class parameters(object):
         
         
     def list(self,name=None):
-        if name==None:
+        if name is None:
             return dir(self)[2:-1]
         else:
             lst = dir(self)

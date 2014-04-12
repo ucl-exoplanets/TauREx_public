@@ -71,7 +71,7 @@ class output(object):
     def plot_mcmc(self,param_names=False):
         #plotting MCMC sampled distributions
         if self.MCMC:
-            if param_names != False:
+            if param_names:
                 plot_mcmc_results(self.fit.MCMC_FITDATA,parameters=param_names)
             else:
                 plot_mcmc_results(self.fit.MCMC_FITDATA)
@@ -82,7 +82,7 @@ class output(object):
     def plot_multinest(self,param_names=False):
         #plotting nested sampling distributions
         if self.NEST:
-            if param_names == False:
+            if not param_names:
                 parameters = range(self.fit.n_params)
             else:
                 parameters = param_names

@@ -49,7 +49,7 @@ def plot_mcmc_results(DATA,parameters=False, save2pdf=False):
     names = DATA.stats().keys()
     n_params = len(names)
 
-    if parameters == False:
+    if not parameters:
         plotnames = names
     else:
         plotnames = parameters

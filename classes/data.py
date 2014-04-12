@@ -67,18 +67,18 @@ class data(object):
         self.sigma_array = self.readABSfiles()
 
         #reading in other files if specified in parameter file
-        if params.in_include_rad == True:
+        if params.in_include_rad:
             self.rad = self.readfile(self.params_in_rad_file,INTERPOLATE=True)
-        if params.in_include_cia == True:
+        if params.in_include_cia:
             self.cia = self.readfile(self.params.in_cia_file,INTERPOLATE=True)
-        if params.in_include_cld == True:
+        if params.in_include_cld:
             self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
             
 
 
 #basic class methods and overloading
     def list(self,name=None):
-        if name==None:
+        if name is None:
             return dir(self)[2:-1]
         else:
             lst = dir(self)
@@ -109,11 +109,11 @@ class data(object):
 
     def get_scaleheight(self,T_aver=None,surf_g=None,mmw=None):
         #compute scaleheight of atmosphere
-        if T_aver==None:
+        if T_aver is None:
             T_aver = self.params.planet_temp
-        if surf_g == None:
+        if surf_g is None:
             surf_g = self.params.planet_grav
-        if mmw == None:
+        if mmw is None:
             mmw = self.params.planet_mu
 
         return (self.KBOLTZ*T_aver)/(mmw*surf_g)
@@ -128,7 +128,7 @@ class data(object):
         specgrid.append(lambda_min)
         run = True
         i=1
-        while run==True:
+        while run:
             dlam= specgrid[i-1]/R
             specgrid.append(specgrid[i-1]+dlam)
             delta_lambda.append(dlam)
@@ -188,9 +188,9 @@ class data(object):
     def set_ABSfile(self,path=None,filelist=None,interpolate = False):
     #manually overwrites absorption coefficients from new file
     #input path needs to be given and list of filename strings
-        if path == None:
+        if path is None:
             extpath = self.params.in_abs_path
-        if filelist == None:
+        if filelist is None:
             raise IOError('No input ABS file specified')
 
         self.sigma_array,self.specgrid = self.readABSfiles(extpath=path,extfilelist=filelist, interpolate2grid=interpolate,outputwavegrid=True)
@@ -219,7 +219,7 @@ class data(object):
     # if outputwavegrid = True, it takes the first column of the ABS file and outputs as separate wavelength grid
 
 
-        if extfilelist== None:
+        if extfilelist is None:
             #reading in list of abs files from parameter file
             if isinstance(self.params.in_abs_files,str):
                 absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
@@ -242,14 +242,14 @@ class data(object):
         else:
             OUT, WAVE = self.__readABSfiles_sub(path=extpath,filelist=extfilelist, interpolate2grid=interpolate2grid,num=len(extfilelist))
 
-        if outputwavegrid == True:
+        if outputwavegrid:
             return OUT, WAVE
         else:
             return OUT
         
 
     def __readABSfiles_sub(self,path, filelist, interpolate2grid,num):
-        if interpolate2grid == True:
+        if interpolate2grid:
             OUT = zeros((num,self.nspecgrid))
             WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
         else:
@@ -281,7 +281,7 @@ class data(object):
 #         plot(OUT[:,0], OUT[:,1])
 
         #interpolating to specgrid
-        if INTERPOLATE == True:
+        if INTERPOLATE:
 #             interpflux = interp1d(OUT[:,0],OUT[:,1],axis=0,kind='cubic')(self.wavegrid)
             interpflux = interp(self.specgrid,OUT[:,0],OUT[:,1])
 #             print interpflux

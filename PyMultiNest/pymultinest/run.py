@@ -146,11 +146,11 @@ def run(LogLikelihood,
 	
 	"""
 
-	if n_params == None:
+	if n_params is None:
 		n_params = n_dims
-	if n_clustering_params == None:
+	if n_clustering_params is None:
 		n_clustering_params = n_dims
-	if wrapped_params == None:
+	if wrapped_params is None:
 		wrapped_params = [0] * n_dims
 	
 	WrappedType = c_int * len(wrapped_params)

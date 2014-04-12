@@ -46,7 +46,7 @@ options, remainder = parser.parse_args()
 
 #Initialise parameters object
 params = parameters(options.param_filename)
-if params.verbose == True:
+if params.verbose:
     print 'ARGV      :', sys.argv[1:]
     print 'VERBOSE   :', params.verbose
     print 'PARFILE    :', options.param_filename
@@ -79,7 +79,7 @@ PATH = '/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssect
 OUTPATH = '/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/speclib/'
 globlist = glob.glob(PATH+'*.abs')
 
-if os.path.isdir(OUTPATH) == False:
+if not os.path.isdir(OUTPATH):
     os.mkdir(OUTPATH)
 
 

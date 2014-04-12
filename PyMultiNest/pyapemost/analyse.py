@@ -131,7 +131,7 @@ def model_probability(show=True):
 		f = 'prob-chain%d.dump' % i
 		# this file has 2 columns: with prior and *without*.
 		value = numpy.loadtxt(f)[:,1].mean() / beta[i]
-		logprob = logprob + value * (beta[i] - previous_beta)
+        logprob += value * (beta[i] - previous_beta)
 		previous_beta = beta[i]
 	
 	if show is True:
@@ -399,8 +399,9 @@ class VisitedAllPlotter(VisitedPlotter):
 	
 	def conditional_plot_after(self, param1, values1, param2, values2):
 		pass
-	
-	def marginal_plot_before(self, param, values):
+
+    # noinspection PyNoneFunctionAssignment
+    def marginal_plot_before(self, param, values):
 		name = param['name']
 		i = self.paramnames.index(name)
 		thisplot = self.choose_plot(i, i)

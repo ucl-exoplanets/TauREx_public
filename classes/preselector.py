@@ -45,7 +45,7 @@ class preselector(object):
     def run(self,runpreprocess=True):
         #script running the preselector
 
-        if runpreprocess == True:
+        if runpreprocess:
             #running pre_processing routines using parameter file specifications
             self.run_preprocess()
         #loading generated spectral library and running PCA
@@ -74,29 +74,29 @@ class preselector(object):
         #generatePCA will run PCA on spectral library and compile final dictionary
 
         #getting booleans from parameter file if not set manually
-        if convertLinelist == None:
+        if convertLinelist is None:
             convertLinelist = self.params.pre_conver2microns
-        if generateSpectra == None:
+        if generateSpectra is None:
             generateSpectra = self.params.pre_gen_speclib
-        if generatePCA == None:
+        if generatePCA is None:
             generatePCA = self.params.pre_gen_pca
 
         #doing the pre-processing
-        if convertLinelist == True:
+        if convertLinelist:
             convert2microns(self.params.pre_cross_path+'*')
             # print '1 done'
-        if generateSpectra == True:
+        if generateSpectra:
             generate_spectra_lib(self.params,self.params.pre_cross_path,self.params.pre_speclib_path,
                                  MIXING=self.params.pre_mixing_ratios)
             # print '2 done'
-        if generatePCA == True:
+        if generatePCA:
             generate_PCA_library(self.params.pre_speclib_path+'*',self.params.pre_pca_path)
             # print '3 done'
 
 
     def load_library(self,PATH=None):
         #function loading spec_pcalib.pkl.zip into memory
-        if PATH == None:
+        if PATH is None:
             PATH = self.params.pre_pca_path
 
         try:
@@ -237,7 +237,10 @@ class preselector(object):
 
         self.mol_rank = np.asarray(molkeys)[idx]
         self.mol_dist = sortdist
-        self.mol_idx  = diffidx+3
+        if diffidx < 2:
+            self.mol_idx = 3
+        else:
+            self.mol_idx  = diffidx
 
         # print ''
         # print distance

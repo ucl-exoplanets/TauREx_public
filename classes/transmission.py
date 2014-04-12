@@ -56,20 +56,20 @@ class transmission(object):
         self.Rsig          = self.get_Rsig()
 
         #calculating collision induced absorption cross sections
-        if params.in_include_cia == True:
+        if params.in_include_cia:
             self.cia       = data['cia']
             self.Csig      = self.get_Csig()
         else:
             self.Csig      = zeros((self.nlambda))
         
         #loading c++ pathintegral library for faster computation
-        if params.trans_cpp == True:
+        if params.trans_cpp:
             self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral.so')
 
      
 #basic class methods and overloading
     def list(self,name=None):
-        if name==None:
+        if name is None:
             return dir(self)[2:-1]
         else:
             lst = dir(self)
@@ -151,9 +151,9 @@ class transmission(object):
 
     def path_integral(self, X = None, rho = None):
 
-        if X == None:
+        if X is None:
             X = self.X
-        if rho == None:
+        if rho is None:
             rho = self.rho
         
         #setting up arrays
@@ -192,9 +192,9 @@ class transmission(object):
         
         
     def cpath_integral(self, X = None, rho = None):
-        if X == None:
+        if X is None:
             X = self.X
-        if rho == None:
+        if rho is None:
             rho = self.rho        
 
         #casting changing arrays to c++ pointers
@@ -244,7 +244,7 @@ class transmission(object):
         OUT: Rayleigh scattering opacity cross-section per particle (in m^2)
         '''
         #sigma_R=0.0                 # Rayleigh absorption coefficient (from Liou, An Introduction to Atmospheric Radiation)
-        wl=wl *1.0e-6               #convert wavelengths to m
+        wl *= 1.0e-6  #convert wavelengths to m
         rad=self.atmosphere['mol'][NAME]['radius']    #molecular radius (m)
         r_ind=self.atmosphere['mol'][NAME]['ridx']    #molecular refractive index
         r_sq=r_ind**2 

@@ -44,7 +44,7 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #reading available cross section lists in PATH
     globlist = glob.glob(PATH+'*.abs')
 
-    if os.path.isdir(OUTPATH) == False:
+    if not os.path.isdir(OUTPATH):
         os.mkdir(OUTPATH)
     # else:
 
@@ -165,7 +165,7 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=2):
 
 
 
-    if OUTPATH != False:
+    if OUTPATH:
         with gzip.GzipFile(OUTPATH+'spec_pcalib.pkl.zip','wb') as outhandle:
             pickle.dump(OUTdic,outhandle)
 

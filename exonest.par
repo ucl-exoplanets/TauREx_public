@@ -177,26 +177,26 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 300
-T_low = 300
+T_up  = 200
+T_low = 200
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 1e-1
+X_up  = 1e-2
 X_low = 0.0
 
 
 [MCMC]
 #defines MCMC specific parameters
 
-#update data standard deviation from dynamic fit. Yes = True, No = False
-update_std = False
+#update data standard deviation from dynamic fit.
+update_std = True
 
 
 #MCMC number of total iterations
-iter = 3000
+iter = 1000
 
 #MCMC burn in period 
-burn = 300
+burn = 10
 
 #MCMC thinning factor
 thin = 2

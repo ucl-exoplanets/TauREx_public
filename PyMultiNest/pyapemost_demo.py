@@ -87,7 +87,7 @@ if "analyse" in cmd:
 		plt.plot(v[:,0], v[:,2], ls='steps--', label=k)
 		plt.legend()
 		print(k, stats)
-		i = i + 1
+        i += 1
 	plt.savefig("marginals.pdf")
 	show("marginals.pdf")
 	

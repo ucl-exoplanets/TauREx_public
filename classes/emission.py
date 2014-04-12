@@ -28,7 +28,7 @@ class emission(object):
 
 #basic class methods and overloading
     def list(self,name=None):
-        if name==None:
+        if name is None:
             return dir(self)[2:-1]
         else:
             lst = dir(self)
@@ -43,4 +43,5 @@ class emission(object):
     def reset(self,data):
     #allows to reset the original instance to reflect changes in the data instance
     #this avoids an initialisation of a separate instance.
+    # noinspection PyArgumentList
         self.__init__(self.params,data)

@@ -178,7 +178,7 @@ class PlotMarginalModes(object):
 				xytext=(textx, texty),
 				arrowprops=arrow, horizontalalignment='left', verticalalignment='bottom',
 			)
-			i = i + 1
+            i += 1
 		
 	def plot_modes_marginal(self, dim1, cumulative = False, grid_points = 200, 
 		with_ellipses = True, with_points = True):
@@ -265,7 +265,7 @@ class PlotMarginalModes(object):
 				arrowprops=arrow, horizontalalignment='left',
 				verticalalignment='bottom',
 			)
-			i = i + 1
+            i += 1
 
 		
 
