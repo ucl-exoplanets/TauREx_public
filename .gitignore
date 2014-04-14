@@ -1,3 +1,6 @@
+*.lprof
+*.lprofile
+*.profile
 *.pyc
 rawfiles/
 compiledcode/
