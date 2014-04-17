@@ -1,11 +1,20 @@
 from __future__ import absolute_import, unicode_literals, print_function
 from ctypes import cdll
+
+libname = 'libmultinest.so'
+try: # detect if run through mpiexec/mpirun
+	from mpi4py import MPI
+	if MPI.COMM_WORLD.Get_size() > 1: # need parallel capabilities
+		libname = 'libmultinest_mpi.so'
+except ImportError:
+	pass
+
 try:
-	lib = cdll.LoadLibrary('libmultinest.so')
+	lib = cdll.LoadLibrary(libname)
 except OSError as e:
-	if e.message == 'libmultinest.so: cannot open shared object file: No such file or directory':
+	if e.message == '%s: cannot open shared object file: No such file or directory' % libname:
 		print()
-		print('ERROR:   Could not load MultiNest library "libmultinest.so"')
+		print('ERROR:   Could not load MultiNest library "%s"' % libname)
 		print('ERROR:   You have to build it first,')
 		print('ERROR:   and point the LD_LIBRARY_PATH environment variable to it!')
 		print('ERROR:   manual: http://johannesbuchner.github.com/PyMultiNest/install.html')
@@ -19,10 +28,8 @@ except OSError as e:
 		print()
 	if 'undefined symbol: mpi_' in e.message:
 		print()
-		print('ERROR:   You did something stupid. You tried to compile MultiNest with MPI,')
-		print('ERROR:   but the MultiNest bridge without MPI, or the other way around.')
-		print('ERROR:   Decide on one consistent way (no MPI is safe). Either way, you currently')
-		print('ERROR:   do not have MPI compiled into the library, and it fails to load!')
+		print('ERROR:   You tried to compile MultiNest linked with MPI,')
+		print('ERROR:   but now when running, MultiNest can not find the MPI linked libraries.')
 		print('ERROR:   manual: http://johannesbuchner.github.com/PyMultiNest/install.html')
 		print()
 	# the next if is useless because we can not catch symbol lookup errors (the executable crashes)
@@ -41,6 +48,11 @@ except OSError as e:
 
 from ctypes import *
 from numpy.ctypeslib import as_array
+import signal, sys
+
+def interrupt_handler(signal, frame):
+	sys.stderr.write('ERROR: Interrupt received: Terminating\n')
+	sys.exit(1)
 
 def run(LogLikelihood,
 	Prior,
@@ -146,11 +158,11 @@ def run(LogLikelihood,
 	
 	"""
 
-	if n_params is None:
+	if n_params == None:
 		n_params = n_dims
-	if n_clustering_params is None:
+	if n_clustering_params == None:
 		n_clustering_params = n_dims
-	if wrapped_params is None:
+	if wrapped_params == None:
 		wrapped_params = [0] * n_dims
 	
 	WrappedType = c_int * len(wrapped_params)
@@ -188,6 +200,7 @@ def run(LogLikelihood,
 				as_array(posterior,shape=(nPar+2,nSamples)).T,
 				(pc[0,:],pc[1,:],pc[2,:],pc[3,:]), # (mean,std,bestfit,map)
 				maxLogLike,logZ,logZerr)
+	prev_handler = signal.signal(signal.SIGINT, interrupt_handler)
 	
 	lib.run(c_bool(importance_nested_sampling),
 		c_bool(multimodal), c_bool(const_efficiency_mode),
@@ -202,5 +215,4 @@ def run(LogLikelihood,
 		c_double(log_zero), c_int(max_iter),
 		loglike_type(loglike),dumper_type(dumper),
 		c_int(context))
-
-
+	signal.signal(signal.SIGINT, prev_handler)

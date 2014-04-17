@@ -79,7 +79,7 @@ class profile(object):
         return (self.botlzman*T_aver)/(mmw*surf_g)
         
         
-        
+    # @profile #line-by-line profiling decorator
     def setup_pta_grid(self):
         #calculate pressure, temperature, altitude grid
         
@@ -100,7 +100,7 @@ class profile(object):
         return PTA_arr
         
 
-        
+    # @profile #line-by-line profiling decorator
     def get_rho(self,T=None,P=None):
         #calculate atmospheric densities for given temperature and pressure
         

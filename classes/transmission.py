@@ -17,12 +17,14 @@
 
 #loading libraries     
 import numpy
+import copy
 from numpy import *
 from pylab import *
 import itertools
 import time
 import ctypes as C
 from library.library_general import *
+# from mpi4py import MPI
 
 class transmission(object):
 
@@ -64,7 +66,8 @@ class transmission(object):
         
         #loading c++ pathintegral library for faster computation
         if params.trans_cpp:
-            self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral.so')
+            # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
+            self.cpathlib = C.CDLL('./library/pathintegral.so',mode=C.RTLD_GLOBAL)
 
      
 #basic class methods and overloading
@@ -190,46 +193,60 @@ class transmission(object):
 
         return absorption
         
-        
+    # @profile #line-by-line profiling decorator
     def cpath_integral(self, X = None, rho = None):
         if X is None:
             X = self.X
         if rho is None:
-            rho = self.rho        
+            rho = self.rho
 
         #casting changing arrays to c++ pointers
         Xs1,Xs2 = shape(X)
         Xnew = zeros((Xs1+1,Xs2))
         Xnew[:-1,:] = X
         cX, cs1,cs2 = cast2cpp(Xnew)
+        del(cs1); del(cs2);
         crho, cs1 = cast2cpp(rho)
-        
+        del(cs1);
         #casting fixed arrays and variables to c++ pointers
         csigma_array, cs1,cs2 = cast2cpp(self.sigma_array)
+        del(cs1); del(cs2);
         cdlarray, cs1 = cast2cpp(self.dlarray)
+        del(cs1);
         znew = zeros((len(self.z)))
         znew[:] = self.z
         cz, cs1   = cast2cpp(znew)
-        cdz, cs1  = cast2cpp(self.dz) 
+        del(cs1);
+        cdz, cs1  = cast2cpp(self.dz)
+        del(cs1);
         cRsig, cs1 = cast2cpp(self.Rsig)
+        del(cs1);
         cCsig, cs1 = cast2cpp(self.Csig)
+        del(cs1);
         cRp = C.c_double(self.Rp)
         cRs = C.c_double(self.Rs)
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
-        
+
         #setting up output array
         absorption = zeros((self.nlambda),dtype=float64)
-        
+
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int
-        
+
         #running c++ path integral
         cpath_int(csigma_array,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
                   clinecount,cnlayers,cn_gas,C.c_void_p(absorption.ctypes.data))
 
-        return absorption   
+        # del(cX); del(crho); del(csigma_array); del(cz); del(cRsig); del(cCsig); del(cRp); del(cRs);
+        # del(clinecount); del(cnlayers); del(cn_gas); del(cpath_int)
+
+        OUT = zeros((self.nlambda))
+        OUT[:] = absorption
+        del(absorption)
+
+        return OUT
         
         
     

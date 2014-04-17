@@ -31,15 +31,15 @@ def plot_multinest_results(DATA, parameters, save2pdf=False):
         for tick in ax.xaxis.get_major_ticks():
                 tick.label.set_rotation(-30)
 
-    for j in range(i):
-        ax = plt.subplot(n_params, n_params, n_params * j + i + 1)
-        ax.ticklabel_format(style='sci')
-        #plt.subplots_adjust(left=0, bottom=0, right=0, top=0, wspace=0, hspace=0)
-        p.plot_conditional(i, j, with_ellipses=False, with_points=True, grid_points=50)
-        xlabel(parameters[i])
-        ylabel(parameters[j])
-        for tick in ax.xaxis.get_major_ticks():
-                tick.label.set_rotation(-30)
+        for j in range(i):
+            ax = plt.subplot(n_params, n_params, n_params * j + i + 1)
+            ax.ticklabel_format(style='sci')
+            #plt.subplots_adjust(left=0, bottom=0, right=0, top=0, wspace=0, hspace=0)
+            p.plot_conditional(i, j, with_ellipses=False, with_points=True, grid_points=50)
+            xlabel(parameters[i])
+            ylabel(parameters[j])
+            for tick in ax.xaxis.get_major_ticks():
+                    tick.label.set_rotation(-30)
 
 
 def plot_mcmc_results(DATA,parameters=False, save2pdf=False):
@@ -63,13 +63,13 @@ def plot_mcmc_results(DATA,parameters=False, save2pdf=False):
         xlabel(plotnames[i])
         for tick in ax.xaxis.get_major_ticks():
                 tick.label.set_rotation(-30)
-    for j in range(i):
-        ax = plt.subplot(n_params, n_params, n_params * j + i + 1)
-        ax.ticklabel_format(style='sci')
-        plot(DATA.trace(names[i])[:],DATA.trace(names[j])[:],'.',color='k')
-        xlabel(plotnames[i])
-        ylabel(plotnames[j])
-        for tick in ax.xaxis.get_major_ticks():
-                tick.label.set_rotation(-30)
+        for j in range(i):
+            ax = plt.subplot(n_params, n_params, n_params * j + i + 1)
+            ax.ticklabel_format(style='sci')
+            plot(DATA.trace(names[i])[:],DATA.trace(names[j])[:],'.',color='k')
+            xlabel(plotnames[i])
+            ylabel(plotnames[j])
+            for tick in ax.xaxis.get_major_ticks():
+                    tick.label.set_rotation(-30)
 
 

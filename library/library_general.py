@@ -28,7 +28,22 @@ def cast2cpp(ARRAY):
         PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
         return PARR, C.c_int(s1), C.c_int(s2)
     
-    
+def redirect_stderr_stdout(stderr=sys.stderr, stdout=sys.stdout):
+    #function decorator to re-direct standard output
+    #use as: @redirect_stderr_stdout(some_logging_stream, the_console)
+    #to print to file: @redirect_stderr_stdout(stdout=open(FILENAME,'wb'))
+    def wrap(f):
+        def newf(*args, **kwargs):
+            old_stderr, old_stdout = sys.stderr, sys.stdout
+            sys.stderr = stderr
+            sys.stdout = stdout
+            try:
+                return f(*args, **kwargs)
+            finally:
+                sys.stderr, sys.stdout = old_stderr, old_stdout
+
+        return newf
+    return wrap
 
 # update_progress() : Displays or updates a console progress bar
 ## Accepts a float between 0 and 1. Any int will be converted to a float.

@@ -34,6 +34,13 @@ import pymultinest
 import math, os
 if not os.path.exists("chains"): os.mkdir("chains")
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    pass
+
+
+
 
 class fitting(object):
     def __init__(self,params,data,profile,transmod):
@@ -95,7 +102,8 @@ class fitting(object):
         self.NEST     = False
 
 
-        
+
+    # @profile #line-by-line profiling decorator
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
@@ -122,12 +130,15 @@ class fitting(object):
         # plot(MODEL_interp)
         # draw()
 
+        # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
+
         res = (DATA-MODEL_interp) / DATASTD
         return sum(res**2)
         
 ############################################################################### 
 #simplex downhill algorithm
 
+    # @profile #line-by-line profiling decorator
     def collate_downhill_results(self,PFIT):
         #function unpacking the downhill minimization results
         Xout_mean = zeros((self.ngas,self.nlayers))
@@ -145,7 +156,7 @@ class fitting(object):
 
         return Tout_mean,Xout_mean
 
-
+    # @profile #line-by-line profiling decorator
     def downhill_fit(self):
     # fits data using simplex downhill minimisation
 
@@ -170,7 +181,8 @@ class fitting(object):
     
 ###############################################################################    
 #Markov Chain Monte Carlo algorithm
-    
+
+    # @profile #line-by-line profiling decorator
     def collate_mcmc_result(self,MCMCout):
         #function unpacking the MCMC results
         
@@ -205,6 +217,7 @@ class fitting(object):
 
 
     # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
+    # @profile #line-by-line profiling decorator
     def mcmc_fit(self):
     # adaptive Markov Chain Monte Carlo
 
@@ -351,14 +364,21 @@ class fitting(object):
         parameters = [str(i) for i in range(self.n_params)]
         n_params = self.n_params
         ndim = n_params
-        
+
+
+
+
         # progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         # threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
         pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,
                         importance_nested_sampling = self.params.nest_imp_sampling, resume = resume,
                         verbose = self.params.nest_verbose,sampling_efficiency = self.params.nest_samp_eff,
-                        n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter)
+                        n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter,init_MPI=False)
         # progress.stop()
+
+        #forcing slave processes to exit at this stage
+        if MPI.COMM_WORLD.Get_rank() != 0:
+            exit()
         
         
         #coallating results into arrays

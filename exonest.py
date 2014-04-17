@@ -25,11 +25,23 @@ import numpy, pylab, sys, os, optparse, time
 from numpy import * #nummerical array library 
 from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
+try:
+    from mpi4py import MPI
+    MPIrank = MPI.COMM_WORLD.Get_rank()
+    if MPIrank == 0:
+        MPImaster = True
+    else:
+        MPImaster = False
+except ImportError:
+    MPIimport = False
+
+
+
 
 #start of profiling code
-import cProfile, pstats, StringIO
-pr = cProfile.Profile()
-pr.enable()
+# import cProfile, pstats, StringIO
+# pr = cProfile.Profile()
+# pr.enable()
 # starttime = time.clock()
 
 #end of profiling code
@@ -65,15 +77,32 @@ options, remainder = parser.parse_args()
 
 #Initialise parameters object
 params = parameters(options.param_filename)
-if params.verbose:
-    print 'ARGV      :', sys.argv[1:]
-    print 'VERBOSE   :', params.verbose
-    print 'PARFILE    :', options.param_filename
-    print 'REMAINING :', remainder
+# if params.verbose:
+#     print 'ARGV      :', sys.argv[1:]
+#     print 'VERBOSE   :', params.verbose
+#     print 'PARFILE    :', options.param_filename
+#     print 'REMAINING :', remainder
 
 #####################################################################
 
+#
+# comm = MPI.COMM_WORLD
+# rank=comm.Get_rank()
+# size=comm.Get_size()
+# print("my rank is %d"%rank)
+#
+# exit()
+
+# comm = MPI.COMM_WORLD
+# rank=comm.Get_rank()
+# size=comm.size
+# print("my rank is %d"%rank)
+
+# MPI.Init()
+
 #initialising data object
+
+
 dataob = data(params)
 
 
@@ -94,9 +123,9 @@ dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #printing a few data object attributes
-print dataob.atmosphere['mol']
-print dataob.atmosphere['info']['mu']
-print dataob.atmosphere['mol'].keys()
+# print dataob.atmosphere['mol']
+# print dataob.atmosphere['info']['mu']
+# print dataob.atmosphere['mol'].keys()
 
 #initialising TP profile object
 print 'loading profile'
@@ -174,9 +203,11 @@ fitob = fitting(params, dataob, profileob, transob)
 print 'fitting data'
 #fit data
 
-fitob.downhill_fit()    #simplex downhill fit
+
+# fitob.downhill_fit()    #simplex downhill fit
 # fitob.mcmc_fit()        #MCMC fit
-# fitob.multinest_fit(resume=True)   #Nested sampling fit
+fitob.multinest_fit()   #Nested sampling fit
+
 #
 #manually call transmission spectrum code
 # absorption = transob.cpath_integral(rho=profileob.get_rho(T=fitob.MCMC_T_mean),X=fitob.MCMC_X_mean)
@@ -199,43 +230,43 @@ outputob.save_model()       #saving models to ascii
 
 
 #profiling code
-pr.disable()
-
-PROFDIR = 'Profiling/'
-if not os.path.isdir(PROFDIR):
-        os.mkdir(PROFDIR)
-
-# s = StringIO.StringIO()
-sortby = 'cumulative'
-# ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-
-#printing to terminal
+# pr.disable()
+#
+# PROFDIR = 'Profiling/'
+# if not os.path.isdir(PROFDIR):
+#         os.mkdir(PROFDIR)
+#
+# # s = StringIO.StringIO()
+# sortby = 'cumulative'
+# # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+#
+# #printing to terminal
+# # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
+# # globalstats.print_stats()
+#
+# #redirecting output to files
+# sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
 # globalstats.print_stats()
-
-#redirecting output to files
-sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
-globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
-globalstats.print_stats()
-
-sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
-globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
-globalstats.print_stats()
-
-sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
-globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
-globalstats.print_stats()
-
-sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
-globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
-globalstats.print_stats()
-
-sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
-globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
-globalstats.print_stats()
-
-# ps.print_stats()
-# print s.getvalue()
+#
+# sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
+# globalstats.print_stats()
+#
+# sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
+# globalstats.print_stats()
+#
+# sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
+# globalstats.print_stats()
+#
+# sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
+# globalstats.print_stats()
+#
+# # ps.print_stats()
+# # print s.getvalue()
 
 
 #last line. displays any diagrams generated. must be run after profiling

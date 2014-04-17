@@ -22,7 +22,7 @@ import os, sys
 PROFNAME = 'exonest'
 PROFDIR  = 'Profiling/'
 
-print 'Running profiling:'
+print 'Running line-by-line runtime profiling:'
 print '-----------------------------------------'
 
 os.chdir('../')
@@ -36,3 +36,23 @@ print 'coallating results into '+PROFNAME+'.lprofile'
 # sys.stdout = open(PROFDIR+PROFNAME+'.lprofile','wb')
 os.system('python -m line_profiler exonest.py.lprof > '+PROFDIR+PROFNAME+'.lprofile')
 # os.system('rm exonest.py.lprof')
+
+
+
+################################################
+# Additional script running memory line-by-line profiling
+# this requires the memory profiler
+# URL: https://pypi.python.org/pypi/memory_profiler
+# pip: sudo pip install memory_profiler
+#
+# USAGE: same as runtime line-by-line profiler
+#
+# OUTPUTS: .mprofile file
+#
+################################################
+
+# print ''
+# print 'Running line-by-line memory profiling:'
+# print '-----------------------------------------'
+
+# os.system('python -m memory_profiler exonest.py > '+PROFDIR+PROFNAME+'.mprofile')
