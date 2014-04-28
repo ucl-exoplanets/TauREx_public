@@ -49,7 +49,7 @@ generate_pca = False
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = testspec2.txt
+spectrum_file = Input/testspec2.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -98,10 +98,10 @@ file_prefix = test_
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.74
+radius = 0.788
 
 #Stellar temperature (K)
-temp   = 5119
+temp   = 4800
 
 
 
@@ -109,22 +109,22 @@ temp   = 5119
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 0.213
+radius = 1.138
 
 #Orbital semi-major axis (AU)
-sma = 0.08
+sma = 0.03142
 
 #Planetary bond albedo (0-1)
-albedo = 0.5
+albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
-grav = 3.166
+grav = 21.2
 
 #Planetary temperature (K)
-temp = 757
+temp = 1500
 
 #molecular weight of atmosphere 
-mu = 3.0
+mu = 2.3
 
 #molecules considered
 molec = H20, CH4, CO2
@@ -165,7 +165,7 @@ var_mix = True
 #independent of method
 
 #resolution of model runs (R)
-spec_res = 2000
+spec_res = 500
 
 #fit transmission model
 transmission = True
@@ -177,8 +177,8 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 500
-T_low = 500
+T_up  = 200
+T_low = 200
 
 #Upper and lower bounds for mixing ratios 
 X_up  = 1e-2
@@ -193,20 +193,20 @@ update_std = True
 
 
 #MCMC number of total iterations
-iter = 15000
+iter = 1000
 
 #MCMC burn in period 
-burn = 1000
+burn = 10
 
 #MCMC thinning factor
-thin = 1
+thin = 2
 
 
 [MultiNest]
 #defines MultiNest specific parameters
 
 #resume from previous run
-resume = False
+resume = True
 
 #verbose
 verbose = True
@@ -215,7 +215,7 @@ verbose = True
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 1000
+n_live_points = 2000
 
 #maximum no. of iterations (0=inf)
 max_iter = 0
