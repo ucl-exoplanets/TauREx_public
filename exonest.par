@@ -49,7 +49,7 @@ generate_pca = False
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/testspec2.txt
+spectrum_file = testspec2.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -98,10 +98,10 @@ file_prefix = test_
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.788
+radius = 0.74
 
 #Stellar temperature (K)
-temp   = 4800
+temp   = 5119
 
 
 
@@ -109,22 +109,22 @@ temp   = 4800
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 1.138
+radius = 0.213
 
 #Orbital semi-major axis (AU)
-sma = 0.03142
+sma = 0.08
 
 #Planetary bond albedo (0-1)
-albedo = 0.2
+albedo = 0.5
 
 #Planetary surface gravity (ms^-2)
-grav = 21.2
+grav = 3.166
 
 #Planetary temperature (K)
-temp = 1500
+temp = 757
 
 #molecular weight of atmosphere 
-mu = 2.3
+mu = 3.0
 
 #molecules considered
 molec = H20, CH4, CO2
@@ -206,7 +206,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #resume from previous run
-resume = True
+resume = False
 
 #verbose
 verbose = True

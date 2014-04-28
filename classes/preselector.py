@@ -191,6 +191,10 @@ class preselector(object):
 
             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+            if np.isnan(eucdist):
+                eucdist = 1000
+            if np.isnan(eucdist_inv):
+                eucdist_inv = 1000
 
             corrcoeff = st.pearsonr(datanorm_m,pc2)
 
@@ -238,7 +242,7 @@ class preselector(object):
         self.mol_rank = np.asarray(molkeys)[idx]
         self.mol_dist = sortdist
         if diffidx < 2:
-            self.mol_idx = 3
+            self.mol_idx = 4
         else:
             self.mol_idx  = diffidx
 

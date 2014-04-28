@@ -110,9 +110,10 @@ dataob = data(params)
 if params.pre_run:
     print 'loading preprocessing'
     preob = preselector(params,dataob)
-    #preob.run_preprocess(convertLinelist=False,generateSpectra=False,generatePCA=True)
+    # preob.run_preprocess(convertLinelist=False,generateSpectra=True,generatePCA=True)
     preob.run()
-    # print preob.mol_rank, preob.mol_idx
+    print preob.mol_dist
+    print preob.mol_rank, preob.mol_idx
     params = preob.update_params()
     dataob.reset(params)
 
@@ -204,9 +205,9 @@ print 'fitting data'
 #fit data
 
 
-# fitob.downhill_fit()    #simplex downhill fit
+fitob.downhill_fit()    #simplex downhill fit
 # fitob.mcmc_fit()        #MCMC fit
-fitob.multinest_fit()   #Nested sampling fit
+# fitob.multinest_fit()   #Nested sampling fit
 
 #
 #manually call transmission spectrum code
