@@ -34,7 +34,11 @@ class data(object):
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
-        self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
+        if params.fit_manual_waverange:
+            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
+                                          lambda_min=self.params.fit_wavemin,lambda_max=self.params.fit_wavemax)
+        else:
+            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
                                           lambda_min=self.wavegrid[0],lambda_max=self.wavegrid[-1])
         self.nspecgrid = len(self.specgrid)
 

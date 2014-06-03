@@ -71,7 +71,7 @@ include_rad = False
 rad_file = Input/rad_star.rad
 
 #include H2-H2 collision induced absorption. True/False 
-include_cia = False 
+include_cia = True 
 
 #file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
@@ -98,10 +98,10 @@ file_prefix = test_
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.788
+radius = 0.568
 
 #Stellar temperature (K)
-temp   = 4800
+temp   = 3600
 
 
 
@@ -109,25 +109,25 @@ temp   = 4800
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 1.138
+radius = 0.440
 
 #Orbital semi-major axis (AU)
-sma = 0.03142
+sma = 0.0356
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
-grav = 21.2
+grav = 7.9
 
 #Planetary temperature (K)
-temp = 1500
+temp = 800
 
 #molecular weight of atmosphere 
 mu = 2.3
 
 #molecules considered
-molec = H20, CH4, CO2
+molec = H20, CH4, CO2, NH4, CO
 
 
 [T-P profile]
@@ -137,7 +137,7 @@ molec = H20, CH4, CO2
 var_atm = True
 
 #thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
-num_scaleheights = 22
+num_scaleheights = 20
 
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
@@ -164,8 +164,17 @@ var_mix = True
 #defines general fittings parameters 
 #independent of method
 
+#manually set wavelength range (if False, range taken from input data)
+manual_waverange = True
+
+#short wavelength cut-off (in microns) if manual_waverange = True
+wavemin = 2.0
+
+#long wavelength cut-off (in microns) if manual_waverange = True
+wavemax = 20.0
+
 #resolution of model runs (R)
-spec_res = 500
+spec_res = 300
 
 #fit transmission model
 transmission = True

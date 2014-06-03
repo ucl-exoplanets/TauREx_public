@@ -234,17 +234,18 @@ class preselector(object):
         diff = 0
         diffidx = 0
         sortdist = np.asarray(distance)[idx]
-        for i in range(len(sortdist)-1):
-            if (sortdist[i+1]-sortdist[i]) > diff:
-                diff = (sortdist[i+1]-sortdist[i])
+        for i in range(len(sortdist)-2):
+            if (sortdist[i+2]-sortdist[i+1]) > diff:
+                diff = (sortdist[i+2]-sortdist[i+1])
                 diffidx = i
 
         self.mol_rank = np.asarray(molkeys)[idx]
         self.mol_dist = sortdist
-        if diffidx < 2:
-            self.mol_idx = 4
-        else:
-            self.mol_idx  = diffidx
+        # if diffidx < 2:
+        #     self.mol_idx = 4
+        # else:
+        #     self.mol_idx  = diffidx
+        self.mol_idx = diffidx
 
         # print ''
         # print distance
@@ -254,9 +255,9 @@ class preselector(object):
         print np.asarray(molkeys)[idx]
         # print diffidx, diff
         #
-        # pl.figure(3)
-        # pl.plot(np.asarray(distance)[idx])
-        # show()
+#         pl.figure(3)
+#         pl.plot(np.asarray(distance)[idx])
+#         show()
 
 
     def calc_astroparams(self):

@@ -75,6 +75,9 @@ class parameters(object):
         self.tp_max_pres           = parser.getfloat('T-P profile', 'atm_max_pressure')
         self.tp_var_mix            = parser.getboolean('T-P profile', 'var_mix')
 
+        self.fit_manual_waverange  = parser.getboolean('Fitting','manual_waverange')
+        self.fit_wavemin           = parser.getfloat('Fitting','wavemin')
+        self.fit_wavemax           = parser.getfloat('Fitting','wavemax')
         self.fit_spec_res          = parser.getfloat('Fitting','spec_res')
         self.fit_transmission      = parser.getboolean('Fitting','transmission')
         self.fit_emission          = parser.getboolean('Fitting', 'emission')

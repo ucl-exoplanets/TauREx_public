@@ -146,53 +146,72 @@ transob = transmission(params, dataob)
 ###example of how to manually reading in ABS file and computing transmission spectrum
 
 
-# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonest/exonestpy/test-code/crosssections/',
-#                    filelist=['12C-16O2_300-12999_1000K_1.000000.sigma.abs', '14N-1H3_300-19999_1000K_1.000000.sigma.abs',
-#                              '12C-1H4_300-11999_1000K_1.000000.sigma.abs', '1H2-16O_300-29995_1000K_1.000000.sigma.abs'],interpolate=True)
-# transob.reset(dataob) #resets transob to reflect changes in dataob
-# # #
-# # # figure(200)
-# # # plot(dataob.sigma_array[0,:])
-# # # plot(dataob.sigma_array[1,:])
-# # # show()
-# # # exit()
-# # #
-# # #
-# #manually setting mixing ratio and T-P profile
-# X_in   = zeros((4,profileob.nlayers))
-# print np.shape(X_in)
-# # X_in[0,:]  += 1.11622920e-03
-# # X_in[1,:]  += 2.54462702e-08
-# # X_in[2,:]  += 1.14925746e-03
-# # X_in[3,:]  += 9.96460970e-05
-#
+dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/test-code/crosssections/',
+                   filelist=['1H2-16O_300-29995_600K_1.000000.sigma.abs',
+                             '12C-1H4_300-11999_600K_1.000000.sigma.abs',
+                             '12C-16O_300-8499_600K_1.000000.sigma.abs',
+                             '14N-1H3_300-19999_600K_1.000000.sigma.abs',
+                             '12C-16O2_300-12999_600K_1.000000.sigma.abs'],interpolate=True)
+
+
+# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/test-code/crosssections/',
+#                    filelist=['1H2-16O_300-29995_1400K_1.000000.sigma.abs','14N-1H3_300-19999_1400K_1.000000.sigma.abs',
+#                              '12C-16O2_300-12999_1400K_1.000000.sigma.abs'],interpolate=True)
+
+
+transob.reset(dataob) #resets transob to reflect changes in dataob
+# #
+# figure(200)
+# plot(dataob.specgrid,dataob.sigma_array[0,:])
+# plot(dataob.specgrid,dataob.sigma_array[1,:])
+# plot(dataob.specgrid,dataob.sigma_array[2,:])
+# # plot(dataob.specgrid,dataob.sigma_array[3,:])
+# show()
+# exit()
+# #
+# #
+#manually setting mixing ratio and T-P profile
+X_in   = zeros((5,profileob.nlayers))
+print np.shape(X_in)
+# X_in[0,:]  += 1.11622920e-03
+# X_in[1,:]  += 2.54462702e-08
+# X_in[2,:]  += 1.14925746e-03
+# X_in[3,:]  += 9.96460970e-05
+
 # X_in[0,:]  += 0.0011647246764488776
 # X_in[1,:]  += 2.892344980711778e-08
 # X_in[2,:]  += 0.0011969760859621417
 # X_in[3,:]  += 0.00010305931257479826
+
+X_in[0,:]  += 8.0e-3
+X_in[1,:]  += 4.0e-3
+X_in[2,:]  += 2e-3
+X_in[3,:]  += 7e-4 #2e-7
+X_in[4,:]  += 2e-5
+
+# 1.11622920e-03   2.54462702e-08   1.14925746e-03
+#    9.96460970e-05
 #
-# # 1.11622920e-03   2.54462702e-08   1.14925746e-03
-# #    9.96460970e-05
-# #
-# # [1143.2703550954802, 0.0011647246764488776, 2.892344980711778e-08, 0.0011969760859621417, 0.00010305931257479826]
-#
-# rho_in = profileob.get_rho(T=1140)
-# MODEL = transob.cpath_integral(rho=rho_in,X=X_in)  # computing transmission
-#
-# OUT = np.zeros((len(dataob.specgrid),2))
-# OUT[:,0] = dataob.specgrid
-# OUT[:,1] = MODEL
-# # OUT[:,2] += 1e-4
-# # np.savetxt('testspec2.txt',OUT)
-#
-# figure()
+# [1143.2703550954802, 0.0011647246764488776, 2.892344980711778e-08, 0.0011969760859621417, 0.00010305931257479826]
+
+rho_in = profileob.get_rho(T=600)
+MODEL = transob.cpath_integral(rho=rho_in,X=X_in)  # computing transmission
+
+OUT = np.zeros((len(dataob.specgrid),2))
+OUT[:,0] = dataob.specgrid
+OUT[:,1] = MODEL
+# OUT[:,2] += 1e-4
+np.savetxt('testspec2.txt',OUT)
+
+figure()
 # plot(dataob.spectrum[:,0],dataob.spectrum[:,1],'g')
-# # errorbar(OUT[:,0],OUT[:,1],OUT[:,2],color=[0.7,0.7,0.7])
-# plot(OUT[:,0],OUT[:,1],'b')
-# show()
-#
-#
-# exit()
+# errorbar(OUT[:,0],OUT[:,1],OUT[:,2],color=[0.7,0.7,0.7])
+plot(OUT[:,0],OUT[:,1],'b')
+# xscale('log')
+show()
+
+
+exit()
 
 #########
 
