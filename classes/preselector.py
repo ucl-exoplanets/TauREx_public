@@ -53,17 +53,23 @@ class preselector(object):
         #interpolating PCA vectors onto data vector
         self.interpolate2data()
         #generating mask for correlation using first principal component
-        self.generate_mask()
+        self.generate_mask(thres=0.4)
         #computing euclidian distance and correlation coefficients between library and data
         self.correlate()
         #rank molecules according to their lowest euclidian distance to data
         #also estimate number of likely molecules in data
         self.rank_molecules()
+        #selecting molecules 
+        self.select_molecules()
         #calculating some planetary parameters
         self.calc_astroparams()
 
         # print self.mol_rank
         # print self.mol_idx
+        
+        #saving new PCA library
+#         with gzip.GzipFile(self.params.pre_pca_path+'spec_pcalib2.pkl.zip','wb') as outhandle:
+#             pickle.dump(self.PCALIB,outhandle)
 
 
 
@@ -90,7 +96,7 @@ class preselector(object):
                                  MIXING=self.params.pre_mixing_ratios)
             # print '2 done'
         if generatePCA:
-            generate_PCA_library(self.params.pre_speclib_path+'*',self.params.pre_pca_path)
+            generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
             # print '3 done'
 
 
@@ -141,7 +147,7 @@ class preselector(object):
 
             try:
                 pc1_interp = self.PCALIB[molecule]['PCA']['norm_interp'][:,0]
-                self.PCALIB[molecule]['PCA']['interp_mask'] = pc1_interp > thres
+                self.PCALIB[molecule]['PCA']['interp_mask'] = pc1_interp > self.params.pre_mask_thres
             except(KeyError):
                 pass
 
@@ -189,8 +195,10 @@ class preselector(object):
             # pc2 /= np.max(pc2)
             pc2_inv = (-1.0*(pc2-np.mean(pc2)))+np.mean(pc2)
 
-            eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
-            eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+#             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
+#             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+            eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+            eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             if np.isnan(eucdist):
                 eucdist = 1000
             if np.isnan(eucdist_inv):
@@ -209,17 +217,17 @@ class preselector(object):
 
 
 
-            # print molecule,': ',corrcoeff, '... ',eucdist,'... ',eucdist_inv
-            # pl.figure(1)
-            # pl.plot(datanorm_m,'b')
-            # pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
-            # pl.plot(pc2,'g')
-            # # pl.plot(pc2_inv,'y')
-            # #
-            # # pl.figure(2)
-            # # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-            # # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
-            # pl.show()
+            print molecule,': ',corrcoeff, '... ',eucdist,'... ',eucdist_inv
+#             pl.figure(1)
+#             pl.plot(datanorm_m,'b')
+#             pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
+#             pl.plot(pc2,'g')
+#             # pl.plot(pc2_inv,'y')
+#             #
+#             # pl.figure(2)
+#             # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+#             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+#             pl.show()
 
 
     def rank_molecules(self):
@@ -241,11 +249,13 @@ class preselector(object):
 
         self.mol_rank = np.asarray(molkeys)[idx]
         self.mol_dist = sortdist
-        # if diffidx < 2:
-        #     self.mol_idx = 4
-        # else:
-        #     self.mol_idx  = diffidx
+        if diffidx < 2:
+            self.mol_idx = 4
+        else:
+            self.mol_idx  = diffidx
         self.mol_idx = diffidx
+        
+#         self.mol_idx = 5
 
         # print ''
         # print distance
@@ -269,6 +279,29 @@ class preselector(object):
         # self.Tplanet = 1400
 
 
+    def select_molecules(self):
+    #select molecules given previously determined ranking and inclusions from parameter file
+        
+        self.molselected = self.mol_rank[:self.mol_idx]
+        tmpmol = self.molselected
+        self.numgas      = int(self.mol_idx+1)
+
+        #if set in parameters, molecules are added to selection if not already present
+        if self.params.pre_mol_force_bool:
+            if np.ndim(self.params.pre_mol_force) == 0:
+                self.params.pre_mol_force = np.array([self.params.pre_mol_force])
+
+            for mol in self.params.pre_mol_force:
+                if mol.strip() not in self.molselected:
+                    tmpmol = np.insert(tmpmol,0,mol.strip())
+                    self.numgas += 1  
+                        
+            self.molselected = tmpmol
+
+
+            
+        
+
     def update_params(self):
     #updates the parameter object with perselector derived values and returns
     #updated copy to main code
@@ -282,10 +315,10 @@ class preselector(object):
         newparams.planet_temp = self.Tplanet
 
         #setting number of gases/molecules
-        newparams.tp_num_gas = int(self.mol_idx+1)
+        newparams.tp_num_gas = self.numgas
 
         #setting molecules list
-        newparams.planet_molec = self.mol_rank[self.mol_idx]
+        newparams.planet_molec = self.molselected
 
         #setting new abs_files path
         newparams.in_abs_path = self.params.pre_cross_path
@@ -297,7 +330,7 @@ class preselector(object):
         #determining the right abs file for correct Tplanet
         #this needs to be changed when we want several temperatures
         absfilelist = []
-        for molecule in (self.mol_rank[:self.mol_idx+1]):
+        for molecule in (self.molselected):
             temp = self.PCALIB[molecule]['temps']
             next_temp = find_nearest(temp,self.Tplanet)[0]
 

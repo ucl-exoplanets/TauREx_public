@@ -52,8 +52,14 @@ class parameters(object):
         self.pre_pca_path          = parser.get('Preselector','pca_path')
         self.pre_conver2microns    = parser.getboolean('Preselector','convert2microns')
         self.pre_gen_speclib       = parser.getboolean('Preselector','generate_speclib')
+        self.pre_restrict_temp     = parser.getboolean('Preselector','restrict_temp')
+        self.pre_temp_range        = genfromtxt(StringIO(parser.get('Preselector', 'temp_range')), delimiter = ',')
         self.pre_mixing_ratios     = genfromtxt(StringIO(parser.get('Preselector', 'mixing_ratio')), delimiter = ',')
         self.pre_gen_pca           = parser.getboolean('Preselector','generate_pca')
+        self.pre_mask_thres        = parser.getfloat('Preselector','mask_thres')
+        self.pre_mol_force_bool    = parser.getboolean('Preselector','mol_force_on')
+        self.pre_mol_force         = genfromtxt(StringIO(parser.get('Preselector','mol_force')),delimiter = ',',dtype='str',autostrip=True)
+
         
         self.star_radius           = parser.getfloat('Star', 'radius')    *RSOL
         self.star_temp             = parser.getfloat('Star','temp')

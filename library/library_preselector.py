@@ -1,7 +1,7 @@
 import numpy as np
 import pylab as pl
 import sklearn.decomposition as sk
-import glob,string,gzip
+import glob,string,gzip,os
 import cPickle as pickle
 
 from classes.transmission import *
@@ -33,6 +33,11 @@ def convert2microns(PATH, upcut=25):
 def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #Generates transmission spectra from cross section files for given mixing ratios
     #output: 2 column ascii files (.spec)
+    
+    #cleaning speclib folder before generating spectra
+    oldfiles = glob.glob(OUTPATH+'*.spec')
+    for i in oldfiles:
+        os.remove(i)
 
     #initiating objects needed
     dataob_pca = data(PARAMS)
@@ -54,21 +59,33 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
         temp  = float(string.rsplit(fname,'_',2)[1][:-1]) #getting temperature from file name
 
         # print fname
-
-        for mix in MIXING:
-            X_in   = zeros((1,int(profileob_pca.nlayers))) #setting up mixing ratio array
-            X_in  += mix #setting mixing ratio
-            rho_in = profileob_pca.get_rho(T=temp) #calculating T-P profile
-
-            dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=False) #reading in cross section file
-            # dataob_pca.specgrid = dataob_pca.wavegrid
-            # dataob_pca.nspecgrid = dataob_pca.nwave
-            transob_pca.reset(dataob_pca) #resets transob to reflect changes in dataob
-
-
-            #manually setting mixing ratio and T-P profile
-            MODEL = transob_pca.cpath_integral(rho=rho_in,X=X_in) #computing transmission
-            np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob_pca.specgrid,MODEL)))
+        if PARAMS.pre_restrict_temp: #imposing temperature range restrictions
+            if temp < float(PARAMS.pre_temp_range[0]) or temp > float(PARAMS.pre_temp_range[1]): 
+                pass
+        else:
+            for mix in MIXING:
+                X_in   = zeros((1,int(profileob_pca.nlayers))) #setting up mixing ratio array
+                X_in  += mix #setting mixing ratio
+                rho_in = profileob_pca.get_rho(T=temp) #calculating T-P profile
+        
+                if PARAMS.in_include_cia or PARAMS.in_include_cld:
+                    dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=True) #reading in cross section file
+                else:
+                    dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=False) #reading in cross section file
+                    # dataob_pca.specgrid = dataob_pca.wavegrid
+                    # dataob_pca.nspecgrid = dataob_pca.nwave
+                transob_pca.reset(dataob_pca) #resets transob to reflect changes in dataob
+#                     pl.figure(21)
+#                     pl.plot(dataob_pca.specgrid,dataob_pca.sigma_array[0])
+#                     pl.show()
+#         
+                    #manually setting mixing ratio and T-P profile
+                MODEL = transob_pca.cpath_integral(rho=rho_in,X=X_in) #computing transmission
+#                     pl.figure(20)
+#                     pl.plot(MODEL)
+#                     pl.show()
+#                     exit()
+                np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob_pca.specgrid,MODEL)))
 
 
 def find_nearest(arr, value):
@@ -91,7 +108,8 @@ def PCA(DATA0,PCnum):
 
 
 
-def generate_PCA_library(PATH,OUTPATH=False,comp_num=2):
+def generate_PCA_library(PARAMS,PATH,OUTPATH=False,comp_num=2):
+        
     FILES = glob.glob(PATH)
 
     filename = FILES[0].rpartition('/')[-1]
@@ -130,16 +148,32 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=2):
         for f in FILES:
             if (f.rpartition('/')[-1]).split('_')[0] == molnamelist[i]:
                 tmp = np.loadtxt(f)
-                DATA[:,j] = tmp[:,1]
                 temp  = float(string.rsplit(f,'_',3)[1][:-1]) #getting temperature from file name
-                if temp not in templist:
-                    templist.append(temp)
+                
+                if PARAMS.pre_restrict_temp: #imposing temperature range restrictions
+                    if temp > float(PARAMS.pre_temp_range[0]) and temp < float(PARAMS.pre_temp_range[1]): 
+                        print f
+                        DATA[:,j] = tmp[:,1]
+                        if temp not in templist:
+                            templist.append(temp)
+                else:
+                    DATA[:,j] = tmp[:,1]
+                    if temp not in templist:
+                        templist.append(temp)
 
                 if j == 0:
                     wavegrid = tmp[:,0]
                 j += 1
 
         pca = sk.RandomizedPCA(n_components=comp_num,whiten=False)
+        
+        #checking and replacing negative numbers 
+        DATA[DATA < 0] = 0
+        
+#         pl.figure()
+#         pl.plot(DATA)
+#         pl.show()
+        
         pca.fit(np.transpose(DATA))
 
         meanspec = np.mean(DATA,axis=1)
@@ -165,7 +199,7 @@ def generate_PCA_library(PATH,OUTPATH=False,comp_num=2):
 
 
 
-    if OUTPATH:
+    if OUTPATH != False:
         with gzip.GzipFile(OUTPATH+'spec_pcalib.pkl.zip','wb') as outhandle:
             pickle.dump(OUTdic,outhandle)
 

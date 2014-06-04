@@ -281,7 +281,7 @@ class data(object):
         #sorting data along ascending first column    
         OUT = OUT[argsort(OUT[:,0]),:]
 
-        # figure()
+#         figure()
 #         plot(OUT[:,0], OUT[:,1])
 
         #interpolating to specgrid
@@ -291,8 +291,8 @@ class data(object):
 #             print interpflux
             OUT = transpose(vstack((self.specgrid,interpflux)))
         # print 'ble',np.shape(OUT)
-        # plot(OUT[:,0], OUT[:,1], c='r')
-        # show()
+#         plot(OUT[:,0], OUT[:,1], c='r')
+#         show()
         return OUT
 
         
