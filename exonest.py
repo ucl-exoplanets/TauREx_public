@@ -112,8 +112,7 @@ if params.pre_run:
     preob = preselector(params,dataob)
     # preob.run_preprocess(convertLinelist=False,generateSpectra=True,generatePCA=True)
     preob.run()
-    print preob.mol_dist
-    print preob.mol_rank, preob.mol_idx
+    print preob.molselected
     params = preob.update_params()
     dataob.reset(params)
 
