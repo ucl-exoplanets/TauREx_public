@@ -60,6 +60,7 @@ class data(object):
             self.X       = zeros((self.ngas,self.nlayers))
             self.X      += 1e-5  #setting up initial mixing ratios
 
+
         #calculating densities
         self.rho = (self.pta[:,0])/(self.KBOLTZ*self.pta[:,1])
         self.rho_tot = sum(self.rho)

@@ -1,18 +1,69 @@
 from numpy import *
-# from pylab import *
-import scipy
+from library.library_preselector import *
+import scipy, sys, glob, os, time
 from scipy.special import wofz
+import ctypes as C
+# from pylab import *
 # from library.library_occultquad import *
 # from scipy.optimize import fmin
-import sys
-import os
 # import string
 # import math
-import time
-import ctypes as C
+
+
+
+def find_absfile(PATH,MOLECULELIST,TEMPERATURE):
+    #determining correct abs files to be read in
+    #reading available cross section lists in PATH
+    
+    #code can be improved
+    
+    globlist = glob.glob(PATH+'*.abs')
+
+    #determining the right abs file for correct Tplanet
+    #this needs to be changed when we want several temperatures
+
+    absfilelist = []
+    mollist = []
+    
+    #first pass looking for available molecules
+    for FILE in globlist:
+        fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+        splitname = string.split(fname,'_',3)
+        
+        if splitname[0] not in mollist:
+            mollist.append(splitname[0])
+            
+            
+    #second pass looking for available temperatures
+    for molecule in MOLECULELIST:
+        if molecule not in mollist:
+            raise ValueError('Absorption cross-section file not found for: '+molecule)
+        else:
+            temps = []
+            for FILE in globlist:
+                fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+                splitname = string.split(fname,'_',3)
+                temps.append(float(splitname[2][:-1])) #getting temperature from file name
+                
+            #looking for closest temperature match
+            next_temp = find_nearest(temps,TEMPERATURE)[0]
+        
+            #selecting correct cross section file
+            for FILE in globlist:
+                fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+                splitname = string.split(fname,'_',3)
+                
+                if splitname[0] == molecule:
+                    if float(splitname[2][:-1]) == next_temp:
+                        absfilelist.append(fname)  
+    
+    return absfilelist
+
+
 
 
 def cast2cpp(ARRAY):
+    #cast numpy array to C array
 
     if ARRAY.dtype != float64:
         print 'WARNING: array not cast in float64'

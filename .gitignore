@@ -7,3 +7,8 @@ compiledcode/
 setup.sh
 chains/
 output/
+.metadata/
+.project
+.idea/
+.pydevproject
+.settings

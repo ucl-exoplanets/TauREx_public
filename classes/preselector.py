@@ -284,7 +284,7 @@ class preselector(object):
         
         self.molselected = self.mol_rank[:self.mol_idx]
         tmpmol = self.molselected
-        self.numgas      = int(self.mol_idx+1)
+#         self.numgas      = int(self.mol_idx+1)
 
         #if set in parameters, molecules are added to selection if not already present
         if self.params.pre_mol_force_bool:
@@ -294,9 +294,11 @@ class preselector(object):
             for mol in self.params.pre_mol_force:
                 if mol.strip() not in self.molselected:
                     tmpmol = np.insert(tmpmol,0,mol.strip())
-                    self.numgas += 1  
-                        
+#                     self.numgas += 1  
+                 
             self.molselected = tmpmol
+            
+        self.numgas = int(len(self.molselected))
 
 
             

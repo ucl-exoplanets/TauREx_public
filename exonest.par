@@ -21,7 +21,7 @@ trans_cpp = True
 # not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
 
 #run preselector
-run_pre = True
+run_pre = False
 
 #Path of ExoMol cross section files folder
 cross_path = test-code/crosssections/
@@ -51,7 +51,7 @@ mixing_ratio = 1e-5,1e-4,1e-3,1e-2
 generate_pca = False
 
 #masking threshold
-mask_thres = 0.4
+mask_thres = 0.6
 
 #force preselector to include following list of molecules
 mol_force_on = True
@@ -63,7 +63,7 @@ mol_force = 12C-16O,1H2-16O
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/gj3470b_test2.txt
+spectrum_file = Input/gj3470b_test.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -188,7 +188,7 @@ wavemin = 0.5
 wavemax = 20.0
 
 #resolution of model runs (R)
-spec_res = 5000
+spec_res = 1000
 
 #fit transmission model
 transmission = True
@@ -229,7 +229,7 @@ thin = 2
 #defines MultiNest specific parameters
 
 #resume from previous run
-resume = True
+resume = False
 
 #verbose
 verbose = True
