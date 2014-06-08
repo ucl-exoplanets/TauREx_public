@@ -7,6 +7,55 @@ verbose = True
 trans_cpp = True
 
 
+[Input]
+#Observed spectrum to be fitted
+spectrum_file = Input/gj3470b_test.txt
+
+#use T-P profile and mixing ratios ATM file
+use_ATMfile = False
+
+#file containing pre-determined T-P profile and mixing ratios
+atm_file = Input/profile.atm
+
+#Path of ExoMol cross section files folder
+abs_path = test-code/crosssections/
+
+#files containing absorption cores-sections 
+#you can specify several file names separated by commas
+#WARNING: parameter is legacy input. Not used by code, define abs_path and planet_molec parameters instead.
+abs_files = h2o_1500K.abs
+
+#temperature grid resolution (K)
+tempres = 50
+
+#include varying stellar radii file. True/False 
+include_rad = False 
+
+#file from which to read stellar radius R*(lambda)
+rad_file = Input/rad_star.rad
+
+#include H2-H2 collision induced absorption. True/False 
+include_cia = False 
+
+#file from which to read CIA coefficients
+cia_file = Input/h2_h2_1000K.cia
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+cld_file = Input/cloud1.cld
+
+
+
+[Output]
+#path for output files
+path = Output/
+
+#output file prefix
+file_prefix = test_
+
+
 
 [Preselector]
 
@@ -21,10 +70,7 @@ trans_cpp = True
 # not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
 
 #run preselector
-run_pre = False
-
-#Path of ExoMol cross section files folder
-cross_path = test-code/crosssections/
+run_pre = True
 
 #Path of spectral library folder
 speclib_path = test-code/speclib/
@@ -61,53 +107,6 @@ mol_force_on = True
 mol_force = 12C-16O,1H2-16O
 
 
-[Input]
-#Observed spectrum to be fitted
-spectrum_file = Input/gj3470b_test.txt
-
-#use T-P profile and mixing ratios ATM file
-use_ATMfile = False
-
-#file containing pre-determined T-P profile and mixing ratios
-atm_file = Input/profile.atm
-
-#folder containing absorption cores-section files
-abs_path = Input/exonest_abs/
-
-#files containing absorption cores-sections 
-#you can specify several file names separated by commas
-abs_files = h2o_1500K.abs
-
-#include varying stellar radii file. True/False 
-include_rad = False 
-
-#file from which to read stellar radius R*(lambda)
-rad_file = Input/rad_star.rad
-
-#include H2-H2 collision induced absorption. True/False 
-include_cia = False 
-
-#file from which to read CIA coefficients
-cia_file = Input/h2_h2_1000K.cia
-
-#include cloud opacities. True/False 
-include_cld = False
-
-#file from which to read optical depths for extra opacities (e.g. clouds)
-cld_file = Input/cloud1.cld
-
-
-
-[Output]
-#path for output files
-path = Output/
-
-#output file prefix
-file_prefix = test_
-
-
-
-
 [Star]
 #defines stellar specific (fixed or starting) parameters:
 
@@ -141,7 +140,7 @@ temp = 800
 mu = 2.3
 
 #molecules considered
-molec = H20, CH4, CO2, NH4, CO
+molec = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
 
 
 [T-P profile]

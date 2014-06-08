@@ -116,7 +116,6 @@ if params.pre_run:
     params = preob.update_params()
     dataob.reset(params)
 
-print params.in_abs_files
 
 #adding some molecules to the atmosphere
 dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
@@ -142,91 +141,91 @@ transob = transmission(params, dataob)
 # exit()
 
 ########
-###example of how to manually reading in ABS file and computing transmission spectrum
-
-
-dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/test-code/crosssections/',
-                   filelist=['1H2-16O_300-29995_1400K_1.000000.sigma.abs',
-                             '12C-1H4_300-11999_1400K_1.000000.sigma.abs',
-                             '12C-16O_300-8499_1400K_1.000000.sigma.abs',
-                             '14N-1H3_300-19999_1400K_1.000000.sigma.abs',
-                             '12C-16O2_300-12999_1400K_1.000000.sigma.abs'],interpolate=True)
-# # 
-# # 
-# # dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/test-code/crosssections/',
-# #                    filelist=['12C-16O2_300-12999_600K_1.000000.sigma.abs'],interpolate=True)
-# # 
+# ###example of how to manually reading in ABS file and computing transmission spectrum
 # 
-transob.reset(dataob) #resets transob to reflect changes in dataob
 # 
+# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/test-code/crosssections/',
+#                    filelist=['1H2-16O_300-29995_1400K_1.000000.sigma.abs',
+#                              '12C-1H4_300-11999_1400K_1.000000.sigma.abs',
+#                              '12C-16O_300-8499_1400K_1.000000.sigma.abs',
+#                              '14N-1H3_300-19999_1400K_1.000000.sigma.abs',
+#                              '12C-16O2_300-12999_1400K_1.000000.sigma.abs'],interpolate=True,temperature=1400)
+# # # 
+# # # 
+# # # dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/test-code/crosssections/',
+# # #                    filelist=['12C-16O2_300-12999_600K_1.000000.sigma.abs'],interpolate=True)
+# # # 
+# # 
+# transob.reset(dataob) #resets transob to reflect changes in dataob
+# # 
+# # # # #
+# # # # figure(200)
+# # # # plot(dataob.specgrid,dataob.sigma_array[0,:])
+# # # # plot(dataob.specgrid,dataob.sigma_array[1,:])
+# # # # plot(dataob.specgrid,dataob.sigma_array[2,:])
+# # # # # plot(dataob.specgrid,dataob.sigma_array[3,:])
+# # # # show()
+# # # # exit()
+# # # # #
+# # # # #
+# # # #manually setting mixing ratio and T-P profile
+# X_in   = zeros((5,profileob.nlayers))
+# # # print np.shape(X_in)
+# # # X_in[0,:]  += 1.0e-03
+# # # # X_in[1,:]  += 2.54462702e-08
+# # # # X_in[2,:]  += 1.14925746e-03
+# # # # X_in[3,:]  += 9.96460970e-05
+# # # 
+# # # # X_in[0,:]  += 0.0011647246764488776
+# # # # X_in[1,:]  += 2.892344980711778e-08
+# # # # X_in[2,:]  += 0.0011969760859621417
+# # # # X_in[3,:]  += 0.00010305931257479826
+# # # 
+# #gj3470 composition
+# # X_in[0,:]  += 5.0e-3
+# # X_in[1,:]  += 4.0e-3
+# # X_in[2,:]  += 2e-3
+# # X_in[3,:]  += 7e-4 #2e-7
+# # X_in[4,:]  += 2e-4
+# 
+# #carbon poor 1solar c/o=0.5
+# # X_in[0,:]  += 4.0e-4
+# # X_in[1,:]  += 2.0e-8
+# # X_in[2,:]  += 4.0e-4
+# # X_in[3,:]  += 2.0e-7 #2e-7
+# # X_in[4,:]  += 1.0e-5
+# 
+# #carbon poor 10x solar c/o=0.5
+# X_in[0,:]  += 4.0e-4
+# X_in[1,:]  += 1.0e-7
+# X_in[2,:]  += 4.0e-4
+# X_in[3,:]  += 7.0e-5 #2e-7
+# X_in[4,:]  += 1.0e-5
+# 
+# # # 
+# # # # 1.11622920e-03   2.54462702e-08   1.14925746e-03
+# # # #    9.96460970e-05
 # # # #
-# # # figure(200)
-# # # plot(dataob.specgrid,dataob.sigma_array[0,:])
-# # # plot(dataob.specgrid,dataob.sigma_array[1,:])
-# # # plot(dataob.specgrid,dataob.sigma_array[2,:])
-# # # # plot(dataob.specgrid,dataob.sigma_array[3,:])
-# # # show()
-# # # exit()
-# # # #
-# # # #
-# # #manually setting mixing ratio and T-P profile
-X_in   = zeros((5,profileob.nlayers))
-# # print np.shape(X_in)
-# # X_in[0,:]  += 1.0e-03
-# # # X_in[1,:]  += 2.54462702e-08
-# # # X_in[2,:]  += 1.14925746e-03
-# # # X_in[3,:]  += 9.96460970e-05
+# # # # [1143.2703550954802, 0.0011647246764488776, 2.892344980711778e-08, 0.0011969760859621417, 0.00010305931257479826]
+# #   
+# rho_in = profileob.get_rho(T=1400)
+# MODEL = transob.cpath_integral(rho=rho_in,X=X_in,temperature=1400)  # computing transmission
+# # # 
+# OUT = np.zeros((len(dataob.specgrid),3))
+# OUT[:,0] = dataob.specgrid
+# OUT[:,1] = MODEL
+# OUT[:,2] += 5e-5
+# # np.savetxt('testspec2.txt',OUT)
 # # 
-# # # X_in[0,:]  += 0.0011647246764488776
-# # # X_in[1,:]  += 2.892344980711778e-08
-# # # X_in[2,:]  += 0.0011969760859621417
-# # # X_in[3,:]  += 0.00010305931257479826
+# figure()
+# # plot(dataob.spectrum[:,0],dataob.spectrum[:,1],'g')
+# errorbar(OUT[:,0],OUT[:,1],OUT[:,2],color=[0.7,0.7,0.7])
+# plot(OUT[:,0],OUT[:,1],'b')
+# xscale('log')
+# show()
 # # 
-#gj3470 composition
-# X_in[0,:]  += 5.0e-3
-# X_in[1,:]  += 4.0e-3
-# X_in[2,:]  += 2e-3
-# X_in[3,:]  += 7e-4 #2e-7
-# X_in[4,:]  += 2e-4
-
-#carbon poor 1solar c/o=0.5
-X_in[0,:]  += 4.0e-4
-X_in[1,:]  += 2.0e-8
-X_in[2,:]  += 4.0e-4
-X_in[3,:]  += 2.0e-7 #2e-7
-X_in[4,:]  += 1.0e-5
-
-#carbon poor 10x solar c/o=0.5
-X_in[0,:]  += 4.0e-4
-X_in[1,:]  += 1.0e-7
-X_in[2,:]  += 4.0e-4
-X_in[3,:]  += 7.0e-5 #2e-7
-X_in[4,:]  += 1.0e-5
-
 # # 
-# # # 1.11622920e-03   2.54462702e-08   1.14925746e-03
-# # #    9.96460970e-05
-# # #
-# # # [1143.2703550954802, 0.0011647246764488776, 2.892344980711778e-08, 0.0011969760859621417, 0.00010305931257479826]
-#   
-rho_in = profileob.get_rho(T=1400)
-MODEL = transob.cpath_integral(rho=rho_in,X=X_in)  # computing transmission
-# # 
-OUT = np.zeros((len(dataob.specgrid),3))
-OUT[:,0] = dataob.specgrid
-OUT[:,1] = MODEL
-OUT[:,2] += 5e-5
-# np.savetxt('testspec2.txt',OUT)
-# 
-figure()
-# plot(dataob.spectrum[:,0],dataob.spectrum[:,1],'g')
-errorbar(OUT[:,0],OUT[:,1],OUT[:,2],color=[0.7,0.7,0.7])
-plot(OUT[:,0],OUT[:,1],'b')
-xscale('log')
-show()
-# 
-# 
-exit()
+# exit()
 
 #########
 
@@ -241,7 +240,7 @@ print 'fitting data'
 
 fitob.downhill_fit()    #simplex downhill fit
 # fitob.mcmc_fit()        #MCMC fit
-fitob.multinest_fit()   #Nested sampling fit
+# fitob.multinest_fit()   #Nested sampling fit
 
 #
 #manually call transmission spectrum code

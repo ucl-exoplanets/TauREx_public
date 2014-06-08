@@ -1,6 +1,6 @@
 from numpy import *
-from library.library_preselector import *
-import scipy, sys, glob, os, time
+# from library.library_preselector import *
+import scipy, sys, glob, os, time,string
 from scipy.special import wofz
 import ctypes as C
 # from pylab import *
@@ -9,9 +9,45 @@ import ctypes as C
 # import string
 # import math
 
+# def linear_abs_temp_interpolator(TEMPLIST, ):
 
 
-def find_absfile(PATH,MOLECULELIST,TEMPERATURE):
+def find_nearest(arr, value):
+    # find nearest value in array
+    arr = array(arr)
+    idx = (abs(arr-value)).argmin()
+    return [arr[idx], idx]
+
+
+def find_absfiles(PATH, MOLNAME):
+    #finding all absorption crosssection files in PATH for molecule MOLNAME
+    #return: array of absfilenames and array of corresponding temperatures
+    
+    globlist = glob.glob(PATH+'*.abs')
+    
+    absfilelist = []
+    templist = []
+
+    for FILE in globlist:
+        fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+        splitname = string.split(fname,'_',3)
+
+        if splitname[0] == MOLNAME:
+            absfilelist.append(fname)
+            templist.append(float(splitname[2][:-1]))
+    
+    templist = asarray(templist)
+    absfilelist = asarray(absfilelist)
+    
+    sortidx = argsort(templist)
+    
+#     print absfilelist[sortidx], templist[sortidx]
+    
+    return absfilelist[sortidx], templist[sortidx]
+
+
+
+def find_single_absfile(PATH,MOLECULELIST,TEMPERATURE):
     #determining correct abs files to be read in
     #reading available cross section lists in PATH
     

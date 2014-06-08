@@ -38,10 +38,12 @@ class transmission(object):
         self.nlayers       = data['nlayers']
         self.rho           = data['rho']
         self.n_gas         = data['ngas']
-        self.sigma_array   = data['sigma_array']
+        self.sigma_dict    = data['sigma_dict']
         self.X             = data['X']
         self.atmosphere    = data['atmosphere']
+        self.planet_temp   = int(params.planet_temp)
 
+        
         if usedatagrid:
         #use wavelengthgrid of data or internal specgrid defined in data class
             self.set_lambdagrid(data['wavegrid'])
@@ -152,12 +154,17 @@ class transmission(object):
 
 
 
-    def path_integral(self, X = None, rho = None):
+    def path_integral(self, X = None, rho = None, temperature=None):
 
         if X is None:
             X = self.X
         if rho is None:
             rho = self.rho
+        if temperature is None:
+            temperature = self.planet_temp
+            
+        #selecting correct sigma_array for temperature
+        sigma_array = self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
         
         #setting up arrays
         absorption = zeros((self.nlambda))
@@ -176,7 +183,7 @@ class transmission(object):
             for c,j,k in self.iteridx:
                 #optical depth due to gasses
                 for i in range(molnum):
-                    tau[j] += (self.sigma_array[i,wl] * X[i,j+k] * rho[j+k] * self.dlarray[c])
+                    tau[j] += (sigma_array[i,wl] * X[i,j+k] * rho[j+k] * self.dlarray[c])
                 
                 Rtau[j] = self.Rsig[wl] * rho[j+k] * self.dlarray[c] #optical depth due to Rayleigh scattering
                 Ctau[j] = self.Csig[wl] * (rho[j+k] **2) * self.dlarray[c]  # calculating CIA optical depth
@@ -194,11 +201,16 @@ class transmission(object):
         return absorption
         
     # @profile #line-by-line profiling decorator
-    def cpath_integral(self, X = None, rho = None):
+    def cpath_integral(self, X = None, rho = None, temperature=None):
         if X is None:
             X = self.X
         if rho is None:
             rho = self.rho
+        if temperature is None:
+            temperature = self.planet_temp
+            
+        #selecting correct sigma_array for temperature
+        sigma_array = self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
 
         #casting changing arrays to c++ pointers
         Xs1,Xs2 = shape(X)
@@ -209,7 +221,7 @@ class transmission(object):
         crho, cs1 = cast2cpp(rho)
         del(cs1);
         #casting fixed arrays and variables to c++ pointers
-        csigma_array, cs1,cs2 = cast2cpp(self.sigma_array)
+        csigma_array, cs1,cs2 = cast2cpp(sigma_array)
         del(cs1); del(cs2);
         cdlarray, cs1 = cast2cpp(self.dlarray)
         del(cs1);

@@ -22,6 +22,9 @@ from numpy import *
 from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
+import library.library_general as libgen
+
+
 
 class data(object):
 
@@ -69,7 +72,10 @@ class data(object):
         self.atmosphere = self.init_atmosphere()
         
         #reading in absorption coefficient data 
-        self.sigma_array = self.readABSfiles()
+#         self.sigma_array = self.readABSfiles()
+        self.sigma_dict = self.build_sigma_dic()
+        
+        
 
         #reading in other files if specified in parameter file
         if params.in_include_rad:
@@ -190,16 +196,110 @@ class data(object):
         return MMW
 
 
-    def set_ABSfile(self,path=None,filelist=None,interpolate = False):
+    def set_ABSfile(self,path=None,filelist=None,interpolate = False,temperature=None):
     #manually overwrites absorption coefficients from new file
     #input path needs to be given and list of filename strings
         if path is None:
             extpath = self.params.in_abs_path
         if filelist is None:
             raise IOError('No input ABS file specified')
-
-        self.sigma_array,self.specgrid = self.readABSfiles(extpath=path,extfilelist=filelist, interpolate2grid=interpolate,outputwavegrid=True)
+        if temperature is None:
+            temperature = self.params.planet_temp
+        
+        sigma_array,self.specgrid = self.readABSfiles(extpath=path,extfilelist=filelist, interpolate2grid=interpolate,outputwavegrid=True)
+        self.sigma_dict = {}
+        self.sigma_dict['tempgrid'] = [int(temperature)]
+        self.sigma_dict[int(temperature)] = sigma_array
         self.nspecgrid = len(self.specgrid)
+
+
+
+    def build_sigma_dic(self,tempstep=50):
+        #building temperature dependent sigma_array
+        
+        try:
+            mollist = [self.params.planet_molec.item()] #necessary for 0d numpy arrays
+        except ValueError:
+            mollist = self.params.planet_molec
+        
+#         print self.params.planet_molec
+        
+        tempmin = []
+        tempmax = []
+                
+        moldict = {}
+        
+        
+        for molecule in mollist:
+            moldict[molecule] ={}
+            
+            absfiles, templist = libgen.find_absfiles(self.params.in_abs_path,molecule)
+            tempmax.append(np.max(templist))
+            tempmin.append(np.min(templist))
+            
+            sigtmp = self.readABSfiles(extfilelist=absfiles, extpath=self.params.in_abs_path, interpolate2grid=True, outputwavegrid = False)
+            
+            sigshape = np.shape(sigtmp)
+            
+            moldict[molecule]['sigma'] = sigtmp
+            moldict[molecule]['templist'] = templist
+            moldict[molecule]['tempmin'] = tempmin
+            moldict[molecule]['tempmax'] = tempmax
+            
+            
+#             figure()
+#             plot(np.transpose(sigtmp))
+#             show()
+
+        #setting up new temperature grid
+        temp_totmin = np.max(tempmin)
+        temp_totmax = np.min(tempmax)
+        tempgrid = [i for i in range(int(temp_totmin),int(temp_totmax),int(tempstep))]
+        tempgrid.append(int(temp_totmax))
+        moldict['tempgrid'] = tempgrid 
+        
+#         print temp_totmax, temp_totmin, tempgrid
+        
+        #interpolating absorption cross sections to new temperature grid
+        for molecule in mollist:
+            interpsigma = zeros((len(tempgrid),sigshape[1]))
+            
+            for i in range(sigshape[1]):
+                interpsigma[:,i] = np.interp(tempgrid,moldict[molecule]['templist'],moldict[molecule]['sigma'][:,i]) #linear interpolation. to be changed with hill et al method 
+            
+            moldict[molecule]['interpsigma'] = interpsigma
+            
+#             print np.shape(interpsigma)
+#             figure()
+#             plot(np.transpose(interpsigma))
+
+        #building final sigma_array dictionary
+        sigma_dict = {}
+        sigma_dict['tempgrid'] = tempgrid
+        for i in range(len(tempgrid)):
+            sigma_dict[tempgrid[i]] = {}
+            
+            sigma_array = zeros((len(mollist),sigshape[1]))
+            j = 0
+            for molecule in mollist:
+                sigma_array[j,:] = moldict[molecule]['interpsigma'][i,:]
+                j += 1
+            sigma_dict[tempgrid[i]] = sigma_array
+            
+#             print tempgrid[i], type(tempgrid[i])
+#             figure()
+#             plot(np.transpose(sigma_dict[tempgrid[i]]))
+#             show() 
+            
+        
+#         figure()
+#         plot(np.transpose(sigma_dict[600][0,:]),'b')
+#         plot(np.transpose(sigma_dict[1600][0,:]),'r')
+#         
+#         show()
+
+        return sigma_dict
+
 
 
     def readATMfile(self):

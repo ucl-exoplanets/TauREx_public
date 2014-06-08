@@ -35,6 +35,7 @@ class parameters(object):
         self.in_atm_file           = parser.get('Input','atm_file')
         self.in_abs_path           = parser.get('Input','abs_path')
         self.in_abs_files          = parser.get('Input','abs_files')
+        self.in_tempres            = parser.getint('Input','tempres')
 
         self.in_include_rad        = parser.getboolean('Input','include_rad')
         self.in_rad_file           = parser.get('Input','rad_file')
@@ -47,7 +48,6 @@ class parameters(object):
         self.out_file_prefix       = parser.get('Output','file_prefix')
 
         self.pre_run               = parser.getboolean('Preselector','run_pre')
-        self.pre_cross_path        = parser.get('Preselector','cross_path')
         self.pre_speclib_path      = parser.get('Preselector','speclib_path')
         self.pre_pca_path          = parser.get('Preselector','pca_path')
         self.pre_conver2microns    = parser.getboolean('Preselector','convert2microns')
@@ -70,7 +70,7 @@ class parameters(object):
         self.planet_albedo         = parser.getfloat('Planet','albedo')
         self.planet_temp           = parser.getfloat('Planet', 'temp')
         self.planet_mu             = parser.getfloat('Planet', 'mu')      *AMU
-        self.planet_molec          = parser.get('Planet','molec')
+        self.planet_molec          = genfromtxt(StringIO(parser.get('Planet','molec')),delimiter = ',',dtype='str',autostrip=True)
         
         self.tp_var_atm            = parser.getboolean('T-P profile','var_atm')
         self.tp_num_scale          = parser.getint('T-P profile', 'num_scaleheights')

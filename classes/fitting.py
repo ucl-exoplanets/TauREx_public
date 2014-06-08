@@ -116,7 +116,7 @@ class fitting(object):
             X[i,:] += PFIT[i+1]
 
 
-        MODEL = self.transmod.cpath_integral(rho=rho,X=X)
+        MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=PFIT[0])
         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
 
 #         ion()

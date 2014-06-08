@@ -89,10 +89,10 @@ class preselector(object):
 
         #doing the pre-processing
         if convertLinelist:
-            convert2microns(self.params.pre_cross_path+'*')
+            convert2microns(self.params.in_abs_path+'*')
             # print '1 done'
         if generateSpectra:
-            generate_spectra_lib(self.params,self.params.pre_cross_path,self.params.pre_speclib_path,
+            generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
                                  MIXING=self.params.pre_mixing_ratios)
             # print '2 done'
         if generatePCA:
@@ -323,28 +323,28 @@ class preselector(object):
         newparams.planet_molec = self.molselected
 
         #setting new abs_files path
-        newparams.in_abs_path = self.params.pre_cross_path
+        newparams.in_abs_path = self.params.in_abs_path
 
-        #determining correct abs files to be read in
-        #reading available cross section lists in PATH
-        globlist = glob.glob(self.params.pre_cross_path+'*.abs')
-
-        #determining the right abs file for correct Tplanet
-        #this needs to be changed when we want several temperatures
-        absfilelist = []
-        for molecule in (self.molselected):
-            temp = self.PCALIB[molecule]['temps']
-            next_temp = find_nearest(temp,self.Tplanet)[0]
-
-            for FILE in globlist:
-                fname = string.rsplit(FILE,'/',1)[1] #splitting the name
-                splitname = string.split(fname,'_',3)
-
-                if splitname[0] == molecule:
-                    if float(splitname[2][:-1]) == next_temp:
-                        absfilelist.append(fname)
-
-        #setting new list of abs files to be read
-        newparams.in_abs_files = absfilelist
+#         #determining correct abs files to be read in
+#         #reading available cross section lists in PATH
+#         globlist = glob.glob(self.params.in_abs_path+'*.abs')
+# 
+#         #determining the right abs file for correct Tplanet
+#         #this needs to be changed when we want several temperatures
+#         absfilelist = []
+#         for molecule in (self.molselected):
+#             temp = self.PCALIB[molecule]['temps']
+#             next_temp = find_nearest(temp,self.Tplanet)[0]
+# 
+#             for FILE in globlist:
+#                 fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+#                 splitname = string.split(fname,'_',3)
+# 
+#                 if splitname[0] == molecule:
+#                     if float(splitname[2][:-1]) == next_temp:
+#                         absfilelist.append(fname)
+# 
+#         #setting new list of abs files to be read
+#         newparams.in_abs_files = absfilelist
 
         return newparams
