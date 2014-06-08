@@ -152,7 +152,10 @@ class transmission(object):
     #calculating collisional induced absorption
         return self.scatterCIA(self.cia[:,1],self.atmosphere['mol']['H2']['frac'])      
 
-
+    def get_sigma_array(self,temperature):
+    #getting sigma array from sigma_dic for given temperature 
+        return self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
+        
 
     def path_integral(self, X = None, rho = None, temperature=None):
 
@@ -164,7 +167,7 @@ class transmission(object):
             temperature = self.planet_temp
             
         #selecting correct sigma_array for temperature
-        sigma_array = self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
+        sigma_array = self.get_sigma_array(temperature)
         
         #setting up arrays
         absorption = zeros((self.nlambda))
@@ -210,8 +213,8 @@ class transmission(object):
             temperature = self.planet_temp
             
         #selecting correct sigma_array for temperature
-        sigma_array = self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
-
+        sigma_array = self.get_sigma_array(temperature)
+        
         #casting changing arrays to c++ pointers
         Xs1,Xs2 = shape(X)
         Xnew = zeros((Xs1+1,Xs2))
