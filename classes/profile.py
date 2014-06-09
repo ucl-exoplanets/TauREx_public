@@ -39,7 +39,7 @@ class profile(object):
         
         if params.tp_var_atm:
             self.nlayers = int(params.tp_atm_levels)
-            self.ngas    = int(params.tp_num_gas)
+            self.ngas    = int(data.ngas)
             self.pta     = self.setup_pta_grid()
             self.P       = self.pta[:,0]
             self.T       = self.pta[:,1]

@@ -6,6 +6,18 @@ verbose = True
 #True: c++ version, False: python version
 trans_cpp = True
 
+#manually set wavelength range (if False, range taken from input data)
+manual_waverange = True
+
+#short wavelength cut-off (in microns) if manual_waverange = True
+wavemin = 0.5
+
+#long wavelength cut-off (in microns) if manual_waverange = True
+wavemax = 20.0
+
+#resolution of internal model runs (R)
+spec_res = 1000
+
 
 [Input]
 #Observed spectrum to be fitted
@@ -18,12 +30,12 @@ use_ATMfile = False
 atm_file = Input/profile.atm
 
 #Path of ExoMol cross section files folder
-abs_path = test-code/crosssections/
+abs_path = Input/crosssections/
 
 #files containing absorption cores-sections 
 #you can specify several file names separated by commas
 #WARNING: parameter is legacy input. Not used by code, define abs_path and planet_molec parameters instead.
-abs_files = h2o_1500K.abs
+__legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
 tempres = 50
@@ -55,6 +67,11 @@ path = Output/
 #output file prefix
 file_prefix = test_
 
+#save internal model to file. Useful for when only creating transmission/emisison model
+dump_internal = True
+
+#internal model name save as
+internal_name = testspec.dat
 
 
 [Preselector]
@@ -73,10 +90,10 @@ file_prefix = test_
 run_pre = True
 
 #Path of spectral library folder
-speclib_path = test-code/speclib/
+speclib_path = Preselector/speclib/
 
 #Path of PCA preselector .pkl file
-pca_path = test-code/
+pca_path = Preselector/
 
 #run ExoMol cross section conversion from wavenumbers to microns
 convert2microns = True
@@ -140,7 +157,12 @@ temp = 800
 mu = 2.3
 
 #molecules considered
-molec = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
+molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
+
+#initial mixing ratios (starting point for minimisation) 
+#and used for model only mode (create_spectrum.py). Must have as
+#many mixing ratios as molecules above. Comma separated list. 
+mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
 
 
 [T-P profile]
@@ -155,10 +177,6 @@ num_scaleheights = 20
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
 atm_levels = 40
-
-#number of gasses in atmosphere. 
-#If var_atm = False, num_gas is taken from .atm file
-num_gas = 1
 
 #set temperature as variables
 var_temp = True
@@ -176,18 +194,6 @@ var_mix = True
 [Fitting]
 #defines general fittings parameters 
 #independent of method
-
-#manually set wavelength range (if False, range taken from input data)
-manual_waverange = False
-
-#short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.5
-
-#long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 20.0
-
-#resolution of model runs (R)
-spec_res = 1000
 
 #fit transmission model
 transmission = True
@@ -232,6 +238,9 @@ resume = False
 
 #verbose
 verbose = True
+
+#sampling chains directory
+nest_path = chains/
 
 #sampling efficiency (parameter, ...)
 sampling_eff = parameter

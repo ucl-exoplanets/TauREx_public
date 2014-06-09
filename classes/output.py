@@ -28,16 +28,17 @@ from library.library_plotting import *
 
 
 class output(object):
-    def __init__(self,params,data,fit):
+    def __init__(self,params,data,fit=None):
 
         self.params = params
         self.data   = data
         self.fit    = fit
 
         #determining which fits were performed
-        self.MCMC = fit.MCMC
-        self.NEST = fit.NEST
-        self.DOWN = fit.DOWNHILL
+        if fit is not None:
+            self.MCMC = fit.MCMC
+            self.NEST = fit.NEST
+            self.DOWN = fit.DOWNHILL
 
         #calculating final absorption/emission spectrum (currently only absorption)
         self.profile = profile(params,data)
@@ -116,10 +117,18 @@ class output(object):
             py.plot(self.data.spectrum[:,0],transpose(self.transspec_nest),c='g',label='NESTED',linewidth=linewidth)
         py.legend()
         py.title('Data and Model')
-        py.xlabel('Wavelength')
+        py.xlabel('Wavelength ($\mu m$)')
         py.ylabel('(Rp/Rs)^2') #dynamic for emission case later
 
-    def save_model(self,ascii=True):
+    def plot_manual(self,model,linewidth=2.0):
+        py.figure()
+        py.plot(model[:,0],model[:,1],color=[0.0,0.0,0.0],linewidth=linewidth,label='Model')
+        py.legend()
+        py.title('Model')
+        py.xlabel('Wavelength ($\mu m$)')
+        py.ylabel('$(Rp/Rs)^2$') #dynamic for emission case later
+
+    def save_model(self,ascii=True,modelout=None, modelsaveas= None):
         #dumps all model fits to file
         if not os.path.exists(self.params.out_path):
             os.makedirs(self.params.out_path)
@@ -141,3 +150,7 @@ class output(object):
                 np.savetxt(self.params.out_path+self.params.out_file_prefix+'transmission_spectrum_down.dat',OUT)
         if self.params.fit_emission:
             print 'NEIN!'
+        if modelout is not None:
+            np.savetxt(self.params.out_path+modelsaveas,modelout)
+            
+            

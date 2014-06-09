@@ -37,11 +37,11 @@ class data(object):
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
-        if params.fit_manual_waverange:
-            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
-                                          lambda_min=self.params.fit_wavemin,lambda_max=self.params.fit_wavemax)
+        if params.gen_manual_waverange:
+            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
+                                          lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
         else:
-            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.fit_spec_res,
+            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
                                           lambda_min=self.wavegrid[0],lambda_max=self.wavegrid[-1])
         self.nspecgrid = len(self.specgrid)
 
@@ -58,10 +58,9 @@ class data(object):
             self.ngas = len(self.X[:,0])
         else:
             self.nlayers = self.params.tp_atm_levels
-            self.ngas    = self.params.tp_num_gas
+            self.ngas    = size(self.params.planet_molec)
             self.pta     = self.setup_pta_grid()
-            self.X       = zeros((self.ngas,self.nlayers))
-            self.X      += 1e-5  #setting up initial mixing ratios
+            self.X       = self.set_mixing_ratios()
 
 
         #calculating densities
@@ -157,6 +156,27 @@ class data(object):
 
         return np.asarray(specgrid),np.asarray(delta_lambda)
 
+    def set_mixing_ratios(self):
+    #setting up mixing ratio array from parameter file inputs
+        try:
+            mixing = [self.params.planet_mixing.item()] #necessary for 0d numpy arrays
+        except ValueError:
+            mixing = self.params.planet_mixing   
+            
+        #checking if number of mixing ratios = number of gasses
+        X = zeros((self.ngas,self.nlayers))
+        
+        if self.params.pre_run:
+            X += 1e-4
+        else:
+            if size(mixing) is not self.ngas:
+                raise IOError('Wrong  number of mixing ratios to molecules in parameter file')
+                exit()
+            for i in range(self.ngas):
+                X[i,:] += float(mixing[i])
+        return X
+        
+        
 
     def setup_pta_grid(self):
     #generating atmospheric Pressure, Temperature, Altitude (PTA)
