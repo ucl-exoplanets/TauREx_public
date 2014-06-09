@@ -37,14 +37,13 @@ except ImportError:
     
 
 #checking for multinest library
-global multinest_import 
 try: 
-    with os.devnull as sys.stdout: 
-        import pymultinest
-        multinest_import = True
+    import pymultinest
+    multinest_import = True
 except:
-    print 'Multinest library is not loaded. Multinest functionality will be disabled.'
+    print 'WARNING: Multinest library is not loaded. Multinest functionality will be disabled.'
     multinest_import = False
+
 
 #checking for pymc library
 global pymc_import
@@ -52,7 +51,7 @@ try:
     import pymc
     pymc_import = True
 except:
-    print 'PYMC library is not loaded. MCMC functionality will be disabled.'
+    print 'WARNING: PYMC library is not loaded. MCMC functionality will be disabled.'
     pymc_import = False
 
 
@@ -121,7 +120,6 @@ params = parameters(options.param_filename)
 #initialising data object
 dataob = data(params)
 
-
 #initiating preselector class
 if params.pre_run:
     if params.verbose: print 'loading preprocessing'
@@ -163,6 +161,7 @@ if params.fit_transmission:
     if params.mcmc_run and pymc_import:
         fitob.mcmc_fit()    #MCMC fit
     if params.nest_run and multinest_import:
+        print 'AAAAH'
         fitob.multinest_fit()   #Nested sampling fit
 
 

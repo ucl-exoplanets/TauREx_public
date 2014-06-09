@@ -6,11 +6,9 @@
 import pylab,numpy, os, sys
 from pylab import *
 from numpy import *
-global multinest_import 
-try: 
-    with os.devnull as sys.stdout: 
-        import pymultinest
-        multinest_import = True
+try:  
+    import pymultinest
+    multinest_import = True
 except:
     multinest_import = False
 

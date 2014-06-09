@@ -19,26 +19,20 @@
 ################################################
 
 #loading libraries     
-import numpy, pylab,os,sys
+import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess
 from numpy import *
 from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 from scipy.optimize import minimize
-import pymc
-import warnings
 
-import threading, subprocess
-global multinest_import 
 try: 
-    with os.devnull as sys.stdout: 
-        import pymultinest
-        multinest_import = True
+    import pymultinest
+    multinest_import = True
 except:
     multinest_import = False
 
-import math, os
 if not os.path.exists("chains"): os.mkdir("chains")
 
 try:
