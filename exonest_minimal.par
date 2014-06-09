@@ -19,6 +19,7 @@ wavemax = 20.0
 spec_res = 1000
 
 
+
 [Input]
 #Observed spectrum to be fitted
 spectrum_file = Input/gj3470b_test.txt
@@ -59,7 +60,6 @@ include_cld = False
 cld_file = Input/cloud1.cld
 
 
-
 [Output]
 #path for output files
 path = Output/
@@ -74,56 +74,6 @@ dump_internal = True
 internal_name = testspec.dat
 
 
-[Preselector]
-
-#Run preselector module to automatically estimate
-#number and types of molecules present in spectrum.
-#If run, the following parameters will be automatically
-#determined and overwritten by the pre-selector
-# [Input]: atm_file, abs_path (overwritten by cross_path), abs_files
-# [Input]: use_ATMfile = False,
-# [Planet]: temp, molec, (mu not yet)
-# [T-P profile]: num_gas
-# not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
-
-#run preselector
-run_pre = True
-
-#Path of spectral library folder
-speclib_path = Preselector/speclib/
-
-#Path of PCA preselector .pkl file
-pca_path = Preselector/
-
-#run ExoMol cross section conversion from wavenumbers to microns
-convert2microns = True
-
-#(re)generate spectral library
-generate_speclib = False
-
-#restrict temperature range for cross-section lists
-restrict_temp = False
-
-#setting temperature range (K) if restrict_temp = True : low, high 
-temp_range = 400, 1000
-
-#mixing ratios for which spectra are computed
-mixing_ratio = 1e-5,1e-4,1e-3,1e-2
-
-#(re)compute PCA preselector file
-generate_pca = False
-
-#masking threshold
-mask_thres = 0.6
-
-#force preselector to include following list of molecules
-mol_force_on = True
-
-#list of molecules to be added
-#naming convention must be same as cross-section file, comma separated 
-mol_force = 12C-16O,1H2-16O
-
-
 [Star]
 #defines stellar specific (fixed or starting) parameters:
 
@@ -132,7 +82,6 @@ radius = 0.568
 
 #Stellar temperature (K)
 temp   = 3600
-
 
 
 [Planet]
@@ -165,6 +114,7 @@ molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
 mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
 
 
+
 [T-P profile]
 #let mixing ratios and T-P profile vary
 #True: free parameters allowed and lower/upper limits taken from .atm, 
@@ -190,80 +140,6 @@ atm_max_pressure = 1e6
 #set mixing ratios as variables
 var_mix = True
 
-
-[Fitting]
-#defines general fittings parameters 
-#independent of method
-
-#fit transmission model
-transmission = True
-
-#fit emission model
-emission     = False
-
-#free parameters, temperature, abundance
-param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
-
-#Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 200
-T_low = 200
-
-#Upper and lower bounds for mixing ratios 
-X_up  = 1e-2
-X_low = 0.0
-
-
-[MCMC]
-#defines MCMC specific parameters
-
-#run MCMC analysis on data
-run = False
-
-#update data standard deviation from dynamic fit.
-update_std = True
-
-
-#MCMC number of total iterations
-iter = 1000
-
-#MCMC burn in period 
-burn = 10
-
-#MCMC thinning factor
-thin = 2
-
-
-[MultiNest]
-#defines MultiNest specific parameters
-
-#run Nested Sampling analysis on data
-run = True
-
-#resume from previous run
-resume = False
-
-#verbose
-verbose = True
-
-#sampling chains directory
-nest_path = chains/
-
-#sampling efficiency (parameter, ...)
-sampling_eff = parameter
-
-#number of live points
-n_live_points = 2000
-
-#maximum no. of iterations (0=inf)
-max_iter = 0
-
-#importance nested sampling
-imp_sampling = False
-
-
-
-[NeuralNet]
-#defines Neural Network specific parameters
 
 
 

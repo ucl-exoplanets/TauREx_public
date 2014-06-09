@@ -109,6 +109,7 @@ class parameters(object):
             pass
         
         try:
+            self.mcmc_run              = parser.getboolean('MCMC','run')
             self.mcmc_update_std       = parser.getboolean('MCMC','update_std')
             self.mcmc_iter             = parser.getfloat('MCMC', 'iter')
             self.mcmc_burn             = parser.getfloat('MCMC','burn')
@@ -117,6 +118,7 @@ class parameters(object):
             pass
 
         try:
+            self.nest_run              = parser.getboolean('MultiNest','run')
             self.nest_resume           = parser.getboolean('MultiNest','resume')
             self.nest_verbose          = parser.getboolean('MultiNest','verbose')
             self.nest_path             = parser.get('MultiNest','nest_path')

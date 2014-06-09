@@ -3,11 +3,18 @@
 #
 ###############################
 
-import pylab
+import pylab,numpy, os, sys
 from pylab import *
-import numpy 
 from numpy import *
-import pymultinest
+global multinest_import 
+try: 
+    with os.devnull as sys.stdout: 
+        import pymultinest
+        multinest_import = True
+except:
+    multinest_import = False
+
+
 
 
 def plot_multinest_results(DATA, parameters, save2pdf=False):

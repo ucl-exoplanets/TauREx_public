@@ -34,6 +34,26 @@ try:
         MPImaster = False
 except ImportError:
     MPIimport = False
+    
+
+#checking for multinest library
+global multinest_import 
+try: 
+    with os.devnull as sys.stdout: 
+        import pymultinest
+        multinest_import = True
+except:
+    print 'Multinest library is not loaded. Multinest functionality will be disabled.'
+    multinest_import = False
+
+#checking for pymc library
+global pymc_import
+try: 
+    import pymc
+    pymc_import = True
+except:
+    print 'PYMC library is not loaded. MCMC functionality will be disabled.'
+    pymc_import = False
 
 
 #start of profiling code
@@ -99,8 +119,6 @@ params = parameters(options.param_filename)
 # MPI.Init()
 
 #initialising data object
-
-
 dataob = data(params)
 
 
@@ -136,14 +154,16 @@ transob = transmission(params, dataob)
 #initialising fitting object
 if params.verbose: print 'loading fitting'
 fitob = fitting(params, dataob, profileob, transob)
-#
+
+
 if params.verbose: print 'fitting data'
 #fit data
-
-
-fitob.downhill_fit()    #simplex downhill fit
-# fitob.mcmc_fit()        #MCMC fit
-# fitob.multinest_fit()   #Nested sampling fit
+if params.fit_transmission:
+    fitob.downhill_fit()    #simplex downhill fit
+    if params.mcmc_run and pymc_import:
+        fitob.mcmc_fit()    #MCMC fit
+    if params.nest_run and multinest_import:
+        fitob.multinest_fit()   #Nested sampling fit
 
 
 #

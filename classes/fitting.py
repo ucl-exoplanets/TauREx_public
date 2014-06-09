@@ -19,7 +19,7 @@
 ################################################
 
 #loading libraries     
-import numpy, pylab
+import numpy, pylab,os,sys
 from numpy import *
 from pylab import *
 from StringIO import StringIO
@@ -30,7 +30,14 @@ import pymc
 import warnings
 
 import threading, subprocess
-import pymultinest
+global multinest_import 
+try: 
+    with os.devnull as sys.stdout: 
+        import pymultinest
+        multinest_import = True
+except:
+    multinest_import = False
+
 import math, os
 if not os.path.exists("chains"): os.mkdir("chains")
 
@@ -44,7 +51,7 @@ except ImportError:
 
 class fitting(object):
     def __init__(self,params,data,profile,transmod):
-        
+
         self.params      = params
         self.dataob      = data
         self.transmod    = transmod
@@ -67,7 +74,7 @@ class fitting(object):
         self.bounds.append((self.T_low,self.T_up))
         for i in range(self.ngas):
             self.bounds.append((self.X_low,self.X_up))
-
+            
 
 
         #checking if number of free parameters for X = number of gas species
