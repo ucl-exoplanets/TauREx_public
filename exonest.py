@@ -34,6 +34,7 @@ try:
         MPImaster = False
 except ImportError:
     MPIimport = False
+    MPImaster = True
     
 
 #checking for multinest library
@@ -109,12 +110,16 @@ params = parameters(options.param_filename)
 # print("my rank is %d"%rank)
 #
 # exit()
-
+# 
 # comm = MPI.COMM_WORLD
 # rank=comm.Get_rank()
-# size=comm.size
+# # size=comm.size
 # print("my rank is %d"%rank)
 
+# print 'MyRank ', MPIrank
+# if MPImaster:
+#     print 'MasterRank ', MPIrank
+# exit()
 # MPI.Init()
 
 #initialising data object
@@ -159,9 +164,9 @@ if params.verbose: print 'fitting data'
 if params.fit_transmission:
     fitob.downhill_fit()    #simplex downhill fit
     if params.mcmc_run and pymc_import:
+#     if params.mcmc_run and pymc_import and MPImaster:
         fitob.mcmc_fit()    #MCMC fit
     if params.nest_run and multinest_import:
-        print 'AAAAH'
         fitob.multinest_fit()   #Nested sampling fit
 
 

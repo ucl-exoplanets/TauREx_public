@@ -10,13 +10,13 @@ trans_cpp = True
 manual_waverange = True
 
 #short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.5
+wavemin = 1.0
 
 #long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 1000
+spec_res = 300
 
 
 
@@ -100,7 +100,7 @@ albedo = 0.2
 grav = 7.9
 
 #Planetary temperature (K)
-temp = 800
+temp = 700
 
 #molecular weight of atmosphere 
 mu = 2.3

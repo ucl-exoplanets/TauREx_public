@@ -19,7 +19,7 @@
 ################################################
 
 #loading libraries     
-import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess
+import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess,gzip,pickle
 from numpy import *
 from pylab import *
 from StringIO import StringIO
@@ -45,14 +45,16 @@ except ImportError:
 
 class fitting(object):
     def __init__(self,params,data,profile,transmod):
-
+        
+        self.MPIrank     = MPI.COMM_WORLD.Get_rank()
+        
         self.params      = params
         self.dataob      = data
         self.transmod    = transmod
         self.profileob   = profile
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
-        self.ngas        = params.tp_num_gas
+        self.ngas        = data.ngas
         self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         
         # self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
@@ -275,6 +277,20 @@ class fitting(object):
         self.MCMC_X_std  = Xout_std
         self.MCMC_STATS  = R.stats()
         self.MCMC_FITDATA= R
+        
+        MCMC_OUT = {}
+        MCMC_OUT[self.MPIrank] = {}
+        MCMC_OUT[self.MPIrank]['FITDATA'] = R
+        MCMC_OUT[self.MPIrank]['STATS']   = R.stats()
+        MCMC_OUT[self.MPIrank]['T_mean']  = Tout_mean
+        MCMC_OUT[self.MPIrank]['T_std']   = Tout_std
+        MCMC_OUT[self.MPIrank]['X_mean']  = Xout_mean
+        MCMC_OUT[self.MPIrank]['X_std']   = Xout_std
+        
+        
+        #saving to file as pickle 
+        with gzip.GzipFile(self.params.out_path+'MCMC_results.pkl.zip','wb') as outhandle:
+            pickle.dump(MCMC_OUT,outhandle)
 
 
 
