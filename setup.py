@@ -56,7 +56,8 @@ if pipstatus != 0:
 print 'trying to compile the multinest libraries...'
 print 'please make sure you have the correct C++, Fortran compilers '
 print 'and CMAKE installed'
-os.chdir(HOMEPATH+MULTNESTPATH+'build')
+os.chdir(HOMEPATH+MULTNESTPATH+'build/')
+# os.system('rm -r *')
 
 if _platform == 'darwin':
     multistatus1 = os.system('cmake -DCMAKE_{C,CXX}_FLAGS="-arch x86_64" -DCMAKE_Fortran_FLAGS="-m64" ..')

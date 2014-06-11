@@ -115,6 +115,7 @@ class parameters(object):
             self.mcmc_burn             = parser.getfloat('MCMC','burn')
             self.mcmc_thin             = parser.getfloat('MCMC', 'thin')
         except:
+            self.mcmc_run              = False
             pass
 
         try:
@@ -127,6 +128,7 @@ class parameters(object):
             self.nest_max_iter         = parser.getint('MultiNest','max_iter')
             self.nest_imp_sampling     = parser.getboolean('MultiNest','imp_sampling')
         except:
+            self.nest_run              = False
             pass
         
         

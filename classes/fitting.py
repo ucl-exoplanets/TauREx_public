@@ -19,9 +19,9 @@
 ################################################
 
 #loading libraries     
-import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess,gzip,pickle
-from numpy import *
+import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess,gzip,pickle,shutil
 from pylab import *
+from numpy import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
@@ -47,6 +47,7 @@ class fitting(object):
     def __init__(self,params,data,profile,transmod):
         
         self.MPIrank     = MPI.COMM_WORLD.Get_rank()
+        self.MPIsize     = MPI.COMM_WORLD.Get_size()
         
         self.params      = params
         self.dataob      = data
@@ -233,11 +234,32 @@ class fitting(object):
         
         
         # setting prior distributions
+        #master thread (MPIrank =0) will start from ideal solution (from downhill fitting)
+        #slave threads (MPIrank != 0) will start from randomised points.
+
         priors = empty(size(PINIT),dtype=object)
-        priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
-        for i in range(len(PINIT)-1):
-            priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
-        
+        #setting up main thread
+        if self.MPIrank == 0: 
+            priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+            for i in range(len(PINIT)-1):
+                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+        #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
+        else:
+            T_range = (self.T_up+self.T_low) / 5.0 #range of temperatures over which to perturbe starting position
+            X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
+   
+            T_rand = random.uniform(low=PINIT[0]-T_range,high=PINIT[0]+T_range) #random temperature start
+            if T_rand > self.T_low and T_rand < self.T_up: #check if within prior boundaries
+                priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=T_rand) #uniform temperature prior 
+            else:
+                priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+                
+            for i in range(len(PINIT)-1):
+                X_rand = random.uniform(PINIT[i+1]-X_range,PINIT[i+1]+X_range) #random mixing ratio start
+                if X_rand > self.X_low and X_rand < self.X_up: #check if within prior boundaries
+                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=X_rand)  # uniform mixing ratio prior
+                else:
+                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
 
         #setting up data error prior if specified
         if self.params.mcmc_update_std:
@@ -260,15 +282,29 @@ class fitting(object):
             llterms =  - 0.5* chi_t
             return llterms
 
-        # executing MCMC sampling
-        R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=1)  # build the model
+        #setting up folders for chain output
+        OUTFOLDER = 'chains/MCMC/thread_'+str(self.MPIrank)
+        if not os.path.isdir('chains/MCMC'):
+            os.mkdir('chains/MCMC')
+        if os.path.isdir(OUTFOLDER):
+            shutil.rmtree(OUTFOLDER)
+
+        # executing MCMC sampling]
+        if self.params.verbose: verbose = 1
+        else: verbose = 0
+            
+        R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=verbose,db='txt',
+                      dbname='chains/MCMC/thread_'+str(self.MPIrank))  # build the model
+#         R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=1)  # build the model
+
         R.sample(iter=self.params.mcmc_iter, burn=self.params.mcmc_burn,
-                 thin=self.params.mcmc_thin)              # populate and run it
-        
+                     thin=self.params.mcmc_thin)              # populate and run it
+
+
         #coallating results into arrays
         Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_mcmc_result(R)
 
-        print Xout_mean, Tout_mean
+#         print Xout_mean, Tout_mean
         #saving arrays to object
         self.MCMC        = True
         self.MCMC_T_mean = Tout_mean
@@ -278,19 +314,19 @@ class fitting(object):
         self.MCMC_STATS  = R.stats()
         self.MCMC_FITDATA= R
         
-        MCMC_OUT = {}
-        MCMC_OUT[self.MPIrank] = {}
-        MCMC_OUT[self.MPIrank]['FITDATA'] = R
-        MCMC_OUT[self.MPIrank]['STATS']   = R.stats()
-        MCMC_OUT[self.MPIrank]['T_mean']  = Tout_mean
-        MCMC_OUT[self.MPIrank]['T_std']   = Tout_std
-        MCMC_OUT[self.MPIrank]['X_mean']  = Xout_mean
-        MCMC_OUT[self.MPIrank]['X_std']   = Xout_std
+#         MCMC_OUT = {}
+#         MCMC_OUT[self.MPIrank] = {}
+#         MCMC_OUT[self.MPIrank]['FITDATA'] = R
+#         MCMC_OUT[self.MPIrank]['STATS']   = R.stats()
+#         MCMC_OUT[self.MPIrank]['T_mean']  = Tout_mean
+#         MCMC_OUT[self.MPIrank]['T_std']   = Tout_std
+#         MCMC_OUT[self.MPIrank]['X_mean']  = Xout_mean
+#         MCMC_OUT[self.MPIrank]['X_std']   = Xout_std
         
         
         #saving to file as pickle 
-        with gzip.GzipFile(self.params.out_path+'MCMC_results.pkl.zip','wb') as outhandle:
-            pickle.dump(MCMC_OUT,outhandle)
+#         with gzip.GzipFile(self.params.out_path+'MCMC_results.pkl.zip','wb') as outhandle:
+#             pickle.dump(MCMC_OUT,outhandle)
 
 
 

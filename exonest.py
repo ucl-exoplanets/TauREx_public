@@ -122,6 +122,7 @@ params = parameters(options.param_filename)
 # exit()
 # MPI.Init()
 
+
 #initialising data object
 dataob = data(params)
 

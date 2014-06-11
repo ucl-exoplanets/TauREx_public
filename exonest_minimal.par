@@ -71,7 +71,7 @@ file_prefix = test_
 dump_internal = True
 
 #internal model name save as
-internal_name = testspec.dat
+internal_name = gj3470b_test3.dat
 
 
 [Star]
@@ -106,12 +106,12 @@ temp = 700
 mu = 2.3
 
 #molecules considered
-molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
+molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
+mixing_ratios = 8.0e-3, 4.0e-3, 2.0e-3, 2.0e-5, 1.0e-4
 
 
 
