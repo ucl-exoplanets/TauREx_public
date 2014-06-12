@@ -1,0 +1,145 @@
+[General]
+#verbose or not 
+verbose = True
+
+#use c++ path_integral version for transmission
+#True: c++ version, False: python version
+trans_cpp = True
+
+#manually set wavelength range (if False, range taken from input data)
+manual_waverange = True
+
+#short wavelength cut-off (in microns) if manual_waverange = True
+wavemin = 1.0
+
+#long wavelength cut-off (in microns) if manual_waverange = True
+wavemax = 20.0
+
+#resolution of internal model runs (R)
+spec_res = 300
+
+
+
+[Input]
+#Observed spectrum to be fitted
+spectrum_file = Input/gj3470b_test.txt
+
+#use T-P profile and mixing ratios ATM file
+use_ATMfile = False
+
+#file containing pre-determined T-P profile and mixing ratios
+atm_file = Input/profile.atm
+
+#Path of ExoMol cross section files folder
+abs_path = Input/crosssections/
+
+#files containing absorption cores-sections 
+#you can specify several file names separated by commas
+#WARNING: parameter is legacy input. Not used by code, define abs_path and planet_molec parameters instead.
+__legacy__abs_files = h2o_1500K.abs
+
+#temperature grid resolution (K)
+tempres = 50
+
+#include varying stellar radii file. True/False 
+include_rad = False 
+
+#file from which to read stellar radius R*(lambda)
+rad_file = Input/rad_star.rad
+
+#include H2-H2 collision induced absorption. True/False 
+include_cia = False 
+
+#file from which to read CIA coefficients
+cia_file = Input/h2_h2_1000K.cia
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+cld_file = Input/cloud1.cld
+
+
+[Output]
+#path for output files
+path = Output/
+
+#output file prefix
+file_prefix = test_
+
+#save internal model to file. Useful for when only creating transmission/emisison model
+dump_internal = True
+
+#internal model name save as
+internal_name = gj3470b_test3.dat
+
+
+[Star]
+#defines stellar specific (fixed or starting) parameters:
+
+#Stellar radius (R_sun)
+radius = 0.568
+
+#Stellar temperature (K)
+temp   = 3600
+
+
+[Planet]
+#defines planetary specific (fixed or starting) parameters:
+
+#Planetary radius (R_jupiter)
+radius = 0.440
+
+#Orbital semi-major axis (AU)
+sma = 0.0356
+
+#Planetary bond albedo (0-1)
+albedo = 0.2
+
+#Planetary surface gravity (ms^-2)
+grav = 7.9
+
+#Planetary temperature (K)
+temp = 700
+
+#molecular weight of atmosphere 
+mu = 2.3
+
+#molecules considered
+molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
+
+#initial mixing ratios (starting point for minimisation) 
+#and used for model only mode (create_spectrum.py). Must have as
+#many mixing ratios as molecules above. Comma separated list. 
+mixing_ratios = 8.0e-3, 4.0e-3, 2.0e-3, 2.0e-5, 1.0e-4
+
+
+
+[T-P profile]
+#let mixing ratios and T-P profile vary
+#True: free parameters allowed and lower/upper limits taken from .atm, 
+#False: all fixed to input .atm file
+var_atm = True
+
+#thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
+num_scaleheights = 20
+
+#number of atmospheric levels. 
+#If var_atm = False, atm_levels is taken from .atm file
+atm_levels = 40
+
+#set temperature as variables
+var_temp = True
+
+#set pressure as variable
+var_pres = True
+
+#set maximum pressure level (if set variable) (Pa)
+atm_max_pressure = 1e6
+
+#set mixing ratios as variables
+var_mix = True
+
+
+
+

@@ -314,7 +314,7 @@ class preselector(object):
         newparams.in_use_ATMfile = False
 
         #setting planetary temperature
-        newparams.planet_temp = self.Tplanet
+#         newparams.planet_temp = self.Tplanet
 
         #setting number of gases/molecules
         newparams.tp_num_gas = self.numgas

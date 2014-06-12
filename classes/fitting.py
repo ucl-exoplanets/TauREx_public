@@ -66,13 +66,12 @@ class fitting(object):
         self.T_up        = self.params.planet_temp + self.params.fit_T_up
         self.T_low       = self.params.planet_temp - self.params.fit_T_low
 
+
         #setting bounds for downhill algorithm
         self.bounds = []
         self.bounds.append((self.T_low,self.T_up))
         for i in range(self.ngas):
             self.bounds.append((self.X_low,self.X_up))
-            
-
 
         #checking if number of free parameters for X = number of gas species
 #         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
@@ -85,9 +84,9 @@ class fitting(object):
         # self.PINIT[1:,:] = self.profileob.X
 
         self.PINIT     = zeros((self.ngas+1))
-        self.PINIT[0]  = self.profileob.T[0]
+        self.PINIT[0]  = self.params.planet_temp
         # self.PINIT[1:] = float((self.params.fit_X_up-self.params.fit_X_low)/2 + self.params.fit_X_low)
-        self.PINIT[1:] = 1e-5
+        self.PINIT[1:] = 1e-4
 
 
         # for i in range(1,self.ngas):
@@ -245,7 +244,7 @@ class fitting(object):
                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
         #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
         else:
-            T_range = (self.T_up+self.T_low) / 5.0 #range of temperatures over which to perturbe starting position
+            T_range = (self.T_up-self.T_low) / 5.0 #range of temperatures over which to perturbe starting position
             X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
    
             T_rand = random.uniform(low=PINIT[0]-T_range,high=PINIT[0]+T_range) #random temperature start

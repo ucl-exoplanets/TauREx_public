@@ -12,3 +12,6 @@ output/
 .idea/
 .pydevproject
 .settings
+test-code/
+Input/
+Preselector/
