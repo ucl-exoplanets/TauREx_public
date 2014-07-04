@@ -73,6 +73,8 @@ dump_internal = True
 #internal model name save as
 internal_name = hotjupiter_test.dat
 
+#save plots to .pdf 
+save_plots = True
 
 [Star]
 #defines stellar specific (fixed or starting) parameters:

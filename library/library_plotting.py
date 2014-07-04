@@ -15,12 +15,12 @@ except:
 
 
 
-def plot_multinest_results(DATA, parameters, save2pdf=False):
+def plot_multinest_results(DATA, parameters,  save2pdf=False, out_path=None):
     #routine plotting multinest posterior distributions and marginals
     n_params = len(parameters)
 #         s = a.get_stats()
     p = pymultinest.PlotMarginalModes(DATA)
-    figure(figsize=(5*n_params, 5*n_params))
+    fig = figure(figsize=(5*n_params, 5*n_params))
     title('Multinest posteriors')
     #plt.subplots_adjust(wspace=0, hspace=0)
 #         fig.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
@@ -45,9 +45,10 @@ def plot_multinest_results(DATA, parameters, save2pdf=False):
             ylabel(parameters[j])
             for tick in ax.xaxis.get_major_ticks():
                     tick.label.set_rotation(-30)
+    if save2pdf: fig.savefig(out_path+'nested_posteriors.pdf')
 
 
-def plot_mcmc_results(DATA,parameters=False, save2pdf=False):
+def plot_mcmc_results(DATA,parameters=False,save2pdf=False,out_path=None):
     #routine plotting MCMC posterior distributions and marginals
     # n_params = len(parameters)
 
@@ -59,7 +60,7 @@ def plot_mcmc_results(DATA,parameters=False, save2pdf=False):
     else:
         plotnames = parameters
 
-    figure(figsize=(5*n_params, 5*n_params))
+    fig = figure(figsize=(5*n_params, 5*n_params))
     title('MCMC posteriors')
     for i in range(n_params):
         ax = subplot(n_params, n_params, n_params * i + i + 1)
@@ -77,4 +78,4 @@ def plot_mcmc_results(DATA,parameters=False, save2pdf=False):
             for tick in ax.xaxis.get_major_ticks():
                     tick.label.set_rotation(-30)
 
-
+    if save2pdf: fig.savefig(out_path+'mcmc_posteriors.pdf')

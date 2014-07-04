@@ -175,7 +175,7 @@ if params.fit_transmission:
 outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
-if params.verbose: outputob.plot_all()
+if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.out_save_plots)
 # outputob.plot_spectrum()   #plotting data only
 # outputob.plot_multinest()  #plotting multinest posteriors
 # outputob.plot_mcmc()       #plotting mcmc posterios

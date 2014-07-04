@@ -73,6 +73,9 @@ dump_internal = True
 #internal model name save as
 internal_name = gj3470b_test3.dat
 
+#save plots to .pdf 
+save_plots = True
+
 
 [Star]
 #defines stellar specific (fixed or starting) parameters:

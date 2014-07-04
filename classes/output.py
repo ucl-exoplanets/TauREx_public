@@ -58,55 +58,57 @@ class output(object):
         elif self.params.fit_emission:
             print 'Emission not implemented yet'
 
-    def plot_all(self):
+    def plot_all(self,save2pdf=False):
     #plots absolutely everything
 
-        self.plot_spectrum()
-        self.plot_fit()
+        self.plot_spectrum(save2pdf=save2pdf)
+        self.plot_fit(save2pdf=save2pdf)
         if self.MCMC:
-            self.plot_mcmc()
+            self.plot_mcmc(save2pdf=save2pdf)
         if self.NEST:
-            self.plot_multinest()
+            self.plot_multinest(save2pdf=save2pdf)
 
 
-    def plot_mcmc(self,param_names=False):
+    def plot_mcmc(self,param_names=False,save2pdf=False):
         #plotting MCMC sampled distributions
         if self.MCMC:
             if param_names:
-                plot_mcmc_results(self.fit.MCMC_FITDATA,parameters=param_names)
+                plot_mcmc_results(self.fit.MCMC_FITDATA,parameters=param_names,save2pdf=save2pdf, out_path=self.params.out_path)
             else:
-                plot_mcmc_results(self.fit.MCMC_FITDATA)
+                plot_mcmc_results(self.fit.MCMC_FITDATA,save2pdf=save2pdf, out_path=self.params.out_path)
         else:
             print 'MCMC was not run. Nothing to see here. Go away... '
 
 
-    def plot_multinest(self,param_names=False):
+    def plot_multinest(self,param_names=False,save2pdf=False):
         #plotting nested sampling distributions
         if self.NEST:
             if not param_names:
                 parameters = range(self.fit.n_params)
             else:
                 parameters = param_names
-            plot_multinest_results(self.fit.NEST_FITDATA,parameters=parameters)
+            plot_multinest_results(self.fit.NEST_FITDATA,parameters=parameters,save2pdf=save2pdf, out_path=self.params.out_path)
         else:
             print 'Multinest was not run. Nothing to see here. Go away... '
 
 
-    def plot_spectrum(self,linewidth=2.0):
+    def plot_spectrum(self,save2pdf=False,linewidth=2.0):
         #plotting data only
 
-        py.figure()
+        fig = py.figure()
         py.errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2],color=[0.7,0.7,0.7],linewidth=linewidth)
         py.plot(self.data.spectrum[:,0],self.data.spectrum[:,1],color=[0.3,0.3,0.3],linewidth=linewidth,label='DATA')
         py.legend()
         py.title('Input data')
         py.xlabel('Wavelength')
         py.ylabel('(Rp/Rs)^2') #dynamic for emission case later
+        
+        if save2pdf: fig.savefig(self.params.out_path+'spectrum+data.pdf')
 
-    def plot_fit(self,linewidth=2.0):
+    def plot_fit(self,save2pdf=False,linewidth=2.0):
         #plotting data and fits
 
-        py.figure()
+        fig = py.figure()
         py.errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2],color=[0.7,0.7,0.7],linewidth=linewidth)
         py.plot(self.data.spectrum[:,0],self.data.spectrum[:,1],color=[0.3,0.3,0.3],linewidth=linewidth,label='DATA')
         if self.DOWN:
@@ -119,14 +121,19 @@ class output(object):
         py.title('Data and Model')
         py.xlabel('Wavelength ($\mu m$)')
         py.ylabel('(Rp/Rs)^2') #dynamic for emission case later
+        
+        if save2pdf: fig.savefig(self.params.out_path+'model_fit.pdf')
+        
 
-    def plot_manual(self,model,linewidth=2.0):
-        py.figure()
+    def plot_manual(self,model,save2pdf=False,linewidth=2.0):
+        fig = py.figure()
         py.plot(model[:,0],model[:,1],color=[0.0,0.0,0.0],linewidth=linewidth,label='Model')
         py.legend()
         py.title('Model')
         py.xlabel('Wavelength ($\mu m$)')
         py.ylabel('$(Rp/Rs)^2$') #dynamic for emission case later
+        
+        if save2pdf: fig.savefig(self.params.out_path+'spectrum.pdf')
 
     def save_model(self,ascii=True,modelout=None, modelsaveas= None):
         #dumps all model fits to file

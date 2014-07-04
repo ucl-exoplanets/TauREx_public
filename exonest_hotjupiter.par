@@ -1,13 +1,13 @@
 [General]
 #verbose or not 
-verbose = True
+verbose = False
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
 trans_cpp = True
 
 #manually set wavelength range (if False, range taken from input data)
-manual_waverange = True
+manual_waverange = False
 
 #short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.5
@@ -38,7 +38,7 @@ abs_path = Input/crosssections/
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 50
+tempres = 20
 
 #include varying stellar radii file. True/False 
 include_rad = False 
@@ -68,10 +68,13 @@ path = Output/
 file_prefix = test_
 
 #save internal model to file. Useful for when only creating transmission/emisison model
-dump_internal = True
+dump_internal = False
 
 #internal model name save as
 internal_name = testspec.dat
+
+#save plots to .pdf 
+save_plots = True
 
 
 [Preselector]
@@ -102,10 +105,10 @@ convert2microns = False
 generate_speclib = False
 
 #restrict temperature range for cross-section lists
-restrict_temp = False
+restrict_temp = True
 
 #setting temperature range (K) if restrict_temp = True : low, high 
-temp_range = 400, 1000
+temp_range = 800, 1600
 
 #mixing ratios for which spectra are computed
 mixing_ratio = 1e-5,1e-4,1e-3,1e-2
@@ -151,7 +154,7 @@ albedo = 0.2
 grav = 21.2
 
 #Planetary temperature (K)
-temp = 1500
+temp = 1400
 
 #molecular weight of atmosphere 
 mu = 2.3
@@ -217,27 +220,27 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = False
+run = True
 
 #update data standard deviation from dynamic fit.
 update_std = True
 
 
 #MCMC number of total iterations
-iter = 1000
+iter = 25000
 
 #MCMC burn in period 
-burn = 10
+burn = 2500
 
 #MCMC thinning factor
-thin = 2
+thin = 1
 
 
 [MultiNest]
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = False
+run = True
 
 #resume from previous run
 resume = False
@@ -252,7 +255,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 2000
+n_live_points = 4000
 
 #maximum no. of iterations (0=inf)
 max_iter = 0

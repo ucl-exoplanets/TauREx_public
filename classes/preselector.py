@@ -53,7 +53,7 @@ class preselector(object):
         #interpolating PCA vectors onto data vector
         self.interpolate2data()
         #generating mask for correlation using first principal component
-        self.generate_mask(thres=0.4)
+        self.generate_mask(thres=self.params.pre_mask_thres)
         #computing euclidian distance and correlation coefficients between library and data
         self.correlate()
         #rank molecules according to their lowest euclidian distance to data
@@ -90,14 +90,14 @@ class preselector(object):
         #doing the pre-processing
         if convertLinelist:
             convert2microns(self.params.in_abs_path+'*')
-            # print '1 done'
+#             print '1 done'
         if generateSpectra:
             generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
                                  MIXING=self.params.pre_mixing_ratios)
-            # print '2 done'
+#             print '2 done'
         if generatePCA:
             generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
-            # print '3 done'
+#             print '3 done'
 
 
     def load_library(self,PATH=None):

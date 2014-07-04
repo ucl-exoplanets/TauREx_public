@@ -55,36 +55,40 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
 
 
     for FILE in globlist:
+        print FILE
         fname = string.rsplit(FILE,'/',1)[1] #splitting the name
         temp  = float(string.rsplit(fname,'_',2)[1][:-1]) #getting temperature from file name
 
         # print fname
         if PARAMS.pre_restrict_temp: #imposing temperature range restrictions
             if temp < float(PARAMS.pre_temp_range[0]) or temp > float(PARAMS.pre_temp_range[1]): 
-                pass
-        else:
+                run = False
+            else: 
+                run = True
+                
+        if run:
             for mix in MIXING:
                 X_in   = zeros((1,int(profileob_pca.nlayers))) #setting up mixing ratio array
                 X_in  += mix #setting mixing ratio
                 rho_in = profileob_pca.get_rho(T=temp) #calculating T-P profile
-        
+            
                 if PARAMS.in_include_cia or PARAMS.in_include_cld:
                     dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=True) #reading in cross section file
                 else:
                     dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=False) #reading in cross section file
-                    # dataob_pca.specgrid = dataob_pca.wavegrid
-                    # dataob_pca.nspecgrid = dataob_pca.nwave
+                        # dataob_pca.specgrid = dataob_pca.wavegrid
+                        # dataob_pca.nspecgrid = dataob_pca.nwave
                 transob_pca.reset(dataob_pca) #resets transob to reflect changes in dataob
-#                     pl.figure(21)
-#                     pl.plot(dataob_pca.specgrid,dataob_pca.sigma_array[0])
-#                     pl.show()
-#         
-                    #manually setting mixing ratio and T-P profile
+    #                     pl.figure(21)
+    #                     pl.plot(dataob_pca.specgrid,dataob_pca.sigma_array[0])
+    #                     pl.show()
+    #         
+                        #manually setting mixing ratio and T-P profile
                 MODEL = transob_pca.cpath_integral(rho=rho_in,X=X_in) #computing transmission
-#                     pl.figure(20)
-#                     pl.plot(MODEL)
-#                     pl.show()
-#                     exit()
+#                 pl.figure(20)
+#                 pl.plot(MODEL)
+#                 pl.show()
+    #               exit()
                 np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob_pca.specgrid,MODEL)))
 
 

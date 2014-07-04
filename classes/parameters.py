@@ -53,6 +53,7 @@ class parameters(object):
         self.out_file_prefix       = parser.get('Output','file_prefix')
         self.out_dump_internal     = parser.getboolean('Output','dump_internal')
         self.out_internal_name     = parser.get('Output','internal_name')
+        self.out_save_plots        = parser.getboolean('Output','save_plots')
 
         self.star_radius           = parser.getfloat('Star', 'radius')    *RSOL
         self.star_temp             = parser.getfloat('Star','temp')
