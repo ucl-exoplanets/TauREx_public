@@ -3,9 +3,13 @@
 #
 ###############################
 
-import pylab,numpy, os, sys
-from pylab import *
-from numpy import *
+import  os, sys,string
+import pylab as pl
+import numpy as np
+from numpy import array
+import scipy.ndimage as ndimage
+from matplotlib.ticker import FuncFormatter
+
 try:  
     import pymultinest
     multinest_import = True
@@ -20,29 +24,29 @@ def plot_multinest_results(DATA, parameters,  save2pdf=False, out_path=None):
     n_params = len(parameters)
 #         s = a.get_stats()
     p = pymultinest.PlotMarginalModes(DATA)
-    fig = figure(figsize=(5*n_params, 5*n_params))
-    title('Multinest posteriors')
+    fig = pl.figure(figsize=(5*n_params, 5*n_params))
+    pl.title('Multinest posteriors')
     #plt.subplots_adjust(wspace=0, hspace=0)
 #         fig.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     for i in range(n_params):
-        ax = subplot(n_params, n_params, n_params * i + i + 1)
+        ax = pl.subplot(n_params, n_params, n_params * i + i + 1)
         p.plot_marginal(i, with_ellipses=True, with_points=False, grid_points=50)
 
 #             p1.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 #             plt.xticks(rotation=70)
 
-        ylabel("Probability")
-        xlabel(parameters[i])
+        pl.ylabel("Probability")
+        pl.xlabel(parameters[i])
         for tick in ax.xaxis.get_major_ticks():
                 tick.label.set_rotation(-30)
 
         for j in range(i):
-            ax = plt.subplot(n_params, n_params, n_params * j + i + 1)
+            ax = pl.subplot(n_params, n_params, n_params * j + i + 1)
             ax.ticklabel_format(style='sci')
             #plt.subplots_adjust(left=0, bottom=0, right=0, top=0, wspace=0, hspace=0)
             p.plot_conditional(i, j, with_ellipses=False, with_points=True, grid_points=50)
-            xlabel(parameters[i])
-            ylabel(parameters[j])
+            pl.xlabel(parameters[i])
+            pl.ylabel(parameters[j])
             for tick in ax.xaxis.get_major_ticks():
                     tick.label.set_rotation(-30)
     if save2pdf: fig.savefig(out_path+'nested_posteriors.pdf')
@@ -60,22 +64,25 @@ def plot_mcmc_results(DATA,parameters=False,save2pdf=False,out_path=None):
     else:
         plotnames = parameters
 
-    fig = figure(figsize=(5*n_params, 5*n_params))
-    title('MCMC posteriors')
+    fig = pl.figure(figsize=(5*n_params, 5*n_params))
+    pl.title('MCMC posteriors')
     for i in range(n_params):
-        ax = subplot(n_params, n_params, n_params * i + i + 1)
-        hist(DATA.trace(names[i])[:],color='k')
-        ylabel("Probability")
-        xlabel(plotnames[i])
+        ax = pl.subplot(n_params, n_params, n_params * i + i + 1)
+        pl.hist(DATA.trace(names[i])[:],color='k')
+        pl.ylabel("Probability")
+        pl.xlabel(plotnames[i])
         for tick in ax.xaxis.get_major_ticks():
                 tick.label.set_rotation(-30)
         for j in range(i):
-            ax = plt.subplot(n_params, n_params, n_params * j + i + 1)
+            ax = pl.subplot(n_params, n_params, n_params * j + i + 1)
             ax.ticklabel_format(style='sci')
-            plot(DATA.trace(names[i])[:],DATA.trace(names[j])[:],'.',color='k')
-            xlabel(plotnames[i])
-            ylabel(plotnames[j])
+            pl.plot(DATA.trace(names[i])[:],DATA.trace(names[j])[:],'.',color='k')
+            pl.xlabel(plotnames[i])
+            pl.ylabel(plotnames[j])
             for tick in ax.xaxis.get_major_ticks():
                     tick.label.set_rotation(-30)
 
     if save2pdf: fig.savefig(out_path+'mcmc_posteriors.pdf')
+
+
+

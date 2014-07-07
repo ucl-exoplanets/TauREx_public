@@ -33,7 +33,14 @@ class output(object):
         self.params = params
         self.data   = data
         self.fit    = fit
-
+        
+        #dumping fitted paramter list to file 
+        with open('chains/parameters.dat','w') as parfile:
+            parfile.write('Temperature \n')
+            for mol in params.planet_molec:
+                parfile.write(mol+' \n')
+                
+        
         #determining which fits were performed
         if fit is not None:
             self.MCMC = fit.MCMC

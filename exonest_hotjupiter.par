@@ -220,7 +220,7 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = True
+run = False
 
 #update data standard deviation from dynamic fit.
 update_std = True
@@ -240,7 +240,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
 resume = False
