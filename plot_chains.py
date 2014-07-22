@@ -121,6 +121,7 @@ def plot_posteriors(data,n_params,params,display_params):
     #     ax.ticklabel_format(style='sci')
     #     print np.int(np.round(np.log10(mcmc[0][params[i]][0])))   
     #     print nested[0][params[i]][0]
+#        print np.log10(data[0][params[i]]['data'][0])
         scale_pow = np.int(np.round(np.log10(data[0][params[i]]['data'][0]))) 
     #     print scale_pow
         if scale_pow < 0.0:
@@ -267,12 +268,12 @@ if plot_nest:
     #only one thread for nested sampling hence nested[0]
     nested[0]= {}
     nested[0]['state'] = nest_raw.get_stats()
-    nest_data = np.loadtxt(chaindir+'1-post_separate.dat')#nest_raw.get_equal_weighted_posterior()
-    n_params = len(nest_data[0,:])-2
+    nest_data = np.loadtxt(chaindir+'1-post_equal_weights.dat')#nest_raw.get_equal_weighted_posterior()
+    n_params = len(nest_data[0,:])-1
     params_nest = []
     for i in range(n_params):
         nested[0][str(i)] ={}
-        nested[0][str(i)]['data'] = nest_data[:,i+2]
+        nested[0][str(i)]['data'] = nest_data[:,i]
         nested[0][str(i)]['stats'] ={}
         for j in range(len(nested[0]['state']['modes'])): #number of independent modes detected 
             nested[0][str(i)]['stats'][j] ={}

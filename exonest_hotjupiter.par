@@ -220,10 +220,10 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = False
+run = True
 
 #update data standard deviation from dynamic fit.
-update_std = True
+update_std = False
 
 
 #MCMC number of total iterations

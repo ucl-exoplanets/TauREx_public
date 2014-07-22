@@ -262,9 +262,9 @@ class fitting(object):
 
         #setting up data error prior if specified
         if self.params.mcmc_update_std:
-            std_dev = pymc.Uniform('std_dev',0.0,max(DATASTD),value=DATASTD,size=len(DATASTD)) #uniform prior on data standard deviation
+            std_dev = pymc.Uniform('std_dev',0.0,2.0*max(DATASTD),value=DATASTD,size=len(DATASTD)) #uniform prior on data standard deviation
         else:
-            std_dev = pymc.Uniform('std_dev',0.0,max(DATASTD),value=DATASTD,observed=True,size=len(DATASTD))
+            std_dev = pymc.Uniform('std_dev',0.0,2.0*max(DATASTD),value=DATASTD,observed=True,size=len(DATASTD))
         
         
         @pymc.deterministic(plot=False)

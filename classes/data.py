@@ -72,7 +72,7 @@ class data(object):
         
         #reading in absorption coefficient data 
 #         self.sigma_array = self.readABSfiles()
-        self.sigma_dict = self.build_sigma_dic()
+        self.sigma_dict = self.build_sigma_dic(tempstep=params.in_tempres)
         
         
 
