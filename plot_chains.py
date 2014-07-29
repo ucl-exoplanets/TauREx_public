@@ -1,6 +1,6 @@
 #! /usr/bin/python 
 
-import glob, string
+import glob, string, sys, getopt, datetime 
 import numpy as np
 import pylab as pl
 from numpy import array
@@ -9,8 +9,112 @@ from matplotlib.ticker import FuncFormatter
 
 
 #function time
-# Define a function to make the ellipses
+def help_disp():
+    
+    print ''
+    print 'plot_chains.py: script plotting posterior distributions of MCMC and MultiNest runs for TauRex'
+    print 'Possible in-line commands (if not provided interactive mode is run): '
+    print '--------------'
+    print '-a : plots MCMC and MultiNest posteriors in default dir: chains/'
+    print '-v : uses Matplotlib interactive plotting backend'
+    print '-i : sets input dir if not default (default = chains/)'
+    print '-o : sets output dir if not default (default =./)'
+    print '-m : plots MCMC results only'
+    print '-n : plots Nested sampling results only'
+    print '-t : timestamp output filenames. year:month:day:hour:min'
+    print '-c : plot countours, default = True'
+    print '-h, -help : shows this page'
+    print ''
+
+
+
+def parse_commands(argv):
+    #parses command line options and interavtive menu
+    
+    plot_nest = False; plot_mcmc = False; plot_show = False; interactive = False; timestamp = False
+    plot_contour = True
+    chaindir = 'chains/'
+    outdir = './'
+    timestamp2 = ''
+    
+    #reading command line options
+    try:
+        opts, args = getopt.getopt(argv,'avi:o:mntc:h')
+        if len(opts) == 0:
+            interactive = True 
+    except getopt.GetoptError:
+        print 'inputs broken starting interactive mode...'
+        interactive = True 
+
+
+    if interactive == False:
+        #option parser
+        for opt, arg in opts:
+            if opt == '-h':
+                help_disp()
+                sys.exit()
+            elif opt == '-a':
+                plot_nest = True
+                plot_mcmc = True
+            elif opt == '-n':
+                plot_nest = True
+                Plot_mcmc = False
+            elif opt == '-m':
+                plot_nest = False
+                plot_mcmc = True
+            elif opt == '-v':
+                plot_show = True
+            elif opt == '-i':
+                chaindir = arg
+            elif opt == '-o':
+                outdir = arg
+            elif opt == '-t':
+                timestamp = True
+                timestamp2 = str(datetime.datetime.now())
+                timestamp2 = timestamp2[0:9]+'_'+timestamp2[11:-5]
+            elif opt == '-c':
+                if arg == 'False' or arg == 'false' or arg != 'True' or arg != 'true' or arg != '':
+                    plot_contour = False
+
+    if interactive == True: 
+        chaindir2 = raw_input('Chain directory [chains/]: ')
+        if chaindir2 == '':
+            pass
+        else: 
+            chaindir = chaindir2
+
+        outdir2 = raw_input('Output directory [./]: ')
+        if outdir2 == '':
+            pass
+        else: 
+            outdir = outdir2
+
+        plottmp = raw_input('Plot MCMC posteriors [y]/n: ')
+        if plottmp == '' or plottmp == 'y' or plottmp == 'Y':
+            plot_mcmc = True
+        else:
+            plot_mcmc = False
+             
+        plottmp = raw_input('Plot Nested posteriors [y]/n: ')
+        if plottmp == '' or plottmp == 'y' or plottmp == 'Y':
+            plot_nest = True
+        else:
+            plot_nest = False
+    
+    if chaindir[-1] != '/':
+        chaindir = chaindir+'/'
+    if outdir[-1] != '/':
+        outdir = outdir+'/' 
+    
+    #setting mcmc directory 
+    mcmcdir = chaindir+'MCMC/'
+    
+    return chaindir, mcmcdir, outdir, plot_nest, plot_mcmc, plot_show, plot_contour, timestamp, timestamp2
+
+
+
 def ellipse(ra,rb,ang,x0,y0,Nb=100):
+    # Define a function to make the ellipses
     xpos,ypos=x0,y0
     radm,radn=ra,rb
     an=ang
@@ -98,7 +202,7 @@ def exp_formatter_fun(x, p):
         
         
         
-def plot_posteriors(data,n_params,params,display_params):
+def plot_posteriors(data,n_params,params,display_params,plot_contour):
     fig = pl.figure(figsize=(5*n_params, 5*n_params))
 #     pl.title('Nested posteriors')
     seq = 0
@@ -164,7 +268,7 @@ def plot_posteriors(data,n_params,params,display_params):
 #             ax2.annotate('i ='+str(i)+' j ='+str(j)+' n ='+str(n_params * j + i + 1)+' s ='+str(seq),xy=(0.7,0.1),xycoords='axes fraction',
 #                         horizontalalignment='center', verticalalignment='center')
             ax2.ticklabel_format(style='sci')
-            plot_2Ddistribution(ax2,data, 0,params[i],params[j],suppressAxes=True,confidence=True)
+            plot_2Ddistribution(ax2,data, 0,params[i],params[j],suppressAxes=True,confidence=plot_contour)
     #         nested_plot.plot_conditional(i, j,with_ellipses=False, with_points=True, grid_points=50)
             pl.subplots_adjust(hspace=0.0,wspace=0.0)
             ax2.set_xlim(globalxlims)
@@ -184,150 +288,137 @@ def plot_posteriors(data,n_params,params,display_params):
     #             ax2.set_xlim(globalxlims[j])
     return fig
 
+
+
 #################################################################################
 
 
-chaindir = raw_input('Chain directory [chains/]: ')
-if chaindir == '':
-    chaindir = 'chains/'
-if chaindir[-1] != '/':
-    chaindir = chaindir+'/'
-
-mcmcdir = chaindir+'MCMC/'
-
-plottmp = raw_input('Plot MCMC posteriors [y]/n: ')
-if plottmp == '' or plottmp == 'y' or plottmp == 'Y':
-    plot_mcmc = True
-else:
-    plot_mcmc = False
-     
-plottmp = raw_input('Plot Nested posteriors [y]/n: ')
-if plottmp == '' or plottmp == 'y' or plottmp == 'Y':
-    plot_nest = True
-else:
-    plot_nest = False
-
-# chaindir = 'chains_10000/'
-# plot_mcmc = False
-# chaindir = 'chains/'
-# mcmcdir  = 'chains/MCMC/'
-
-
-# nested_post_sep = np.loadtxt(chaindir+'1-post_separate.dat')
-# nested          = np.loadtxt(chaindir+'1-.txt')
-
-BINS= 50
-# n_params = 6
-
-disp_params = np.loadtxt(chaindir+'parameters.dat',dtype='string')
-disp_params[0] = disp_params[0]+' (K)' #add units to temperature parameter
-n_params = len(disp_params)
-
-
-if plot_mcmc:
-#reading in MCMC data
-    mcmc = {}
-    for thread in glob.glob(mcmcdir+'*'):
-        id = int(thread[-1])
-        mcmc[id] = {}
-             
-        with open(mcmcdir+'thread_0/state.txt','r') as statefile:
-            mcmc[id]['state'] = eval(statefile.read())
-             
-        chainlist = glob.glob(thread+'/Chain_0/*')
-        for trace in chainlist:
-            traceid = string.rsplit(trace, '/')[-1][:-4]
-            mcmc[id][traceid] ={}
-            mcmc[id][traceid]['data'] = np.loadtxt(trace)
-            mcmc[id][traceid]['stats'] = {}
-            mcmc[id][traceid]['stats'][0] = {}
-            mcmc[id][traceid]['stats'][0]['sigma'] = np.std(mcmc[id][traceid]['data'])
-            mcmc[id][traceid]['stats'][0]['mean'] = np.mean(mcmc[id][traceid]['data'])
-            
+def main(argv):
     
-#     print mcmc.keys()
-    params_mcmc = mcmc[0]['state']['stochastics'].keys()
-    params_mcmc[1:] = np.sort(params_mcmc[1:])
-#     print params_mcmc
+    chaindir, mcmcdir, outdir, plot_nest, plot_mcmc, plot_show, plot_contour, timestamp,timestamp2 = parse_commands(argv)
+
+    global BINS
+    BINS = 50
+    # n_params = 6
     
-#     exit()
-     #     mcmcchainlist = glob.glob(thread+'/Chain_0/*')[1]
-     #     print string.rsplit(mcmcchainlist, '/')[-1][:-4]
-
-
-
-# exit()
-
-
-if plot_nest:
-    import pymultinest as pymn
-    #reading in Nested data
-    nest_raw = pymn.Analyzer(n_params=n_params,outputfiles_basename=chaindir+'1-')
-    nested = {}
-    # n_params = nest_raw.n_params 
-    #only one thread for nested sampling hence nested[0]
-    nested[0]= {}
-    nested[0]['state'] = nest_raw.get_stats()
-    nest_data = np.loadtxt(chaindir+'1-post_equal_weights.dat')#nest_raw.get_equal_weighted_posterior()
-    n_params = len(nest_data[0,:])-1
-    params_nest = []
-    for i in range(n_params):
-        nested[0][str(i)] ={}
-        nested[0][str(i)]['data'] = nest_data[:,i]
-        nested[0][str(i)]['stats'] ={}
-        for j in range(len(nested[0]['state']['modes'])): #number of independent modes detected 
-            nested[0][str(i)]['stats'][j] ={}
-            nested[0][str(i)]['stats'][j]['sigma'] = nested[0]['state']['modes'][j]['sigma'][i]
-            nested[0][str(i)]['stats'][j]['mean'] = nested[0]['state']['modes'][j]['mean'][i]
-            if j == 1:
-                break #only take the first two modes if many are detected
-        params_nest.append(str(i))
+    disp_params = np.loadtxt(chaindir+'parameters.dat',dtype='string')
+    disp_params[0] = disp_params[0]+' (K)' #add units to temperature parameter
+    n_params = len(disp_params)
+    
+    
+    if plot_mcmc:
+    #reading in MCMC data
+        mcmc = {}
+        for thread in glob.glob(mcmcdir+'*'):
+            id = int(thread[-1])
+            mcmc[id] = {}
+                 
+            with open(mcmcdir+'thread_0/state.txt','r') as statefile:
+                mcmc[id]['state'] = eval(statefile.read())
+                 
+            chainlist = glob.glob(thread+'/Chain_0/*')
+            for trace in chainlist:
+                traceid = string.rsplit(trace, '/')[-1][:-4]
+                mcmc[id][traceid] ={}
+                mcmc[id][traceid]['data'] = np.loadtxt(trace)
+                mcmc[id][traceid]['stats'] = {}
+                mcmc[id][traceid]['stats'][0] = {}
+                mcmc[id][traceid]['stats'][0]['sigma'] = np.std(mcmc[id][traceid]['data'])
+                mcmc[id][traceid]['stats'][0]['mean'] = np.mean(mcmc[id][traceid]['data'])
+                
         
-#     print n_params, len(params)
+    #     print mcmc.keys()
+        params_mcmc = mcmc[0]['state']['stochastics'].keys()
+        params_mcmc[1:] = np.sort(params_mcmc[1:])
+    #     print params_mcmc
+        
+    #     exit()
+         #     mcmcchainlist = glob.glob(thread+'/Chain_0/*')[1]
+         #     print string.rsplit(mcmcchainlist, '/')[-1][:-4]
+ 
+    # exit()
+    
+    
+    if plot_nest:
+        import pymultinest as pymn
+        #reading in Nested data
+        nest_raw = pymn.Analyzer(n_params=n_params,outputfiles_basename=chaindir+'1-')
+        nested = {}
+        # n_params = nest_raw.n_params 
+        #only one thread for nested sampling hence nested[0]
+        nested[0]= {}
+        nested[0]['state'] = nest_raw.get_stats()
+        nest_data = np.loadtxt(chaindir+'1-post_equal_weights.dat')#nest_raw.get_equal_weighted_posterior()
+        n_params = len(nest_data[0,:])-1
+        params_nest = []
+        for i in range(n_params):
+            nested[0][str(i)] ={}
+            nested[0][str(i)]['data'] = nest_data[:,i]
+            nested[0][str(i)]['stats'] ={}
+            for j in range(len(nested[0]['state']['modes'])): #number of independent modes detected 
+                nested[0][str(i)]['stats'][j] ={}
+                nested[0][str(i)]['stats'][j]['sigma'] = nested[0]['state']['modes'][j]['sigma'][i]
+                nested[0][str(i)]['stats'][j]['mean'] = nested[0]['state']['modes'][j]['mean'][i]
+                if j == 1:
+                    break #only take the first two modes if many are detected
+            params_nest.append(str(i))
+            
+    #     print n_params, len(params)
+    
+    
+    # pl.figure()
+    # pl.scatter(nested.get_equal_weighted_posterior()[:,1],nested.get_equal_weighted_posterior()[:,2])
+    # pl.show()
+    # 
+    # print nested[0]['0']['stats']#.keys()
+    
+    # exit()
+    # print '-------------------------------'
+    # 
+    # print mcmc[0]['state']
+    
+    # exit()
+    
+    #################################################################################
+    
+    
+    # params = mcmc[0]['state']['stochastics'].keys()
+    # n_params = len(params)
+    # n_params = 3
+    
+    if plot_nest: 
+        fig_nest = plot_posteriors(nested,n_params,params_nest,disp_params,plot_contour=plot_contour)
+        if timestamp: 
+            fig_nest.savefig(outdir+'nested_posterior_+'+timestamp2+'.pdf')
+            fig_nest.savefig(outdir+'nested_posterior_+'+timestamp2+'.jpg')
+        else:
+            fig_nest.savefig(outdir+'nested_posterior.pdf')
+            fig_nest.savefig(outdir+'nested_posterior.jpg')
+    if plot_mcmc: 
+        fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params,plot_contours=plot_contours)
+        if timestamp:
+            fig_mcmc.savefig(outdir+'mcmc_posterior_+'+timestamp2+'.pdf')
+            fig_mcmc.savefig(outdir+'mcmc_posterior_+'+timestamp2+'.jpg')
+        else:
+            fig_mcmc.savefig(outdir+'mcmc_posterior.pdf')
+            fig_mcmc.savefig(outdir+'mcmc_posterior.jpg')
+    
+    # corrarray = np.zeros((n_params,len(mcmc[0][params[0]])))
+    # for i in range(n_params):
+    #     corrarray[i,:] = mcmc[0][params[i]]
+    # corrmatrix = np.corrcoef(corrarray)
+    # 
+    # # pl.figure()
+    # ax = pl.subplot(n_params, n_params,n_params*(n_params-1)+1)
+    # ax.imshow(corrmatrix,interpolation='none',cmap='gray_r')
+    # # ax.colorbar()
+    
+    #################################################################################
 
+    if plot_show:
+        pl.show()
+    
 
-# pl.figure()
-# pl.scatter(nested.get_equal_weighted_posterior()[:,1],nested.get_equal_weighted_posterior()[:,2])
-# pl.show()
-# 
-# print nested[0]['0']['stats']#.keys()
-
-# exit()
-# print '-------------------------------'
-# 
-# print mcmc[0]['state']
-
-# exit()
-
-#################################################################################
-
-
-# params = mcmc[0]['state']['stochastics'].keys()
-# n_params = len(params)
-# n_params = 3
-
-if plot_nest: 
-    fig_nest = plot_posteriors(nested,n_params,params_nest,disp_params)
-    fig_nest.savefig('nested_posterior.pdf')
-    fig_nest.savefig('nested_posterior.jpg')
-if plot_mcmc: 
-    fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params)
-    fig_mcmc.savefig('mcmc_posterior.pdf')
-    fig_mcmc.savefig('mcmc_posterior.jpg')
-
-# corrarray = np.zeros((n_params,len(mcmc[0][params[0]])))
-# for i in range(n_params):
-#     corrarray[i,:] = mcmc[0][params[i]]
-# corrmatrix = np.corrcoef(corrarray)
-# 
-# # pl.figure()
-# ax = pl.subplot(n_params, n_params,n_params*(n_params-1)+1)
-# ax.imshow(corrmatrix,interpolation='none',cmap='gray_r')
-# # ax.colorbar()
-
-#################################################################################
-
-
-
-
-# pl.show()
+#run the entire thing
+if __name__ == "__main__":
+    main(sys.argv[1:])
