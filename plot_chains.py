@@ -71,7 +71,7 @@ def parse_commands(argv):
             elif opt == '-t':
                 timestamp = True
                 timestamp2 = str(datetime.datetime.now())
-                timestamp2 = timestamp2[0:9]+'_'+timestamp2[11:-5]
+                timestamp2 = timestamp2[0:10]+'_'+timestamp2[11:13]+'-'+timestamp2[14:16]+'-'+timestamp2[17:-7]
             elif opt == '-c':
                 if arg == 'False' or arg == 'false' or arg != 'True' or arg != 'true' or arg != '':
                     plot_contour = False
@@ -389,16 +389,16 @@ def main(argv):
     if plot_nest: 
         fig_nest = plot_posteriors(nested,n_params,params_nest,disp_params,plot_contour=plot_contour)
         if timestamp: 
-            fig_nest.savefig(outdir+'nested_posterior_+'+timestamp2+'.pdf')
-            fig_nest.savefig(outdir+'nested_posterior_+'+timestamp2+'.jpg')
+            fig_nest.savefig(outdir+'nested_posterior_'+timestamp2+'.pdf')
+            fig_nest.savefig(outdir+'nested_posterior_'+timestamp2+'.jpg')
         else:
             fig_nest.savefig(outdir+'nested_posterior.pdf')
             fig_nest.savefig(outdir+'nested_posterior.jpg')
     if plot_mcmc: 
         fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params,plot_contours=plot_contours)
         if timestamp:
-            fig_mcmc.savefig(outdir+'mcmc_posterior_+'+timestamp2+'.pdf')
-            fig_mcmc.savefig(outdir+'mcmc_posterior_+'+timestamp2+'.jpg')
+            fig_mcmc.savefig(outdir+'mcmc_posterior_'+timestamp2+'.pdf')
+            fig_mcmc.savefig(outdir+'mcmc_posterior_'+timestamp2+'.jpg')
         else:
             fig_mcmc.savefig(outdir+'mcmc_posterior.pdf')
             fig_mcmc.savefig(outdir+'mcmc_posterior.jpg')
