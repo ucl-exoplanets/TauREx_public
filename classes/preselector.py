@@ -63,6 +63,17 @@ class preselector(object):
         self.select_molecules()
         #calculating some planetary parameters
         self.calc_astroparams()
+        
+        #small hack for paper excluding water
+#         print 'moleselected ',self.molselected
+#         print 'numgas ', self.numgas
+#         
+#         self.molselected= np.delete(self.molselected, 2)
+#         self.numgas -= 1
+#         print 'newmolselected ', self.molselected
+#         print 'newnumgas ', self.numgas
+        
+#         exit()
 
         # print self.mol_rank
         # print self.mol_idx
@@ -153,22 +164,28 @@ class preselector(object):
 
 
             # print mask
-            # print molecule
-            # mask = pc1 > thres
-            # pc2 = self.PCALIB[molecule]['PCA']['norm'][:,1]
-            # xaxis = np.zeros((len(pc1),1))
-            # for j in range(len(pc1)):
-            #     xaxis[j] = j
-            # # # print pc1
-            # # # exit()
-            # pl.figure(1)
-            # pl.plot(xaxis,pc1,'b')
-            # pl.plot(xaxis,pc2,'g')
-            # pl.plot(xaxis[mask],pc1[mask],'r')
-            # #
-            # # # pl.figure(2)
-            # # # pl.plot(pc1[mask])
-            # pl.show()
+#             print molecule
+#             mask = pc1 > thres
+#             pc2 = self.PCALIB[molecule]['PCA']['norm'][:,1]
+#             xaxis = np.zeros((len(pc1),1))
+#             for j in range(len(pc1)):
+#                 xaxis[j] = j
+#             # # # print pc1
+#             # # # exit()
+#             pl.figure(1)
+#             pl.plot(xaxis,pc1,'b')
+#             pl.plot(xaxis,pc2,'g')
+#             pl.plot(xaxis[mask],pc1[mask],'r')
+#             # #
+#             pl.figure(2)
+
+
+#             pl.figure(1)
+#             self.PCALIB[molecule]['PCA']['norm_interp'][:,0]
+#             pl.figure(2)
+#             pl.plot(self.PCALIB[molecule]['PCA']['interp_mask'],'r')
+# 
+#             pl.show()
             # # exit()
 
     def correlate(self):
@@ -197,8 +214,15 @@ class preselector(object):
 
 #             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
 #             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
-            eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
-            eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+            try:
+                eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+            except ZeroDivisionError:
+                eucdist = 1000
+            try:
+                eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+            except ZeroDivisionError:
+                eucdist = 1000
+                
             if np.isnan(eucdist):
                 eucdist = 1000
             if np.isnan(eucdist_inv):

@@ -358,12 +358,12 @@ def main(argv):
         #only one thread for nested sampling hence nested[0]
         nested[0]= {}
         nested[0]['state'] = nest_raw.get_stats()
-        nest_data = np.loadtxt(chaindir+'1-post_equal_weights.dat')#nest_raw.get_equal_weighted_posterior()
-        n_params = len(nest_data[0,:])-1
+        nest_data = np.loadtxt(chaindir+'1-.txt')#nest_raw.get_equal_weighted_posterior()
+        n_params = len(nest_data[0,:])-2
         params_nest = []
         for i in range(n_params):
             nested[0][str(i)] ={}
-            nested[0][str(i)]['data'] = nest_data[:,i]
+            nested[0][str(i)]['data'] = nest_data[:,i+2]
             nested[0][str(i)]['stats'] ={}
             for j in range(len(nested[0]['state']['modes'])): #number of independent modes detected 
                 nested[0][str(i)]['stats'][j] ={}
