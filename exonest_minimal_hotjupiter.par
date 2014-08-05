@@ -4,7 +4,7 @@ verbose = True
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
-trans_cpp = True
+trans_cpp = False
 
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = True

@@ -1,6 +1,6 @@
 [General]
 #verbose or not 
-verbose = False
+verbose = True
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
@@ -38,7 +38,7 @@ abs_path = Input/crosssections/
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 20
+tempres = 1.0
 
 #include varying stellar radii file. True/False 
 include_rad = False 
@@ -212,7 +212,7 @@ T_up  = 200
 T_low = 200
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 1e-1
+X_up  = 1e-2
 X_low = 0.0
 
 
@@ -223,7 +223,7 @@ X_low = 0.0
 run = False
 
 #update data standard deviation from dynamic fit.
-update_std = False
+update_std = True
 
 
 #MCMC number of total iterations
@@ -240,7 +240,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
 resume = False

@@ -154,6 +154,7 @@ class transmission(object):
 
     def get_sigma_array(self,temperature):
     #getting sigma array from sigma_dic for given temperature 
+#         print temperature 
         return self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
         
 

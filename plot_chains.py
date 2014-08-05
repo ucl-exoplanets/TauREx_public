@@ -136,14 +136,16 @@ def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppr
     #plot 2D distributions
     axis.plot(data[thread][varname0]['data'],data[0][varname]['data'],'k.',alpha=0.05)
     
-    for i in range(len(data[0][varname]['stats'])):
-        mean1 = data[0][varname0]['stats'][i]['mean']
-        mean2 = data[0][varname]['stats'][i]['mean']
-        axis.axvline(x=mean1,linestyle='--',color='red')
-        axis.axhline(y=mean2,linestyle='--',color='red')
+    
 
     #plot 1,2,3 sigma contours
     if confidence:
+       
+        for i in range(len(data[0][varname]['stats'])):
+           mean1 = data[0][varname0]['stats'][i]['mean']
+           mean2 = data[0][varname]['stats'][i]['mean']
+           axis.axvline(x=mean1,linestyle='--',color='red')
+           axis.axhline(y=mean2,linestyle='--',color='red')
        
         postcov = np.cov(data[0][varname0]['data'],data[0][varname]['data'])
         [eigval,eigvec] = np.linalg.eig(postcov)
@@ -175,16 +177,17 @@ def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppr
         pl.xticks([])
         
 
-def plot_1Dposterior(axis,data,varname):
+def plot_1Dposterior(axis,data,varname,confidence):
 #     std1 = data[0][varname]['sigma']
 #     mean1 = data[0][varname]['mean']
     for i in data.keys():
         axis.hist(data[i][varname]['data'],bins=BINS,normed=True,alpha=0.8, linewidth=2.0,histtype='step')
 #         pl.title(varname)
-    for i in range(len(data[0][varname]['stats'])):
-#         print data[0][varname]['stats'][i]
-        mean1 = data[0][varname]['stats'][i]['mean']
-        axis.axvline(x=mean1,linestyle='--',color='red')
+    if confidence:
+        for i in range(len(data[0][varname]['stats'])):
+    #         print data[0][varname]['stats'][i]
+            mean1 = data[0][varname]['stats'][i]['mean']
+            axis.axvline(x=mean1,linestyle='--',color='red')
     return axis
     
     
@@ -212,12 +215,13 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
         seq +=1
 #         ax.annotate('i ='+str(i)+' n ='+str(n_params * i + i + 1)+' s ='+str(seq),xy=(0.7,0.1),xycoords='axes fraction',
 #                         horizontalalignment='center', verticalalignment='center')
-        ax = plot_1Dposterior(ax, data, params[i])
+        ax = plot_1Dposterior(ax, data, params[i],confidence=plot_contour)
     #     nested_plot.plot_marginal(i, with_ellipses=True, with_points=True, use_log_values=False, grid_points=50)
         if i == 0:
             pl.ylabel("Prob. density",fontsize=20)
         pl.xlabel(display_params[i],fontsize=20)
         globalxlims= ax.get_xlim()
+#         print globalxlims
        
         
         #scaling axis labels 
@@ -226,11 +230,17 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
     #     print np.int(np.round(np.log10(mcmc[0][params[i]][0])))   
     #     print nested[0][params[i]][0]
 #        print np.log10(data[0][params[i]]['data'][0])
-        scale_pow = np.int(np.round(np.log10(data[0][params[i]]['data'][0]))) 
+        scale_tmp = np.round(np.log10(data[0][params[i]]['data'][0]))
+        if np.isfinite(scale_tmp):
+            scale_pow = np.int(scale_tmp) 
+        else:
+            scale_pow = 0.0
     #     print scale_pow
+        
         if scale_pow < 0.0:
             ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
             ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
+
 #             ax.set_xlabel(params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
         
     
@@ -395,7 +405,7 @@ def main(argv):
             fig_nest.savefig(outdir+'nested_posterior.pdf')
             fig_nest.savefig(outdir+'nested_posterior.jpg')
     if plot_mcmc: 
-        fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params,plot_contours=plot_contours)
+        fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params,plot_contour=plot_contour)
         if timestamp:
             fig_mcmc.savefig(outdir+'mcmc_posterior_'+timestamp2+'.pdf')
             fig_mcmc.savefig(outdir+'mcmc_posterior_'+timestamp2+'.jpg')

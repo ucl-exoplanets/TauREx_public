@@ -72,6 +72,7 @@ class fitting(object):
         self.bounds.append((self.T_low,self.T_up))
         for i in range(self.ngas):
             self.bounds.append((self.X_low,self.X_up))
+            
 
         #checking if number of free parameters for X = number of gas species
 #         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
@@ -120,6 +121,7 @@ class fitting(object):
 
 
         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=PFIT[0])
+#         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
 
 #         ion()
@@ -277,8 +279,8 @@ class fitting(object):
         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
             
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
-            # llterms = len(DATA) * np.log(1.0 / sqrt(2.0 * pi)) - len(DATA) * np.log(DATASTD) - 0.5 * chi_t
-            llterms =  - 0.5* chi_t
+            llterms =   (-len(DATA)/2.0)*np.log(pi) -np.log(np.mean(DATASTD)) -0.5* chi_t
+#             llterms =  - 0.5* chi_t
             return llterms
 
         #setting up folders for chain output
@@ -400,12 +402,12 @@ class fitting(object):
             #implements a uniform prior
 
             #converting temperatures from normalised grid to uniform prior
-            cube[0] = cube[0]* (self.T_up-self.T_low)+self.T_low
+            cube[0] = (cube[0]* (self.T_up-self.T_low))+self.T_low
     #         print cube[0]
 
             #converting mixing ratios from normalised grid to uniform prior
             for i in range(1,self.n_params):
-                cube[i] = cube[i] * (self.X_up-self.X_low) + self.X_low
+                cube[i] = (cube[i] * (self.X_up-self.X_low)) + self.X_low
             # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
         
 

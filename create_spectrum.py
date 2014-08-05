@@ -123,7 +123,12 @@ transob = transmission(params, dataob)
 
 
 # rho_in = profileob.get_rho(T=params.planet_temp)
-MODEL = transob.cpath_integral()  # computing transmission
+
+if params.trans_cpp:
+    MODEL = transob.cpath_integral()  # computing transmission
+else:
+    MODEL = transob.path_integral()  # computing transmission
+    
 # # 
 OUT = np.zeros((len(dataob.specgrid),3))
 OUT[:,0] = dataob.specgrid
