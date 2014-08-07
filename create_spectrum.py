@@ -133,7 +133,7 @@ else:
 OUT = np.zeros((len(dataob.specgrid),3))
 OUT[:,0] = dataob.specgrid
 OUT[:,1] = MODEL
-OUT[:,2] += 5e-5 #adding errorbars. can be commented
+# OUT[:,2] += 5e-5 #adding errorbars. can be commented
 
 
 outputob = output(params, dataob) #initiating output object with fitted data from fitting class

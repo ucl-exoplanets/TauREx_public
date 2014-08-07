@@ -187,6 +187,7 @@ def plot_1Dposterior(axis,data,varname,confidence):
         for i in range(len(data[0][varname]['stats'])):
     #         print data[0][varname]['stats'][i]
             mean1 = data[0][varname]['stats'][i]['mean']
+            std1 = data[0][varname]['stats'][i]['sigma']
             axis.axvline(x=mean1,linestyle='--',color='red')
     return axis
     
@@ -335,6 +336,9 @@ def main(argv):
                 mcmc[id][traceid]['stats'][0] = {}
                 mcmc[id][traceid]['stats'][0]['sigma'] = np.std(mcmc[id][traceid]['data'])
                 mcmc[id][traceid]['stats'][0]['mean'] = np.mean(mcmc[id][traceid]['data'])
+                print id, traceid, 'mean: ', np.mean(mcmc[id][traceid]['data'])
+                print id, traceid, 'std: ', np.std(mcmc[id][traceid]['data'])
+
                 
         
     #     print mcmc.keys()

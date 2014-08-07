@@ -71,7 +71,7 @@ file_prefix = test_
 dump_internal = False
 
 #internal model name save as
-internal_name = testspec.dat
+internal_name = transmissionspec.dat
 
 #save plots to .pdf 
 save_plots = True
@@ -124,7 +124,7 @@ mol_force_on = True
 
 #list of molecules to be added
 #naming convention must be same as cross-section file, comma separated 
-mol_force = 12C-16O,1H2-16O,48Ti-16O
+mol_force = 12C-16O,1H2-16O
 
 
 [Star]
@@ -240,7 +240,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
 resume = False
