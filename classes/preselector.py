@@ -164,15 +164,16 @@ class preselector(object):
 
 
             # print mask
-#             print molecule
-#             mask = pc1 > thres
-#             pc2 = self.PCALIB[molecule]['PCA']['norm'][:,1]
-#             xaxis = np.zeros((len(pc1),1))
-#             for j in range(len(pc1)):
-#                 xaxis[j] = j
+            print molecule
+            mask = pc1 > thres
+            pc2 = self.PCALIB[molecule]['PCA']['norm'][:,1]
+            xaxis = np.zeros((len(pc1),1))
+            for j in range(len(pc1)):
+                xaxis[j] = j
 #             # # # print pc1
 #             # # # exit()
-#             pl.figure(1)
+            pl.figure(1)
+            plot(self.PCALIB[molecule]['wavegrid'],self.PCALIB[molecule]['PCA']['norm'])
 #             pl.plot(xaxis,pc1,'b')
 #             pl.plot(xaxis,pc2,'g')
 #             pl.plot(xaxis[mask],pc1[mask],'r')
@@ -185,7 +186,7 @@ class preselector(object):
 #             pl.figure(2)
 #             pl.plot(self.PCALIB[molecule]['PCA']['interp_mask'],'r')
 # 
-#             pl.show()
+            pl.show()
             # # exit()
 
     def correlate(self):
@@ -248,9 +249,9 @@ class preselector(object):
 #             pl.plot(pc2,'g')
 #             # pl.plot(pc2_inv,'y')
 #             #
-#             # pl.figure(2)
-#             # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-#             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+#             pl.figure(2)
+#             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
 #             pl.show()
 
 
@@ -289,9 +290,9 @@ class preselector(object):
         print np.asarray(molkeys)[idx]
         # print diffidx, diff
         #
-#         pl.figure(3)
-#         pl.plot(np.asarray(distance)[idx])
-#         show()
+        pl.figure(3)
+        pl.plot(np.asarray(distance)[idx])
+        show()
 
 
     def calc_astroparams(self):
