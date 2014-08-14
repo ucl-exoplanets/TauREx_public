@@ -174,7 +174,7 @@ def generate_PCA_library(PARAMS,PATH,OUTPATH=False,comp_num=2):
         #checking and replacing negative numbers 
         DATA[DATA < 0] = 0
         
-#         pl.figure()
+#         pl.figure(1)
 #         pl.plot(DATA)
 #         pl.show()
         
@@ -185,7 +185,19 @@ def generate_PCA_library(PARAMS,PATH,OUTPATH=False,comp_num=2):
         normPCA = np.zeros((mollenlist[i],comp_num))
         for jj in range(comp_num):
             normPCA[:,jj] = (pca.components_[jj]-np.min(pca.components_[jj])) /np.max((pca.components_[jj]-np.min(pca.components_[jj])))
-
+        
+        print pca.explained_variance_ratio_ 
+        pl.figure(1)
+        pl.plot(pca.components_[0],'b')
+        pl.figure(2)
+        pl.plot(pca.components_[1],'r')
+        pl.show()
+        
+        
+#         pl.figure(2)
+#         pl.plot(normPCA[:,0],'b')
+#         pl.plot(normPCA[:,1],'r')
+        
 
         #add to OUTdic
         OUTdic[molnamelist[i]] = {}
@@ -196,7 +208,7 @@ def generate_PCA_library(PARAMS,PATH,OUTPATH=False,comp_num=2):
         OUTdic[molnamelist[i]]['data']     = DATA
         OUTdic[molnamelist[i]]['meanspec'] = meanspec
         OUTdic[molnamelist[i]]['PCA']      = {}
-        OUTdic[molnamelist[i]]['PCA']['full'] = pca
+        OUTdic[molnamelist[i]]['PCA']['full'] = pca.components_
         OUTdic[molnamelist[i]]['PCA']['norm'] = normPCA
         # OUTdic[molnamelist[i]]['filename'] =
         # OUTdic[molnamelist[i]]['path']     = PATH
