@@ -173,6 +173,7 @@ class preselector(object):
 #             # # # print pc1
 #             # # # exit()
 #             pl.figure(1)
+#             plot(self.PCALIB[molecule]['wavegrid'],self.PCALIB[molecule]['PCA']['norm'])
 #             pl.plot(xaxis,pc1,'b')
 #             pl.plot(xaxis,pc2,'g')
 #             pl.plot(xaxis[mask],pc1[mask],'r')
@@ -208,49 +209,74 @@ class preselector(object):
 
             datanorm_m = datanorm[mask]-np.mean(datanorm[mask])
             # datanorm_m /= np.max(datanorm[mask])
+            pc1 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,0] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0])
             pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
             # pc2 /= np.max(pc2)
+            pc1_inv = (-1.0*(pc1-np.mean(pc1)))+np.mean(pc1)
             pc2_inv = (-1.0*(pc2-np.mean(pc2)))+np.mean(pc2)
 
 #             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
 #             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
             try:
-                eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                eucdist_pc1 = np.sum(sqrt((datanorm_m-pc1)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
-                eucdist = 1000
+                eucdist_pc1 = 1000
             try:
-                eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                eucdist_pc2 = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
-                eucdist = 1000
+                eucdist_pc2 = 1000
                 
-            if np.isnan(eucdist):
-                eucdist = 1000
-            if np.isnan(eucdist_inv):
-                eucdist_inv = 1000
+            try:
+                eucdist_pc1_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+            except ZeroDivisionError:
+                eucdist_pc1_inv = 1000
+            try:
+                eucdist_pc2_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+            except ZeroDivisionError:
+                eucdist_pc2_inv = 1000
+                
+            if np.isnan(eucdist_pc1):
+                eucdist_pc1 = 1000
+            if np.isnan(eucdist_pc1_inv):
+                eucdist_pc1_inv = 1000
+            if np.isnan(eucdist_pc2):
+                eucdist_pc2 = 1000
+            if np.isnan(eucdist_pc2_inv):
+                eucdist_pc2_inv = 1000
 
-            corrcoeff = st.pearsonr(datanorm_m,pc2)
+            eucdist = [eucdist_pc1,eucdist_pc2]
+            eucdist_inv = [eucdist_pc1_inv, eucdist_pc2_inv]
+            
+            print 'molecule ', molecule
+            print 'eucdist ',eucdist
+            print 'eucdist_inv ', eucdist_inv
+            
+            corrcoeff_pc1 = st.pearsonr(datanorm_m,pc1)
+            corrcoeff_pc2 = st.pearsonr(datanorm_m,pc2)
+            
 
 
-            self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff
+            self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff_pc1
             # self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist
-            if corrcoeff[0] <0.0:
-            # if eucdist_inv < eucdist:
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist_inv
+#             if corrcoeff_pc1[0] <0.0:
+            if min(eucdist_inv) < min(eucdist):
+                self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist_inv)
+
             else:
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist
+                self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
 
 
 
-            print molecule,': ',corrcoeff, '... ',eucdist,'... ',eucdist_inv
+            print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
 #             pl.figure(1)
 #             pl.plot(datanorm_m,'b')
 #             pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
 #             pl.plot(pc2,'g')
 #             # pl.plot(pc2_inv,'y')
 #             #
-#             # pl.figure(2)
-#             # pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-#             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+#             pl.figure(2)
+#             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
 #             pl.show()
 
 
@@ -283,10 +309,10 @@ class preselector(object):
 
         # print ''
         # print distance
-        print np.asarray(distance)[idx]
+#         print np.asarray(distance)[idx]
         # print np.asarray(molkeys)
         # print ''
-        print np.asarray(molkeys)[idx]
+#         print np.asarray(molkeys)[idx]
         # print diffidx, diff
         #
 #         pl.figure(3)

@@ -114,7 +114,7 @@ temp_range = 800, 1600
 mixing_ratio = 1e-5,1e-4,1e-3,1e-2
 
 #(re)compute PCA preselector file
-generate_pca = False
+generate_pca = True
 
 #masking threshold
 mask_thres = 0.6
