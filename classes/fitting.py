@@ -122,7 +122,14 @@ class fitting(object):
 
         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=PFIT[0])
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
-        MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
+
+    
+        #binning internal model 
+        MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
+        
+        #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
+
+        
 
 #         ion()
 #         clf()
@@ -132,12 +139,12 @@ class fitting(object):
 #         clf()
 #         figure(101)
 #         plot(DATA,'g')
-#         plot(MODEL_interp)
+#         plot(MODEL_binned)
 #         draw()
 
         # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
 
-        res = (DATA-MODEL_interp) / DATASTD
+        res = (DATA-MODEL_binned) / DATASTD
         return sum(res**2)
         
 ############################################################################### 

@@ -37,13 +37,22 @@ class data(object):
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
+        
+        #calculating wavelength grids
         if params.gen_manual_waverange:
             self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
                                           lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
         else:
+            #increase model wavelength range by one data spectral bin in blue and red. This ensures correct 
+            #model binning at the edges
+            bin_up = self.wavegrid[-1]-self.wavegrid[-2]
+            bin_low = self.wavegrid[1]-self.wavegrid[0]
             self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                          lambda_min=self.wavegrid[0],lambda_max=self.wavegrid[-1])
+                                          lambda_min=self.wavegrid[0]-bin_low,lambda_max=self.wavegrid[-1]+bin_up)
         self.nspecgrid = len(self.specgrid)
+
+        #calculating spectral binning grid
+        self.spec_bin_grid,self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)       
 
         #calculating atmospheric scale height
         self.scaleheight = self.get_scaleheight()
@@ -161,6 +170,21 @@ class data(object):
         # exit()
 
         return np.asarray(specgrid),np.asarray(delta_lambda)
+    
+    def get_specbingrid(self,wavegrid):
+        #function calculating the bin boundaries for the data 
+        #this is used to bin the internal spectrum to the data in fitting module
+        
+        bingrid =[]
+        bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
+        for i in range(len(wavegrid)-1):
+            bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
+        bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
+        
+        bingrid_idx = numpy.digitize(self.specgrid,bingrid) #getting the specgrid indexes for bins
+        
+
+        return bingrid, bingrid_idx 
 
     def set_mixing_ratios(self):
     #setting up mixing ratio array from parameter file inputs
