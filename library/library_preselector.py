@@ -186,12 +186,12 @@ def generate_PCA_library(PARAMS,PATH,OUTPATH=False,comp_num=2):
         for jj in range(comp_num):
             normPCA[:,jj] = (pca.components_[jj]-np.min(pca.components_[jj])) /np.max((pca.components_[jj]-np.min(pca.components_[jj])))
         
-        print pca.explained_variance_ratio_ 
-        pl.figure(1)
-        pl.plot(pca.components_[0],'b')
-        pl.figure(2)
-        pl.plot(pca.components_[1],'r')
-        pl.show()
+#         print pca.explained_variance_ratio_ 
+#         pl.figure(1)
+#         pl.plot(pca.components_[0],'b')
+#         pl.figure(2)
+#         pl.plot(pca.components_[1],'r')
+#         pl.show()
         
         
 #         pl.figure(2)
