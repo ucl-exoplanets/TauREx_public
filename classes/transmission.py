@@ -24,25 +24,37 @@ import itertools
 import time
 import ctypes as C
 from library.library_general import *
+from library.library_transmission import *
 # from mpi4py import MPI
 
 class transmission(object):
 
 #initialisation
-    def __init__(self,params,data,usedatagrid=False):
+    def __init__(self,params,data,profile,usedatagrid=False):
         #loading data
         self.params        = params
-        self.z             = data['pta'][:,2]
         self.Rp            = params['planet_radius']
         self.Rs            = params['star_radius']
-        self.nlayers       = data['nlayers']
-        self.rho           = data['rho']
+
         self.n_gas         = data['ngas']
         self.sigma_dict    = data['sigma_dict']
         self.X             = data['X']
         self.atmosphere    = data['atmosphere']
+        
+        self.nlayers       = profile['nlayers']
+        self.z             = profile['Z']
+        self.rho           = profile['rho']
+        self.p             = profile['P']
+        self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
+        
         self.planet_temp   = int(params.planet_temp)
 
+        #cloud specific parameters. currently hard coded but can be moved to parameter file 
+        self.include_cld   = params.in_include_cld
+        self.cld_m         = 1.5 #refractive index for cloud cross sections
+        self.cld_a         = 2.0 #cloud particle size (microns)
+        self.cld_upbound   = 0.1 #pressure (in bar) of upper pressure/lower altitude cloud bound
+        self.cld_lowbound  = 1.0e-3 #pressure (in bar) of lower pressure/upper altitude cloud bound
         
         if usedatagrid:
         #use wavelengthgrid of data or internal specgrid defined in data class
@@ -65,6 +77,12 @@ class transmission(object):
             self.Csig      = self.get_Csig()
         else:
             self.Csig      = zeros((self.nlambda))
+            
+        #calculating cloud cross sections
+        if self.include_cld:
+            self.Cld_sig = self.get_cloud_sig()
+        else:
+           self.Cld_sig = zeros((self.nlambda)) #unused but needed to cast to cpp code
         
         #loading c++ pathintegral library for faster computation
         if params.trans_cpp:
@@ -151,6 +169,12 @@ class transmission(object):
     def get_Csig(self):
     #calculating collisional induced absorption
         return self.scatterCIA(self.cia[:,1],self.atmosphere['mol']['H2']['frac'])      
+    
+    def get_cloud_sig(self):
+    #calculating could cross sections
+        return (128.0* np.pi**5 * self.cld_a**6) / (3.0 * self.lambdagrid**4) * ((self.cld_m**2 -1.0)/(self.cld_m**2 +2.0))**2
+
+        
 
     def get_sigma_array(self,temperature):
     #getting sigma array from sigma_dic for given temperature 
@@ -172,17 +196,19 @@ class transmission(object):
         
         #setting up arrays
         absorption = zeros((self.nlambda))
-        tau = zeros((self.nlayers))  
-        Rtau = zeros((self.nlayers))
-        Ctau = zeros((self.nlayers))
-        exptau = zeros((self.nlayers))
+        tau        = zeros((self.nlayers))  
+        Rtau       = zeros((self.nlayers))
+        Ctau       = zeros((self.nlayers))
+        cld_tau    = zeros((self.nlayers))
+        exptau     = zeros((self.nlayers))
 
         molnum = len(X[:,0])
         #running loop over wavelengths     
         for wl in range(self.nlambda):
-            tau[:] = 0.0 
-            exptau[:] = 0.0
-            Rtau[:] = 0.0
+            tau[:]     = 0.0 
+            exptau[:]  = 0.0
+            Rtau[:]    = 0.0
+            cld_tau[:] = 0.0
          
             for c,j,k in self.iteridx:
                 #optical depth due to gasses
@@ -191,9 +217,19 @@ class transmission(object):
                 
                 Rtau[j] = self.Rsig[wl] * rho[j+k] * self.dlarray[c] #optical depth due to Rayleigh scattering
                 Ctau[j] = self.Csig[wl] * (rho[j+k] **2) * self.dlarray[c]  # calculating CIA optical depth
+                
+                #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
+                if self.include_cld:                    
+                    if self.p_bar[k+j] < self.cld_upbound and self.p_bar[k+j] > self.cld_lowbound:
+                        #= log(cloud density), assuming linear decrease with decreasing log pressure
+                        #following Ackerman & Marley (2001), Fig. 6
+                        cld_log_rho = interp_value(np.log(self.p_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0) 
+                        cld_tau[j] += ( self.Cld_sig[wl] * (self.dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
+                
                 #adding all taus together
                 tau[j] += Rtau[j]
                 tau[j] += Ctau[j]
+                if self.include_cld: tau[j] += cld_tau[j]
  
                 exptau[j]= exp(-tau[j])
   
@@ -239,11 +275,26 @@ class transmission(object):
         del(cs1);
         cCsig, cs1 = cast2cpp(self.Csig)
         del(cs1);
+            
         cRp = C.c_double(self.Rp)
         cRs = C.c_double(self.Rs)
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
+
+        #setting and casting cloud paramters
+        cP_bar,cs1    = cast2cpp(self.p_bar)
+        del(cs1)
+        cCld_sig,cs1  = cast2cpp(self.Cld_sig)
+        del(cs1)
+        if self.include_cld:
+            cInclude_cld  = C.c_int(1)
+            cCld_lowbound = C.c_double(self.cld_lowbound)
+            cCld_upbound  = C.c_double(self.cld_upbound)
+        else:
+            cInclude_cld  = C.c_int(0)
+            cCld_lowbound = C.c_double(0)
+            cCld_upbound  = C.c_double(0)
 
         #setting up output array
         absorption = zeros((self.nlambda),dtype=float64)
@@ -253,7 +304,8 @@ class transmission(object):
 
         #running c++ path integral
         cpath_int(csigma_array,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
-                  clinecount,cnlayers,cn_gas,C.c_void_p(absorption.ctypes.data))
+                  clinecount,cnlayers,cn_gas,cInclude_cld,cCld_lowbound,\
+                  cCld_upbound,cP_bar,cCld_sig,C.c_void_p(absorption.ctypes.data))
 
         # del(cX); del(crho); del(csigma_array); del(cz); del(cRsig); del(cCsig); del(cRp); del(cRs);
         # del(clinecount); del(cnlayers); del(cn_gas); del(cpath_int)

@@ -152,7 +152,7 @@ profileob = profile(params, dataob)
 
 #initialising transmission radiative transfer code object
 if params.verbose: print 'loading transmission'
-transob = transmission(params, dataob)
+transob = transmission(params, dataob,profileob)
 
 
 #initialising fitting object

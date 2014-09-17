@@ -46,14 +46,18 @@ class profile(object):
             self.Z       = self.pta[:,2]
             self.X       = zeros((self.ngas,self.nlayers))
             self.X      += 1e-5  #setting up initial mixing ratios
+            self.rho     = self.get_rho()
             
         else:           
             self.nlayers = data.nlayers
             self.pta     = data.pta
-            self.T       = data.pta[:,1]
-            self.X       = data.X       
             self.P       = self.pta[:,0]
-        
+            self.T       = data.pta[:,1]
+            self.Z       = self.pta[:,2]
+            self.X       = data.X       
+            self.rho     = self.get_rho()
+            
+            
                 
 #basic class methods and overloading
     def list(self,name=None):
