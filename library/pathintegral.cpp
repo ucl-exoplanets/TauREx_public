@@ -50,8 +50,8 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 //   cout<< "C2" <<endl;
    
    // setting up arrays and variables
-    float tau[nlayers], exptau[nlayers];
-    float Rtau, Ctau, cld_tau;
+    double tau[nlayers], exptau[nlayers];
+    double Rtau, Ctau, cld_tau;
     int count;
 
     // initialise cloud quantities

@@ -125,7 +125,7 @@ class transmission(object):
         kl = []
         cl = []
         count = 0
-        for j in range(self.nlayers-1):    
+        for j in range(self.nlayers):    
             for k in range(1,self.nlayers-j):
                 dl = 2.0 * (sqrt(pow((self.Rp + self.z[k+j]),2) - pow((self.Rp + self.z[j]),2)) -
                             sqrt(pow((self.Rp + self.z[k-1+j]),2) - pow((self.Rp + self.z[j]),2)))
@@ -148,7 +148,6 @@ class transmission(object):
         dz = zeros((self.nlayers))
         for j in range(self.nlayers-1):
             dz[j] = self.z[j+1] - self.z[j]
-        dz[-1] = dz[-2]
         return dz
     
     def get_Rsig(self):
@@ -229,7 +228,7 @@ class transmission(object):
                 #adding all taus together
                 tau[j] += Rtau[j]
                 tau[j] += Ctau[j]
-                if self.include_cld: tau[j] += cld_tau[j]
+                tau[j] += cld_tau[j]
  
                 exptau[j]= exp(-tau[j])
   
