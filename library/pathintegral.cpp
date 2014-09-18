@@ -11,10 +11,36 @@
 
 using namespace std;
 
+/* Function to interpolate single values */
+#ifndef interpolateValue_H
+#define interpolateValue_H
+double interpolateValue(double *bounds, double sig1, double sig2)
+{
+    /* Extract bounds... */
+    const double y_low = *(bounds);
+    const double y_high = *(bounds+1);
+    const double new_y = *(bounds+2);
+    //cout<< "Interpolating between "<< *(bounds) << " and " << *(bounds+1) << "....." <<endl;
+    
+    /* ...and define a useful value */
+    const double factor = (new_y - y_low) / (y_high - y_low);
+    
+    
+    /* Calculate new values */
+    double new_val = sig1 + ((sig2-sig1) * factor);
+	//interpolation formula
+    
+    return(new_val);
+}
+#endif
+
+
+
 extern "C" {
 void cpath_int(const double ** sigma_array,const double * dlarray, const double * z,
     const double * dz, const double * Rsig, const double * Csig, const double ** X, const double * rho,
-    double Rp, double Rs, int linecount, int nlayers, int n_gas, void * absorptionv) {
+    double Rp, double Rs, int linecount, int nlayers, int n_gas, int include_cld, const double cld_lowbound,
+    const double cld_upbound, const double * p_bar, const double * cld_sig, void * absorptionv) {
 
 
 
@@ -24,10 +50,13 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 //   cout<< "C2" <<endl;
    
    // setting up arrays and variables
-    float tau[nlayers], exptau[nlayers];
-    float Rtau, Ctau;
+    double tau[nlayers], exptau[nlayers];
+    double Rtau, Ctau, cld_tau;
     int count;
 
+    // initialise cloud quantities
+	double bounds[3]={0.0}, cld_log_rho=0.0;
+    
 //    cout<< "C3" <<endl;
 
     //beginning calculations
@@ -46,10 +75,8 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 		/* Calculating optical depths */
 			Rtau = 0.0; 					// sum of Rayleigh optical depth
 			Ctau = 0.0; 					// sum of CIA optical depth
-//			cld_tau = 0.0;					// sum of cloud optical depth
+			cld_tau = 0.0;					// sum of cloud optical depth
 			tau[j] = 0.0;					// total optical depth
-
-//            cout<< "C5" <<endl;
 
 			for (int k=1; k < (nlayers-j); k++) // loop through each layer to sum up path length
 			{
@@ -57,12 +84,31 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 				for(int l=0;l<n_gas;l++) tau[j] += (sigma_array[l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
 				Rtau += Rsig[wl] * rho[j+k] * dlarray[count]; // calculating Rayleigh scattering optical depth
 				Ctau += Csig[wl] * rho[j+k] * rho[j+k] * dlarray[count]; // calculating CIA optical depth
+                
+                
+//              Calculating cloud opacities if requested
+                if(include_cld==1){
+                    if( (p_bar[k+j]<cld_upbound) && (p_bar[k+j]>cld_lowbound) ){ // then cloud exists in this layer [k+j]
+        
+                        bounds[0]=log(cld_lowbound);
+						bounds[1]=log(cld_upbound);
+						bounds[2]=log(p_bar[k+j]);
+                        
+                        cld_log_rho = interpolateValue(bounds,-6,-1);
+                        // = log(cloud density), assuming linear decrease with decreasing log pressure
+                        // following Ackerman & Marley (2001), Fig. 6
+                        cld_tau += ( cld_sig[wl] * (dlarray[count]*1.0e2) * (exp(cld_log_rho)*1.0e-6) );	// convert path lenth from m to cm, and density from g m^-3 to g cm^-3
+                    }
+                }
+                
 				count += 1;
 
-//				cout<< "C6" <<endl;
+
 			}
 			tau[j] += Rtau;	//adding Rayleigh scattering tau to gas tau
 			tau[j] += Ctau; //adding CIA tau to gas tau
+            tau[j] += cld_tau; //adding cloud tau to gas tau
+
 			exptau[j]= exp(-tau[j]);
 		}
 //		cout<< "C7" <<endl;

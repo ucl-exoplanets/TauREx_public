@@ -96,8 +96,8 @@ class data(object):
             self.rad = self.readfile(self.params_in_rad_file,INTERPOLATE=True)
         if params.in_include_cia:
             self.cia = self.readfile(self.params.in_cia_file,INTERPOLATE=True)
-        if params.in_include_cld:
-            self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
+#         if params.in_include_cld:
+#             self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
             
 
 

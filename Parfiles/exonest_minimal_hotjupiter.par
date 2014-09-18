@@ -4,19 +4,19 @@ verbose = True
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
-trans_cpp = True
+trans_cpp = False
 
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = True
 
 #short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 1.0
+wavemin = 0.5
 
 #long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 20.0
+wavemax = 5
 
 #resolution of internal model runs (R)
-spec_res = 300
+spec_res = 1000
 
 
 
@@ -53,11 +53,6 @@ include_cia = False
 #file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
 
-#include cloud opacities. True/False 
-include_cld = False
-
-#file from which to read optical depths for extra opacities (e.g. clouds)
-cld_file = Input/cloud1.cld
 
 
 [Output]
@@ -71,39 +66,39 @@ file_prefix = test_
 dump_internal = True
 
 #internal model name save as
-internal_name = gj3470b_test3.dat
+internal_name = test.dat
 
 #save plots to .pdf 
 save_plots = True
-
 
 [Star]
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.568
+radius = 0.781
 
 #Stellar temperature (K)
-temp   = 3600
+temp   = 4900
+
 
 
 [Planet]
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 0.440
+radius = 1.138
 
 #Orbital semi-major axis (AU)
-sma = 0.0356
+sma = 0.03099
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
-grav = 7.9
+grav = 21.2
 
 #Planetary temperature (K)
-temp = 700
+temp = 1400
 
 #molecular weight of atmosphere 
 mu = 2.3
@@ -114,7 +109,20 @@ molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 8.0e-3, 4.0e-3, 2.0e-3, 2.0e-5, 1.0e-4
+mixing_ratios = 2.0e-3, 2.0e-8, 2.0e-5, 2.0e-2, 2.0e-7
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#cloud refractive index (m) and particle size (a) in microns. Comma separated
+cld_params = 1.5, 1.0
+
+#cloud pressure (in bar) lower and upper bounds. Comma separated
+cld_pressure = 1.0e-3, 0.1
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+#parameter not in use but placeholder for implementation if needed
+cld_file = Input/cloud1.cld
 
 
 

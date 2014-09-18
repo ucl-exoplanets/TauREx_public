@@ -4,7 +4,7 @@ verbose = True
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
-trans_cpp = False
+trans_cpp = True
 
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = True
@@ -16,7 +16,7 @@ wavemin = 1.0
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 300
+spec_res = 200
 
 
 
@@ -71,39 +71,39 @@ file_prefix = test_
 dump_internal = True
 
 #internal model name save as
-internal_name = hotjupiter_test.dat
+internal_name = hotjupiter_r200.dat
 
 #save plots to .pdf 
 save_plots = True
+
 
 [Star]
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.781
+radius = 0.568
 
 #Stellar temperature (K)
-temp   = 4900
-
+temp   = 3600
 
 
 [Planet]
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 1.138
+radius = 0.440
 
 #Orbital semi-major axis (AU)
-sma = 0.03099
+sma = 0.0356
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
-grav = 21.2
+grav = 7.9
 
 #Planetary temperature (K)
-temp = 1400
+temp = 700
 
 #molecular weight of atmosphere 
 mu = 2.3
@@ -114,7 +114,7 @@ molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 2.0e-3, 2.0e-8, 2.0e-3, 2.0e-5, 2.0e-7
+mixing_ratios = 8.0e-3, 4.0e-3, 2.0e-3, 2.0e-5, 1.0e-4
 
 
 

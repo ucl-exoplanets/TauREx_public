@@ -46,8 +46,6 @@ class parameters(object):
         self.in_rad_file           = parser.get('Input','rad_file')
         self.in_include_cia        = parser.getboolean('Input','include_cia')
         self.in_cia_file           = parser.get('Input','cia_file')  
-        self.in_include_cld        = parser.getboolean('Input','include_cld')
-        self.in_cld_file           = parser.get('Input','cld_file')
 
         self.out_path              = parser.get('Output','path')
         self.out_file_prefix       = parser.get('Output','file_prefix')
@@ -66,6 +64,17 @@ class parameters(object):
         self.planet_mu             = parser.getfloat('Planet', 'mu')      *AMU
         self.planet_molec          = genfromtxt(StringIO(parser.get('Planet','molecules')),delimiter = ',',dtype='str',autostrip=True)
         self.planet_mixing         = genfromtxt(StringIO(parser.get('Planet','mixing_ratios')),delimiter = ',',dtype='str',autostrip=True)
+        
+        try:
+            self.in_include_cld        = parser.getboolean('Planet','include_cld')
+            self.in_cld_params         = genfromtxt(StringIO(parser.get('Planet','cld_params')),delimiter = ',',dtype='str',autostrip=True)
+            self.in_cld_m              = np.float(self.in_cld_params[0])
+            self.in_cld_a              = np.float(self.in_cld_params[1])
+            self.in_cld_pressure       = np.float(genfromtxt(StringIO(parser.get('Planet','cld_pressure')),delimiter = ',',dtype='str',autostrip=True))
+            self.in_cld_file           = parser.get('Planet','cld_file')
+        except:
+            self.in_include_cld        = False
+            pass
         
         self.tp_var_atm            = parser.getboolean('T-P profile','var_atm')
         self.tp_num_scale          = parser.getint('T-P profile', 'num_scaleheights')

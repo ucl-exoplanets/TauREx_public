@@ -21,7 +21,7 @@ spec_res = 1000
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/hotjupiter_test.dat
+spectrum_file = Input/gj3470b_test3.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -38,7 +38,7 @@ abs_path = Input/crosssections/
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 1.0
+tempres = 50
 
 #include varying stellar radii file. True/False 
 include_rad = False 
@@ -52,13 +52,6 @@ include_cia = False
 #file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
 
-#include cloud opacities. True/False 
-include_cld = False
-
-#file from which to read optical depths for extra opacities (e.g. clouds)
-cld_file = Input/cloud1.cld
-
-
 
 [Output]
 #path for output files
@@ -68,14 +61,13 @@ path = Output/
 file_prefix = test_
 
 #save internal model to file. Useful for when only creating transmission/emisison model
-dump_internal = False
+dump_internal = True
 
 #internal model name save as
-internal_name = transmissionspec.dat
+internal_name = testspec.dat
 
 #save plots to .pdf 
 save_plots = True
-
 
 [Preselector]
 
@@ -99,22 +91,22 @@ speclib_path = Preselector/speclib/
 pca_path = Preselector/
 
 #run ExoMol cross section conversion from wavenumbers to microns
-convert2microns = False
+convert2microns = True
 
 #(re)generate spectral library
 generate_speclib = False
 
 #restrict temperature range for cross-section lists
-restrict_temp = True
+restrict_temp = False
 
 #setting temperature range (K) if restrict_temp = True : low, high 
-temp_range = 800, 1600
+temp_range = 400, 1000
 
 #mixing ratios for which spectra are computed
 mixing_ratio = 1e-5,1e-4,1e-3,1e-2
 
 #(re)compute PCA preselector file
-generate_pca = True
+generate_pca = False
 
 #masking threshold
 mask_thres = 0.6
@@ -131,41 +123,53 @@ mol_force = 12C-16O,1H2-16O
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.781
+radius = 0.568
 
 #Stellar temperature (K)
-temp   = 4900
-
+temp   = 3600
 
 
 [Planet]
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 1.138
+radius = 0.440
 
 #Orbital semi-major axis (AU)
-sma = 0.03099
+sma = 0.0356
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
-grav = 21.2
+grav = 7.9
 
 #Planetary temperature (K)
-temp = 1400
+temp = 700
 
 #molecular weight of atmosphere 
 mu = 2.3
 
 #molecules considered
-molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
+molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 2.0e-3, 2.0e-8, 2.0e-3, 2.0e-5, 2.0e-7
+mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#cloud refractive index (m) and particle size (a) in microns. Comma separated
+cld_params = 1.5, 1.0
+
+#cloud pressure (in bar) lower and upper bounds. Comma separated
+cld_pressure = 1.0e-3, 0.1
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+#parameter not in use but placeholder for implementation if needed
+cld_file = Input/cloud1.cld
 
 
 [T-P profile]
@@ -220,27 +224,27 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = False
+run = True
 
 #update data standard deviation from dynamic fit.
 update_std = True
 
 
 #MCMC number of total iterations
-iter = 25000
+iter = 1000
 
 #MCMC burn in period 
-burn = 2500
+burn = 10
 
 #MCMC thinning factor
-thin = 1
+thin = 2
 
 
 [MultiNest]
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = False
+run = True
 
 #resume from previous run
 resume = False
@@ -255,7 +259,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 4000
+n_live_points = 2000
 
 #maximum no. of iterations (0=inf)
 max_iter = 0
