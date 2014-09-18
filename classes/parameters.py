@@ -46,8 +46,17 @@ class parameters(object):
         self.in_rad_file           = parser.get('Input','rad_file')
         self.in_include_cia        = parser.getboolean('Input','include_cia')
         self.in_cia_file           = parser.get('Input','cia_file')  
-        self.in_include_cld        = parser.getboolean('Input','include_cld')
-        self.in_cld_file           = parser.get('Input','cld_file')
+        
+        try:
+            self.in_include_cld        = parser.getboolean('Input','include_cld')
+            self.in_cld_params         = genfromtxt(StringIO(parser.get('Input','cld_params')),delimiter = ',',dtype='str',autostrip=True)
+            self.in_cld_m              = np.float(self.in_cld_params[0])
+            self.in_cld_a              = np.float(self.in_cld_params[1])
+            self.in_cld_pressure       = np.float(genfromtxt(StringIO(parser.get('Input','cld_pressure')),delimiter = ',',dtype='str',autostrip=True))
+            self.in_cld_file           = parser.get('Input','cld_file')
+        except:
+            self.in_include_cld        = False
+            pass
 
         self.out_path              = parser.get('Output','path')
         self.out_file_prefix       = parser.get('Output','file_prefix')

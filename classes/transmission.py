@@ -49,12 +49,13 @@ class transmission(object):
         
         self.planet_temp   = int(params.planet_temp)
 
-        #cloud specific parameters. currently hard coded but can be moved to parameter file 
+        #cloud specific parameters.
         self.include_cld   = params.in_include_cld
-        self.cld_m         = 1.5 #refractive index for cloud cross sections
-        self.cld_a         = 2.0 #cloud particle size (microns)
-        self.cld_upbound   = 0.1 #pressure (in bar) of upper pressure/lower altitude cloud bound
-        self.cld_lowbound  = 1.0e-3 #pressure (in bar) of lower pressure/upper altitude cloud bound
+        if self.include_cld:
+            self.cld_m         = params.in_cld_m #refractive index for cloud cross sections
+            self.cld_a         = params.in_cld_a #cloud particle size (microns)
+            self.cld_upbound   = params.in_cld_pressure[1] #pressure (in bar) of upper pressure/lower altitude cloud bound
+            self.cld_lowbound  = params.in_cld_pressure[0] #pressure (in bar) of lower pressure/upper altitude cloud bound
         
         if usedatagrid:
         #use wavelengthgrid of data or internal specgrid defined in data class
@@ -136,8 +137,6 @@ class transmission(object):
                 count += 1
          
         iteridx = zip(cl,jl,kl)
-
-         
         dlarray = asarray(dlarray)      
 #         dlarray[isnan(dlarray)] = 0
          
