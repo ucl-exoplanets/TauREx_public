@@ -66,7 +66,7 @@ class transmission(object):
         #calculating optical path lengths
         self.dlarray,self.iteridx = self.get_path_length()
         self.dz            = self.get_dz()
- 
+        
         #calculating rayleigh scattering cross sections
         self.mol_list      = self.atmosphere['mol'].keys()
         self.ray_thres     = 50.0 * (self.atmosphere['mol'][self.mol_list[0]]['radius'] * 1.0e6);

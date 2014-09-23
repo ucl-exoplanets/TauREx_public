@@ -66,7 +66,7 @@ except:
 
 #loading classes
 from classes.parameters import *
-# from classes.emission import *
+from classes.emission import *
 from classes.transmission import *
 from classes.output import *
 from classes.fitting import *
@@ -84,7 +84,7 @@ from library.library_plotting import *
 parser = optparse.OptionParser()
 parser.add_option('-p', '--parfile',
                   dest="param_filename",
-                  default="exonest.par",
+                  default="Parfiles/exonest.par",
 )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
@@ -151,8 +151,14 @@ if params.verbose: print 'loading profile'
 profileob = profile(params, dataob)
 
 #initialising transmission radiative transfer code object
-if params.verbose: print 'loading transmission'
+# if params.verbose: print 'loading transmission'
 transob = transmission(params, dataob,profileob)
+
+#initilaising emission radiative transfer code object
+emissob = emission(params,dataob,profileob)
+emissob.path_integral()
+
+exit()
 
 
 #initialising fitting object
