@@ -38,10 +38,14 @@ class emission(object):
         self.atmosphere    = data['atmosphere']
 
         self.nlayers       = profile['nlayers']
-        self.z             = profile['Z']
+        self.z             = profile['Z']        
+        self.t             = profile['T']
         self.rho           = profile['rho']
         self.p             = profile['P']
         self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
+        
+        print 'z ',np.max(self.z)
+        print 'p ',np.max(self.p)
 
         self.dzarray       = self.get_dz()
 
@@ -102,7 +106,14 @@ class emission(object):
         if rho is None:
             rho = self.rho
         if temperature is None:
-            temperature = 1000#self.planet_temp
+            temperature = self.t#self.planet_temp
+            
+        pl.figure(100)
+        pl.plot(self.z,rho)
+        
+        pl.figure(101)
+        pl.plot(self.z,self.t)
+
             
         Tstar = 4500
         BB_star = em.black_body(self.specgrid,Tstar)
@@ -116,12 +127,12 @@ class emission(object):
 
         for j in range(self.nlayers):
             tau[:] = 0.0
-            sigma_array = self.get_sigma_array(temperature) #selecting correct sigma_array for temperature
+            sigma_array = self.get_sigma_array(temperature[j]) #selecting correct sigma_array for temperature
             for i in range(molnum):
                 tau += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
 
             exptau =  np.exp(-1.0*tau)    
-            BB_layer = em.black_body(self.specgrid,temperature)
+            BB_layer = em.black_body(self.specgrid,temperature[j])
             
             I_total += BB_layer*exptau
         

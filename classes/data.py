@@ -66,15 +66,12 @@ class data(object):
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
         else:
+            #if no pta file provided, pta will be calculated by the profile class
             self.nlayers = self.params.tp_atm_levels
             self.ngas    = size(self.params.planet_molec)
-            self.pta     = self.setup_pta_grid()
-            self.X       = self.set_mixing_ratios()
+#             self.pta     = self.setup_pta_grid() #if not read from file, pta will be calculated by profile class
+            self.X       = self.set_mixing_ratios() #mixing ratios are read from parameter file or preselector class
 
-
-        #calculating densities
-        self.rho = (self.pta[:,0])/(self.KBOLTZ*self.pta[:,1])
-        self.rho_tot = sum(self.rho)
 
         #setting up dictionary with atmosphere parameters
         self.atmosphere = self.init_atmosphere()
@@ -140,7 +137,8 @@ class data(object):
             surf_g = self.params.planet_grav
         if mmw is None:
             mmw = self.params.planet_mu
-
+             
+ 
         return (self.KBOLTZ*T_aver)/(mmw*surf_g)
 
     def get_specgrid(self,R=5000,lambda_min=0.1,lambda_max=20.0):
@@ -207,24 +205,6 @@ class data(object):
         return X
         
         
-
-    def setup_pta_grid(self):
-    #generating atmospheric Pressure, Temperature, Altitude (PTA)
-    #grid if not read in from ATM file
-        MAX_P    = self.params.tp_max_pres
-        N_SCALE  = self.params.tp_num_scale
-        N_LAYERS = self.params.tp_atm_levels
-
-        max_z    = N_SCALE * self.scaleheight
-#         dz       = max_z / N_LAYERS
-
-        #generatinng altitude-pressure array
-        PTA_arr = zeros((N_LAYERS,3))
-        PTA_arr[:,2] = linspace(0,max_z,num=N_LAYERS)
-        PTA_arr[:,0] = MAX_P * exp(-PTA_arr[:,2]/self.scaleheight)
-        PTA_arr[:,1] = self.params.planet_temp
-
-        return PTA_arr
 
     def add_molecule(self,NAME, WT, RAD, RIDX,FRAC):
     #adding a molecule to the atmosphere dictionary
@@ -358,7 +338,7 @@ class data(object):
             OUT = loadtxt(self.params.in_atm_file)
         except ValueError:
             OUT = loadtxt(self.params.in_atm_file,comments='*',skiprows=10)
-        OUT[:,2] *= 1000. #converting from km to m
+#         OUT[:,2] *= 1000. #converting from km to m
         
         OUT = OUT[argsort(OUT[:,2]),:]
         

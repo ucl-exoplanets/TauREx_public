@@ -13,7 +13,7 @@ class parameters(object):
         '''
         a parameter file is parsed and initial parameter values are set.  
         to add a new parameter edit this file and the input .par file.
-        V1.0  - Definition - C. MacTavish, Apr 2012
+        V1.0  - Definition - I. Waldmann, Apr 2013
         '''
         
         #conversion constants

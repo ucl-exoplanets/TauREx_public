@@ -92,6 +92,7 @@ class profile(object):
         N_LAYERS = self.nlayers
         
         max_z    = N_SCALE * self.scaleheight
+        
 #         dz       = max_z / N_LAYERS
         
         #generatinng altitude-pressure array
