@@ -1,10 +1,10 @@
 [General]
 #verbose or not 
-verbose = True
+verbose = False
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
-trans_cpp = False
+trans_cpp = True
 
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = True
@@ -13,7 +13,7 @@ manual_waverange = True
 wavemin = 0.5
 
 #long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 5
+wavemax = 20.0
 
 #resolution of internal model runs (R)
 spec_res = 1000

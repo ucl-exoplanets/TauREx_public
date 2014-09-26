@@ -130,7 +130,7 @@ else:
     MODEL = transob.path_integral()  # computing transmission
     
 # # 
-OUT = np.zeros((len(dataob.specgrid),3))
+OUT = np.zeros((len(dataob.specgrid),2))
 OUT[:,0] = dataob.specgrid
 OUT[:,1] = MODEL
 # OUT[:,2] += 5e-5 #adding errorbars. can be commented
@@ -139,7 +139,7 @@ OUT[:,1] = MODEL
 outputob = output(params, dataob) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
-outputob.plot_manual(OUT)   #plotting data only
+outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only
 
 if params.out_dump_internal:
     outputob.save_model(modelout=OUT, modelsaveas=params.out_internal_name)       #saving models to ascii
