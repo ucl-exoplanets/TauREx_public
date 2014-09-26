@@ -30,7 +30,7 @@ class profile(object):
         self.params = params
         
         #constants
-        self.botlzman = 1.3806488e-23# m2 kg s-2 K-1
+        self.boltzmann = 1.3806488e-23# m2 kg s-2 K-1
         
         #derived values
         self.scaleheight = self.get_scaleheight(params.planet_temp, params.planet_grav, params.planet_mu)
@@ -55,7 +55,7 @@ class profile(object):
             self.T       = data.pta[:,1]
             self.Z       = self.pta[:,2]
             self.X       = data.X       
-            self.rho     = self.get_rho()
+            self.rho     = self.get_rho(T=self.T,P=self.P)
             
             
                 
@@ -80,7 +80,7 @@ class profile(object):
         
     def get_scaleheight(self,T_aver,surf_g,mmw):
         
-        return (self.botlzman*T_aver)/(mmw*surf_g)
+        return (self.boltzmann*T_aver)/(mmw*surf_g)
         
         
     # @profile #line-by-line profiling decorator
@@ -114,7 +114,7 @@ class profile(object):
         if T is None:
             T = self.params.planet_temp
             
-        return  (P)/(self.botlzman*T)   
+        return  (P)/(self.boltzmann*T)   
         
     # def cast_FIT_array(self,FIT,):
         

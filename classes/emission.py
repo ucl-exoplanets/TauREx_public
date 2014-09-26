@@ -39,7 +39,7 @@ class emission(object):
 
         self.nlayers       = profile['nlayers']
         self.z             = profile['Z']        
-        self.t             = profile['T']
+        self.T             = profile['T']
         self.rho           = profile['rho']
         self.p             = profile['P']
         self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
@@ -106,47 +106,107 @@ class emission(object):
         if rho is None:
             rho = self.rho
         if temperature is None:
-            temperature = self.t#self.planet_temp
+            temperature = self.T#self.planet_temp
             
-        pl.figure(100)
-        pl.plot(self.z,rho)
-        
-        pl.figure(101)
-        pl.plot(self.z,self.t)
+#         pl.figure(100)
+#         pl.plot(self.z,rho)
+#         
+#         pl.figure(101)
+#         pl.plot(self.z,self.t)
 
             
-        Tstar = 4500
+        Tstar = 6000
         BB_star = em.black_body(self.specgrid,Tstar)
 
         #constants 
         molnum = len(X[:,0])
         I_total    = np.zeros((self.nlambda))  
-        tau        = np.zeros((self.nlambda)) 
+        tau        = np.zeros((self.nlayers+1,self.nlambda)) 
         tau_total  = np.zeros((self.nlambda)) 
         
-
-        for j in range(self.nlayers):
-            tau[:] = 0.0
-            sigma_array = self.get_sigma_array(temperature[j]) #selecting correct sigma_array for temperature
-            for i in range(molnum):
-                tau += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
-
-            exptau =  np.exp(-1.0*tau)    
-            BB_layer = em.black_body(self.specgrid,temperature[j])
+        #surface layer
+        
+        BB_surf = em.black_body(self.specgrid,temperature[0])  
+        sigma_array = sigma_array = self.get_sigma_array(temperature[0])
+           
+        for i in range(molnum):
+                tau[0,:] += (sigma_array[i,:] * X[i,0] * rho[0] * self.dzarray[0])
+        exptau = np.exp(-1.0*tau[0,:])
+        I_total += BB_surf*exptau
+        
+        for j in range(1,self.nlayers):
+#             tau[:] = 0.0
             
-            I_total += BB_layer*exptau
-        
-        
-        FpFs = (self.Rp**2 *I_total) / (self.Rs**2 * BB_star)
 
+            for k in range(j,self.nlayers):
+                sigma_array = self.get_sigma_array(temperature[k]) #selecting correct sigma_array for temperature
+                for i in range(molnum):
+#                     print rho[k]
+                    tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k] )
+                    
+                
+#                 pl.ion()
+#                 pl.figure(100)
+#                 pl.plot(rho[k],'x')
+#                 pl.draw()
+             
+             
+        for j in range(1,self.nlayers):
+            exptau = 0.0
+            
+            dtau = tau[j,:] - tau[j-1,:]
+            print dtau
+            
+            exptau =  np.exp(-1.0*tau[j,:]) 
+            
+#             taulist.append(dtau)
+#             print exptau
+                
+#             pl.ion()
+#             pl.figure(100)
+#             pl.plot(self.specgrid,exptau)
+#             pl.draw()
+
+             
+            BB_layer = em.black_body(self.specgrid,temperature[j])
+             
+            I_total += BB_layer*(-1.0*exptau) * dtau
+            
+
+        
+#         pl.show()
+        FpFs = (I_total/ BB_star) *(self.Rp/self.Rs)**2
+        
         
 #         pl.figure(101)
 #         pl.plot(self.specgrid,self.Rp**2 *I_total)
 #         pl.plot(self.specgrid,self.Rs**2 * BB_star,'r')
         
+        
+        pla = em.black_body(self.specgrid,1400) 
+        sta = em.black_body(self.specgrid,6000) 
+        
+        pla2 = em.black_body(self.specgrid,3000)
+        
+        ble = pla/sta *(self.Rp/self.Rs)**2
+        ble2 = pla2/sta *(self.Rp/self.Rs)**2
+        
+        ble_surf = BB_surf/sta *(self.Rp/self.Rs)**2
+        
+        
         pl.figure(102)
         pl.plot(self.specgrid,FpFs)
+        pl.plot(self.specgrid,ble,'k')
+        pl.plot(self.specgrid,ble2,'k--')
+#         pl.plot(self.specgrid,em.black_body(self.specgrid,1000))
+#         pl.plot(self.specgrid,sta,'r')
+#         pl.xscale('log')
+     
+#         pl.figure(103)
+#         pl.plot(taulist,'x')
+#         pl.title('tau')
         pl.show()
+        
         
         
         return 1
