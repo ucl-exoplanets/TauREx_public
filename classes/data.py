@@ -79,14 +79,7 @@ class data(object):
         #reading in absorption coefficient data 
 #         self.sigma_array = self.readABSfiles()
         self.sigma_dict = self.build_sigma_dic(tempstep=params.in_tempres)
-        
-#         figure(1)
-#         for t in self.sigma_dict.keys():
-#             print t
-#             plot(self.sigma_dict[t])
-#         show()
-#         exit()
-        
+              
 
         #reading in other files if specified in parameter file
         if params.in_include_rad:

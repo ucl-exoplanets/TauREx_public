@@ -20,6 +20,7 @@ import numpy as np
 import pylab as pl
 import library.library_emission as em
 from library.library_general import *
+import time
 
 
 class emission(object):
@@ -107,12 +108,6 @@ class emission(object):
             rho = self.rho
         if temperature is None:
             temperature = self.T#self.planet_temp
-            
-#         pl.figure(100)
-#         pl.plot(self.z,rho)
-#         
-#         pl.figure(101)
-#         pl.plot(self.z,self.t)
 
             
         Tstar = 6000
@@ -121,28 +116,44 @@ class emission(object):
         #constants 
         molnum = len(X[:,0])
         I_total    = np.zeros((self.nlambda))  
-        tau        = np.zeros((self.nlayers+1,self.nlambda)) 
+        tau        = np.zeros((self.nlayers,self.nlambda)) 
+        dtau       = np.zeros((self.nlambda,self.nlambda)) 
         tau_total  = np.zeros((self.nlambda)) 
         
-        #surface layer
-        
+        #surface layer      
         BB_surf = em.black_body(self.specgrid,temperature[0])  
-        sigma_array = sigma_array = self.get_sigma_array(temperature[0])
-           
-        for i in range(molnum):
-                tau[0,:] += (sigma_array[i,:] * X[i,0] * rho[0] * self.dzarray[0])
+        sigma_array = self.get_sigma_array(temperature[0])
+#            
+
+        for k in range(self.nlayers):
+                sigma_array = self.get_sigma_array(temperature[k])
+                for i in range(molnum):
+                    tau[0,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+#                 print tau[0,0], X[i,0], rho[0], self.dzarray[0]
+  
         exptau = np.exp(-1.0*tau[0,:])
-        I_total += BB_surf*exptau
+        I_total += BB_surf*(exptau)
+#         
+#         print '-------------'
+        pl.figure(100)
+        pl.plot(self.specgrid,I_total)
+        pl.plot(self.specgrid,BB_surf,'r')
         
-        for j in range(1,self.nlayers):
-#             tau[:] = 0.0
-            
+
+        
+#         for j in xrange(self.nlayers-1,0,-1):
+        for j in xrange(1,self.nlayers):
 
             for k in range(j,self.nlayers):
-                sigma_array = self.get_sigma_array(temperature[k]) #selecting correct sigma_array for temperature
+                sigma_array = self.get_sigma_array(temperature[k])
                 for i in range(molnum):
 #                     print rho[k]
-                    tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k] )
+                    tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+
+#             sigma_array = self.get_sigma_array(temperature[j])
+#             for i in range(molnum):
+# #                     print rho[k]
+#                     tau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j] )
                     
                 
 #                 pl.ion()
@@ -151,11 +162,13 @@ class emission(object):
 #                 pl.draw()
              
              
-        for j in range(1,self.nlayers):
-            exptau = 0.0
+#         for j in range(self.nlayers-1):
             
-            dtau = tau[j,:] - tau[j-1,:]
-            print dtau
+#             dtau = tau[j+1,:] - tau[j,:]
+
+            for i in range(molnum):
+                dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
+
             
             exptau =  np.exp(-1.0*tau[j,:]) 
             
@@ -168,43 +181,51 @@ class emission(object):
 #             pl.draw()
 
              
-            BB_layer = em.black_body(self.specgrid,temperature[j])
-             
-            I_total += BB_layer*(-1.0*exptau) * dtau
+            BB_layer = em.black_body(self.specgrid,temperature[j])           
+            I_total += BB_layer*(exptau) * (dtau[j,:])
             
+            
+#             pl.ion()
+#             pl.clf()
+#             pl.figure(101)
+#             pl.plot(self.specgrid,BB_layer*(exptau) * dtau[j,:],'b')
+#             pl.plot(self.specgrid,I_total,'g')
+#             pl.plot(self.specgrid,em.black_body(self.specgrid,temperature[0]),'k--')
+#             pl.plot(self.specgrid,em.black_body(self.specgrid,temperature[-1]),'k-')
+#             pl.plot(self.specgrid,BB_layer,'r')
+#             pl.title(str(j))
+#                  
+# #             pl.figure(102)
+# #             pl.plot(em.black_body(self.specgrid,temperature[0]),'k--')
+# #             pl.plot(em.black_body(self.specgrid,temperature[-1]),'k-')
+# #             pl.show()
+#             pl.draw()
+#                  
+#             if j < 20:
+#                 time.sleep(2)
 
-        
-#         pl.show()
+
         FpFs = (I_total/ BB_star) *(self.Rp/self.Rs)**2
         
-        
-#         pl.figure(101)
-#         pl.plot(self.specgrid,self.Rp**2 *I_total)
-#         pl.plot(self.specgrid,self.Rs**2 * BB_star,'r')
+
         
         
-        pla = em.black_body(self.specgrid,1400) 
-        sta = em.black_body(self.specgrid,6000) 
+        ble_surf = (em.black_body(self.specgrid,temperature[0]) /BB_star) *(self.Rp/self.Rs)**2
+        ble_top = (em.black_body(self.specgrid,temperature[-1])/BB_star) *(self.Rp/self.Rs)**2
         
-        pla2 = em.black_body(self.specgrid,3000)
-        
-        ble = pla/sta *(self.Rp/self.Rs)**2
-        ble2 = pla2/sta *(self.Rp/self.Rs)**2
-        
-        ble_surf = BB_surf/sta *(self.Rp/self.Rs)**2
-        
-        
+        pl.ioff()
         pl.figure(102)
-        pl.plot(self.specgrid,FpFs)
-        pl.plot(self.specgrid,ble,'k')
-        pl.plot(self.specgrid,ble2,'k--')
+        pl.plot(self.specgrid,FpFs,label='spectrum')
+        pl.plot(self.specgrid,ble_surf,'k',label='bottom layer temp')
+        pl.plot(self.specgrid,ble_top,'k--',label='top layer temp')
+        pl.legend()
 #         pl.plot(self.specgrid,em.black_body(self.specgrid,1000))
 #         pl.plot(self.specgrid,sta,'r')
 #         pl.xscale('log')
      
-#         pl.figure(103)
-#         pl.plot(taulist,'x')
-#         pl.title('tau')
+        pl.figure(103)
+        pl.plot(dtau[:,0])
+        pl.title('dtau')
         pl.show()
         
         
