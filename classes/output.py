@@ -21,18 +21,21 @@
 import numpy as np
 import os
 import pylab as py
-import classes.emission import *
+from classes.emission import *
 from classes.transmission import *
 from classes.profile import *
 from library.library_plotting import *
 
 
 class output(object):
-    def __init__(self,params,data,fit=None):
+    def __init__(self,params,data,fit):
 
-        self.params = params
-        self.data   = data
-        self.fit    = fit
+        self.params   = params
+        self.data     = data
+        self.fitob    = fit
+        self.profile  = profile(params,data) #loading profile class
+        self.set_model(fit) #loading emission/transmission class
+
         
         #dumping fitted paramter list to file 
         with open('chains/parameters.dat','w') as parfile:
@@ -48,20 +51,29 @@ class output(object):
             self.DOWN = fit.DOWNHILL
 
         #calculating final absorption/emission spectrum (currently only absorption)
-        self.profile = profile(params,data)
-        if self.params.fit_transmission:
-            self.trans = transmission(params,data)
-            if self.MCMC:
-                self.transspec_mcmc = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean)
-                self.transspec_mcmc = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_mcmc)
-            if self.NEST:
-                self.transspec_nest = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.NEST_T_mean),X=fit.NEST_X_mean)
-                self.transspec_nest = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_nest)
+        if self.MCMC:
+            self.spec_mcmc = self.model(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean)
+            self.spec_mcmc = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_mcmc)
+        if self.NEST:
+            self.spec_nest = self.model(rho=self.profile.get_rho(T=fit.NEST_T_mean),X=fit.NEST_X_mean)
+            self.spec_nest = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_nest)
                 # print shape(fit.NEST_T_mean), shape(fit.NEST_X_mean)
-            if self.DOWN:
-                # print shape(fit.DOWNHILL_T_mean), shape(fit.DOWNHILL_X_mean)
-                self.transspec_down = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean)
-                self.transspec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_down)
+        if self.DOWN:
+            self.spec_down = self.model(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean)
+            self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
+
+
+    def set_model(self,INPUT):
+        #loads emission/transmission model pointer into output class
+        #the model is determined by the state of the fitting class
+
+        if INPUT.__MODEL_ID__ == 'transmission':
+            self.trans = transmission(self.params,self.data,self.profile)
+            self.model = self.trans.cpath_integral
+        elif INPUT.__MODEL_ID__ == 'emission':
+            self.emis  = emission(self.params,self.data,self.profile)
+            self.model = self.emis.path_integral
+        self.__MODEL_ID__ = INPUT.__MODEL_ID__
 
 
     def plot_all(self,save2pdf=False):
@@ -107,7 +119,10 @@ class output(object):
         py.legend()
         py.title('Input data')
         py.xlabel('Wavelength')
-        py.ylabel('(Rp/Rs)^2') #dynamic for emission case later
+        if self.__MODEL_ID__ == 'transmission':
+            py.ylabel('$(Rp/Rs)^2$') 
+        elif self.__MODEL_ID__ == 'emission':
+            py.ylabel('$F_p/F_\ast$') 
         
         if save2pdf: fig.savefig(self.params.out_path+'spectrum+data.pdf')
 
@@ -118,15 +133,18 @@ class output(object):
         py.errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2],color=[0.7,0.7,0.7],linewidth=linewidth)
         py.plot(self.data.spectrum[:,0],self.data.spectrum[:,1],color=[0.3,0.3,0.3],linewidth=linewidth,label='DATA')
         if self.DOWN:
-            py.plot(self.data.spectrum[:,0],transpose(self.transspec_down),c='b',label='DOWNHILL',linewidth=linewidth)
+            py.plot(self.data.spectrum[:,0],transpose(self.spec_down),c='b',label='DOWNHILL',linewidth=linewidth)
         if self.MCMC:
-            py.plot(self.data.spectrum[:,0],transpose(self.transspec_mcmc),c='r',label='MCMC',linewidth=linewidth)
+            py.plot(self.data.spectrum[:,0],transpose(self.spec_mcmc),c='r',label='MCMC',linewidth=linewidth)
         if self.NEST:
-            py.plot(self.data.spectrum[:,0],transpose(self.transspec_nest),c='g',label='NESTED',linewidth=linewidth)
+            py.plot(self.data.spectrum[:,0],transpose(self.spec_nest),c='g',label='NESTED',linewidth=linewidth)
         py.legend()
         py.title('Data and Model')
         py.xlabel('Wavelength ($\mu m$)')
-        py.ylabel('(Rp/Rs)^2') #dynamic for emission case later
+        if self.__MODEL_ID__ == 'transmission':
+            py.ylabel('$(Rp/Rs)^2$') 
+        elif self.__MODEL_ID__ == 'emission':
+            py.ylabel('$F_p/F_\ast$') 
         
         if save2pdf: fig.savefig(self.params.out_path+'model_fit.pdf')
         
@@ -135,9 +153,12 @@ class output(object):
         fig = py.figure()
         py.plot(model[:,0],model[:,1],color=[0.0,0.0,0.0],linewidth=linewidth,label='Model')
         py.legend()
-        py.title('Model')
+        py.title(self.__MODEL_ID__+' Model')
         py.xlabel('Wavelength ($\mu m$)')
-        py.ylabel('$(Rp/Rs)^2$') #dynamic for emission case later
+        if self.__MODEL_ID__ == 'transmission':
+            py.ylabel('$(Rp/Rs)^2$') 
+        elif self.__MODEL_ID__ == 'emission':
+            py.ylabel('$F_p/F_\ast$') 
         
         if save2pdf: fig.savefig(self.params.out_path+'spectrum.pdf')
 
@@ -145,24 +166,20 @@ class output(object):
         #dumps all model fits to file
         if not os.path.exists(self.params.out_path):
             os.makedirs(self.params.out_path)
-        if self.params.fit_transmission:
-            if self.MCMC and ascii:
-                OUT = np.zeros((len(self.data.spectrum[:,0]),2))
-                OUT[:,0] = self.data.spectrum[:,0]
-                OUT[:,1] = np.transpose(self.transspec_mcmc)
-                np.savetxt(self.params.out_path+self.params.out_file_prefix+'transmission_spectrum_mcmc.dat',OUT)
-            if self.NEST and ascii:
-                OUT = np.zeros((len(self.data.spectrum[:,0]),2))
-                OUT[:,0] = self.data.spectrum[:,0]
-                OUT[:,1] = np.transpose(self.transspec_nest)
-                np.savetxt(self.params.out_path+self.params.out_file_prefix+'transmission_spectrum_nest.dat',OUT)
-            if self.DOWN and ascii:
-                OUT = np.zeros((len(self.data.spectrum[:,0]),2))
-                OUT[:,0] = self.data.spectrum[:,0]
-                OUT[:,1] = np.transpose(self.transspec_down)
-                np.savetxt(self.params.out_path+self.params.out_file_prefix+'transmission_spectrum_down.dat',OUT)
-        if self.params.fit_emission:
-            print 'NEIN!'
+        
+        OUT = np.zeros((len(self.data.spectrum[:,0]),2))
+        OUT[:,0] = self.data.spectrum[:,0]
+        
+        if self.MCMC and ascii:
+                OUT[:,1] = np.transpose(self.spec_mcmc)
+                np.savetxt(self.params.out_path+self.params.out_file_prefix+self.__MODEL_ID__+'_spectrum_mcmc.dat',OUT)
+        if self.NEST and ascii:
+                OUT[:,1] = np.transpose(self.spec_nest)
+                np.savetxt(self.params.out_path+self.params.out_file_prefix+self.__MODEL_ID__+'_spectrum_nest.dat',OUT)
+        if self.DOWN and ascii:
+                OUT[:,1] = np.transpose(self.spec_down)
+                np.savetxt(self.params.out_path+self.params.out_file_prefix+self.__MODEL_ID__+'_spectrum_down.dat',OUT)
+
         if modelout is not None:
             np.savetxt(self.params.out_path+modelsaveas,modelout)
             

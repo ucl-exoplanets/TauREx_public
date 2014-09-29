@@ -158,7 +158,7 @@ if params.fit_transmission:
 #initilaising emission radiative transfer code object
 if params.fit_emission:
     emissob = emission(params,dataob,profileob)
-    emissob.path_integral()
+#     emissob.path_integral()
 
 
 #initialising fitting object
