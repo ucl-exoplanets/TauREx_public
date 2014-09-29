@@ -31,6 +31,9 @@ class transmission(object):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
+        
+        self.__ID__        = 'transmission' #internal class identifier
+        
         #loading data
         self.params        = params
         self.Rp            = params['planet_radius']

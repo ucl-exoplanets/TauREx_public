@@ -152,18 +152,19 @@ profileob = profile(params, dataob)
 
 #initialising transmission radiative transfer code object
 # if params.verbose: print 'loading transmission'
-transob = transmission(params, dataob,profileob)
+if params.fit_transmission:
+    transob = transmission(params, dataob,profileob)
 
 #initilaising emission radiative transfer code object
-emissob = emission(params,dataob,profileob)
-emissob.path_integral()
-
-exit()
+if params.fit_emission:
+    emissob = emission(params,dataob,profileob)
+    emissob.path_integral()
 
 
 #initialising fitting object
 if params.verbose: print 'loading fitting'
-fitob = fitting(params, dataob, profileob, transob)
+fitob = fitting(params, dataob, profileob)
+fitob.set_model(transob) #loading transmission model into fitting object
 
 
 if params.verbose: print 'fitting data'

@@ -21,7 +21,7 @@
 import numpy as np
 import os
 import pylab as py
-# import classes.emission as emi
+import classes.emission import *
 from classes.transmission import *
 from classes.profile import *
 from library.library_plotting import *
@@ -62,8 +62,7 @@ class output(object):
                 # print shape(fit.DOWNHILL_T_mean), shape(fit.DOWNHILL_X_mean)
                 self.transspec_down = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean)
                 self.transspec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_down)
-        elif self.params.fit_emission:
-            print 'Emission not implemented yet'
+
 
     def plot_all(self,save2pdf=False):
     #plots absolutely everything

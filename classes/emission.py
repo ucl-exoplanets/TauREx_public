@@ -27,6 +27,9 @@ class emission(object):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
+        
+        self.__ID__        = 'emission' #internal class identifier
+        
         #loading data
         self.params        = params
         self.Rp            = params['planet_radius']
@@ -37,6 +40,7 @@ class emission(object):
         self.sigma_dict    = data['sigma_dict']
         self.X             = data['X']
         self.atmosphere    = data['atmosphere']
+        self.F_star        = data['F_star']
 
         self.nlayers       = profile['nlayers']
         self.z             = profile['Z']        
@@ -110,8 +114,8 @@ class emission(object):
             temperature = self.T#self.planet_temp
 
             
-        Tstar = 6000
-        BB_star = em.black_body(self.specgrid,Tstar)
+#         Tstar = 6000
+        BB_star = self.F_star
 
         #constants 
         molnum = len(X[:,0])
@@ -213,21 +217,21 @@ class emission(object):
         ble_surf = (em.black_body(self.specgrid,temperature[0]) /BB_star) *(self.Rp/self.Rs)**2
         ble_top = (em.black_body(self.specgrid,temperature[-1])/BB_star) *(self.Rp/self.Rs)**2
         
-        pl.ioff()
-        pl.figure(102)
-        pl.plot(self.specgrid,FpFs,label='spectrum')
-        pl.plot(self.specgrid,ble_surf,'k',label='bottom layer temp')
-        pl.plot(self.specgrid,ble_top,'k--',label='top layer temp')
-        pl.legend()
-#         pl.plot(self.specgrid,em.black_body(self.specgrid,1000))
-#         pl.plot(self.specgrid,sta,'r')
-#         pl.xscale('log')
-     
-        pl.figure(103)
-        pl.plot(dtau[:,0])
-        pl.title('dtau')
-        pl.show()
+#         pl.ioff()
+#         pl.figure(102)
+#         pl.plot(self.specgrid,FpFs,label='spectrum')
+#         pl.plot(self.specgrid,ble_surf,'k',label='bottom layer temp')
+#         pl.plot(self.specgrid,ble_top,'k--',label='top layer temp')
+#         pl.legend()
+# #         pl.plot(self.specgrid,em.black_body(self.specgrid,1000))
+# #         pl.plot(self.specgrid,sta,'r')
+# #         pl.xscale('log')
+#      
+#         pl.figure(103)
+#         pl.plot(dtau[:,0])
+#         pl.title('dtau')
+#         pl.show()
         
         
         
-        return 1
+        return I_total

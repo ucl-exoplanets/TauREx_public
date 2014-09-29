@@ -17,12 +17,13 @@
 ################################################
 
 #loading libraries     
-import numpy, pylab
+import numpy, pylab, os, glob
 from numpy import *
 from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
 import library.library_general as libgen
+import library.library_emission as libem
 
 
 
@@ -79,7 +80,6 @@ class data(object):
         #reading in absorption coefficient data 
 #         self.sigma_array = self.readABSfiles()
         self.sigma_dict = self.build_sigma_dic(tempstep=params.in_tempres)
-              
 
         #reading in other files if specified in parameter file
         if params.in_include_rad:
@@ -89,6 +89,9 @@ class data(object):
 #         if params.in_include_cld:
 #             self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
             
+        #reading in Phoenix stellar model library (if emission is calculated only)
+        if self.params.fit_emission:
+            self.F_star = self.get_star_SED()
 
 
 #basic class methods and overloading
@@ -235,6 +238,42 @@ class data(object):
         self.sigma_dict[int(temperature)] = sigma_array
         self.nspecgrid = len(self.specgrid)
 
+
+
+    def get_star_SED(self):
+    #reading in phoenix spectra from folder specified in parameter file 
+        
+        index = loadtxt(os.path.join(self.params.in_star_path, "SPTyp_KH.dat"), dtype='string')
+        tmpind = []
+        for i in range(len(index)):
+            tmpind.append(float(index[i][1]))
+        tmpind = sort(tmpind)
+        
+        # reading in stellar file index
+        fileindex = glob.glob(os.path.join(self.params.in_star_path, "*.fmt"))
+        
+        if self.params.star_temp > max(tmpind) or self.params.star_temp < min(tmpind):
+            if self.params.verbose:
+                print 'WARNING: Stellar temp. in .par file exceeds range ', min(tmpind), '-', max(tmpind), 'K'
+                print 'Using black-body approximation instead'
+            self.star_blackbody = True
+            SED = libem.black_body(self.specgrid,self.params.star_temp)
+
+        else:
+            # finding closest match to stellar temperature in parameter file
+            [tmpselect, idx] = libgen.find_nearest(tmpind, self.params.star_temp)
+            self.star_blackbody = False
+            
+            for file in fileindex: #this search is explicit due to compatibility issues with Mac and Linux sorting
+                if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
+                    self.SED_filename = file
+            
+            #reading in correct file and interpolating it onto self.specgrid
+            SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
+            SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
+    
+        return SED
+    
 
 
     def build_sigma_dic(self,tempstep=50):

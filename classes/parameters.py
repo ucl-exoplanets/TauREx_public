@@ -40,8 +40,11 @@ class parameters(object):
         self.in_atm_file           = parser.get('Input','atm_file')
         self.in_abs_path           = parser.get('Input','abs_path')
         self.in_abs_files          = parser.get('Input','__legacy__abs_files')
+        
         self.in_tempres            = parser.getfloat('Input','tempres')
 
+        self.in_star_path          = parser.get('Input','star_path')
+        
         self.in_include_rad        = parser.getboolean('Input','include_rad')
         self.in_rad_file           = parser.get('Input','rad_file')
         self.in_include_cia        = parser.getboolean('Input','include_cia')

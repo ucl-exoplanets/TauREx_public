@@ -41,6 +41,9 @@ __legacy__abs_files = h2o_1500K.abs
 #temperature grid resolution (K)
 tempres = 50
 
+#Path to Phoenix/Atlas stellar models (required by emission code)
+star_path = Input/Star_spectra 
+
 #include varying stellar radii file. True/False 
 include_rad = False 
 

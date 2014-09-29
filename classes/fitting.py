@@ -44,15 +44,23 @@ except ImportError:
 
 
 class fitting(object):
-    def __init__(self,params,data,profile,transmod):
+    def __init__(self,params,data,profile,rad_model=None):
         
+        #MPI support       
         self.MPIrank     = MPI.COMM_WORLD.Get_rank()
         self.MPIsize     = MPI.COMM_WORLD.Get_size()
         
+        #loading transmission/emission model
+        self.set_model(rad_model)
+        
+        #loading profile object 
+        self.profileob   = profile
+        
+        #loading data and parameter objects
         self.params      = params
         self.dataob      = data
-        self.transmod    = transmod
-        self.profileob   = profile
+        
+        #loading data and parameters
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = data.ngas
@@ -107,6 +115,21 @@ class fitting(object):
 
 
 
+    def set_model(self,INPUT):
+        #loads emission/transmission model pointer into fitting class
+        if INPUT == None: 
+            self.model = None
+            self.model_id = None
+        else:
+            if INPUT.__ID__ == 'transmission':
+                model = INPUT.cpath_integral()
+            elif INPUT.__ID__ == 'emission':
+                model = INPUT.path_integral()
+                
+            self.model    = model
+            self.__MODEL_ID__ = INPUT.__ID__
+
+
     # @profile #line-by-line profiling decorator
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
@@ -120,10 +143,9 @@ class fitting(object):
             X[i,:] += PFIT[i+1]
 
 
-        MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=PFIT[0])
+        MODEL = self.model(rho=rho,X=X,temperature=PFIT[0])
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
-    
         #binning internal model 
         MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
         
