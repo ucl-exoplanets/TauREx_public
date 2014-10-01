@@ -19,6 +19,7 @@
 ################################################
 
 #loading libraries     
+from base import base
 import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess,gzip,pickle,shutil
 from pylab import *
 from numpy import *
@@ -43,7 +44,7 @@ except ImportError:
 
 
 
-class fitting(object):
+class fitting(base):
     def __init__(self,params,data,profile,rad_model=None):
         
         #MPI support       

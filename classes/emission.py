@@ -15,7 +15,8 @@
 #
 ################################################
 
-#loading libraries     
+#loading libraries
+from base import base    
 import numpy as np
 import pylab as pl
 import library.library_emission as em
@@ -23,7 +24,7 @@ from library.library_general import *
 import time
 
 
-class emission(object):
+class emission(base):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
@@ -60,27 +61,9 @@ class emission(object):
         else:
             self.set_lambdagrid(data['specgrid'])
 
-#basic class methods and overloading
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
+    
+    #class methods 
         
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name]
-
-    def reset(self,data):
-    #allows to reset the original instance to reflect changes in the data instance
-    #this avoids an initialisation of a separate instance.
-    # noinspection PyArgumentList
-        self.__init__(self.params,data)
-    
-    
     def set_lambdagrid(self,GRID):
     #sets internal memory of wavelength grid to be used
         self.lambdagrid = GRID

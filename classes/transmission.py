@@ -15,7 +15,8 @@
 #
 ################################################
 
-#loading libraries     
+#loading libraries   
+from base import base  
 import numpy
 import copy
 from numpy import *
@@ -27,7 +28,7 @@ from library.library_general import *
 from library.library_transmission import *
 # from mpi4py import MPI
 
-class transmission(object):
+class transmission(base):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
@@ -93,25 +94,6 @@ class transmission(object):
             # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
             self.cpathlib = C.CDLL('./library/pathintegral.so',mode=C.RTLD_GLOBAL)
 
-     
-#basic class methods and overloading
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
-        
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name] 
-
-    def reset(self,data):
-    #allows to reset the original instance to reflect changes in the data instance
-    #this avoids an initialisation of a separate instance.
-        self.__init__(self.params,data)
 
 
 #class methods

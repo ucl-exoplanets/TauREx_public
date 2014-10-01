@@ -18,6 +18,7 @@
 
 #loading libraries     
 import numpy, pylab, os, glob
+from base import base
 from numpy import *
 from pylab import *
 from StringIO import StringIO
@@ -27,7 +28,7 @@ import library.library_emission as libem
 
 
 
-class data(object):
+class data(base):
 
 #initialisation
     def __init__(self,params):
@@ -94,24 +95,6 @@ class data(object):
             self.F_star = self.get_star_SED()
 
 
-#basic class methods and overloading
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
-        
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name] 
-
-    def reset(self,params):
-    #allows to reset the original instance to reflect changes in the data instance
-    #this avoids an initialisation of a separate instance.
-        self.__init__(params)
 
 #class functions    
     def init_atmosphere(self, mu=0.0, def_mu=2.3):

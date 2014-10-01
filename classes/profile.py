@@ -17,12 +17,13 @@
 ################################################
 
 #loading libraries     
+from base import base   
 import numpy
 from numpy import *
 
 
 
-class profile(object):
+class profile(base):
 
 
     def __init__(self,params,data):
@@ -59,25 +60,9 @@ class profile(object):
             
             
                 
-#basic class methods and overloading
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
-        
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name] 
 
-    def reset(self,data):
-    #allows to reset the original instance to reflect changes in the data instance
-    #this avoids an initialisation of a separate instance.
-        self.__init__(self.params,data)
-        
+    #class methods 
+            
     def get_scaleheight(self,T_aver,surf_g,mmw):
         
         return (self.boltzmann*T_aver)/(mmw*surf_g)

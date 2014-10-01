@@ -18,6 +18,7 @@
 ################################################
 
 #loading libraries
+from base import base   
 import numpy as np
 import os
 import pylab as py
@@ -27,7 +28,7 @@ from classes.profile import *
 from library.library_plotting import *
 
 
-class output(object):
+class output(base):
     def __init__(self,params,data,fit):
 
         self.params   = params
@@ -63,6 +64,8 @@ class output(object):
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
 
 
+    #class methods
+    
     def set_model(self,INPUT):
         #loads emission/transmission model pointer into output class
         #the model is determined by the state of the fitting class

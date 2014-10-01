@@ -21,6 +21,7 @@
 ################################################
 
 #loading libraries
+from base import base
 import numpy as np
 import pylab as pl
 import gzip,os
@@ -30,7 +31,7 @@ from library.library_preselector import *
 import scipy.stats.stats as st
 
 
-class preselector(object):
+class preselector(base):
     def __init__(self, params,data):
         #
         self.params = params
