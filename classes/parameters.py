@@ -3,11 +3,12 @@
 #Parse parameter file eg. 'exonest.par' and initialise  
 #parameters for run
 ################################################
+from base import base
 from ConfigParser import SafeConfigParser
 from numpy import genfromtxt,arange,size
 from StringIO import StringIO
 
-class parameters(object):
+class parameters(base):
 #instantiation
     def __init__(self, parfile):
         '''
@@ -145,17 +146,15 @@ class parameters(object):
             pass
         
         
+        #####################################################################
+        #additional parser commands. Checking parameter compatibility and stuff 
         
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
+        #checking that either emission or transmisison is run
+        if self.fit_emission and self.fit_transmission:
+            print 'Error: transmission and emission cannot currently be run simultaneously'
+            print 'change the fit_emission, fit_transmission parameters.'  
+        if self.fit_emission: self.fit_transmission = False
+        if self.fit_transmission: self.fit_emission = False 
         
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name]
+        
 

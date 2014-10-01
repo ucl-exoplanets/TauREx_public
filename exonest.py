@@ -25,6 +25,7 @@ import numpy, pylab, sys, os, optparse, time
 from numpy import * #nummerical array library 
 from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
+#trying to initiate MPI parallelisation
 try:
     from mpi4py import MPI
     MPIrank = MPI.COMM_WORLD.Get_rank()
@@ -64,45 +65,6 @@ except:
 
 #end of profiling code
 
-#loading classes
-from classes.parameters import *
-from classes.emission import *
-from classes.transmission import *
-from classes.output import *
-from classes.fitting import *
-from classes.profile import *
-from classes.data import *
-from classes.preselector import *
-
-#loading libraries
-# from library.library_emission import *
-from library.library_transmission import *
-from library.library_general import *
-from library.library_plotting import *
-
-
-parser = optparse.OptionParser()
-parser.add_option('-p', '--parfile',
-                  dest="param_filename",
-                  default="Parfiles/exonest.par",
-)
-parser.add_option('-v', '--verbose',
-                  dest="verbose",
-                  default=False,
-                  action="store_true",
-)
-options, remainder = parser.parse_args()
-
-#Initialise parameters object
-params = parameters(options.param_filename)
-# if params.verbose:
-#     print 'ARGV      :', sys.argv[1:]
-#     print 'VERBOSE   :', params.verbose
-#     print 'PARFILE    :', options.param_filename
-#     print 'REMAINING :', remainder
-
-#####################################################################
-
 ##check for MPI support
 # comm = MPI.COMM_WORLD
 # rank=comm.Get_rank()
@@ -122,6 +84,43 @@ params = parameters(options.param_filename)
 # exit()
 # MPI.Init()
 
+#loading classes
+from classes.parameters import *
+from classes.emission import *
+from classes.transmission import *
+from classes.output import *
+from classes.fitting import *
+from classes.profile import *
+from classes.data import *
+from classes.preselector import *
+
+#loading libraries
+from library.library_emission import *
+from library.library_transmission import *
+from library.library_general import *
+from library.library_plotting import *
+
+
+#loading parameter file parser
+parser = optparse.OptionParser()
+parser.add_option('-p', '--parfile',
+                  dest="param_filename",
+                  default="Parfiles/exonest.par",
+)
+parser.add_option('-v', '--verbose',
+                  dest="verbose",
+                  default=False,
+                  action="store_true",
+)
+options, remainder = parser.parse_args()
+
+#Initialise parameters instance
+params = parameters(options.param_filename)
+
+
+#####################################################################
+#beginning of main code
+
 
 #initialising data instance
 dataob = data(params)
@@ -130,7 +129,7 @@ dataob = data(params)
 if params.verbose: print 'loading profile'
 profileob = profile(params, dataob)
 
-#initiating and runnign preselector instance
+#initiating and running preselector instance
 if params.pre_run:
     if params.verbose: print 'loading preprocessing'
     if params.fit_transmission:
@@ -144,7 +143,7 @@ if params.pre_run:
     dataob.reset(params)
 
 
-#adding some molecules to the atmosphere
+#adding bulk composition to the atmosphere
 dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
@@ -155,36 +154,37 @@ dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 
 
-#initialising transmission radiative transfer code object
-# if params.verbose: print 'loading transmission'
+#initialising transmission radiative transfer code instance
 if params.fit_transmission:
+    if params.verbose: print 'loading transmission class'
     transob = transmission(params, dataob,profileob)
 
-#initilaising emission radiative transfer code object
+#initialising emission radiative transfer code instance
 if params.fit_emission:
+    if params.verbose: print 'loading emission class'
     emissob = emission(params,dataob,profileob)
 #     emissob.path_integral()
 
 # exit()
+
 #initialising fitting object
 if params.verbose: print 'loading fitting'
 fitob = fitting(params, dataob, profileob)
-fitob.set_model(transob) #loading transmission model into fitting object
+if params.fit_transmission: fitob.set_model(transob) #loading transmission model into fitting object
+elif params.fit_emission:   fitob.set_model(emissob) #loading emission model into fitting object
+    
 
-
-if params.verbose: print 'fitting data'
 #fit data
-if params.fit_transmission:
-    fitob.downhill_fit()    #simplex downhill fit
-    if params.mcmc_run and pymc_import:
-#     if params.mcmc_run and pymc_import and MPImaster:
-        fitob.mcmc_fit()    #MCMC fit
-    if params.nest_run and multinest_import:
-        fitob.multinest_fit()   #Nested sampling fit
+if params.verbose: print 'fitting data'
+fitob.downhill_fit()    #simplex downhill fit
+if params.mcmc_run and pymc_import:
+    fitob.mcmc_fit()    #MCMC fit
+if params.nest_run and multinest_import:
+    fitob.multinest_fit()   #Nested sampling fit
 
 
-#
-outputob = output(params, dataob, fitob) #initiating output object with fitted data from fitting class
+#initiating output instance with fitted data from fitting class
+outputob = output(params, dataob, fitob) 
 #
 #plotting fits and data
 if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.out_save_plots)
@@ -194,9 +194,11 @@ if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.ou
 # outputob.plot_fit()        #plotting model fits
 #
 outputob.save_model()       #saving models to ascii
-#
-#
-#
+
+
+#end of main code
+#####################################################################
+
 
 
 #profiling code
