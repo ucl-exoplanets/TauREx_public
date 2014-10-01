@@ -123,13 +123,20 @@ params = parameters(options.param_filename)
 # MPI.Init()
 
 
-#initialising data object
+#initialising data instance
 dataob = data(params)
 
-#initiating preselector class
+#initialising TP profile instance
+if params.verbose: print 'loading profile'
+profileob = profile(params, dataob)
+
+#initiating and runnign preselector instance
 if params.pre_run:
     if params.verbose: print 'loading preprocessing'
-    preob = preselector(params,dataob)
+    if params.fit_transmission:
+        preob = preselector(params,dataob,transmission(params,dataob,profileob))
+    elif params.fit_emission:
+        preob = preselector(params,dataob,emission(params,dataob,profileob))
     # preob.run_preprocess(convertLinelist=False,generateSpectra=True,generatePCA=True)
     preob.run()
     if params.verbose: print preob.molselected
@@ -146,9 +153,7 @@ dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 # print dataob.atmosphere['info']['mu']
 # print dataob.atmosphere['mol'].keys()
 
-#initialising TP profile object
-if params.verbose: print 'loading profile'
-profileob = profile(params, dataob)
+
 
 #initialising transmission radiative transfer code object
 # if params.verbose: print 'loading transmission'

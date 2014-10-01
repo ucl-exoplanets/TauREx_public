@@ -31,7 +31,7 @@ def convert2microns(PATH, upcut=25):
             np.savetxt(f[:-3]+'abs',tmp2,fmt="%.6e,%.8e")
 
 
-def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
+def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #Generates transmission spectra from cross section files for given mixing ratios
     #output: 2 column ascii files (.spec)
     
@@ -45,7 +45,8 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     dataob_pca.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 
     profileob_pca = profile(PARAMS, dataob_pca)
-    transob_pca = transmission(PARAMS, dataob_pca)
+    MODEL.reset(dataob_pca)
+
 
     #reading available cross section lists in PATH
     globlist = glob.glob(PATH+'*.abs')
@@ -79,18 +80,21 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
                     dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=False) #reading in cross section file
                         # dataob_pca.specgrid = dataob_pca.wavegrid
                         # dataob_pca.nspecgrid = dataob_pca.nwave
-                transob_pca.reset(dataob_pca) #resets transob to reflect changes in dataob
+                MODEL.reset(dataob_pca) #resets transob to reflect changes in dataob
     #                     pl.figure(21)
     #                     pl.plot(dataob_pca.specgrid,dataob_pca.sigma_array[0])
     #                     pl.show()
     #         
                         #manually setting mixing ratio and T-P profile
-                MODEL = transob_pca.cpath_integral(rho=rho_in,X=X_in) #computing transmission
+                if MODEL.__ID__ is 'transmission' and PARAMS.trans_cpp:
+                    mod_out = MODEL.cpath_integral(rho=rho_in,X=X_in) #using C# implementation of path integral
+                else:
+                    mod_out = MODEL.path_integral(rho=rho_in,X=X_in) #using python implementation of path integral
 #                 pl.figure(20)
 #                 pl.plot(MODEL)
 #                 pl.show()
     #               exit()
-                np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob_pca.specgrid,MODEL)))
+                np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob_pca.specgrid,mod_out)))
 
 
 def find_nearest(arr, value):
