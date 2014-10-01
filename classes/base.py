@@ -34,3 +34,19 @@ class base(object):
     #allows to reset the original instance to reflect changes in the data instance
     #this avoids an initialisation of a separate instance.
         self.__init__(params)
+        
+    
+    def set_model(self,INPUT = None):
+        #loads emission/transmission model pointer into fitting class
+        if INPUT == None: 
+            self.model = None
+            self.__ID__ = None
+        else:
+            if INPUT.__ID__ == 'transmission':
+                model = INPUT.cpath_integral
+            elif INPUT.__ID__ == 'emission':
+                model = INPUT.path_integral
+                
+            self.model    = model
+            self.__MODEL_ID__ = INPUT.__ID__
+            

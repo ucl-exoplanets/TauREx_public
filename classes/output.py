@@ -35,8 +35,15 @@ class output(base):
         self.data     = data
         self.fitob    = fit
         self.profile  = profile(params,data) #loading profile class
-        self.set_model(fit) #loading emission/transmission class
-
+        
+        #inheriting emission/transmission model from fitting object if loaded
+        # 'fit' can either be the fitting instance or the emission/transmission instances
+        if fit.__ID__ is 'fitting': 
+            self.model        = fit.model #directly inheriting model instance from fitting instance
+            self.__MODEL_ID__ = fit.__MODEL_ID__
+        else:
+            self.set_model(fit) #abstracting emission/transmission model 
+        
         
         #dumping fitted paramter list to file 
         with open('chains/parameters.dat','w') as parfile:
@@ -66,17 +73,17 @@ class output(base):
 
     #class methods
     
-    def set_model(self,INPUT):
-        #loads emission/transmission model pointer into output class
-        #the model is determined by the state of the fitting class
-
-        if INPUT.__MODEL_ID__ == 'transmission':
-            self.trans = transmission(self.params,self.data,self.profile)
-            self.model = self.trans.cpath_integral
-        elif INPUT.__MODEL_ID__ == 'emission':
-            self.emis  = emission(self.params,self.data,self.profile)
-            self.model = self.emis.path_integral
-        self.__MODEL_ID__ = INPUT.__MODEL_ID__
+#     def set_model(self,INPUT):
+#         #loads emission/transmission model pointer into output class
+#         #the model is determined by the state of the fitting class
+# 
+#         if INPUT.__MODEL_ID__ == 'transmission':
+#             self.trans = transmission(self.params,self.data,self.profile)
+#             self.model = self.trans.cpath_integral
+#         elif INPUT.__MODEL_ID__ == 'emission':
+#             self.emis  = emission(self.params,self.data,self.profile)
+#             self.model = self.emis.path_integral
+#         self.__MODEL_ID__ = INPUT.__MODEL_ID__
 
 
     def plot_all(self,save2pdf=False):

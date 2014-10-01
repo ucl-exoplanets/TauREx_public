@@ -47,6 +47,8 @@ except ImportError:
 class fitting(base):
     def __init__(self,params,data,profile,rad_model=None):
         
+        self.__ID__      = 'fitting' 
+        
         #MPI support       
         self.MPIrank     = MPI.COMM_WORLD.Get_rank()
         self.MPIsize     = MPI.COMM_WORLD.Get_size()
