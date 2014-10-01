@@ -5,6 +5,7 @@ import glob,string,gzip,os
 import cPickle as pickle
 
 from classes.transmission import *
+from classes.emission import *
 from classes.profile import *
 from classes.data import *
 

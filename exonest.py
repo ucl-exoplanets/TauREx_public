@@ -160,7 +160,7 @@ if params.fit_emission:
     emissob = emission(params,dataob,profileob)
 #     emissob.path_integral()
 
-
+# exit()
 #initialising fitting object
 if params.verbose: print 'loading fitting'
 fitob = fitting(params, dataob, profileob)

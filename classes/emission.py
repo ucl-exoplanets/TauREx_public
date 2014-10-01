@@ -198,13 +198,15 @@ class emission(object):
 #             pl.plot(self.specgrid,em.black_body(self.specgrid,temperature[-1]),'k-')
 #             pl.plot(self.specgrid,BB_layer,'r')
 #             pl.title(str(j))
-#                  
+#             pl.xscale('log')
+#             pl.xlim([0.0,15.0])
+#                   
 # #             pl.figure(102)
 # #             pl.plot(em.black_body(self.specgrid,temperature[0]),'k--')
 # #             pl.plot(em.black_body(self.specgrid,temperature[-1]),'k-')
 # #             pl.show()
 #             pl.draw()
-#                  
+#                   
 #             if j < 20:
 #                 time.sleep(2)
 
@@ -226,10 +228,10 @@ class emission(object):
 # #         pl.plot(self.specgrid,em.black_body(self.specgrid,1000))
 # #         pl.plot(self.specgrid,sta,'r')
 # #         pl.xscale('log')
-#      
-#         pl.figure(103)
-#         pl.plot(dtau[:,0])
-#         pl.title('dtau')
+# #      
+# #         pl.figure(103)
+# #         pl.plot(dtau[:,0])
+# #         pl.title('dtau')
 #         pl.show()
         
         
