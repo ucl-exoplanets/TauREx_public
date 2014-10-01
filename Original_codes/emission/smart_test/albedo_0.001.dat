@@ -1,0 +1,11 @@
+	Albedo Test File for jupiter
+
+	Wavelength	Albedo
+	(microns)
+
+	0.10000		0.001
+	1.00000		0.001
+	10.0000		0.001
+	100.0		0.001
+	1000.0		0.001
+	20000.0		0.001

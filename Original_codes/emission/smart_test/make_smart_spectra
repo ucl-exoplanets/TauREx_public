@@ -1,0 +1,281 @@
+#
+#   This Make file compiles the program smart_spectra using fortran 90
+#
+# -Wnn   This option sets the line length of  source  state­
+#              ments accepted by the compiler in Fixed-Form source
+#              format. The default value of nn is  72.  The  other
+#              legal values are 80 and 132.
+# -P     Cause  the compiler to instrument the code for pro­
+#              filing with gprof(1).
+#  -g     Generate information appropriate  for  debugging  a
+#              compiled program with a debugger. On Linux systems,
+#              the compiler generates Dwarf debugging information.
+# -Rb    The -Rb option directs the compile to generate code
+#              to check that array indexes are within  the  bounds
+#              of  an  array. Assumed size array whose last dimen­
+#              sion is * cannot be checked.
+# -B80   Directs  the  compiler to generate code that prints
+#              the name of each subroutine and function as  it  is
+#              called at runtime.
+# -en    This  option causes the compiler to issue a warning
+#              whenever it encounters an extension to the  Fortran
+#  -et    Enable runtime stacktrace back.
+#  -s    This option allocates local variables statically
+#  -cpu:type
+#              Use  the  -cpu:type option to generate instructions
+#              specific to a particular processor. The  recognized
+#              type arguments are:
+#              p7      Pentium 4
+#               athlon  AMD Athlon and Duron
+#              opteron  AMD Opteron 
+
+FFLAGS = -c -P -pg -en -Rb -Rc -s
+LFLAGS = -P -pg -Rb -Rc -s
+#FFLAGS = -c -P -g -pg  -en -O1
+#LFLAGS = -P -pg -g -O1
+#FFLAGS = -c -O3
+#LFLAGS =
+#FFLAGS = -c -g -C=all -C=undefined -gline -mtrace=all
+#LFLAGS =
+#FFLAGS = -c -C -Xlist
+#LFLAGS = -Xlist
+
+objs = smart_spectra.o smart.o \
+add_sflx.o add_tflx.o add_rad.o albedo.o aerosol.o aer_tau.o atmstr.o \
+cldstr.o cp_atm.o do_eq_trn.o find_pd.o find_units.o \
+flux_int.o flx_ref.o flx_src.o gasetau.o gasptau.o gaslbltau.o \
+gas_tau.o grey_eq_trn.o heating.o init_bin.o init_interp.o init_iu.o \
+init_pd_iu.o int_rad_lev.o init_spect_io.o interp_rad.o interp_src.o \
+layer_flx.o layer_trn.o load_optics.o map_back.o map_rad.o map_spect.o \
+mod_atm.o norm_pi0_ph.o pd_out.o perturb_rad.o planck.o rad_out.o \
+rad_ref.o rad_slit.o rad_src.o rad_trn.o raylei.o ray_tau.o readmie.o \
+readmix.o readpab.o readsol.o readsur.o readxsec.o \
+skip_wn.o sm_eq_trn.o smart_hdr.o smart_in.o solar.o solar_src.o \
+source_fcn.o surf_brdf.o thermal_src.o write_pd_flx.o \
+DISORT.o ErrPack2.o LINPAK2.o RDI1MACH2.o bdrf.o \
+charsp.o xyinterp.o readfil.o header.o
+
+smart_spectra: $(objs)
+	gfortran $(LFLAGS) -o $@ $(objs)
+
+smart_spectra.o: smart_spectra.f param.inc
+	gfortran $(FFLAGS) -s smart_spectra.f
+
+smart.o: smart.f param.inc
+	gfortran $(FFLAGS) -s smart.f
+
+add_sflx.o: add_sflx.f param.inc
+	gfortran $(FFLAGS) add_sflx.f
+
+add_tflx.o: add_tflx.f param.inc
+	gfortran $(FFLAGS) add_tflx.f
+
+add_rad.o: add_rad.f param.inc
+	gfortran $(FFLAGS) add_rad.f
+
+albedo.o: albedo.f param.inc
+	gfortran $(FFLAGS) albedo.f
+
+aerosol.o: aerosol.f param.inc
+	gfortran $(FFLAGS) aerosol.f
+
+aer_tau.o: aer_tau.f param.inc
+	gfortran $(FFLAGS) aer_tau.f
+
+atmstr.o: atmstr.f param.inc
+	gfortran $(FFLAGS) atmstr.f
+
+cldstr.o: cldstr.f param.inc
+	gfortran $(FFLAGS) cldstr.f
+
+cp_atm.o: cp_atm.f
+	gfortran $(FFLAGS) cp_atm.f
+
+do_eq_trn.o: do_eq_trn.f param.inc
+	gfortran $(FFLAGS) -s do_eq_trn.f
+
+find_pd.o: find_pd.f param.inc
+	gfortran $(FFLAGS) -s find_pd.f
+
+find_units.o: find_units.f
+	gfortran $(FFLAGS) -s find_units.f
+
+flx_src.o: flx_src.f param.inc
+	gfortran $(FFLAGS) flx_src.f
+
+flux_int.o: flux_int.f param.inc
+	gfortran $(FFLAGS) flux_int.f
+
+flx_ref.o: flx_ref.f param.inc
+	gfortran $(FFLAGS) flx_ref.f
+
+gasetau.o: gasetau.f param.inc
+	gfortran $(FFLAGS) gasetau.f
+
+gasptau.o: gasptau.f param.inc
+	gfortran $(FFLAGS) -s gasptau.f
+
+gaslbltau.o: gaslbltau.f param.inc
+	gfortran $(FFLAGS) gaslbltau.f
+
+gas_tau.o: gas_tau.f param.inc
+	gfortran $(FFLAGS) -s gas_tau.f
+
+grey_eq_trn.o: grey_eq_trn.f param.inc
+	gfortran $(FFLAGS) grey_eq_trn.f
+
+heating.o: heating.f param.inc
+	gfortran $(FFLAGS) heating.f
+
+init_bin.o: init_bin.f param.inc
+	gfortran $(FFLAGS) init_bin.f
+
+init_interp.o: init_interp.f param.inc
+	gfortran $(FFLAGS) init_interp.f
+
+init_spect_io.o: init_spect_io.f param.inc
+	gfortran $(FFLAGS) init_spect_io.f
+
+init_iu.o: init_iu.f param.inc
+	gfortran $(FFLAGS) init_iu.f
+
+init_pd_iu.o: init_pd_iu.f param.inc
+	gfortran $(FFLAGS) init_pd_iu.f
+
+int_rad_lev.o: int_rad_lev.f param.inc
+	gfortran $(FFLAGS) int_rad_lev.f
+
+interp_rad.o: interp_rad.f param.inc
+	gfortran $(FFLAGS) -s interp_rad.f
+
+interp_src.o: interp_src.f param.inc
+	gfortran $(FFLAGS) -s interp_src.f
+
+layer_flx.o: layer_flx.f param.inc
+	gfortran $(FFLAGS) layer_flx.f
+
+layer_trn.o: layer_trn.f param.inc
+	gfortran $(FFLAGS) layer_trn.f
+
+load_optics.o: load_optics.f param.inc
+	gfortran $(FFLAGS) load_optics.f
+
+map_back.o: map_back.f param.inc
+	gfortran $(FFLAGS) -s map_back.f
+
+map_rad.o: map_rad.f param.inc
+	gfortran $(FFLAGS) -s map_rad.f
+
+map_spect.o: map_spect.f param.inc
+	gfortran $(FFLAGS) map_spect.f
+
+mod_atm.o: mod_atm.f param.inc
+	gfortran $(FFLAGS) mod_atm.f
+
+norm_pi0_ph.o:norm_pi0_ph.f param.inc
+	gfortran $(FFLAGS) norm_pi0_ph.f
+
+pd_out.o: pd_out.f param.inc
+	gfortran $(FFLAGS) -s pd_out.f
+
+perturb_rad.o: perturb_rad.f param.inc
+	gfortran $(FFLAGS) -s perturb_rad.f
+
+planck.o: planck.f param.inc
+	gfortran $(FFLAGS) planck.f
+
+raylei.o: raylei.f
+	gfortran $(FFLAGS) raylei.f
+
+rad_out.o: rad_out.f param.inc
+	gfortran $(FFLAGS) rad_out.f
+
+rad_slit.o: rad_slit.f param.inc
+	gfortran $(FFLAGS) rad_slit.f
+
+rad_ref.o: rad_ref.f param.inc
+	gfortran $(FFLAGS) rad_ref.f
+
+rad_src.o: rad_src.f param.inc
+	gfortran $(FFLAGS) rad_src.f
+
+rad_trn.o: rad_trn.f param.inc
+	gfortran $(FFLAGS) rad_trn.f
+
+ray_tau.o: ray_tau.f param.inc
+	gfortran $(FFLAGS) ray_tau.f
+
+readmie.o: readmie.f param.inc
+	gfortran $(FFLAGS) readmie.f
+
+readmix.o: readmix.f param.inc
+	gfortran $(FFLAGS) readmix.f
+
+readpab.o: readpab.f param.inc
+	gfortran $(FFLAGS) readpab.f
+
+readxsec.o: readxsec.f param.inc
+	gfortran $(FFLAGS) readxsec.f
+
+readsol.o: readsol.f
+	gfortran $(FFLAGS) readsol.f
+
+readsur.o: readsur.f param.inc
+	gfortran $(FFLAGS) readsur.f
+
+skip_wn.o: skip_wn.f param.inc
+	gfortran $(FFLAGS) skip_wn.f
+
+sm_eq_trn.o: sm_eq_trn.f param.inc
+	gfortran $(FFLAGS) -s sm_eq_trn.f
+
+smart_hdr.o: smart_hdr.f param.inc
+	gfortran $(FFLAGS) smart_hdr.f
+
+smart_in.o: smart_in.f param.inc
+	gfortran $(FFLAGS) smart_in.f
+
+solar.o: solar.f param.inc
+	gfortran $(FFLAGS) solar.f
+
+solar_src.o: solar_src.f param.inc
+	gfortran $(FFLAGS) solar_src.f
+
+source_fcn.o: source_fcn.f param.inc
+	gfortran $(FFLAGS) -s source_fcn.f
+
+surf_brdf.o: surf_brdf.f param.inc
+	gfortran $(FFLAGS) surf_brdf.f
+
+thermal_src.o: thermal_src.f param.inc
+	gfortran $(FFLAGS) thermal_src.f
+
+write_pd_flx.o: write_pd_flx.f param.inc
+	gfortran $(FFLAGS) -s write_pd_flx.f
+
+DISORT.o: DISORT.f
+	gfortran $(FFLAGS) -s DISORT.f
+
+ErrPack2.o: ErrPack2.f
+	gfortran $(FFLAGS) ErrPack2.f
+
+LINPAK2.o: LINPAK2.f
+	gfortran $(FFLAGS) LINPAK2.f
+
+RDI1MACH2.o: RDI1MACH2.f
+	gfortran $(FFLAGS) RDI1MACH2.f
+
+bdrf.o: bdrf.f
+	gfortran $(FFLAGS) bdrf.f
+
+charsp.o: charsp.f
+	gfortran $(FFLAGS) charsp.f
+
+header.o: header.f
+	gfortran $(FFLAGS) header.f
+
+readfil.o: readfil.f
+	gfortran $(FFLAGS) readfil.f
+
+xyinterp.o: xyinterp.f
+	gfortran $(FFLAGS) xyinterp.f

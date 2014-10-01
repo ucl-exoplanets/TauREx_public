@@ -6,7 +6,7 @@
 #
 #
 # Modification History:
-#   - v1.0 : first definition, Ingo Waldmann, Apr 2013 
+#   - v1.0 : first definition, Ingo Waldmann, Sept 2014 
 #
 ################################################
 

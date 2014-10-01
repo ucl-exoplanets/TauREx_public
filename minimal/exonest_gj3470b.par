@@ -52,6 +52,13 @@ include_cia = False
 #file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
 
+#include cloud opacities. True/False 
+include_cld = False
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+cld_file = Input/cloud1.cld
+
+
 
 [Output]
 #path for output files
@@ -157,19 +164,6 @@ molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
 mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
-
-#include cloud opacities. True/False 
-include_cld = False
-
-#cloud refractive index (m) and particle size (a) in microns. Comma separated
-cld_params = 1.5, 1.0
-
-#cloud pressure (in bar) lower and upper bounds. Comma separated
-cld_pressure = 1.0e-3, 0.1
-
-#file from which to read optical depths for extra opacities (e.g. clouds)
-#parameter not in use but placeholder for implementation if needed
-cld_file = Input/cloud1.cld
 
 
 [T-P profile]
