@@ -21,7 +21,7 @@ spec_res = 500
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/hotjupiter_r100_5e-5.dat
+spectrum_file = Input/observations/hotjupiter_r100_5e-5.dat
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -227,7 +227,7 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = True
+run = False
 
 #update data standard deviation from dynamic fit.
 update_std = True
@@ -247,7 +247,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
 resume = False

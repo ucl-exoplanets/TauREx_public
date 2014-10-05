@@ -50,7 +50,7 @@ class output(object):
         #calculating final absorption/emission spectrum (currently only absorption)
         self.profile = profile(params,data)
         if self.params.fit_transmission:
-            self.trans = transmission(params,data)
+            self.trans = transmission(params,data,self.profile)
             if self.MCMC:
                 self.transspec_mcmc = self.trans.cpath_integral(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean)
                 self.transspec_mcmc = np.interp(self.data.wavegrid,self.data.specgrid,self.transspec_mcmc)
