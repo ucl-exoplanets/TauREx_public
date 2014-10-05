@@ -18,8 +18,8 @@
 
 #loading libraries     
 from base import base   
-import numpy
-from numpy import *
+import numpy as np
+import pylab as pl
 
 
 
@@ -45,7 +45,7 @@ class profile(base):
             self.P       = self.pta[:,0]
             self.T       = self.pta[:,1]
             self.Z       = self.pta[:,2]
-            self.X       = zeros((self.ngas,self.nlayers))
+            self.X       = np.zeros((self.ngas,self.nlayers))
             self.X      += 1e-5  #setting up initial mixing ratios
             self.rho     = self.get_rho()
             
@@ -58,6 +58,14 @@ class profile(base):
             self.X       = data.X       
             self.rho     = self.get_rho(T=self.T,P=self.P)
             
+        T,P = self.TP_profile([1e3,10.0], [1800,1400,1600])
+        
+        pl.figure(200)
+        pl.plot(T,P)
+        pl.yscale('log')
+        pl.gca().invert_yaxis()
+        pl.show()
+        exit()
             
                 
 
@@ -81,13 +89,50 @@ class profile(base):
 #         dz       = max_z / N_LAYERS
         
         #generatinng altitude-pressure array
-        PTA_arr = zeros((N_LAYERS,3))
-        PTA_arr[:,2] = linspace(0,max_z,num=N_LAYERS)
-        PTA_arr[:,0] = MAX_P * exp(-PTA_arr[:,2]/self.scaleheight)
+        PTA_arr = np.zeros((N_LAYERS,3))
+        PTA_arr[:,2] = np.linspace(0,max_z,num=N_LAYERS)
+        PTA_arr[:,0] = MAX_P * np.exp(-PTA_arr[:,2]/self.scaleheight)
         PTA_arr[:,1] = self.params.planet_temp
 
         
         return PTA_arr
+        
+    def setup_prior_bounds(self):
+        #partially to be moved to parameter file i guess
+        
+        pass
+
+    def setup_parameter_grid(self, transmission=False, emission=False):
+        #I AM SAMPSAN I AM SAMPSAN
+        
+        INDEX  = []
+        PARAMS = []
+        
+        #setting up mixing ratios for individual gases
+        cgas = 0
+        for i in self.ngas:
+            PARAMS.append(1e-5)
+            cgas += 1
+        
+        INDEX.append(cgas)
+        
+        #setting up temperature parameters
+        T_mean = (self.params.T_up - self.params.T_low)/2.0
+        num_T_params = 3
+        
+        ctemp = 0
+        if transmission:
+            ctemp +=1
+            PARAMS.append(self.params.planet_temp)
+        if emission:
+            for i in range(num_T_params):
+                PARAMS.append(T_mean)
+                ctemp += 1
+            for i in range(num_T_params-1):
+                
+                
+            #UNFINISHED!!
+        
         
 
     # @profile #line-by-line profiling decorator
@@ -102,4 +147,44 @@ class profile(base):
         return  (P)/(self.boltzmann*T)   
         
     # def cast_FIT_array(self,FIT,):
+    
+    def TP_profile(self,PARAMS, T=None, P=None):
+    #main function defining basic parameterised TP-profile from 
+    #PARAMS and INDEX. INDEX = [Chi, T,P]
+    
+        INDEX = self.TPindex
+        
+    
+        if P is None:
+            P = self.P
+            
+        if T is not None: 
+            return T, P 
+
+        if INDEX[1] > 1:
+            P_params =  [self.params.tp_max_pres] + P_params + [np.min(P)]
+            T_params = T_params + [T_params[-1]]
+            #creating linear T-P profile
+            T = np.interp(np.log(P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+            return T[::-1], P
+        
+        if INDEX[1] == 1:
+            T = np.zeros_like(P)
+            T += PARAMS[INDEX[0]+INDEX[1]]
+            return T, P
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            
+    
+    
+    
+    
+    
         

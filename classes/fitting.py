@@ -118,19 +118,19 @@ class fitting(base):
 
 
 
-    def set_model(self,INPUT):
-        #loads emission/transmission model pointer into fitting class
-        if INPUT == None: 
-            self.model = None
-            self.__MODEL_ID__ = None
-        else:
-            if INPUT.__ID__ == 'transmission':
-                model = INPUT.cpath_integral
-            elif INPUT.__ID__ == 'emission':
-                model = INPUT.path_integral
-                
-            self.model    = model
-            self.__MODEL_ID__ = INPUT.__ID__
+#     def set_model(self,INPUT):
+#         #loads emission/transmission model pointer into fitting class
+#         if INPUT == None: 
+#             self.model = None
+#             self.__MODEL_ID__ = None
+#         else:
+#             if INPUT.__ID__ == 'transmission':
+#                 model = INPUT.cpath_integral
+#             elif INPUT.__ID__ == 'emission':
+#                 model = INPUT.path_integral
+#                 
+#             self.model    = model
+#             self.__MODEL_ID__ = INPUT.__ID__
 
 
     # @profile #line-by-line profiling decorator
