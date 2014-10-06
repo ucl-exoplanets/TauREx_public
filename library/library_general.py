@@ -187,4 +187,7 @@ def funcGauss(p, x):
     return 1.0/(sigma * sqrt(2.0 * pi)) * exp(-(x-mu)**2/(2.0*sigma**2))
 
 
+
+
+
         

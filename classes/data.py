@@ -25,12 +25,17 @@ from StringIO import StringIO
 from scipy.interpolate import interp1d
 import library.library_general as libgen
 
+#loading taurex license manager. Only loaded in data class
+from classes.license import *
+
 
 
 class data(object):
 
 #initialisation
     def __init__(self,params):
+        #checking taurex license
+        license_manager().run()
         
         self.params = params
         self.KBOLTZ=1.380648813e-23
