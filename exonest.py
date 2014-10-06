@@ -55,6 +55,9 @@ except:
     print 'WARNING: PYMC library is not loaded. MCMC functionality will be disabled.'
     pymc_import = False
 
+#checking taurex license
+from classes.license import *
+license_manager().run()
 
 #start of profiling code
 # import cProfile, pstats, StringIO
@@ -124,6 +127,7 @@ params = parameters(options.param_filename)
 
 
 #initialising data object
+if params.verbose: print 'loading data'
 dataob = data(params)
 
 #initiating preselector class
