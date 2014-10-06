@@ -16,6 +16,7 @@
 #
 ################################################
 
+
 #loading libraries     
 import numpy, pylab
 from numpy import *
@@ -30,6 +31,7 @@ class data(object):
 
 #initialisation
     def __init__(self,params):
+        
         self.params = params
         self.KBOLTZ=1.380648813e-23
         

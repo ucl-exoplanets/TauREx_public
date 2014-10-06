@@ -4,6 +4,7 @@
 #parameters for run
 ################################################
 from ConfigParser import SafeConfigParser
+import numpy as np
 from numpy import genfromtxt,arange,size
 from StringIO import StringIO
 
