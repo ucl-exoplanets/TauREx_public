@@ -27,7 +27,6 @@ import datetime,getpass,json,base64, socket, random
 
 
 class license_manager(object):
-    
     def __init__(self):
         
         self.local_user   = getpass.getuser()
