@@ -55,10 +55,14 @@ class profile(base):
             self.P       = self.pta[:,0]
             self.T       = data.pta[:,1]
             self.Z       = self.pta[:,2]
-            self.X       = data.X       
+            self.X       = data.X     
+            self.ngas    = int(data.ngas)  
             self.rho     = self.get_rho(T=self.T,P=self.P)
             
-        T,P = self.TP_profile([1e3,10.0], [1800,1400,1600])
+        self.setup_prior_bounds()
+        PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)
+        
+        T,P = self.TP_profile(PARAMS=PARAMS)
         
         pl.figure(200)
         pl.plot(T,P)
@@ -100,27 +104,31 @@ class profile(base):
     def setup_prior_bounds(self):
         #partially to be moved to parameter file i guess
         
-        pass
+        self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
+        self.Tpriors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
+        self.Ppriors = [[1e4,1e5],[10.0,100.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
 
     def setup_parameter_grid(self, transmission=False, emission=False):
         #I AM SAMPSAN I AM SAMPSAN
         
-        INDEX  = []
+        COUNT  = []
         PARAMS = []
+        INDEX  = []
         
         #setting up mixing ratios for individual gases
+        Xmean = np.mean(self.Xpriors)
         cgas = 0
-        for i in self.ngas:
-            PARAMS.append(1e-5)
+        for i in range(self.ngas):
+            PARAMS.append(Xmean)
             cgas += 1
         
-        INDEX.append(cgas)
+        COUNT.append(cgas)
         
         #setting up temperature parameters
-        T_mean = (self.params.T_up - self.params.T_low)/2.0
+        T_mean = np.mean(self.Tpriors)
         num_T_params = 3
         
-        ctemp = 0
+        ctemp = 0; cpres = 0
         if transmission:
             ctemp +=1
             PARAMS.append(self.params.planet_temp)
@@ -129,9 +137,23 @@ class profile(base):
                 PARAMS.append(T_mean)
                 ctemp += 1
             for i in range(num_T_params-1):
+                PARAMS.append(np.mean(self.Ppriors[i]))
+                cpres += 1
                 
+        COUNT.append(ctemp)
+        COUNT.append(cpres)
+
+        cumidx = COUNT[0]
+        INDEX.append(cumidx)
+        for i in range(1,len(COUNT)):
+            cumidx += COUNT[i]
+            INDEX.append(cumidx)
+    
+#         print PARAMS[:INDEX[0]], PARAMS[INDEX[0]:INDEX[1]], PARAMS[INDEX[1]:]
+        
+        return PARAMS, INDEX, COUNT
                 
-            #UNFINISHED!!
+        
         
         
 
@@ -153,7 +175,15 @@ class profile(base):
     #PARAMS and INDEX. INDEX = [Chi, T,P]
     
         INDEX = self.TPindex
+        COUNT = self.TPcount
         
+        X_params = PARAMS[:INDEX[0]]
+        T_params = PARAMS[INDEX[0]:INDEX[1]]
+        P_params = PARAMS[INDEX[1]:]
+
+        
+#         print INDEX, COUNT
+#         print X_params, T_params, P_params
     
         if P is None:
             P = self.P
@@ -161,14 +191,14 @@ class profile(base):
         if T is not None: 
             return T, P 
 
-        if INDEX[1] > 1:
+        if COUNT[1] > 1:
             P_params =  [self.params.tp_max_pres] + P_params + [np.min(P)]
             T_params = T_params + [T_params[-1]]
             #creating linear T-P profile
             T = np.interp(np.log(P[::-1]), np.log(P_params[::-1]), T_params[::-1])
             return T[::-1], P
         
-        if INDEX[1] == 1:
+        if COUNT[1] == 1:
             T = np.zeros_like(P)
             T += PARAMS[INDEX[0]+INDEX[1]]
             return T, P
