@@ -59,8 +59,10 @@ class profile(base):
             self.ngas    = int(data.ngas)  
             self.rho     = self.get_rho(T=self.T,P=self.P)
             
+        self.num_T_params = 3 #number of free temperature parameters
+        
         self.setup_prior_bounds()
-        PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)
+        self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)
         
         T,P = self.TP_profile(PARAMS=PARAMS)
         
@@ -107,9 +109,30 @@ class profile(base):
         self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
         self.Tpriors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
         self.Ppriors = [[1e4,1e5],[10.0,100.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
+        
+        #setting up bounds for downhill algorithm
+        #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
+        bounds = []
+        for i in range(self.ngas):
+            bounds.append((self.Xpriors[0],self.Xpriors[1]))
+        if transmission:
+            bounds.append((self.Tpriors[0],self.Tpriors[1]))
+        if emission:
+            for i in range(self.num_T_params):
+                bounds.append((self.Tpriors[0],self.Tpriors[1]))
+            for i in range(self.num_T_params-1):
+                bounds.append((self.Ppriors[0],self.Ppriors[1]))
+            
+        self.bounds = bounds
+        
+        
 
     def setup_parameter_grid(self, transmission=False, emission=False):
         #I AM SAMPSAN I AM SAMPSAN
+        
+        #PARAMS [abundances (ngas), temperatures (num_T_params), pressures (num_T_params-1)]
+        #COUNT [no. abundances, no. temperatures, no. pressures]
+        #INDEX index to PARAMS for slicing 
         
         COUNT  = []
         PARAMS = []
@@ -126,7 +149,7 @@ class profile(base):
         
         #setting up temperature parameters
         T_mean = np.mean(self.Tpriors)
-        num_T_params = 3
+        num_T_params = self.num_T_params
         
         ctemp = 0; cpres = 0
         if transmission:
@@ -154,21 +177,6 @@ class profile(base):
         return PARAMS, INDEX, COUNT
                 
         
-        
-        
-
-    # @profile #line-by-line profiling decorator
-    def get_rho(self,T=None,P=None):
-        #calculate atmospheric densities for given temperature and pressure
-        
-        if P is None:
-            P = self.P
-        if T is None:
-            T = self.params.planet_temp
-            
-        return  (P)/(self.boltzmann*T)   
-        
-    # def cast_FIT_array(self,FIT,):
     
     def TP_profile(self,PARAMS, T=None, P=None):
     #main function defining basic parameterised TP-profile from 
@@ -181,6 +189,11 @@ class profile(base):
         T_params = PARAMS[INDEX[0]:INDEX[1]]
         P_params = PARAMS[INDEX[1]:]
 
+        #convert X into 2d arrays (previously done in fitting module but seems more appropriate here)
+        X   = np.zeros((self.ngas,self.nlayers))
+        for i in range(self.ngas):
+            X[i,:] += X_params[i]
+        
         
 #         print INDEX, COUNT
 #         print X_params, T_params, P_params
@@ -189,7 +202,7 @@ class profile(base):
             P = self.P
             
         if T is not None: 
-            return T, P 
+            return T, P, X
 
         if COUNT[1] > 1:
             P_params =  [self.params.tp_max_pres] + P_params + [np.min(P)]
@@ -200,12 +213,23 @@ class profile(base):
         
         if COUNT[1] == 1:
             T = np.zeros_like(P)
-            T += PARAMS[INDEX[0]+INDEX[1]]
-            return T, P
+            T += T_params
+            return T, P, X
         
         
         
+       # @profile #line-by-line profiling decorator
+    def get_rho(self,T=None,P=None):
+        #calculate atmospheric densities for given temperature and pressure
         
+        if P is None:
+            P = self.P
+        if T is None:
+            T = self.params.planet_temp
+            
+        return  (P)/(self.boltzmann*T)   
+        
+    # def cast_FIT_array(self,FIT,):     
         
         
         

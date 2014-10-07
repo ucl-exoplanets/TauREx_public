@@ -57,7 +57,7 @@ class fitting(base):
         self.set_model(rad_model)
         
         #loading profile object 
-        self.profileob   = profile
+        self.profile     = profile
         
         #loading data and parameter objects
         self.params      = params
@@ -78,38 +78,43 @@ class fitting(base):
         self.T_low       = self.params.planet_temp - self.params.fit_T_low
 
 
-        #setting bounds for downhill algorithm
-        self.bounds = []
-        self.bounds.append((self.T_low,self.T_up))
-        for i in range(self.ngas):
-            self.bounds.append((self.X_low,self.X_up))
-            
-
-        #checking if number of free parameters for X = number of gas species
-#         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
-#             warnings.warn('Number of free X parameters does not equal number of gas species and atmospheric levels')
-#             self.params.fit_param_free_X = self.params.tp_atm_levels*self.params.tp_num_gas
+        #getting parameter grid with initial estimates
+        self.PINIT       = self.profile.PARAMS
+        self.Pindex      = self.profile.TPindex
+        self.Pshape      = shape(self.PINIT)
         
-        #setting up initial parameter array
-        # self.PINIT = zeros((self.ngas+1,self.nlayers))
-        # self.PINIT[0,:] = self.profileob.T
-        # self.PINIT[1:,:] = self.profileob.X
-
-        self.PINIT     = zeros((self.ngas+1))
-        self.PINIT[0]  = self.params.planet_temp
-        # self.PINIT[1:] = float((self.params.fit_X_up-self.params.fit_X_low)/2 + self.params.fit_X_low)
-        self.PINIT[1:] = 1e-4
+        #getting prior bounds for downhill algorithm
+        self.bounds      = self.profile.bounds
+        
+        #setting bounds for downhill algorithm
+#         self.bounds = []
+#         self.bounds.append((self.T_low,self.T_up))
+#         for i in range(self.ngas):
+#             self.bounds.append((self.X_low,self.X_up))
+#             
+# 
+#         #checking if number of free parameters for X = number of gas species
+# #         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
+# #             warnings.warn('Number of free X parameters does not equal number of gas species and atmospheric levels')
+# #             self.params.fit_param_free_X = self.params.tp_atm_levels*self.params.tp_num_gas
+#         
+#         #setting up initial parameter array
+#         # self.PINIT = zeros((self.ngas+1,self.nlayers))
+#         # self.PINIT[0,:] = self.profileob.T
+#         # self.PINIT[1:,:] = self.profileob.X
+# 
+#         self.PINIT     = zeros((self.ngas+1))
+#         self.PINIT[0]  = self.params.planet_temp
+#         # self.PINIT[1:] = float((self.params.fit_X_up-self.params.fit_X_low)/2 + self.params.fit_X_low)
+#         self.PINIT[1:] = 1e-4
 
 
         # for i in range(1,self.ngas):
         #     self.PINIT[i] = self.profileob.X[i,0]
 
-        self.Pshape = shape(self.PINIT)
-        
-        # self.PINIT2 = self.PINIT.flatten(order='F')
-        # self.PINIT3 = self.PINIT2[(self.Pshape[0]-1):] #restricting temperature to one free parameter only
-        self.PINIT3 = self.PINIT
 
+        
+     
        
         #initialising output tags
         self.DOWNHILL = False
@@ -118,43 +123,23 @@ class fitting(base):
 
 
 
-#     def set_model(self,INPUT):
-#         #loads emission/transmission model pointer into fitting class
-#         if INPUT == None: 
-#             self.model = None
-#             self.__MODEL_ID__ = None
-#         else:
-#             if INPUT.__ID__ == 'transmission':
-#                 model = INPUT.cpath_integral
-#             elif INPUT.__ID__ == 'emission':
-#                 model = INPUT.path_integral
-#                 
-#             self.model    = model
-#             self.__MODEL_ID__ = INPUT.__ID__
 
 
     # @profile #line-by-line profiling decorator
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
-        rho = self.profileob.get_rho(T=PFIT[0])
-#         print PFIT[0]
-#         X   = PFIT[1:].reshape(self.Pshape[0],self.Pshape[1]-1)
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
+        rho = self.profile.get_rho(T=T,P=P)        #calculating densities
 
-        X   = zeros((self.ngas,self.nlayers))
-        for i in range(self.ngas):
-            X[i,:] += PFIT[i+1]
-
-
-        MODEL = self.model(rho=rho,X=X,temperature=PFIT[0])
+        #the temperature parameter should work out of the box but check for transmission again
+        MODEL = self.model(rho=rho,X=X,temperature=T)
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
         #binning internal model 
         MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
         
         #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
-
-        
 
 #         ion()
 #         clf()
@@ -178,26 +163,29 @@ class fitting(base):
     # @profile #line-by-line profiling decorator
     def collate_downhill_results(self,PFIT):
         #function unpacking the downhill minimization results
-        Xout_mean = zeros((self.ngas,self.nlayers))
-        # Tout_mean = zeros((self.nlayers*self.ngas))
+        
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+#         Xout_mean = zeros((self.ngas,self.nlayers))
+#         # Tout_mean = zeros((self.nlayers*self.ngas))
+# 
+#         print PFIT
+#         Tout_mean= PFIT[0]
+# 
+#         if len(PFIT)-1 < self.nlayers*self.ngas:
+#             # Xout_mean[:] += PFIT[1:]
+#             for i in range(len(PFIT)-1):
+#                 Xout_mean[i,:] += PFIT[i+1]
+#         else:
+#             Xout_mean[:] = PFIT[1:]
 
-        print PFIT
-        Tout_mean= PFIT[0]
-
-        if len(PFIT)-1 < self.nlayers*self.ngas:
-            # Xout_mean[:] += PFIT[1:]
-            for i in range(len(PFIT)-1):
-                Xout_mean[i,:] += PFIT[i+1]
-        else:
-            Xout_mean[:] = PFIT[1:]
-
-        return Tout_mean,Xout_mean
-
+        return T,X 
+    
     # @profile #line-by-line profiling decorator
     def downhill_fit(self):
     # fits data using simplex downhill minimisation
 
-        PINIT = self.PINIT3  # initial temperatures and abundances
+        PINIT = self.PINIT  # initial temperatures and abundances
         
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
@@ -261,7 +249,7 @@ class fitting(base):
         if self.DOWNHILL:
             PINIT = self.DOWNHILL_PFIT
         else:
-            PINIT = self.PINIT3
+            PINIT = self.PINIT
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
         
