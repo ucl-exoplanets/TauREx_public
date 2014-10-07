@@ -213,8 +213,8 @@ class fitting(base):
         #function unpacking the MCMC results
         
         MCMCstats = MCMCout.stats()
-        Xout_mean = zeros((self.ngas,self.nlayers))
-        Xout_std  = zeros((self.ngas,self.nlayers))
+#         Xout_mean = zeros((self.ngas,self.nlayers))
+#         Xout_std  = zeros((self.ngas,self.nlayers))
         
         PFIT     = []
         PFIT_std = []
@@ -223,6 +223,13 @@ class fitting(base):
             PFIT_std.append(MCMCstats['PFIT_%i' % i]['standard deviation'])
             
         T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+#         #fix for single temperature parameter for transmission
+#         if self.__MODEL_ID__ == 'transmission':
+#             Tout = np.zeros((1,self.nlayers))
+#             Tout += T
+#             T = Tout
+            
         
         T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
         X_std = PFIT_std[:self.Pindex[0]]
@@ -251,7 +258,7 @@ class fitting(base):
 #         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
 #         return Tout_mean, Tout_std, Xout_mean, Xout_std
-        return T, T_std, X, X_std
+        return np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)
 
 
     # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
@@ -275,8 +282,8 @@ class fitting(base):
         #setting up main thread
         if self.MPIrank == 0: 
             
-            for i in range(len(PINIT)):
-                    priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][0],value=PINIT[i])  # uniform prior
+            for i in range(self.n_params):
+                    priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][1],value=PINIT[i])  # uniform prior
             
 #             for i in range(PINIT[self.Pindex[0]:self.Pindex[1]]):
 #                 priors[] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
@@ -285,10 +292,12 @@ class fitting(base):
                     
         #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
         else:
-            for i in range(len(PINIT)):
+            for i in range(self.n_params):
                 P_range = (self.bounds[i][1] - self.bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
-                P_rand  = random.uniform(low=PINIT[i]-P_range,high=PINIT[i]+P_range) #random parameter start
-                priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][0],value=P_rand)  # uniform prior
+                P_mean  = np.mean(self.bounds[i])
+                P_rand  = random.uniform(low=P_mean-P_range,high=P_mean+P_range) #random parameter start
+                print self.bounds[i][0], self.bounds[i][1], P_mean, P_range, P_rand
+                priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][1],value=P_rand)  # uniform prior
             
 #             T_range = (self.T_up-self.T_low) / 5.0 #range of temperatures over which to perturb starting position
 #             X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
@@ -323,6 +332,10 @@ class fitting(base):
         # log-likelihood function
         @pymc.stochastic(observed=True, plot=False)
         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
+            
+#             PFIT2 = [PFIT[i] for i in range(self.n_params)]
+            
+#             print value
             
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
             llterms =   (-len(DATA)/2.0)*np.log(pi) -np.log(np.mean(DATASTD)) -0.5* chi_t
@@ -427,7 +440,7 @@ class fitting(base):
         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
 #         return Tout_mean, Tout_std, Xout_mean, Xout_std
-        return T, T_std, X, X_std
+        return np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)
 
 
 

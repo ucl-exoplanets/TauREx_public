@@ -168,7 +168,7 @@ if params.fit_emission:
 # exit()
 
 #initialising fitting object
-if params.verbose: print 'loading fitting'
+if params.verbose: print 'loading fitting class'
 fitob = fitting(params, dataob, profileob)
 if params.fit_transmission: fitob.set_model(transob) #loading transmission model into fitting object
 elif params.fit_emission:   fitob.set_model(emissob) #loading emission model into fitting object
@@ -184,9 +184,11 @@ if params.nest_run and multinest_import:
 
 
 #initiating output instance with fitted data from fitting class
+if params.verbose: print 'loading output class'
 outputob = output(params, dataob, fitob) 
 #
 #plotting fits and data
+if params.verbose: print 'plotting/saving results'
 if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.out_save_plots)
 # outputob.plot_spectrum()   #plotting data only
 # outputob.plot_multinest()  #plotting multinest posteriors

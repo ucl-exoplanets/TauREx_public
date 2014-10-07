@@ -28,7 +28,9 @@ class profile(base):
 
     def __init__(self,params,data):
         
-        self.params = params
+        self.params       = params
+        self.transmission = self.params.fit_transmission
+        self.emission     = self.params.fit_emission
         
         #constants
         self.boltzmann = 1.3806488e-23# m2 kg s-2 K-1
@@ -64,14 +66,14 @@ class profile(base):
         self.setup_prior_bounds()
         self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)
         
-        T,P = self.TP_profile(PARAMS=PARAMS)
+        T,P,X = self.TP_profile(PARAMS=self.PARAMS)
         
-        pl.figure(200)
-        pl.plot(T,P)
-        pl.yscale('log')
-        pl.gca().invert_yaxis()
-        pl.show()
-        exit()
+#         pl.figure(200)
+#         pl.plot(T,P)
+#         pl.yscale('log')
+#         pl.gca().invert_yaxis()
+#         pl.show()
+#         exit()
             
                 
 
@@ -115,9 +117,9 @@ class profile(base):
         bounds = []
         for i in range(self.ngas):
             bounds.append((self.Xpriors[0],self.Xpriors[1]))
-        if transmission:
+        if self.transmission:
             bounds.append((self.Tpriors[0],self.Tpriors[1]))
-        if emission:
+        if self.emission:
             for i in range(self.num_T_params):
                 bounds.append((self.Tpriors[0],self.Tpriors[1]))
             for i in range(self.num_T_params-1):
@@ -152,10 +154,10 @@ class profile(base):
         num_T_params = self.num_T_params
         
         ctemp = 0; cpres = 0
-        if transmission:
+        if self.transmission:
             ctemp +=1
             PARAMS.append(self.params.planet_temp)
-        if emission:
+        if self.emission:
             for i in range(num_T_params):
                 PARAMS.append(T_mean)
                 ctemp += 1
@@ -212,8 +214,9 @@ class profile(base):
             return T[::-1], P
         
         if COUNT[1] == 1:
-            T = np.zeros_like(P)
-            T += T_params
+#             T = np.zeros_like(P)
+            T = T_params
+#             T += T_params
             return T, P, X
         
         

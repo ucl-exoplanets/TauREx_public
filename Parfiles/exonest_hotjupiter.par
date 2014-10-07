@@ -230,17 +230,17 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = False
+run = True
 
 #update data standard deviation from dynamic fit.
 update_std = True
 
 
 #MCMC number of total iterations
-iter = 25000
+iter = 300
 
 #MCMC burn in period 
-burn = 2500
+burn = 10
 
 #MCMC thinning factor
 thin = 1
@@ -253,7 +253,7 @@ thin = 1
 run = False
 
 #resume from previous run
-resume = False
+resume = True
 
 #verbose
 verbose = True
@@ -265,7 +265,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 4000
+n_live_points = 400
 
 #maximum no. of iterations (0=inf)
 max_iter = 0

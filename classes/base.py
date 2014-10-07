@@ -40,7 +40,7 @@ class base(object):
         #loads emission/transmission model pointer into fitting class
         if INPUT == None: 
             self.model = None
-            self.__ID__ = None
+            self.__MODEL_ID__ = None
         else:
             if INPUT.__ID__ == 'transmission':
                 model = INPUT.cpath_integral
