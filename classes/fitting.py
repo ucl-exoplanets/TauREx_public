@@ -67,7 +67,7 @@ class fitting(base):
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = data.ngas
-        self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
+#         self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         
         # self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
 
@@ -82,6 +82,7 @@ class fitting(base):
         self.PINIT       = self.profile.PARAMS
         self.Pindex      = self.profile.TPindex
         self.Pshape      = shape(self.PINIT)
+        self.n_params    = len(self.PINIT)
         
         #getting prior bounds for downhill algorithm
         self.bounds      = self.profile.bounds
@@ -214,31 +215,43 @@ class fitting(base):
         MCMCstats = MCMCout.stats()
         Xout_mean = zeros((self.ngas,self.nlayers))
         Xout_std  = zeros((self.ngas,self.nlayers))
+        
+        PFIT     = []
+        PFIT_std = []
+        for i in range(len(self.PINIT)):
+            PFIT.append(MCMCstats['PFIT_%i' % i]['mean'])
+            PFIT_std.append(MCMCstats['PFIT_%i' % i]['standard deviation'])
+            
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+        T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
+        X_std = PFIT_std[:self.Pindex[0]]
 
-        #needs to be rewritten to make assignment more dynamic for variable TP profiles.Ideas?
-        Tout_mean = MCMCstats['temp']['mean']
-        Tout_std  = MCMCstats['temp']['standard deviation']
+#         #needs to be rewritten to make assignment more dynamic for variable TP profiles.Ideas?
+#         Tout_mean = MCMCstats['temp']['mean']
+#         Tout_std  = MCMCstats['temp']['standard deviation']
+# 
+#         # print MCMCstats.keys()
+#         # if len(MCMCstats.keys())-1 < self.nlayers*self.ngas:
+#         #     Xout_mean[:] += MCMCstats['mixing_%i' % 0]['mean']
+#         #     Xout_std[:]  += MCMCstats['mixing_%i' % 0]['standard deviation']
+#         #     for i in range(len(MCMCstats.keys())-1):
+#         #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
+#         #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
+#         # else:
+#         #     for i in range(self.nlayers*self.ngas):
+#         #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
+#         #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
+# 
+#         for i in range(self.ngas):
+#             Xout_mean[i,:] = MCMCstats['mixing_%i' % i]['mean']
+#             Xout_std[i,:]  = MCMCstats['mixing_%i' % i]['standard deviation']
+# 
+#         # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
+#         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
-        # print MCMCstats.keys()
-        # if len(MCMCstats.keys())-1 < self.nlayers*self.ngas:
-        #     Xout_mean[:] += MCMCstats['mixing_%i' % 0]['mean']
-        #     Xout_std[:]  += MCMCstats['mixing_%i' % 0]['standard deviation']
-        #     for i in range(len(MCMCstats.keys())-1):
-        #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
-        #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
-        # else:
-        #     for i in range(self.nlayers*self.ngas):
-        #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
-        #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
-
-        for i in range(self.ngas):
-            Xout_mean[i,:] = MCMCstats['mixing_%i' % i]['mean']
-            Xout_std[i,:]  = MCMCstats['mixing_%i' % i]['standard deviation']
-
-        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
-        # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
-
-        return Tout_mean, Tout_std, Xout_mean, Xout_std
+#         return Tout_mean, Tout_std, Xout_mean, Xout_std
+        return T, T_std, X, X_std
 
 
     # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
@@ -261,26 +274,39 @@ class fitting(base):
         priors = empty(size(PINIT),dtype=object)
         #setting up main thread
         if self.MPIrank == 0: 
-            priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
-            for i in range(len(PINIT)-1):
-                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+            
+            for i in range(len(PINIT)):
+                    priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][0],value=PINIT[i])  # uniform prior
+            
+#             for i in range(PINIT[self.Pindex[0]:self.Pindex[1]]):
+#                 priors[] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+#             for i in range(len(PINIT)-1):
+#                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+                    
         #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
         else:
-            T_range = (self.T_up-self.T_low) / 5.0 #range of temperatures over which to perturbe starting position
-            X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
-   
-            T_rand = random.uniform(low=PINIT[0]-T_range,high=PINIT[0]+T_range) #random temperature start
-            if T_rand > self.T_low and T_rand < self.T_up: #check if within prior boundaries
-                priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=T_rand) #uniform temperature prior 
-            else:
-                priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
-                
-            for i in range(len(PINIT)-1):
-                X_rand = random.uniform(PINIT[i+1]-X_range,PINIT[i+1]+X_range) #random mixing ratio start
-                if X_rand > self.X_low and X_rand < self.X_up: #check if within prior boundaries
-                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=X_rand)  # uniform mixing ratio prior
-                else:
-                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+            for i in range(len(PINIT)):
+                P_range = (self.bounds[i][1] - self.bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
+                P_rand  = random.uniform(low=PINIT[i]-P_range,high=PINIT[i]+P_range) #random parameter start
+                priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][0],value=P_rand)  # uniform prior
+            
+#             T_range = (self.T_up-self.T_low) / 5.0 #range of temperatures over which to perturb starting position
+#             X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
+#    
+#             T_rand = random.uniform(low=PINIT[0]-T_range,high=PINIT[0]+T_range) #random temperature start
+#             if T_rand > self.T_low and T_rand < self.T_up: #check if within prior boundaries
+#                 priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=T_rand) #uniform temperature prior 
+#             else:
+#                 priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+#                 
+#             for i in range(len(PINIT)-1):
+#                 X_rand = random.uniform(PINIT[i+1]-X_range,PINIT[i+1]+X_range) #random mixing ratio start
+#                 if X_rand > self.X_low and X_rand < self.X_up: #check if within prior boundaries
+#                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=X_rand)  # uniform mixing ratio prior
+#                 else:
+#                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+
+
 
         #setting up data error prior if specified
         if self.params.mcmc_update_std:
@@ -360,37 +386,50 @@ class fitting(base):
 
         NESTstats = NESTout.get_stats()
 
-        Xout_mean = zeros((self.ngas,self.nlayers))
-        Xout_std  = zeros((self.ngas,self.nlayers))
+#         Xout_mean = zeros((self.ngas,self.nlayers))
+#         Xout_std  = zeros((self.ngas,self.nlayers))
+# 
+#         # print NESTstats['modes'][0]['maximum a posterior']
+#         Tout_mean = NESTstats['modes'][0]['maximum a posterior'][0]
+#         Tout_std  = NESTstats['modes'][0]['sigma'][0]
+# 
+#         # for i in range(1,len(NESTstats['modes'][0]['maximum a posterior'])):
+#         #     Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+#         #     Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+#         #
+#         # if len(NESTstats['modes'][0]['maximum a posterior'])-1 < self.nlayers*self.ngas:
+#         #     Xout_mean[:] += NESTstats['modes'][0]['maximum a posterior'][1]
+#         #     Xout_std[:]  += NESTstats['modes'][0]['sigma'][1]
+#         #     for i in range(len(NESTstats['modes'][0]['maximum a posterior'])-1):
+#         #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+#         #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+#         # else:
+#         #     for i in range(self.nlayers*self.ngas):
+#         #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+#         #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+# 
+#         for i in range(self.ngas):
+#             Xout_mean[i,:] = NESTstats['modes'][0]['maximum a posterior'][i+1]
+#             Xout_std[i,:]  = NESTstats['modes'][0]['sigma'][i+1]
 
-        # print NESTstats['modes'][0]['maximum a posterior']
-        Tout_mean = NESTstats['modes'][0]['maximum a posterior'][0]
-        Tout_std  = NESTstats['modes'][0]['sigma'][0]
-
-        # for i in range(1,len(NESTstats['modes'][0]['maximum a posterior'])):
-        #     Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-        #     Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-        #
-        # if len(NESTstats['modes'][0]['maximum a posterior'])-1 < self.nlayers*self.ngas:
-        #     Xout_mean[:] += NESTstats['modes'][0]['maximum a posterior'][1]
-        #     Xout_std[:]  += NESTstats['modes'][0]['sigma'][1]
-        #     for i in range(len(NESTstats['modes'][0]['maximum a posterior'])-1):
-        #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-        #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-        # else:
-        #     for i in range(self.nlayers*self.ngas):
-        #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-        #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-
-        for i in range(self.ngas):
-            Xout_mean[i,:] = NESTstats['modes'][0]['maximum a posterior'][i+1]
-            Xout_std[i,:]  = NESTstats['modes'][0]['sigma'][i+1]
-
+        PFIT     = []
+        PFIT_std = []
+        for i in range(self.n_params):
+            PFIT.append(NESTstats['modes'][0]['maximum a posterior'][i])
+            PFIT_std.append(NESTstats['modes'][0]['sigma'][i])
+            
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+        T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
+        X_std = PFIT_std[:self.Pindex[0]]
 
         # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
-        return Tout_mean, Tout_std, Xout_mean, Xout_std
+#         return Tout_mean, Tout_std, Xout_mean, Xout_std
+        return T, T_std, X, X_std
+
+
 
     
     def multinest_fit(self,resume=None):
@@ -421,13 +460,13 @@ class fitting(base):
             #prior distributions called by multinest
             #implements a uniform prior
 
-            #converting temperatures from normalised grid to uniform prior
-            cube[0] = (cube[0]* (self.T_up-self.T_low))+self.T_low
+#             #converting temperatures from normalised grid to uniform prior
+#             cube[0] = (cube[0]* (self.T_up-self.T_low))+self.T_low
     #         print cube[0]
 
             #converting mixing ratios from normalised grid to uniform prior
-            for i in range(1,self.n_params):
-                cube[i] = (cube[i] * (self.X_up-self.X_low)) + self.X_low
+            for i in range(self.n_params):
+                cube[i] = (cube[i] * (self.bounds[i][1]-self.bounds[i][0])) + self.bounds[i][0]
             # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
         
 
