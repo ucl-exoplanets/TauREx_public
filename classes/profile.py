@@ -64,7 +64,7 @@ class profile(base):
         self.num_T_params = 3 #number of free temperature parameters
         
         self.setup_prior_bounds()
-        self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)
+        self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)    
         
         T,P,X = self.TP_profile(PARAMS=self.PARAMS)
         

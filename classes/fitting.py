@@ -130,8 +130,9 @@ class fitting(base):
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
 
+        
         T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
-        rho = self.profile.get_rho(T=T,P=P)        #calculating densities
+        rho = self.profile.get_rho(T=T,P=P)          #calculating densities
 
         #the temperature parameter should work out of the box but check for transmission again
         MODEL = self.model(rho=rho,X=X,temperature=T)
@@ -333,11 +334,16 @@ class fitting(base):
         @pymc.stochastic(observed=True, plot=False)
         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
             
-#             PFIT2 = [PFIT[i] for i in range(self.n_params)]
+#
+#             Pcontainer = np.hstack(PFIT)
+
+            #need to cast from numpy object array to float array. Slow but hstack is  slower. 
+            #ideas?
+            Pcontainer = np.zeros((self.n_params))
+            for i in range(self.n_params):
+                Pcontainer[i] = PFIT[i]
             
-#             print value
-            
-            chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
+            chi_t = self.chisq_trans(Pcontainer,DATA,DATASTD)
             llterms =   (-len(DATA)/2.0)*np.log(pi) -np.log(np.mean(DATASTD)) -0.5* chi_t
 #             llterms =  - 0.5* chi_t
             return llterms
