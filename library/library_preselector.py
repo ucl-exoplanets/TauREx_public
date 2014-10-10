@@ -4,10 +4,11 @@ import sklearn.decomposition as sk
 import glob,string,gzip,os
 import cPickle as pickle
 
-from classes.transmission import *
-from classes.emission import *
-from classes.profile import *
-from classes.data import *
+import transmission, emission,profile,data
+from transmission import *
+from emission import *
+from profile import *
+from data import *
 
 
 

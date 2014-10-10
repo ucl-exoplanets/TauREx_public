@@ -1,19 +1,17 @@
 #! /usr/bin/python
 
 #compilation script turning all classes and libraries into shared (.so) C# libraries. 
+#
+# To compile type: ./c_setup.py build_ext --inplace
 
-import glob,os
+import glob,os,shutil
 from distutils.core import setup
 from Cython.Build import cythonize
-
-
 
 
 classlist = glob.glob('classes/*.py')
 librarylist = glob.glob('library/*.py')
 
-print classlist
-exit()
 print 'Compiling code...'
 
 setup(
@@ -37,12 +35,52 @@ elif delpy == 'y':
 if delc:
     print 'deleting .c files'
     c_classlist = glob.glob('classes/*.c')
-    c_librarylist = glob.glob('classes/*.c')
-    os.remove(c_classlist+c_librarylist)
+    c_librarylist = glob.glob('library/*.c')
+    for file in c_classlist:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
+    for file in c_librarylist:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
     
 if delpy:
     print 'deleting .py files'
-    os.remove(classlist_librarylist)
+    for file in classlist:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
+        
+    for file in librarylist:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
+    
+    pyc_classlist = glob.glob('classes/*.pyc')
+    pyc_librarylist = glob.glob('library/*.pyc')
+
+    print 'deleting .pyc files'
+    for file in pyc_classlist:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
+    for file in pyc_librarylist:
+        try:
+            os.remove(file)
+        except OSError:
+            pass   
+        
+print 'removing build directory'
+try:
+    shutil.rmtree('./build')
+except OSError:
+    pass
     
 print 'done'
     

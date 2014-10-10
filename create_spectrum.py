@@ -38,18 +38,25 @@ except:
     multinest_import = False
 
 #loading classes
-from classes.parameters import *
-# from classes.emission import *
-from classes.transmission import *
-from classes.output import *
-from classes.profile import *
-from classes.data import *
+sys.path.append('./classes')
+sys.path.append('./library')
+
+import parameters,emission,transmission,output,fitting,profile,data,preselector
+from parameters import *
+from emission import *
+from transmission import *
+from output import *
+from fitting import *
+from profile import *
+from data import *
+from preselector import *
 
 #loading libraries
-# from library.library_emission import *
-from library.library_transmission import *
-from library.library_general import *
-from library.library_plotting import *
+import library_emission, library_transmission, library_general, library_plotting
+from library_emission import *
+from library_transmission import *
+from library_general import *
+from library_plotting import *
 
 
 parser = optparse.OptionParser()

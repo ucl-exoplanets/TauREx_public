@@ -27,7 +27,8 @@ import pylab as pl
 import gzip,os
 import cPickle as pickle
 from copy import deepcopy
-from library.library_preselector import *
+import library_preselector
+from library_preselector import *
 import scipy.stats.stats as st
 
 

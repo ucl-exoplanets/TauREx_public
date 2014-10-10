@@ -85,20 +85,25 @@ except:
 # MPI.Init()
 
 #loading classes
-from classes.parameters import *
-from classes.emission import *
-from classes.transmission import *
-from classes.output import *
-from classes.fitting import *
-from classes.profile import *
-from classes.data import *
-from classes.preselector import *
+sys.path.append('./classes')
+sys.path.append('./library')
+
+import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
+from parameters import *
+from emission import *
+from transmission import *
+from output import *
+from fitting import *
+from tp_profile import *
+from data import *
+from preselector import *
 
 #loading libraries
-from library.library_emission import *
-from library.library_transmission import *
-from library.library_general import *
-from library.library_plotting import *
+import library_emission, library_transmission, library_general, library_plotting
+from library_emission import *
+from library_transmission import *
+from library_general import *
+from library_plotting import *
 
 
 #loading parameter file parser
@@ -129,7 +134,7 @@ dataob = data(params)
 
 #initialising TP profile instance
 if params.verbose: print 'loading profile'
-profileob = profile(params, dataob)
+profileob = tp_profile(params, dataob)
 
 #initiating and running preselector instance
 if params.pre_run:
@@ -187,6 +192,9 @@ if params.nest_run and multinest_import:
 
 #initiating output instance with fitted data from fitting class
 if params.verbose: print 'loading output class'
+
+print output
+
 outputob = output(params, dataob, fitob) 
 #
 #plotting fits and data

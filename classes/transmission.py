@@ -24,8 +24,9 @@ from pylab import *
 import itertools
 import time
 import ctypes as C
-from library.library_general import *
-from library.library_transmission import *
+import library_general,library_transmission
+from library_general import *
+from library_transmission import *
 # from mpi4py import MPI
 
 class transmission(base):

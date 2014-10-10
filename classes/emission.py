@@ -19,8 +19,9 @@
 from base import base    
 import numpy as np
 import pylab as pl
-import library.library_emission as em
-from library.library_general import *
+import library_emission as em
+import library_general
+from library_general import *
 import time
 
 

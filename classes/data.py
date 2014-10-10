@@ -24,11 +24,12 @@ from numpy import *
 from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
-import library.library_general as libgen
-import library.library_emission as libem
+import library_general as libgen
+import library_emission as libem
 
 #loading taurex license manager. Only loaded in data class
-from classes.license import *
+import license
+from license import *
 
 
 

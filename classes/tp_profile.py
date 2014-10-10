@@ -23,7 +23,7 @@ import pylab as pl
 
 
 
-class profile(base):
+class tp_profile(base):
 
 
     def __init__(self,params,data):

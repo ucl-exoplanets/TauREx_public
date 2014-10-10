@@ -22,10 +22,11 @@ from base import base
 import numpy as np
 import os
 import pylab as py
-from classes.emission import *
-from classes.transmission import *
-from classes.profile import *
-from library.library_plotting import *
+import emission, transmission, tp_profile, library_plotting
+from emission import *
+from transmission import *
+from tp_profile import *
+from library_plotting import *
 
 
 class output(base):
@@ -34,7 +35,7 @@ class output(base):
         self.params   = params
         self.data     = data
         self.fit      = fit
-        self.profile  = profile(params,data) #loading profile class
+        self.profile  = tp_profile(params,data) #loading profile class
         
         #inheriting emission/transmission model from fitting object if loaded
         # 'fit' can either be the fitting instance or the emission/transmission instances
