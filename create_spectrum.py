@@ -112,8 +112,10 @@ OUT[:,0] = dataob.specgrid
 OUT[:,1] = MODEL
 # OUT[:,2] += 5e-5 #adding errorbars. can be commented
 
-
-outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class
+if params.gen_type == 'emission':
+    outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class
+if params.gen_type == 'transmission':
+    outputob = output(params, dataob,transob) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
 outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only

@@ -1,6 +1,6 @@
 [General]
 #verbose or not 
-verbose = False
+verbose = True
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
@@ -19,7 +19,7 @@ wavemax = 20.0
 spec_res = 1000
 
 #specturm type (emission/transmission), for create_spectrum.py 
-type = emission 
+type = transmission 
 
 [Input]
 #Observed spectrum to be fitted

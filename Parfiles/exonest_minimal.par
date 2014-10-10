@@ -19,7 +19,7 @@ wavemax = 20.0
 spec_res = 200
 
 #specturm type (emission/transmission), for create_spectrum.py
-type = emission 
+type = transmission 
 
 
 [Input]
