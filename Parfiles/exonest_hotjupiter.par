@@ -18,6 +18,9 @@ wavemax = 20.0
 #resolution of internal model runs (R)
 spec_res = 500
 
+#specturm type (emission/transmission), for create_spectrum.py 
+type = emission 
+
 
 [Input]
 #Observed spectrum to be fitted

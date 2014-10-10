@@ -129,7 +129,8 @@ class fitting(base):
     # @profile #line-by-line profiling decorator
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
-
+        
+#         print PFIT
         
         T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
         rho = self.profile.get_rho(T=T,P=P)          #calculating densities
@@ -142,17 +143,21 @@ class fitting(base):
         MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
         
         #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
-
+#         print PFIT
+#         print T
+#         print P
 #         ion()
 #         clf()
 #         figure(100)
-#         plot(MODEL)
+#         plot(T,np.log(P))
 #         draw()
-#         clf()
-#         figure(101)
-#         plot(DATA,'g')
-#         plot(MODEL_binned)
-#         draw()
+
+        ion()
+        clf()
+        figure(101)
+        plot(DATA,'g')
+        plot(MODEL_binned)
+        draw()
 
         # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
 
@@ -194,9 +199,10 @@ class fitting(base):
         
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
-
-        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
-
+        
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Powell',bounds=(self.bounds))
+        
+        print PFIT
 
         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
         self.DOWNHILL = True

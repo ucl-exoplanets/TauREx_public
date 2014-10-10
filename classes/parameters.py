@@ -35,6 +35,7 @@ class parameters(base):
         self.gen_wavemin           = parser.getfloat('General','wavemin')
         self.gen_wavemax           = parser.getfloat('General','wavemax')
         self.gen_spec_res          = parser.getfloat('General','spec_res')
+        self.gen_type              = parser.get('General','type')
         
         self.in_spectrum_file      = parser.get('Input','spectrum_file')
         self.in_use_ATMfile        = parser.getboolean('Input','use_ATMfile')

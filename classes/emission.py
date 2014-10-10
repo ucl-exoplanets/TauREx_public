@@ -122,9 +122,9 @@ class emission(base):
         I_total += BB_surf*(exptau)
 #         
 #         print '-------------'
-        pl.figure(100)
-        pl.plot(self.specgrid,I_total)
-        pl.plot(self.specgrid,BB_surf,'r')
+#         pl.figure(100)
+#         pl.plot(self.specgrid,I_total)
+#         pl.plot(self.specgrid,BB_surf,'r')
         
 
         
@@ -199,8 +199,8 @@ class emission(base):
 
         
         
-        ble_surf = (em.black_body(self.specgrid,temperature[0]) /BB_star) *(self.Rp/self.Rs)**2
-        ble_top = (em.black_body(self.specgrid,temperature[-1])/BB_star) *(self.Rp/self.Rs)**2
+#         ble_surf = (em.black_body(self.specgrid,temperature[0]) /BB_star) *(self.Rp/self.Rs)**2
+#         ble_top = (em.black_body(self.specgrid,temperature[-1])/BB_star) *(self.Rp/self.Rs)**2
         
 #         pl.ioff()
 #         pl.figure(102)
@@ -216,7 +216,5 @@ class emission(base):
 # #         pl.plot(dtau[:,0])
 # #         pl.title('dtau')
 #         pl.show()
-        
-        
-        
-        return I_total
+
+        return FpFs

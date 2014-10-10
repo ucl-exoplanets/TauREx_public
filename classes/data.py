@@ -91,7 +91,7 @@ class data(base):
 #             self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
             
         #reading in Phoenix stellar model library (if emission is calculated only)
-        if self.params.fit_emission:
+        if self.params.gen_type == 'emission' or self.params.fit_emission:
             self.F_star = self.get_star_SED()
 
 

@@ -63,11 +63,56 @@ class profile(base):
             
         self.num_T_params = 3 #number of free temperature parameters
         
-        self.setup_prior_bounds()
-        self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)    
+#         pl.figure(104)
+#         pl.plot(self.T,np.log(self.P))
+#         pl.show()
+#         exit()
         
-        T,P,X = self.TP_profile(PARAMS=self.PARAMS)
         
+        if self.params.fit_emission or self.params.fit_transmission:
+            self.setup_prior_bounds()
+            
+        if self.params.fit_emission:
+            self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)    
+            self.PARAMS[4] = 1200.0
+            
+        if self.params.fit_transmission:
+            self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(transmission=True)
+
+        self.PARAMS[0] = 1e-5
+        self.PARAMS[1] = 1e-5
+        self.PARAMS[2] = 1400
+        self.PARAMS[3] = 1400
+        self.PARAMS[4] = 1200
+
+
+#         self.bounds = [(0.0, 0.01), (0.0, 0.01), (1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0), (50000.0, 500000.0), (50.0, 150.0)]
+#         self.Tpriors = [(1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0)]
+#         self.Ppriors = [(50000.0, 500000.0), (50.0, 150.0)]
+#         self.Xpriors = [(0.0, 0.01), (0.0, 0.01)]
+#         print self.bounds
+#         
+#          
+#         self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)  
+#         print self.PARAMS
+#         PARAMS2 = self.PARAMS
+#         PARAMS2[2] = 1400
+#         PARAMS2[3] = 1400
+#         PARAMS2[4] = 1200
+# #         
+# #         print PARAMS2
+# #         
+#         self.T,self.P,self.X = self.TP_profile(PARAMS=PARAMS2)
+#         self.rho = self.get_rho(T=self.T,P=self.P)
+#             
+#         pl.figure(104)
+#         pl.plot(T,np.log(P))
+#         
+#         rho = self.get_rho(T=T, P=P)
+#         pl.figure(105)
+#         pl.plot(rho)
+#         pl.show()
+#         exit()
 #         pl.figure(200)
 #         pl.plot(T,P)
 #         pl.yscale('log')
@@ -110,7 +155,9 @@ class profile(base):
         
         self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
         self.Tpriors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
-        self.Ppriors = [[1e4,1e5],[10.0,100.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
+        
+        #BE REALLY CAREFUL WITH THIS PARAMETER. THIS NEEDS SANITY CHECKING 
+        self.Ppriors = [[5e4,5e5],[50.0,150.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
         
         #setting up bounds for downhill algorithm
         #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
@@ -123,7 +170,7 @@ class profile(base):
             for i in range(self.num_T_params):
                 bounds.append((self.Tpriors[0],self.Tpriors[1]))
             for i in range(self.num_T_params-1):
-                bounds.append((self.Ppriors[0],self.Ppriors[1]))
+                bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
             
         self.bounds = bounds
         
@@ -154,10 +201,10 @@ class profile(base):
         num_T_params = self.num_T_params
         
         ctemp = 0; cpres = 0
-        if self.transmission:
+        if transmission:
             ctemp +=1
             PARAMS.append(self.params.planet_temp)
-        if self.emission:
+        if emission:
             for i in range(num_T_params):
                 PARAMS.append(T_mean)
                 ctemp += 1
@@ -207,11 +254,13 @@ class profile(base):
             return T, P, X
 
         if COUNT[1] > 1:
-            P_params =  [self.params.tp_max_pres] + P_params + [np.min(P)]
-            T_params = T_params + [T_params[-1]]
+            P_params =  [self.params.tp_max_pres] + list(P_params) + [np.min(P)]
+            T_params = list(T_params) + [T_params[-1]]
+#             print P_params
+#             print T_params
             #creating linear T-P profile
             T = np.interp(np.log(P[::-1]), np.log(P_params[::-1]), T_params[::-1])
-            return T[::-1], P
+            return T[::-1], P, X
         
         if COUNT[1] == 1:
 #             T = np.zeros_like(P)

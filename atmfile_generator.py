@@ -31,11 +31,11 @@ N_LAYERS = 80 #number of atmospheric layers
 N_SCALE  = 20.0   #number of scale heights 
 MAX_P    = 1e6 #maximum pressure (Pa)
 
-MOL_NUM  = 3   #number of molecules 
+MOL_NUM  = 2   #number of molecules 
 
 smooth_window = 5 #smoothing window size as percent of total data
 
-T_surf = 1800.0  #surface temperature (K)
+T_surf = 1400.0  #surface temperature (K)
 mu     = 2.3   #mean molecular weight (atomic units)
 g      = 7.9  #surface gravity (m/s^2)
         
@@ -56,6 +56,7 @@ PTA_arr[:,2] = np.linspace(0,max_z,num=N_LAYERS)
 PTA_arr[:,0] = MAX_P * np.exp(-PTA_arr[:,2]/scaleheight)
 PTA_arr[:,1] = T_surf
 
+MIN_P = PTA_arr[-1,0]
 print 'min_p ', PTA_arr[-1,0]
 
 print 'scaleheight ', scaleheight
@@ -66,9 +67,9 @@ print 'max_z ',max_z, 'end z ', PTA_arr[-1,2]
 #setting TP nodes
 # Znodes = [0.0, 4.0e6,5e6,max_z]
 # Pnodes = [MAX_P,1000.0, 0.0]
-Pnodes = [MAX_P,1e5, 100.0,0.0]
+Pnodes = [MAX_P,1e5, 100.0,MIN_P]
 # Tnodes = [T_surf,1200.0,1200.0]
-Tnodes = [T_surf,T_surf,1400.0,1400.0]
+Tnodes = [T_surf,T_surf,1200.0,1200.0]
 # Tnodes = [T_surf,T_surf,T_surf, T_surf]
 
 #creating linear T-P profile
@@ -76,7 +77,7 @@ int_func1 = interpolate.interp1d(Pnodes[::-1],Tnodes[::-1],kind='quadratic')
 TP = int_func1((PTA_arr[::-1])[:,0])
 
 
-TP = np.interp((PTA_arr[::-1])[:,0], Pnodes[::-1], Tnodes[::-1])
+TP = np.interp((np.log(PTA_arr[::-1])[:,0]), np.log(Pnodes[::-1]), Tnodes[::-1])
 
 # print TP
 
@@ -94,7 +95,8 @@ PTA_arr[:,1] = TP[::-1]
 
 #adding mixing ratios for molecules 
 # X = [6.0e-5,1.0e-5,5.0e-6]
-X = [1.0e-7,1.0e-7,1.0e-7]
+# X = [1.0e-7,1.0e-7,1.0e-7]
+X = [1.0e-5,1.0e-5]
 
 for i in range(len(X)):
     PTA_arr[:,2+i+1] = X[i]

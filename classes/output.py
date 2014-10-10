@@ -54,10 +54,14 @@ class output(base):
                 
         
         #determining which fits were performed
-        if fit is not None:
+        if fit.__ID__ == 'fitting':
             self.MCMC = fit.MCMC
             self.NEST = fit.NEST
             self.DOWN = fit.DOWNHILL
+        else:
+            self.MCMC = False
+            self.NEST = False
+            self.DOWN = False
 
         #calculating final absorption/emission spectrum (currently only absorption)
         if self.MCMC:
@@ -122,7 +126,7 @@ class output(base):
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$') 
         elif self.__MODEL_ID__ == 'emission':
-            py.ylabel('$F_p/F_\ast$') 
+            py.ylabel('$F_p/F_s$') 
         
         if save2pdf: fig.savefig(self.params.out_path+'spectrum+data.pdf')
 
@@ -144,7 +148,7 @@ class output(base):
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$') 
         elif self.__MODEL_ID__ == 'emission':
-            py.ylabel('$F_p/F_\ast$') 
+            py.ylabel('$F_p/F_s$') 
         
         if save2pdf: fig.savefig(self.params.out_path+'model_fit.pdf')
         
@@ -158,7 +162,7 @@ class output(base):
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$') 
         elif self.__MODEL_ID__ == 'emission':
-            py.ylabel('$F_p/F_\ast$') 
+            py.ylabel('$F_p/F_s$') 
         
         if save2pdf: fig.savefig(self.params.out_path+'spectrum.pdf')
 
