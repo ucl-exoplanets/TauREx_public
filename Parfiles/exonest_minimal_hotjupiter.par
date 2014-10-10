@@ -23,7 +23,7 @@ type = emission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/gj3470b_test.txt
+spectrum_file = Input/observations/gj3470b_test.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False

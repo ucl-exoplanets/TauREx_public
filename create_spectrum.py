@@ -41,13 +41,13 @@ except:
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,output,fitting,profile,data,preselector
+import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
 from parameters import *
 from emission import *
 from transmission import *
 from output import *
 from fitting import *
-from profile import *
+from tp_profile import *
 from data import *
 from preselector import *
 
@@ -66,7 +66,7 @@ parser.add_option('-p', '--parfile',
 )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
-                  default=False,
+                  default=True,
                   action="store_true",
 )
 options, remainder = parser.parse_args()
@@ -87,7 +87,7 @@ dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #initialising TP profile object
 if params.verbose: print 'loading profile'
-profileob = profile(params, dataob)
+profileob = tp_profile(params, dataob)
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
