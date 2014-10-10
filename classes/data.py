@@ -18,19 +18,21 @@
 
 
 #loading libraries     
-import numpy, pylab
+import numpy, pylab, os, glob
+from base import base
 from numpy import *
 from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
 import library.library_general as libgen
+import library.library_emission as libem
 
 #loading taurex license manager. Only loaded in data class
 from classes.license import *
 
 
 
-class data(object):
+class data(base):
 
 #initialisation
     def __init__(self,params):
@@ -73,15 +75,12 @@ class data(object):
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
         else:
+            #if no pta file provided, pta will be calculated by the profile class
             self.nlayers = self.params.tp_atm_levels
             self.ngas    = size(self.params.planet_molec)
-            self.pta     = self.setup_pta_grid()
-            self.X       = self.set_mixing_ratios()
+#             self.pta     = self.setup_pta_grid() #if not read from file, pta will be calculated by profile class
+            self.X       = self.set_mixing_ratios() #mixing ratios are read from parameter file or preselector class
 
-
-        #calculating densities
-        self.rho = (self.pta[:,0])/(self.KBOLTZ*self.pta[:,1])
-        self.rho_tot = sum(self.rho)
 
         #setting up dictionary with atmosphere parameters
         self.atmosphere = self.init_atmosphere()
@@ -89,14 +88,6 @@ class data(object):
         #reading in absorption coefficient data 
 #         self.sigma_array = self.readABSfiles()
         self.sigma_dict = self.build_sigma_dic(tempstep=params.in_tempres)
-        
-#         figure(1)
-#         for t in self.sigma_dict.keys():
-#             print t
-#             plot(self.sigma_dict[t])
-#         show()
-#         exit()
-        
 
         #reading in other files if specified in parameter file
         if params.in_include_rad:
@@ -106,26 +97,11 @@ class data(object):
 #         if params.in_include_cld:
 #             self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
             
+        #reading in Phoenix stellar model library (if emission is calculated only)
+        if self.params.gen_type == 'emission' or self.params.fit_emission:
+            self.F_star = self.get_star_SED()
 
 
-#basic class methods and overloading
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
-        
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name] 
-
-    def reset(self,params):
-    #allows to reset the original instance to reflect changes in the data instance
-    #this avoids an initialisation of a separate instance.
-        self.__init__(params)
 
 #class functions    
     def init_atmosphere(self, mu=0.0, def_mu=2.3):
@@ -147,7 +123,8 @@ class data(object):
             surf_g = self.params.planet_grav
         if mmw is None:
             mmw = self.params.planet_mu
-
+             
+ 
         return (self.KBOLTZ*T_aver)/(mmw*surf_g)
 
     def get_specgrid(self,R=5000,lambda_min=0.1,lambda_max=20.0):
@@ -215,24 +192,6 @@ class data(object):
         
         
 
-    def setup_pta_grid(self):
-    #generating atmospheric Pressure, Temperature, Altitude (PTA)
-    #grid if not read in from ATM file
-        MAX_P    = self.params.tp_max_pres
-        N_SCALE  = self.params.tp_num_scale
-        N_LAYERS = self.params.tp_atm_levels
-
-        max_z    = N_SCALE * self.scaleheight
-#         dz       = max_z / N_LAYERS
-
-        #generatinng altitude-pressure array
-        PTA_arr = zeros((N_LAYERS,3))
-        PTA_arr[:,2] = linspace(0,max_z,num=N_LAYERS)
-        PTA_arr[:,0] = MAX_P * exp(-PTA_arr[:,2]/self.scaleheight)
-        PTA_arr[:,1] = self.params.planet_temp
-
-        return PTA_arr
-
     def add_molecule(self,NAME, WT, RAD, RIDX,FRAC):
     #adding a molecule to the atmosphere dictionary
         self.atmosphere['mol'][NAME] = {}
@@ -269,6 +228,42 @@ class data(object):
         self.sigma_dict[int(temperature)] = sigma_array
         self.nspecgrid = len(self.specgrid)
 
+
+
+    def get_star_SED(self):
+    #reading in phoenix spectra from folder specified in parameter file 
+        
+        index = loadtxt(os.path.join(self.params.in_star_path, "SPTyp_KH.dat"), dtype='string')
+        tmpind = []
+        for i in range(len(index)):
+            tmpind.append(float(index[i][1]))
+        tmpind = sort(tmpind)
+        
+        # reading in stellar file index
+        fileindex = glob.glob(os.path.join(self.params.in_star_path, "*.fmt"))
+        
+        if self.params.star_temp > max(tmpind) or self.params.star_temp < min(tmpind):
+            if self.params.verbose:
+                print 'WARNING: Stellar temp. in .par file exceeds range ', min(tmpind), '-', max(tmpind), 'K'
+                print 'Using black-body approximation instead'
+            self.star_blackbody = True
+            SED = libem.black_body(self.specgrid,self.params.star_temp)
+
+        else:
+            # finding closest match to stellar temperature in parameter file
+            [tmpselect, idx] = libgen.find_nearest(tmpind, self.params.star_temp)
+            self.star_blackbody = False
+            
+            for file in fileindex: #this search is explicit due to compatibility issues with Mac and Linux sorting
+                if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
+                    self.SED_filename = file
+            
+            #reading in correct file and interpolating it onto self.specgrid
+            SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
+            SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
+    
+        return SED
+    
 
 
     def build_sigma_dic(self,tempstep=50):
@@ -365,7 +360,7 @@ class data(object):
             OUT = loadtxt(self.params.in_atm_file)
         except ValueError:
             OUT = loadtxt(self.params.in_atm_file,comments='*',skiprows=10)
-        OUT[:,2] *= 1000. #converting from km to m
+#         OUT[:,2] *= 1000. #converting from km to m
         
         OUT = OUT[argsort(OUT[:,2]),:]
         

@@ -18,7 +18,8 @@ wavemax = 20.0
 #resolution of internal model runs (R)
 spec_res = 1000
 
-
+#specturm type (emission/transmission), for create_spectrum.py 
+type = emission 
 
 [Input]
 #Observed spectrum to be fitted
@@ -40,6 +41,9 @@ __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
 tempres = 50
+
+#Path to Phoenix/Atlas stellar models (required by emission code)
+star_path = Input/Star_spectra 
 
 #include varying stellar radii file. True/False 
 include_rad = False 

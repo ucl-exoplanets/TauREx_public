@@ -83,51 +83,21 @@ if params.verbose: print 'loading profile'
 profileob = profile(params, dataob)
 
 #initialising transmission radiative transfer code object
-if params.verbose: print 'loading transmission'
-transob = transmission(params, dataob,profileob)
+if params.gen_type == 'transmission':
+    if params.verbose: print 'loading transmission'
+    transob = transmission(params, dataob,profileob)
 
-
-########
-###example of how to manually reading in ABS file and computing transmission spectrum
-# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/Input/crosssections/',
-#                    filelist=['1H2-16O_300-29995_600K_1.000000.sigma.abs',
-#                              '12C-1H4_300-11999_600K_1.000000.sigma.abs'],interpolate=True)
-# transob.reset(dataob) #resets transob to reflect changes in dataob
-########
-
-
-
-# # #manually setting mixing ratio and T-P profile
-# X_in   = zeros((5,profileob.nlayers))
-# # 
-#gj3470 composition
-# X_in[0,:]  += 5.0e-3
-# X_in[1,:]  += 4.0e-3
-# X_in[2,:]  += 2e-3
-# X_in[3,:]  += 7e-4 #2e-7
-# X_in[4,:]  += 2e-4
-
-#carbon poor 1solar c/o=0.5
-# X_in[0,:]  += 4.0e-4
-# X_in[1,:]  += 2.0e-8
-# X_in[2,:]  += 4.0e-4
-# X_in[3,:]  += 2.0e-7 #2e-7
-# X_in[4,:]  += 1.0e-5
-# 
-# #carbon poor 10x solar c/o=0.5
-# X_in[0,:]  += 4.0e-4
-# X_in[1,:]  += 1.0e-7
-# X_in[2,:]  += 4.0e-4
-# X_in[3,:]  += 7.0e-5 #2e-7
-# X_in[4,:]  += 1.0e-5
-
-
-# rho_in = profileob.get_rho(T=params.planet_temp)
-
-if params.trans_cpp:
-    MODEL = transob.cpath_integral()  # computing transmission
-else:
-    MODEL = transob.path_integral()  # computing transmission
+    if params.trans_cpp:
+        MODEL = transob.cpath_integral()  # computing transmission
+    else:
+        MODEL = transob.path_integral()  # computing transmission
+        
+#initialising transmission radiative transfer code object
+if params.gen_type == 'emission':
+    if params.verbose: print 'loading emission'
+    emisob = emission(params, dataob,profileob)
+    
+    MODEL = emisob.path_integral()  # computing transmission        
     
 # # 
 OUT = np.zeros((len(dataob.specgrid),2))
@@ -136,7 +106,7 @@ OUT[:,1] = MODEL
 # OUT[:,2] += 5e-5 #adding errorbars. can be commented
 
 
-outputob = output(params, dataob) #initiating output object with fitted data from fitting class
+outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
 outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only

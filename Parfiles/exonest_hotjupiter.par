@@ -16,12 +16,15 @@ wavemin = 0.5
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 500
+spec_res = 1000
+
+#specturm type (emission/transmission), for create_spectrum.py 
+type = transmission 
 
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/hotjupiter_r100_5e-5.dat
+spectrum_file = Input/observations/hotjupiter_r300_5e-5.dat
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -39,6 +42,9 @@ __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
 tempres = 1.0
+
+#Path to Phoenix/Atlas stellar models (required by emission code)
+star_path = Input/Star_spectra 
 
 #include varying stellar radii file. True/False 
 include_rad = False 
@@ -234,10 +240,10 @@ update_std = True
 
 
 #MCMC number of total iterations
-iter = 25000
+iter = 300
 
 #MCMC burn in period 
-burn = 2500
+burn = 10
 
 #MCMC thinning factor
 thin = 1
@@ -250,7 +256,7 @@ thin = 1
 run = False
 
 #resume from previous run
-resume = False
+resume = True
 
 #verbose
 verbose = True
@@ -262,7 +268,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 4000
+n_live_points = 400
 
 #maximum no. of iterations (0=inf)
 max_iter = 0

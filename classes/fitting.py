@@ -19,6 +19,7 @@
 ################################################
 
 #loading libraries     
+from base import base
 import numpy, pylab,os,sys,math,pymc,warnings,threading, subprocess,gzip,pickle,shutil
 from pylab import *
 from numpy import *
@@ -43,20 +44,30 @@ except ImportError:
 
 
 
-class fitting(object):
-    def __init__(self,params,data,profile,transmod):
+class fitting(base):
+    def __init__(self,params,data,profile,rad_model=None):
         
+        self.__ID__      = 'fitting' 
+        
+        #MPI support       
         self.MPIrank     = MPI.COMM_WORLD.Get_rank()
         self.MPIsize     = MPI.COMM_WORLD.Get_size()
         
+        #loading transmission/emission model
+        self.set_model(rad_model)
+        
+        #loading profile object 
+        self.profile     = profile
+        
+        #loading data and parameter objects
         self.params      = params
         self.dataob      = data
-        self.transmod    = transmod
-        self.profileob   = profile
+        
+        #loading data and parameters
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = data.ngas
-        self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
+#         self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         
         # self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
 
@@ -67,38 +78,44 @@ class fitting(object):
         self.T_low       = self.params.planet_temp - self.params.fit_T_low
 
 
-        #setting bounds for downhill algorithm
-        self.bounds = []
-        self.bounds.append((self.T_low,self.T_up))
-        for i in range(self.ngas):
-            self.bounds.append((self.X_low,self.X_up))
-            
-
-        #checking if number of free parameters for X = number of gas species
-#         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
-#             warnings.warn('Number of free X parameters does not equal number of gas species and atmospheric levels')
-#             self.params.fit_param_free_X = self.params.tp_atm_levels*self.params.tp_num_gas
+        #getting parameter grid with initial estimates
+        self.PINIT       = self.profile.PARAMS
+        self.Pindex      = self.profile.TPindex
+        self.Pshape      = shape(self.PINIT)
+        self.n_params    = len(self.PINIT)
         
-        #setting up initial parameter array
-        # self.PINIT = zeros((self.ngas+1,self.nlayers))
-        # self.PINIT[0,:] = self.profileob.T
-        # self.PINIT[1:,:] = self.profileob.X
-
-        self.PINIT     = zeros((self.ngas+1))
-        self.PINIT[0]  = self.params.planet_temp
-        # self.PINIT[1:] = float((self.params.fit_X_up-self.params.fit_X_low)/2 + self.params.fit_X_low)
-        self.PINIT[1:] = 1e-4
+        #getting prior bounds for downhill algorithm
+        self.bounds      = self.profile.bounds
+        
+        #setting bounds for downhill algorithm
+#         self.bounds = []
+#         self.bounds.append((self.T_low,self.T_up))
+#         for i in range(self.ngas):
+#             self.bounds.append((self.X_low,self.X_up))
+#             
+# 
+#         #checking if number of free parameters for X = number of gas species
+# #         if len(self.params.fit_param_free_X) != (self.params.tp_atm_levels*self.params.tp_num_gas):
+# #             warnings.warn('Number of free X parameters does not equal number of gas species and atmospheric levels')
+# #             self.params.fit_param_free_X = self.params.tp_atm_levels*self.params.tp_num_gas
+#         
+#         #setting up initial parameter array
+#         # self.PINIT = zeros((self.ngas+1,self.nlayers))
+#         # self.PINIT[0,:] = self.profileob.T
+#         # self.PINIT[1:,:] = self.profileob.X
+# 
+#         self.PINIT     = zeros((self.ngas+1))
+#         self.PINIT[0]  = self.params.planet_temp
+#         # self.PINIT[1:] = float((self.params.fit_X_up-self.params.fit_X_low)/2 + self.params.fit_X_low)
+#         self.PINIT[1:] = 1e-4
 
 
         # for i in range(1,self.ngas):
         #     self.PINIT[i] = self.profileob.X[i,0]
 
-        self.Pshape = shape(self.PINIT)
-        
-        # self.PINIT2 = self.PINIT.flatten(order='F')
-        # self.PINIT3 = self.PINIT2[(self.Pshape[0]-1):] #restricting temperature to one free parameter only
-        self.PINIT3 = self.PINIT
 
+        
+     
        
         #initialising output tags
         self.DOWNHILL = False
@@ -107,35 +124,35 @@ class fitting(object):
 
 
 
+
+
     # @profile #line-by-line profiling decorator
     def chisq_trans(self,PFIT,DATA,DATASTD):
         #chisquare minimisation bit
+        
+#         print PFIT
+        
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
+        rho = self.profile.get_rho(T=T,P=P)          #calculating densities
 
-        rho = self.profileob.get_rho(T=PFIT[0])
-#         print PFIT[0]
-#         X   = PFIT[1:].reshape(self.Pshape[0],self.Pshape[1]-1)
-
-        X   = zeros((self.ngas,self.nlayers))
-        for i in range(self.ngas):
-            X[i,:] += PFIT[i+1]
-
-
-        MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=PFIT[0])
+        #the temperature parameter should work out of the box but check for transmission again
+        MODEL = self.model(rho=rho,X=X,temperature=T)
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
-    
         #binning internal model 
         MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
         
         #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
-
-        
-
+#         print PFIT
+#         print T
+#         print P
 #         ion()
 #         clf()
 #         figure(100)
-#         plot(MODEL)
+#         plot(T,np.log(P))
 #         draw()
+
+#         ion()
 #         clf()
 #         figure(101)
 #         plot(DATA,'g')
@@ -153,35 +170,39 @@ class fitting(object):
     # @profile #line-by-line profiling decorator
     def collate_downhill_results(self,PFIT):
         #function unpacking the downhill minimization results
-        Xout_mean = zeros((self.ngas,self.nlayers))
-        # Tout_mean = zeros((self.nlayers*self.ngas))
+        
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+#         Xout_mean = zeros((self.ngas,self.nlayers))
+#         # Tout_mean = zeros((self.nlayers*self.ngas))
+# 
+#         print PFIT
+#         Tout_mean= PFIT[0]
+# 
+#         if len(PFIT)-1 < self.nlayers*self.ngas:
+#             # Xout_mean[:] += PFIT[1:]
+#             for i in range(len(PFIT)-1):
+#                 Xout_mean[i,:] += PFIT[i+1]
+#         else:
+#             Xout_mean[:] = PFIT[1:]
 
-        print PFIT
-        Tout_mean= PFIT[0]
-
-        if len(PFIT)-1 < self.nlayers*self.ngas:
-            # Xout_mean[:] += PFIT[1:]
-            for i in range(len(PFIT)-1):
-                Xout_mean[i,:] += PFIT[i+1]
-        else:
-            Xout_mean[:] = PFIT[1:]
-
-        return Tout_mean,Xout_mean
-
+        return T,X 
+    
     # @profile #line-by-line profiling decorator
     def downhill_fit(self):
     # fits data using simplex downhill minimisation
 
-        PINIT = self.PINIT3  # initial temperatures and abundances
+        PINIT = self.PINIT  # initial temperatures and abundances
         
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
         
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
-
+        
         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
-
+        
+#         print PFIT
 
         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
         self.DOWNHILL = True
@@ -199,33 +220,52 @@ class fitting(object):
         #function unpacking the MCMC results
         
         MCMCstats = MCMCout.stats()
-        Xout_mean = zeros((self.ngas,self.nlayers))
-        Xout_std  = zeros((self.ngas,self.nlayers))
+#         Xout_mean = zeros((self.ngas,self.nlayers))
+#         Xout_std  = zeros((self.ngas,self.nlayers))
+        
+        PFIT     = []
+        PFIT_std = []
+        for i in range(len(self.PINIT)):
+            PFIT.append(MCMCstats['PFIT_%i' % i]['mean'])
+            PFIT_std.append(MCMCstats['PFIT_%i' % i]['standard deviation'])
+            
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+#         #fix for single temperature parameter for transmission
+#         if self.__MODEL_ID__ == 'transmission':
+#             Tout = np.zeros((1,self.nlayers))
+#             Tout += T
+#             T = Tout
+            
+        
+        T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
+        X_std = PFIT_std[:self.Pindex[0]]
 
-        #needs to be rewritten to make assignment more dynamic for variable TP profiles.Ideas?
-        Tout_mean = MCMCstats['temp']['mean']
-        Tout_std  = MCMCstats['temp']['standard deviation']
+#         #needs to be rewritten to make assignment more dynamic for variable TP profiles.Ideas?
+#         Tout_mean = MCMCstats['temp']['mean']
+#         Tout_std  = MCMCstats['temp']['standard deviation']
+# 
+#         # print MCMCstats.keys()
+#         # if len(MCMCstats.keys())-1 < self.nlayers*self.ngas:
+#         #     Xout_mean[:] += MCMCstats['mixing_%i' % 0]['mean']
+#         #     Xout_std[:]  += MCMCstats['mixing_%i' % 0]['standard deviation']
+#         #     for i in range(len(MCMCstats.keys())-1):
+#         #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
+#         #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
+#         # else:
+#         #     for i in range(self.nlayers*self.ngas):
+#         #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
+#         #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
+# 
+#         for i in range(self.ngas):
+#             Xout_mean[i,:] = MCMCstats['mixing_%i' % i]['mean']
+#             Xout_std[i,:]  = MCMCstats['mixing_%i' % i]['standard deviation']
+# 
+#         # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
+#         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
-        # print MCMCstats.keys()
-        # if len(MCMCstats.keys())-1 < self.nlayers*self.ngas:
-        #     Xout_mean[:] += MCMCstats['mixing_%i' % 0]['mean']
-        #     Xout_std[:]  += MCMCstats['mixing_%i' % 0]['standard deviation']
-        #     for i in range(len(MCMCstats.keys())-1):
-        #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
-        #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
-        # else:
-        #     for i in range(self.nlayers*self.ngas):
-        #         Xout_mean[i] = MCMCstats['mixing_%i' % i]['mean']
-        #         Xout_std[i]  = MCMCstats['mixing_%i' % i]['standard deviation']
-
-        for i in range(self.ngas):
-            Xout_mean[i,:] = MCMCstats['mixing_%i' % i]['mean']
-            Xout_std[i,:]  = MCMCstats['mixing_%i' % i]['standard deviation']
-
-        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
-        # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
-
-        return Tout_mean, Tout_std, Xout_mean, Xout_std
+#         return Tout_mean, Tout_std, Xout_mean, Xout_std
+        return np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)
 
 
     # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
@@ -236,7 +276,7 @@ class fitting(object):
         if self.DOWNHILL:
             PINIT = self.DOWNHILL_PFIT
         else:
-            PINIT = self.PINIT3
+            PINIT = self.PINIT
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
         
@@ -248,26 +288,41 @@ class fitting(object):
         priors = empty(size(PINIT),dtype=object)
         #setting up main thread
         if self.MPIrank == 0: 
-            priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
-            for i in range(len(PINIT)-1):
-                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+            
+            for i in range(self.n_params):
+                    priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][1],value=PINIT[i])  # uniform prior
+            
+#             for i in range(PINIT[self.Pindex[0]:self.Pindex[1]]):
+#                 priors[] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+#             for i in range(len(PINIT)-1):
+#                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+                    
         #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
         else:
-            T_range = (self.T_up-self.T_low) / 5.0 #range of temperatures over which to perturbe starting position
-            X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
-   
-            T_rand = random.uniform(low=PINIT[0]-T_range,high=PINIT[0]+T_range) #random temperature start
-            if T_rand > self.T_low and T_rand < self.T_up: #check if within prior boundaries
-                priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=T_rand) #uniform temperature prior 
-            else:
-                priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
-                
-            for i in range(len(PINIT)-1):
-                X_rand = random.uniform(PINIT[i+1]-X_range,PINIT[i+1]+X_range) #random mixing ratio start
-                if X_rand > self.X_low and X_rand < self.X_up: #check if within prior boundaries
-                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=X_rand)  # uniform mixing ratio prior
-                else:
-                    priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+            for i in range(self.n_params):
+                P_range = (self.bounds[i][1] - self.bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
+                P_mean  = np.mean(self.bounds[i])
+                P_rand  = random.uniform(low=P_mean-P_range,high=P_mean+P_range) #random parameter start
+                print self.bounds[i][0], self.bounds[i][1], P_mean, P_range, P_rand
+                priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][1],value=P_rand)  # uniform prior
+            
+#             T_range = (self.T_up-self.T_low) / 5.0 #range of temperatures over which to perturb starting position
+#             X_range = (self.X_up-self.X_low) / 5.0 #range of mixing ratios
+#    
+#             T_rand = random.uniform(low=PINIT[0]-T_range,high=PINIT[0]+T_range) #random temperature start
+#             if T_rand > self.T_low and T_rand < self.T_up: #check if within prior boundaries
+#                 priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=T_rand) #uniform temperature prior 
+#             else:
+#                 priors[0] = pymc.Uniform('temp',self.T_low,self.T_up,value=PINIT[0]) #uniform temperature prior
+#                 
+#             for i in range(len(PINIT)-1):
+#                 X_rand = random.uniform(PINIT[i+1]-X_range,PINIT[i+1]+X_range) #random mixing ratio start
+#                 if X_rand > self.X_low and X_rand < self.X_up: #check if within prior boundaries
+#                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=X_rand)  # uniform mixing ratio prior
+#                 else:
+#                     priors[i+1] = pymc.Uniform('mixing_%i' % (i), self.X_low,self.X_up,value=PINIT[i+1])  # uniform mixing ratio prior
+
+
 
         #setting up data error prior if specified
         if self.params.mcmc_update_std:
@@ -285,7 +340,16 @@ class fitting(object):
         @pymc.stochastic(observed=True, plot=False)
         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
             
-            chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
+#
+#             Pcontainer = np.hstack(PFIT)
+
+            #need to cast from numpy object array to float array. Slow but hstack is  slower. 
+            #ideas?
+            Pcontainer = np.zeros((self.n_params))
+            for i in range(self.n_params):
+                Pcontainer[i] = PFIT[i]
+            
+            chi_t = self.chisq_trans(Pcontainer,DATA,DATASTD)
             llterms =   (-len(DATA)/2.0)*np.log(pi) -np.log(np.mean(DATASTD)) -0.5* chi_t
 #             llterms =  - 0.5* chi_t
             return llterms
@@ -347,37 +411,50 @@ class fitting(object):
 
         NESTstats = NESTout.get_stats()
 
-        Xout_mean = zeros((self.ngas,self.nlayers))
-        Xout_std  = zeros((self.ngas,self.nlayers))
+#         Xout_mean = zeros((self.ngas,self.nlayers))
+#         Xout_std  = zeros((self.ngas,self.nlayers))
+# 
+#         # print NESTstats['modes'][0]['maximum a posterior']
+#         Tout_mean = NESTstats['modes'][0]['maximum a posterior'][0]
+#         Tout_std  = NESTstats['modes'][0]['sigma'][0]
+# 
+#         # for i in range(1,len(NESTstats['modes'][0]['maximum a posterior'])):
+#         #     Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+#         #     Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+#         #
+#         # if len(NESTstats['modes'][0]['maximum a posterior'])-1 < self.nlayers*self.ngas:
+#         #     Xout_mean[:] += NESTstats['modes'][0]['maximum a posterior'][1]
+#         #     Xout_std[:]  += NESTstats['modes'][0]['sigma'][1]
+#         #     for i in range(len(NESTstats['modes'][0]['maximum a posterior'])-1):
+#         #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+#         #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+#         # else:
+#         #     for i in range(self.nlayers*self.ngas):
+#         #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
+#         #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
+# 
+#         for i in range(self.ngas):
+#             Xout_mean[i,:] = NESTstats['modes'][0]['maximum a posterior'][i+1]
+#             Xout_std[i,:]  = NESTstats['modes'][0]['sigma'][i+1]
 
-        # print NESTstats['modes'][0]['maximum a posterior']
-        Tout_mean = NESTstats['modes'][0]['maximum a posterior'][0]
-        Tout_std  = NESTstats['modes'][0]['sigma'][0]
-
-        # for i in range(1,len(NESTstats['modes'][0]['maximum a posterior'])):
-        #     Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-        #     Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-        #
-        # if len(NESTstats['modes'][0]['maximum a posterior'])-1 < self.nlayers*self.ngas:
-        #     Xout_mean[:] += NESTstats['modes'][0]['maximum a posterior'][1]
-        #     Xout_std[:]  += NESTstats['modes'][0]['sigma'][1]
-        #     for i in range(len(NESTstats['modes'][0]['maximum a posterior'])-1):
-        #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-        #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-        # else:
-        #     for i in range(self.nlayers*self.ngas):
-        #         Xout_mean[i] = NESTstats['modes'][0]['maximum a posterior'][i]
-        #         Xout_std[i]  = NESTstats['modes'][0]['sigma'][i]
-
-        for i in range(self.ngas):
-            Xout_mean[i,:] = NESTstats['modes'][0]['maximum a posterior'][i+1]
-            Xout_std[i,:]  = NESTstats['modes'][0]['sigma'][i+1]
-
+        PFIT     = []
+        PFIT_std = []
+        for i in range(self.n_params):
+            PFIT.append(NESTstats['modes'][0]['maximum a posterior'][i])
+            PFIT_std.append(NESTstats['modes'][0]['sigma'][i])
+            
+        T,P,X = self.profile.TP_profile(PARAMS=PFIT)
+        
+        T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
+        X_std = PFIT_std[:self.Pindex[0]]
 
         # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
-        return Tout_mean, Tout_std, Xout_mean, Xout_std
+#         return Tout_mean, Tout_std, Xout_mean, Xout_std
+        return np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)
+
+
 
     
     def multinest_fit(self,resume=None):
@@ -408,13 +485,13 @@ class fitting(object):
             #prior distributions called by multinest
             #implements a uniform prior
 
-            #converting temperatures from normalised grid to uniform prior
-            cube[0] = (cube[0]* (self.T_up-self.T_low))+self.T_low
+#             #converting temperatures from normalised grid to uniform prior
+#             cube[0] = (cube[0]* (self.T_up-self.T_low))+self.T_low
     #         print cube[0]
 
             #converting mixing ratios from normalised grid to uniform prior
-            for i in range(1,self.n_params):
-                cube[i] = (cube[i] * (self.X_up-self.X_low)) + self.X_low
+            for i in range(self.n_params):
+                cube[i] = (cube[i] * (self.bounds[i][1]-self.bounds[i][0])) + self.bounds[i][0]
             # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
         
 
