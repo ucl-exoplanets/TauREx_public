@@ -122,7 +122,8 @@ class fitting(base):
         self.MCMC     = False
         self.NEST     = False
 
-
+        #DEBUG COUNTER
+        self.db_count = 0
 
 
 
@@ -131,6 +132,8 @@ class fitting(base):
         #chisquare minimisation bit
         
 #         print PFIT
+#         self.db_count += 1
+#         print self.db_count
         
         T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
         rho = self.profile.get_rho(T=T,P=P)          #calculating densities
@@ -201,15 +204,18 @@ class fitting(base):
         #                                    disp=1, full_output=1)
         
 #         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
-        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Powell',bounds=(self.bounds),options={'maxiter':1e3})
+#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds),options=dict({'maxfun':10}))
+        PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD),maxfun=1000)
         
 #         print PFIT
 
-        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
+        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT)
+#         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
         self.DOWNHILL = True
         self.DOWNHILL_T_mean = Tout_mean
         self.DOWNHILL_X_mean = Xout_mean
-        self.DOWNHILL_PFIT   = PFIT['x']
+        self.DOWNHILL_PFIT   = PFIT
+#         self.DOWNHILL_PFIT   = PFIT['x']
 
 
     

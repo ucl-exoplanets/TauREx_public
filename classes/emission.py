@@ -109,45 +109,50 @@ class emission(base):
         BB_star = self.F_star
 
         #constants 
-        I_total    = np.zeros((self.nlambda))  
-        tau        = np.zeros((self.nlayers,self.nlambda)) 
-        dtau       = np.zeros((self.nlambda,self.nlambda)) 
-        tau_total  = np.zeros((self.nlambda)) 
+        self.I_total[:]   = 0
+        self.tau[:]       = 0
+        self.dtau[:]      = 0
+        self.tau_total[:] = 0
         
         #surface layer      
         BB_surf = em.black_body(self.specgrid,temperature[0])  
         sigma_array = self.get_sigma_array(temperature[0])
-#            
 
         for k in xrange(self.nlayers):
-                sigma_array = self.get_sigma_array(temperature[k])
+                if temperature[k] != temperature[k-1]:
+                    sigma_array = self.get_sigma_array(temperature[k])
+                    
                 for i in xrange(self.n_gas):
-                    tau[0,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                    self.tau[0,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
 
   
-        exptau = np.exp(-1.0*tau[0,:])
-        I_total += BB_surf*(exptau)
+        exptau = np.exp(-1.0*self.tau[0,:])
+        self.I_total += BB_surf*(exptau)
 
-
+        #other layers
+        sigma_array = self.get_sigma_array(temperature[0])
         for j in xrange(1,self.nlayers):
 
             for k in xrange(j,self.nlayers):
-                sigma_array = self.get_sigma_array(temperature[k])
+                if temperature[k] != temperature[k-1]:
+                    sigma_array = self.get_sigma_array(temperature[k])
+                    
                 for i in xrange(self.n_gas):
-                    tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
-
-
-            for i in xrange(self.n_gas):
-                dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
+                    self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                if k is j:
+                    self.dtau[j,:] = self.tau[j,:]
+                      
+#             for i in xrange(self.n_gas):
+#                 self.dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
 
             
-            exptau =  np.exp(-1.0*tau[j,:]) 
+            exptau =  np.exp(-1.0*self.tau[j,:]) 
             
              
             BB_layer = em.black_body(self.specgrid,temperature[j])           
-            I_total += BB_layer*(exptau) * (dtau[j,:])
+            self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
             
 
-        FpFs = (I_total/ BB_star) *(self.Rp/self.Rs)**2
+        FpFs = (self.I_total/ BB_star) *(self.Rp/self.Rs)**2
  
         return FpFs
