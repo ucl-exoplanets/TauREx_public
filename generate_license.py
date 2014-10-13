@@ -16,8 +16,10 @@
 #
 ################################################
 
-
-from classes.license import *
+import sys
+sys.path.append('./classes')
+import license
+from license import *
 
 
 print 'TauREx License file generator'

@@ -21,20 +21,26 @@
 ################################################
 
 #loading libraries
+from base import base
 import numpy as np
 import pylab as pl
 import gzip,os
 import cPickle as pickle
 from copy import deepcopy
-from library.library_preselector import *
+import library_preselector
+from library_preselector import *
 import scipy.stats.stats as st
 
 
-class preselector(object):
-    def __init__(self, params,data):
+class preselector(base):
+    def __init__(self, params,data,model_object):
         #
-        self.params = params
-        self.data   = data
+        self.params       = params
+        self.data         = data
+        self.model_object = model_object
+        
+        #setting emission/transmission model
+        self.set_model(model_object)
 
         #reading in spectrum data to be fitted
         self.spectrum = data.spectrum
@@ -104,7 +110,7 @@ class preselector(object):
 #             print '1 done'
         if generateSpectra:
             generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
-                                 MIXING=self.params.pre_mixing_ratios)
+                                 MODEL=self.model_object,MIXING=self.params.pre_mixing_ratios)
 #             print '2 done'
         if generatePCA:
             generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)

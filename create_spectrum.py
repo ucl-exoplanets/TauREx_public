@@ -28,6 +28,13 @@ from numpy import * #nummerical array library
 from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
 
+####start of profiling code
+# import cProfile, pstats, StringIO
+# pr = cProfile.Profile()
+# pr.enable()
+# starttime = time.clock()
+
+
 #checking for multinest library
 global multinest_import 
 try: 
@@ -38,18 +45,25 @@ except:
     multinest_import = False
 
 #loading classes
-from classes.parameters import *
-# from classes.emission import *
-from classes.transmission import *
-from classes.output import *
-from classes.profile import *
-from classes.data import *
+sys.path.append('./classes')
+sys.path.append('./library')
+
+import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
+from parameters import *
+from emission import *
+from transmission import *
+from output import *
+from fitting import *
+from tp_profile import *
+from data import *
+from preselector import *
 
 #loading libraries
-# from library.library_emission import *
-from library.library_transmission import *
-from library.library_general import *
-from library.library_plotting import *
+import library_emission, library_transmission, library_general, library_plotting
+from library_emission import *
+from library_transmission import *
+from library_general import *
+from library_plotting import *
 
 
 parser = optparse.OptionParser()
@@ -59,7 +73,7 @@ parser.add_option('-p', '--parfile',
 )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
-                  default=False,
+                  default=True,
                   action="store_true",
 )
 options, remainder = parser.parse_args()
@@ -80,54 +94,24 @@ dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #initialising TP profile object
 if params.verbose: print 'loading profile'
-profileob = profile(params, dataob)
+profileob = tp_profile(params, dataob)
 
 #initialising transmission radiative transfer code object
-if params.verbose: print 'loading transmission'
-transob = transmission(params, dataob,profileob)
+if params.gen_type == 'transmission':
+    if params.verbose: print 'loading transmission'
+    transob = transmission(params, dataob,profileob)
 
-
-########
-###example of how to manually reading in ABS file and computing transmission spectrum
-# dataob.set_ABSfile(path='/Users/ingowaldmann/UCLlocal/REPOS/exonestpy/Input/crosssections/',
-#                    filelist=['1H2-16O_300-29995_600K_1.000000.sigma.abs',
-#                              '12C-1H4_300-11999_600K_1.000000.sigma.abs'],interpolate=True)
-# transob.reset(dataob) #resets transob to reflect changes in dataob
-########
-
-
-
-# # #manually setting mixing ratio and T-P profile
-# X_in   = zeros((5,profileob.nlayers))
-# # 
-#gj3470 composition
-# X_in[0,:]  += 5.0e-3
-# X_in[1,:]  += 4.0e-3
-# X_in[2,:]  += 2e-3
-# X_in[3,:]  += 7e-4 #2e-7
-# X_in[4,:]  += 2e-4
-
-#carbon poor 1solar c/o=0.5
-# X_in[0,:]  += 4.0e-4
-# X_in[1,:]  += 2.0e-8
-# X_in[2,:]  += 4.0e-4
-# X_in[3,:]  += 2.0e-7 #2e-7
-# X_in[4,:]  += 1.0e-5
-# 
-# #carbon poor 10x solar c/o=0.5
-# X_in[0,:]  += 4.0e-4
-# X_in[1,:]  += 1.0e-7
-# X_in[2,:]  += 4.0e-4
-# X_in[3,:]  += 7.0e-5 #2e-7
-# X_in[4,:]  += 1.0e-5
-
-
-# rho_in = profileob.get_rho(T=params.planet_temp)
-
-if params.trans_cpp:
-    MODEL = transob.cpath_integral()  # computing transmission
-else:
-    MODEL = transob.path_integral()  # computing transmission
+    if params.trans_cpp:
+        MODEL = transob.cpath_integral()  # computing transmission
+    else:
+        MODEL = transob.path_integral()  # computing transmission
+        
+#initialising transmission radiative transfer code object
+if params.gen_type == 'emission':
+    if params.verbose: print 'loading emission'
+    emisob = emission(params, dataob,profileob)
+    
+    MODEL = emisob.path_integral()  # computing transmission        
     
 # # 
 OUT = np.zeros((len(dataob.specgrid),2))
@@ -135,13 +119,63 @@ OUT[:,0] = dataob.specgrid
 OUT[:,1] = MODEL
 # OUT[:,2] += 5e-5 #adding errorbars. can be commented
 
-
-outputob = output(params, dataob) #initiating output object with fitted data from fitting class
+if params.gen_type == 'emission':
+    outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class
+if params.gen_type == 'transmission':
+    outputob = output(params, dataob,transob) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
 outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only
 
 if params.out_dump_internal:
     outputob.save_model(modelout=OUT, modelsaveas=params.out_internal_name)       #saving models to ascii
+
+
+
+#end of main code
+#####################################################################
+
+
+
+####profiling code
+# pr.disable()
+# 
+# PROFDIR = 'Profiling/'
+# if not os.path.isdir(PROFDIR):
+#         os.mkdir(PROFDIR)
+# 
+# # s = StringIO.StringIO()
+# sortby = 'cumulative'
+# # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+# 
+# #printing to terminal
+# # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
+# # globalstats.print_stats()
+# 
+# #redirecting output to files
+# sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
+# globalstats.print_stats()
+# 
+# sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
+# globalstats.print_stats()
+# 
+# sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
+# globalstats.print_stats()
+# 
+# sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
+# globalstats.print_stats()
+# 
+# sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
+# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
+# globalstats.print_stats()
 #
+# # ps.print_stats()
+# # print s.getvalue()
+
+
+#last line. displays any diagrams generated. must be run after profiling
 if params.verbose: show()

@@ -3,18 +3,19 @@
 #Parse parameter file eg. 'exonest.par' and initialise  
 #parameters for run
 ################################################
+from base import base
 from ConfigParser import SafeConfigParser
 import numpy as np
 from numpy import genfromtxt,arange,size
 from StringIO import StringIO
 
-class parameters(object):
+class parameters(base):
 #instantiation
     def __init__(self, parfile):
         '''
         a parameter file is parsed and initial parameter values are set.  
         to add a new parameter edit this file and the input .par file.
-        V1.0  - Definition - C. MacTavish, Apr 2012
+        V1.0  - Definition - I. Waldmann, Apr 2013
         '''
         
         #conversion constants
@@ -35,14 +36,18 @@ class parameters(object):
         self.gen_wavemin           = parser.getfloat('General','wavemin')
         self.gen_wavemax           = parser.getfloat('General','wavemax')
         self.gen_spec_res          = parser.getfloat('General','spec_res')
+        self.gen_type              = parser.get('General','type')
         
         self.in_spectrum_file      = parser.get('Input','spectrum_file')
         self.in_use_ATMfile        = parser.getboolean('Input','use_ATMfile')
         self.in_atm_file           = parser.get('Input','atm_file')
         self.in_abs_path           = parser.get('Input','abs_path')
         self.in_abs_files          = parser.get('Input','__legacy__abs_files')
+        
         self.in_tempres            = parser.getfloat('Input','tempres')
 
+        self.in_star_path          = parser.get('Input','star_path')
+        
         self.in_include_rad        = parser.getboolean('Input','include_rad')
         self.in_rad_file           = parser.get('Input','rad_file')
         self.in_include_cia        = parser.getboolean('Input','include_cia')
@@ -143,17 +148,15 @@ class parameters(object):
             pass
         
         
+        #####################################################################
+        #additional parser commands. Checking parameter compatibility and stuff 
         
-    def list(self,name=None):
-        if name is None:
-            return dir(self)[2:-1]
-        else:
-            lst = dir(self)
-            return filter(lambda k: name in k, lst)
+        #checking that either emission or transmisison is run
+        if self.fit_emission and self.fit_transmission:
+            print 'Error: transmission and emission cannot currently be run simultaneously'
+            print 'change the fit_emission, fit_transmission parameters.'  
+        if self.fit_emission: self.fit_transmission = False
+        if self.fit_transmission: self.fit_emission = False 
         
-    def __getattribute__(self,name):
-        return object.__getattribute__(self, name)
-    
-    def __getitem__(self,name):
-        return self.__dict__[name]
+        
 
