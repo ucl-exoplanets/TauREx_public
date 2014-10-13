@@ -26,7 +26,8 @@ print 'Running line-by-line runtime profiling:'
 print '-----------------------------------------'
 
 os.chdir('../')
-os.system('./'+PROFDIR+'kernprof.py -l -v exonest.py ')
+# os.system('./'+PROFDIR+'kernprof.py -l -v exonest.py -p Parfiles/exonest_test.par')
+os.system('./'+PROFDIR+'kernprof.py -l -v create_spectrum.py -p Parfiles/exonest_minimal_hotjupiter_emission.par')
 
 print '-----------------------------------------'
 print 'Finished profiling'

@@ -57,7 +57,7 @@ except:
     pymc_import = False
 
 
-#start of profiling code
+####start of profiling code
 # import cProfile, pstats, StringIO
 # pr = cProfile.Profile()
 # pr.enable()
@@ -192,9 +192,6 @@ if params.nest_run and multinest_import:
 
 #initiating output instance with fitted data from fitting class
 if params.verbose: print 'loading output class'
-
-print output
-
 outputob = output(params, dataob, fitob) 
 #
 #plotting fits and data
@@ -213,38 +210,38 @@ outputob.save_model()       #saving models to ascii
 
 
 
-#profiling code
+####profiling code
 # pr.disable()
-#
+# 
 # PROFDIR = 'Profiling/'
 # if not os.path.isdir(PROFDIR):
 #         os.mkdir(PROFDIR)
-#
+# 
 # # s = StringIO.StringIO()
 # sortby = 'cumulative'
 # # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-#
+# 
 # #printing to terminal
 # # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
 # # globalstats.print_stats()
-#
+# 
 # #redirecting output to files
 # sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
 # globalstats.print_stats()
-#
+# 
 # sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
 # globalstats.print_stats()
-#
+# 
 # sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
 # globalstats.print_stats()
-#
+# 
 # sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
 # globalstats.print_stats()
-#
+# 
 # sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
 # globalstats.print_stats()

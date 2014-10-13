@@ -200,7 +200,8 @@ class fitting(base):
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
         
-        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
+#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Powell',bounds=(self.bounds))
         
 #         print PFIT
 
