@@ -130,6 +130,7 @@ class emission(base):
         self.I_total += BB_surf*(exptau)
 
         #other layers
+        BB_layer = BB_surf
         sigma_array = self.get_sigma_array(temperature[0])
         for j in xrange(1,self.nlayers):
 
@@ -148,8 +149,8 @@ class emission(base):
             
             exptau =  np.exp(-1.0*self.tau[j,:]) 
             
-             
-            BB_layer = em.black_body(self.specgrid,temperature[j])           
+            if temperature[j] != temperature[j-1]: 
+                BB_layer = em.black_body(self.specgrid,temperature[j])           
             self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
             
 

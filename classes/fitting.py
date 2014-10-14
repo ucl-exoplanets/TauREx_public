@@ -67,6 +67,7 @@ class fitting(base):
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = data.ngas
+        self.nspecbingrid= len(data.spec_bin_grid)
 #         self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         
         # self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
@@ -143,7 +144,7 @@ class fitting(base):
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
         #binning internal model 
-        MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
+        MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in xrange(1,self.nspecbingrid)]
         
         #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
 #         print PFIT
