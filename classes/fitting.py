@@ -205,18 +205,18 @@ class fitting(base):
         #                                    disp=1, full_output=1)
         
 #         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
-#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds),options=dict({'maxfun':10}))
-        PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD),maxfun=1000)
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds))
+#         PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD))
         
 #         print PFIT
 
-        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT)
-#         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
+#         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT)
+        Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
         self.DOWNHILL = True
         self.DOWNHILL_T_mean = Tout_mean
         self.DOWNHILL_X_mean = Xout_mean
-        self.DOWNHILL_PFIT   = PFIT
-#         self.DOWNHILL_PFIT   = PFIT['x']
+#         self.DOWNHILL_PFIT   = PFIT
+        self.DOWNHILL_PFIT   = PFIT['x']
 
 
     
