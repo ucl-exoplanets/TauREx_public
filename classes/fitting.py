@@ -137,6 +137,9 @@ class fitting(base):
 #         print self.db_count
         
         T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
+#         print T
+#         print P
+#         print X
         rho = self.profile.get_rho(T=T,P=P)          #calculating densities
 
         #the temperature parameter should work out of the box but check for transmission again
@@ -157,14 +160,18 @@ class fitting(base):
 #         draw()
 
 #         ion()
+#         show()
 #         clf()
 #         figure(101)
 #         plot(DATA,'g')
 #         plot(MODEL_binned)
+# #         show()
 #         draw()
 
-        # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
+#         print MODEL_binned
 
+        # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
+        
         res = (DATA-MODEL_binned) / DATASTD
         return sum(res**2)
         
@@ -204,9 +211,10 @@ class fitting(base):
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
         
-#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
-        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds))
-#         PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD))
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method=self.params.downhill_type,bounds=(self.bounds),
+                        options=self.params.downhill_options)
+#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds))
+#         PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD),maxfun=10)
         
 #         print PFIT
 
@@ -480,7 +488,7 @@ class fitting(base):
         def multinest_loglike(cube, ndim,nparams):
         #log-likelihood function called by multinest
         
-            PFIT = [cube[i] for i in range(self.n_params)]
+            PFIT = [cube[i] for i in xrange(self.n_params)]
             PFIT = asarray(PFIT)
 
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
@@ -498,7 +506,7 @@ class fitting(base):
     #         print cube[0]
 
             #converting mixing ratios from normalised grid to uniform prior
-            for i in range(self.n_params):
+            for i in xrange(self.n_params):
                 cube[i] = (cube[i] * (self.bounds[i][1]-self.bounds[i][0])) + self.bounds[i][0]
             # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
         
@@ -507,7 +515,7 @@ class fitting(base):
         DATASTD = self.observation[:,2] #data error 
         DATASTDmean = mean(DATASTD)
         
-        parameters = [str(i) for i in range(self.n_params)]
+        parameters = [str(i) for i in xrange(self.n_params)]
         n_params = self.n_params
         ndim = n_params
 

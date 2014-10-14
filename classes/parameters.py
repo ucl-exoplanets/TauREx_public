@@ -8,6 +8,7 @@ from ConfigParser import SafeConfigParser
 import numpy as np
 from numpy import genfromtxt,arange,size
 from StringIO import StringIO
+import ast
 
 class parameters(base):
 #instantiation
@@ -122,6 +123,13 @@ class parameters(base):
         except:
             self.fit_transmission      = False
             self.fit_emission          = False
+            pass
+        try: 
+            self.downhill_run          = parser.getboolean('Downhill','run')
+            self.downhill_type         = parser.get('Downhill', 'type')
+            self.downhill_options      = ast.literal_eval(parser.get('Downhill','options'))
+        except:
+            self.downhill_run          = False
             pass
         
         try:

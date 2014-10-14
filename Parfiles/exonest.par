@@ -231,6 +231,22 @@ X_up  = 1e-2
 X_low = 0.0
 
 
+[Downhill]
+#defines parameters for minimisation
+
+#run minimisation routine on data
+run = True
+
+#type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, 
+#L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
+#see scipy.optimize.minimize documentation
+type = L-BFGS-B
+
+#Supply extra parameters using options parameter. See scipy docu
+options = {‘verbose’:False}
+
+
+
 [MCMC]
 #defines MCMC specific parameters
 
