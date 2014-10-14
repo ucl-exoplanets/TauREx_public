@@ -104,7 +104,6 @@ class emission(base):
         if temperature is None:
             temperature = self.T#self.planet_temp
 
-            
 
         BB_star = self.F_star
 

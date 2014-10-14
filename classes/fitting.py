@@ -88,6 +88,7 @@ class fitting(base):
         #getting prior bounds for downhill algorithm
         self.bounds      = self.profile.bounds
         
+    
         #setting bounds for downhill algorithm
 #         self.bounds = []
 #         self.bounds.append((self.T_low,self.T_up))
@@ -155,24 +156,26 @@ class fitting(base):
 #         print P
 #         ion()
 #         clf()
-#         figure(100)
+#         figure(1)
 #         plot(T,np.log(P))
 #         draw()
 
 #         ion()
 #         show()
+#         print isinteractive()
 #         clf()
-#         figure(101)
+#         figure(1)
 #         plot(DATA,'g')
 #         plot(MODEL_binned)
-# #         show()
+#         show()
 #         draw()
 
-#         print MODEL_binned
+        
 
         # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
         
         res = (DATA-MODEL_binned) / DATASTD
+#         print sum(res**2)
         return sum(res**2)
         
 ############################################################################### 
@@ -211,12 +214,11 @@ class fitting(base):
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
         
-        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method=self.params.downhill_type,bounds=(self.bounds),
-                        options=self.params.downhill_options)
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method=self.params.downhill_type,bounds=(self.bounds))
 #         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds))
 #         PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD),maxfun=10)
         
-#         print PFIT
+        print PFIT
 
 #         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT)
         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])

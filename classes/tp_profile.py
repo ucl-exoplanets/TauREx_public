@@ -78,12 +78,14 @@ class tp_profile(base):
             
         if self.params.fit_transmission:
             self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(transmission=True)
-
-#         self.PARAMS[0] = 1e-5
-#         self.PARAMS[1] = 1e-5
+# 
+#         self.PARAMS[0] = 5e-6
+#         self.PARAMS[1] = 2e-7
 #         self.PARAMS[2] = 1400
 #         self.PARAMS[3] = 1400
 #         self.PARAMS[4] = 1200
+#         self.PARAMS[5] = 1e5
+#         self.PARAMS[6] = 100.0
 
 
 #         self.bounds = [(0.0, 0.01), (0.0, 0.01), (1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0), (50000.0, 500000.0), (50.0, 150.0)]

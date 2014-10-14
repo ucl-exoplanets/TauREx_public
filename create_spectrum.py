@@ -117,7 +117,7 @@ if params.gen_type == 'emission':
 OUT = np.zeros((len(dataob.specgrid),2))
 OUT[:,0] = dataob.specgrid
 OUT[:,1] = MODEL
-# OUT[:,2] += 5e-5 #adding errorbars. can be commented
+# OUT[:,2] += 1e-5 #adding errorbars. can be commented
 
 if params.gen_type == 'emission':
     outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class

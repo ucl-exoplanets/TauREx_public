@@ -127,7 +127,7 @@ class parameters(base):
         try: 
             self.downhill_run          = parser.getboolean('Downhill','run')
             self.downhill_type         = parser.get('Downhill', 'type')
-            self.downhill_options      = ast.literal_eval(parser.get('Downhill','options'))
+#         self.downhill_options      = ast.literal_eval(str(parser.get('Downhill','options')))
         except:
             self.downhill_run          = False
             pass
