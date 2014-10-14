@@ -87,7 +87,7 @@ class emission(base):
         
         return np.asarray(dz)
         
-    @profile #line-by-line profiling decorator
+#     @profile #line-by-line profiling decorator
     def path_integral(self, X=None, rho=None,temperature=None):
         
         if X is None:

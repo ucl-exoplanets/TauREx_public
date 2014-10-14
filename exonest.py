@@ -29,14 +29,25 @@ from ConfigParser import SafeConfigParser
 try:
     from mpi4py import MPI
     MPIrank = MPI.COMM_WORLD.Get_rank()
-    if MPIrank == 0:
-        MPImaster = True
+    MPIsize = MPI.COMM_WORLD.Get_size()
+    if MPIsize > 1:
+        MPIimport = True
+        if MPIrank == 0:
+            MPImaster = True
+            MPIverbose= True
+        else:
+            MPImaster = False
+            MPIverbose= False
     else:
-        MPImaster = False
+        MPIverbose = True
+        MPImaster  = True
+        MPIimport  = False
 except ImportError:
     MPIimport = False
     MPImaster = True
+    MPIverbose= True
     
+
 
 #checking for multinest library
 try: 
@@ -69,8 +80,9 @@ except:
 # comm = MPI.COMM_WORLD
 # rank=comm.Get_rank()
 # size=comm.Get_size()
-# print("my rank is %d"%rank)
-#
+# print "my rank is %d"%rank, ' ',MPIverbose
+# 
+# 
 # exit()
 # 
 # comm = MPI.COMM_WORLD
@@ -126,14 +138,16 @@ params = parameters(options.param_filename)
 #####################################################################
 #beginning of main code
 
-
+#MPI related message
+if params.verbose and MPIverbose and MPIimport: print 'MPI enabled. Running on',MPIsize,' cores.'
+elif params.verbose and MPIverbose: print 'MPI disabled.'
 
 #initialising data object
-if params.verbose: print 'loading data'
+if params.verbose and MPIverbose: print 'loading data'
 dataob = data(params)
 
 #initialising TP profile instance
-if params.verbose: print 'loading profile'
+if params.verbose and MPIverbose: print 'loading profile'
 profileob = tp_profile(params, dataob)
 
 #initiating and running preselector instance
@@ -163,26 +177,26 @@ dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #initialising transmission radiative transfer code instance
 if params.fit_transmission:
-    if params.verbose: print 'loading transmission class'
+    if params.verbose and MPIverbose: print 'loading transmission class'
     transob = transmission(params, dataob,profileob)
 
 #initialising emission radiative transfer code instance
 if params.fit_emission:
-    if params.verbose: print 'loading emission class'
+    if params.verbose and MPIverbose: print 'loading emission class'
     emissob = emission(params,dataob,profileob)
 #     emissob.path_integral()
 
 # exit()
 
 #initialising fitting object
-if params.verbose: print 'loading fitting class'
+if params.verbose and MPIverbose: print 'loading fitting class'
 fitob = fitting(params, dataob, profileob)
 if params.fit_transmission: fitob.set_model(transob) #loading transmission model into fitting object
 elif params.fit_emission:   fitob.set_model(emissob) #loading emission model into fitting object
     
 
 #fit data
-if params.verbose: print 'fitting data'
+if params.verbose and MPIverbose: print 'fitting data'
 fitob.downhill_fit()    #simplex downhill fit
 if params.mcmc_run and pymc_import:
     fitob.mcmc_fit()    #MCMC fit
@@ -191,11 +205,11 @@ if params.nest_run and multinest_import:
 
 
 #initiating output instance with fitted data from fitting class
-if params.verbose: print 'loading output class'
+if params.verbose and MPIverbose: print 'loading output class'
 outputob = output(params, dataob, fitob) 
 #
 #plotting fits and data
-if params.verbose: print 'plotting/saving results'
+if params.verbose and MPIverbose: print 'plotting/saving results'
 if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.out_save_plots)
 # outputob.plot_spectrum()   #plotting data only
 # outputob.plot_multinest()  #plotting multinest posteriors
