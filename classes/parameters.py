@@ -150,6 +150,9 @@ class parameters(base):
             self.nest_samp_eff         = parser.get('MultiNest','sampling_eff')
             self.nest_nlive            = parser.getint('MultiNest','n_live_points')
             self.nest_max_iter         = parser.getint('MultiNest','max_iter')
+            self.nest_multimodes       = parser.getboolean('MultiNest','multimodes')
+            self.nest_max_modes        = parser.getint('MultiNest','max_modes')
+            self.nest_const_eff        = parser.getboolean('MultiNest','const_eff')
             self.nest_imp_sampling     = parser.getboolean('MultiNest','imp_sampling')
         except:
             self.nest_run              = False

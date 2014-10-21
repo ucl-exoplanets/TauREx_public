@@ -349,18 +349,26 @@ class fitting(base):
             std_dev = pymc.Uniform('std_dev',0.0,2.0*max(DATASTD),value=DATASTD,observed=True,size=len(DATASTD))
         
         
-        @pymc.deterministic(plot=False)
-        def precision(std_dev=std_dev):
-                return std_dev
-    
+        #deterministic class needs to be initiliased directly as CYTHON doesnt like PYMC decorators
+#         @pymc.deterministic(plot=False)
+#         def precision_func(std_dev):
+#                 return std_dev
+#             
+#         precision = pymc.Deterministic(eval = precision_func,
+#                   name = 'precision',
+#                   parents = {'std_dev': std_dev}, doc = 'precision',
+#                   trace = True,
+#                   verbose = 0,
+#                   dtype=float,
+#                   plot=False,
+#                   cache_depth = 2)
         
-        # log-likelihood function
-        @pymc.stochastic(observed=True, plot=False)
-        def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
             
-#
-#             Pcontainer = np.hstack(PFIT)
-
+        
+        # log-likelihood function. Needs to be initialised directly since CYTHON does not like PYMC decorators
+#         @pymc.stochastic(observed=True, plot=False)
+#         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
+        def mcmc_loglikelihood(value, PFIT, DATASTD, DATA):
             #need to cast from numpy object array to float array. Slow but hstack is  slower. 
             #ideas?
             Pcontainer = np.zeros((self.n_params))
@@ -371,6 +379,27 @@ class fitting(base):
             llterms =   (-len(DATA)/2.0)*np.log(pi) -np.log(np.mean(DATASTD)) -0.5* chi_t
 #             llterms =  - 0.5* chi_t
             return llterms
+        
+        
+        mcmc_logp = pymc.Stochastic( logp = mcmc_loglikelihood,
+                doc = 'The switchpoint for mcmc loglikelihood.',
+                name = 'switchpoint',
+                parents = {'PFIT': priors, 'DATASTD': std_dev, 'DATA':DATA},
+#                 random = switchpoint_rand,
+                trace = True,
+                value = PINIT,
+                dtype=int,
+                rseed = 1.,
+                observed = True,
+                cache_depth = 2,
+                plot=False,
+                verbose = 0)
+
+        
+        
+
+
+
 
         #setting up folders for chain output
         OUTFOLDER = 'chains/MCMC/thread_'+str(self.MPIrank)
@@ -383,7 +412,7 @@ class fitting(base):
         if self.params.verbose: verbose = 1
         else: verbose = 0
             
-        R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=verbose,db='txt',
+        R = pymc.MCMC((priors, mcmc_logp), verbose=verbose,db='txt',
                       dbname='chains/MCMC/thread_'+str(self.MPIrank))  # build the model
 #         R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=1)  # build the model
 
@@ -526,8 +555,9 @@ class fitting(base):
 
         # progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         # threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
-        pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,
-                        importance_nested_sampling = self.params.nest_imp_sampling, resume = resume,
+        pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,multimodal=self.params.nest_multimodes,
+                        max_modes=self.params.nest_max_modes, const_efficiency_mode = self.params.nest_const_eff,
+                        importance_nested_sampling = self.params.nest_imp_sampling,resume = resume,
                         verbose = self.params.nest_verbose,sampling_efficiency = self.params.nest_samp_eff,
                         n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter,init_MPI=False)
         # progress.stop()
