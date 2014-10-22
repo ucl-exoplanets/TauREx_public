@@ -114,6 +114,12 @@ def cast2cpp(ARRAY):
         dbptr = C.POINTER(C.c_double)
         PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
         return PARR, C.c_int(s1), C.c_int(s2)
+    elif ARRdim == 3:
+        [s1,s2,s3] = shape(ARRAY)
+        dbptr = C.POINTER(C.c_double)
+        PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 3D pointer array
+        
+        
     
 def redirect_stderr_stdout(stderr=sys.stderr, stdout=sys.stdout):
     #function decorator to re-direct standard output

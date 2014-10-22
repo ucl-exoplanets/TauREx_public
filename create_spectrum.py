@@ -111,7 +111,7 @@ if params.gen_type == 'emission':
     if params.verbose: print 'loading emission'
     emisob = emission(params, dataob,profileob)
     
-    MODEL = emisob.path_integral()  # computing transmission        
+    MODEL = emisob.cpath_integral()  # computing transmission        
     
 # # 
 OUT = np.zeros((len(dataob.specgrid),2))

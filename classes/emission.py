@@ -19,18 +19,22 @@
 from base import base    
 import numpy as np
 import pylab as pl
+import ctypes as C
 import library_emission as em
 import library_general
 from library_general import *
 import time
 
 
-class emission(base):
+class emission(object):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
         
         self.__ID__        = 'emission' #internal class identifier
+        
+        #type declations for arrays
+        self.DTYPE = np.float
         
         #loading data
         self.params        = params
@@ -38,17 +42,17 @@ class emission(base):
         self.Rs            = params['star_radius']
 
         self.n_gas         = data['ngas']
-        self.specgrid      = data['specgrid']
+        self.specgrid      = data['specgrid'].astype(self.DTYPE)
         self.sigma_dict    = data['sigma_dict']
-        self.X             = data['X']
+        self.X             = data['X'].astype(self.DTYPE)
         self.atmosphere    = data['atmosphere']
-        self.F_star        = data['F_star']
+        self.F_star        = data['F_star'].astype(self.DTYPE)
 
         self.nlayers       = profile['nlayers']
-        self.z             = profile['Z']        
-        self.T             = profile['T']
-        self.rho           = profile['rho']
-        self.p             = profile['P']
+        self.z             = profile['Z'].astype(self.DTYPE)        
+        self.T             = profile['T'].astype(self.DTYPE)
+        self.rho           = profile['rho'].astype(self.DTYPE)
+        self.p             = profile['P'].astype(self.DTYPE)
         self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
         
 #         print 'z ',np.max(self.z)
@@ -64,11 +68,16 @@ class emission(base):
             
             
         #setting up static arrays for path_integral
-        self.I_total    = np.zeros((self.nlambda))  
-        self.tau        = np.zeros((self.nlayers,self.nlambda)) 
-        self.dtau       = np.zeros((self.nlambda,self.nlambda)) 
-        self.tau_total  = np.zeros((self.nlambda)) 
+        self.I_total    = np.zeros((self.nlambda),dtype=self.DTYPE)  
+        self.tau        = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE) 
+        self.dtau       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE) 
+        self.tau_total  = np.zeros((self.nlambda),dtype=self.DTYPE) 
 
+        #loading c++ pathintegral library for faster computation
+        if params.trans_cpp:
+            # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
+            self.cpathlib = C.CDLL('./library/pathintegral_emission.so',mode=C.RTLD_GLOBAL)
+            self.sigma_array_c, self.tempgrid = self.get_sigma_array_c()
     
     #class methods 
         
@@ -82,7 +91,18 @@ class emission(base):
     #getting sigma array from sigma_dic for given temperature 
 #         print temperature 
         return self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
+    
+    def get_sigma_array_c(self):
+    #generating 3D sigma_array from sigma_dict for c++ path integral
+        tempgrid = self.sigma_dict['tempgrid']
+        OUT = np.zeros((len(tempgrid),2,len(self.specgrid)),dtype=np.float64)
         
+        c=0
+        for t in tempgrid:
+            OUT[c,:,:] = self.sigma_dict[t]
+            c += 1
+        return OUT, tempgrid
+    
         
     def get_dz(self):
         
@@ -92,7 +112,7 @@ class emission(base):
             
         dz.append(dz[-1])
         
-        return np.asarray(dz)
+        return np.asarray(dz,dtype=self.DTYPE)
         
 #     @profile #line-by-line profiling decorator
     def path_integral(self, X=None, rho=None,temperature=None):
@@ -156,3 +176,67 @@ class emission(base):
         FpFs = (self.I_total/ BB_star) *(self.Rp/self.Rs)**2
  
         return FpFs
+    
+    def cpath_integral(self, X = None, rho = None, temperature= None):
+        if X is None:
+            X = self.X
+        if rho is None:
+            rho = self.rho
+        if temperature is None:
+            temperature = self.T
+        
+        #casting changing arrays to c++ pointers
+        Xs1,Xs2 = shape(X)
+        Xnew = zeros((Xs1+1,Xs2))
+        Xnew[:-1,:] = X
+        cX, cs1,cs2 = cast2cpp(Xnew)
+        del(cs1); del(cs2);
+        crho, cs1 = cast2cpp(rho)
+        del(cs1);
+        ctemperature,cs1 = cast2cpp(temperature)
+        del(cs1)
+        cF_star,cs1 =cast2cpp(self.F_star)
+        del(cs1)
+        cspecgrid,cs1 = cast2cpp(self.specgrid)
+        del(cs1)
+        #casting fixed arrays and variables to c++ pointers
+        print 'aaaaaaaah ', np.shape(self.sigma_array_c)
+        
+        csigma_array, cs1,cs2,cs3 = cast2cpp(self.sigma_array_c)
+        del(cs1); del(cs2); del(cs3);
+        ctempgrid = cast2cpp(self.tempgrid)
+        del(cs1)
+        cdzarray, cs1 = cast2cpp(self.dzarray)
+        del(cs1);
+        znew = zeros((len(self.z)))
+        znew[:] = self.z
+        cz, cs1   = cast2cpp(znew)
+        del(cs1);
+        cdz, cs1  = cast2cpp(self.dz)
+        del(cs1);
+        cRsig, cs1 = cast2cpp(self.Rsig)
+        del(cs1);
+        cCsig, cs1 = cast2cpp(self.Csig)
+        del(cs1);
+            
+        cRp = C.c_double(self.Rp)
+        cRs = C.c_double(self.Rs)
+        clinecount = C.c_int(self.nlambda)
+        cnlayers = C.c_int(self.nlayers)
+        cn_gas = C.c_int(len(X[:,0]))
+        
+        #setting up output array
+        FpFs = zeros((self.nlambda),dtype=float64)
+
+        #retrieving function from cpp library
+        cpath_int = self.cpathlib.cpath_int_emission
+        
+        capth_int(cX,crho,ctemperature,cF_star,cspecgrid,csigma_array,cdzarray,
+                  cn_lambda,cRp,cRs,cnlayers,cn_gas,ctempgrid, C.c_void_p(FpFs.ctypes.data))
+        
+        OUT = zeros((self.nlambda))
+        OUT[:] = FpFs
+        del(FpFs)
+
+        return OUT
+        
