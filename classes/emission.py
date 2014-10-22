@@ -101,7 +101,7 @@ class emission(object):
         for t in tempgrid:
             OUT[c,:,:] = self.sigma_dict[t]
             c += 1
-        return OUT, tempgrid
+        return OUT, np.asarray(tempgrid)
     
         
     def get_dz(self):
@@ -189,41 +189,29 @@ class emission(object):
         Xs1,Xs2 = shape(X)
         Xnew = zeros((Xs1+1,Xs2))
         Xnew[:-1,:] = X
-        cX, cs1,cs2 = cast2cpp(Xnew)
-        del(cs1); del(cs2);
-        crho, cs1 = cast2cpp(rho)
-        del(cs1);
-        ctemperature,cs1 = cast2cpp(temperature)
-        del(cs1)
-        cF_star,cs1 =cast2cpp(self.F_star)
-        del(cs1)
-        cspecgrid,cs1 = cast2cpp(self.specgrid)
-        del(cs1)
+        cX = cast2cpp(Xnew)
+        crho = cast2cpp(rho)
+        ctemperature = cast2cpp(temperature)
+        cF_star =cast2cpp(self.F_star)
+        cspecgrid = cast2cpp(self.specgrid)
         #casting fixed arrays and variables to c++ pointers
-        print 'aaaaaaaah ', np.shape(self.sigma_array_c)
         
-        csigma_array, cs1,cs2,cs3 = cast2cpp(self.sigma_array_c)
-        del(cs1); del(cs2); del(cs3);
+        csigma_array = cast2cpp(self.sigma_array_c)
         ctempgrid = cast2cpp(self.tempgrid)
-        del(cs1)
-        cdzarray, cs1 = cast2cpp(self.dzarray)
-        del(cs1);
+        cdzarray = cast2cpp(self.dzarray)
         znew = zeros((len(self.z)))
         znew[:] = self.z
-        cz, cs1   = cast2cpp(znew)
-        del(cs1);
-        cdz, cs1  = cast2cpp(self.dz)
-        del(cs1);
-        cRsig, cs1 = cast2cpp(self.Rsig)
-        del(cs1);
-        cCsig, cs1 = cast2cpp(self.Csig)
-        del(cs1);
+        cz  = cast2cpp(znew)
+        cdz  = cast2cpp(self.dzarray)
+#         cRsig = cast2cpp(self.Rsig)
+#         cCsig = cast2cpp(self.Csig)
             
         cRp = C.c_double(self.Rp)
         cRs = C.c_double(self.Rs)
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
+        cn_lambda = C.c_int(len(self.specgrid))
         
         #setting up output array
         FpFs = zeros((self.nlambda),dtype=float64)
@@ -231,7 +219,7 @@ class emission(object):
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int_emission
         
-        capth_int(cX,crho,ctemperature,cF_star,cspecgrid,csigma_array,cdzarray,
+        cpath_int(cX,crho,ctemperature,cF_star,cspecgrid,csigma_array,cdzarray,
                   cn_lambda,cRp,cRs,cnlayers,cn_gas,ctempgrid, C.c_void_p(FpFs.ctypes.data))
         
         OUT = zeros((self.nlambda))

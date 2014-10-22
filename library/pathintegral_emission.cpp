@@ -134,13 +134,16 @@ double** get_sigma_array(double *** sigma_input, double temperature,
 
 //main path integral function
 extern "C" {
-void cpath_int_emission( double ** X,  double * rho, double * temperature,
+void cpath_int_emission(double ** X,  double * rho, double * temperature,
 		double * F_star, double * specgrid, double *** sigma_array_full, double * dzarray,
 		const int n_lambda,const double Rp, const double Rs, const int nlayers,
-		const int n_gas, const int n_sig_temp, double * FpFs) {
+		const int n_gas, const int n_sig_temp, void * FpFs_v) {
 	/*function calculating the path integral for the emission. See python code for comments */
 
 
+	double *FpFs = (double *)FpFs_v;
+
+	FpFs[0] = 100;
 	//declaring arrays and variables
 	double I_total[n_lambda],tau_total[n_lambda];
 	double BB_surf[n_lambda], exptau[n_lambda],temperature_grid[n_sig_temp];
@@ -155,54 +158,62 @@ void cpath_int_emission( double ** X,  double * rho, double * temperature,
 	}
 
 	//surface layer
-	black_body(specgrid,n_lambda,temperature[0],BB_surf);
-	sigma_array = get_sigma_array(sigma_array_full,temperature[0],\
-			temperature_grid,n_gas,n_lambda);
 
-
-	for(int wl=0;wl<n_lambda;wl++){
-		for(int k = 1; k < nlayers; k++){
-			//selecting correct sigma_array for given temperature
-			if(temperature[k] != temperature[k-1]){
-				sigma_array = get_sigma_array(sigma_array_full,temperature[k],\
-							temperature_grid,n_gas,n_lambda);
-			}
-			//calculating tau for all wavelengths through layers
-			for(int i=0;i<n_gas;i++){
-				tau[0][wl] += (sigma_array[i][wl] * X[i][k] * rho[k] * dzarray[k]);
-				}
-		}
-
-		I_total[wl] += BB_surf[wl] * (exp(-1.0*tau[0][wl]));
-
-		//other layers
-		BB_layer = BB_surf;
-		sigma_array = get_sigma_array(sigma_array_full,temperature[0],\
-					temperature_grid,n_gas,n_lambda);
-
-		for(int j=1;j<nlayers;j++){
-
-			for(int k=j;k<nlayers;k++){
-				if(temperature[k] != temperature[k-1]){
-					sigma_array = get_sigma_array(sigma_array_full,temperature[k],\
-								temperature_grid,n_gas,n_lambda);
-				}
-				for(int i=0;i<n_gas;i++){
-					tau[j][wl] += (sigma_array[i][wl] *X[i][k] *rho[k] *dzarray[k]);
-					}
-
-				if(k==j){
-					dtau[j][wl] = tau[j][wl];
-				}
-
-				if(temperature[j] != temperature[j-1]){
-					black_body(specgrid,n_lambda,temperature[j],BB_layer);
-				}
-				I_total[wl] += BB_layer[wl] * (exp(-1.0*tau[j][wl]))* dtau[j][wl];
-			}
-		}
-		FpFs[wl] = (I_total[wl] /F_star[wl]) * pow((Rp/Rs),2);
+	for(int i=0;i<n_lambda;i++){
+		cout << specgrid[i] << endl;
 	}
+//	cout << specgrid << endl;
+//	cout << n_lambda << endl;
+//	cout << temperature[0] << endl;
+
+//	black_body(specgrid,n_lambda,temperature[0],BB_surf);
+//	sigma_array = get_sigma_array(sigma_array_full,temperature[0],\
+//			temperature_grid,n_gas,n_lambda);
+
+
+//	for(int wl=0;wl<n_lambda;wl++){
+//		for(int k = 1; k < nlayers; k++){
+//			//selecting correct sigma_array for given temperature
+//			if(temperature[k] != temperature[k-1]){
+//				sigma_array = get_sigma_array(sigma_array_full,temperature[k],\
+//							temperature_grid,n_gas,n_lambda);
+//			}
+//			//calculating tau for all wavelengths through layers
+//			for(int i=0;i<n_gas;i++){
+//				tau[0][wl] += (sigma_array[i][wl] * X[i][k] * rho[k] * dzarray[k]);
+//				}
+//		}
+//
+//		I_total[wl] += BB_surf[wl] * (exp(-1.0*tau[0][wl]));
+//
+//		//other layers
+//		BB_layer = BB_surf;
+//		sigma_array = get_sigma_array(sigma_array_full,temperature[0],\
+//					temperature_grid,n_gas,n_lambda);
+//
+//		for(int j=1;j<nlayers;j++){
+//
+//			for(int k=j;k<nlayers;k++){
+//				if(temperature[k] != temperature[k-1]){
+//					sigma_array = get_sigma_array(sigma_array_full,temperature[k],\
+//								temperature_grid,n_gas,n_lambda);
+//				}
+//				for(int i=0;i<n_gas;i++){
+//					tau[j][wl] += (sigma_array[i][wl] *X[i][k] *rho[k] *dzarray[k]);
+//					}
+//
+//				if(k==j){
+//					dtau[j][wl] = tau[j][wl];
+//				}
+//
+//				if(temperature[j] != temperature[j-1]){
+//					black_body(specgrid,n_lambda,temperature[j],BB_layer);
+//				}
+//				I_total[wl] += BB_layer[wl] * (exp(-1.0*tau[j][wl]))* dtau[j][wl];
+//			}
+//		}
+//		FpFs[wl] = (I_total[wl] /F_star[wl]) * pow((Rp/Rs),2);
+//	}
 
 
 }

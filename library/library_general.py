@@ -100,24 +100,26 @@ def find_single_absfile(PATH,MOLECULELIST,TEMPERATURE):
 
 def cast2cpp(ARRAY):
     #cast numpy array to C array
-
+  
     if ARRAY.dtype != float64:
         print 'WARNING: array not cast in float64'
         print 'current format: ', ARRAY.dtype
-
+        ARRAY = ARRAY.astype(float64)
+  
     ARRdim = len(shape(ARRAY)) #getting number of dimensions
     if ARRdim == 1:
         s1 = len(ARRAY)
-        return ARRAY.ctypes.data_as(C.POINTER(C.c_double)), C.c_int(s1) #creating 1D pointer array
+        return ARRAY.ctypes.data_as(C.POINTER(C.c_double)) #creating 1D pointer array
     elif ARRdim == 2:
         [s1,s2] = shape(ARRAY)
         dbptr = C.POINTER(C.c_double)
         PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
-        return PARR, C.c_int(s1), C.c_int(s2)
-    elif ARRdim == 3:
-        [s1,s2,s3] = shape(ARRAY)
-        dbptr = C.POINTER(C.c_double)
-        PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 3D pointer array
+        return PARR
+    else:
+        PARR = ARRAY.ctypes.data_as(C.POINTER(C.c_double))
+        return PARR
+   
+
         
         
     
