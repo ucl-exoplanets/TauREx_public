@@ -77,7 +77,7 @@ class emission(object):
         if params.trans_cpp:
             # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
             self.cpathlib = C.CDLL('./library/pathintegral_emission.so',mode=C.RTLD_GLOBAL)
-            self.sigma_array_c, self.tempgrid = self.get_sigma_array_c()
+            self.sigma_array_c, self.sig_tempgrid = self.get_sigma_array_c()
     
     #class methods 
         
@@ -101,7 +101,8 @@ class emission(object):
         for t in tempgrid:
             OUT[c,:,:] = self.sigma_dict[t]
             c += 1
-        return OUT, np.asarray(tempgrid)
+        
+        return OUT, np.asarray(tempgrid,dtype=np.float64)
     
         
     def get_dz(self):
@@ -124,7 +125,6 @@ class emission(object):
         if temperature is None:
             temperature = self.T#self.planet_temp
 
-
         BB_star = self.F_star
 
         #constants 
@@ -143,11 +143,13 @@ class emission(object):
                     
                 for i in xrange(self.n_gas):
                     self.tau[0,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
-
-  
+                    
         exptau = np.exp(-1.0*self.tau[0,:])
         self.I_total += BB_surf*(exptau)
 
+#         for i in range(100):
+#             print BB_surf[i], self.tau[0,i], np.exp(-1.0*self.tau[0,i])
+            
         #other layers
         BB_layer = BB_surf
         sigma_array = self.get_sigma_array(temperature[0])
@@ -184,6 +186,7 @@ class emission(object):
             rho = self.rho
         if temperature is None:
             temperature = self.T
+
         
         #casting changing arrays to c++ pointers
         Xs1,Xs2 = shape(X)
@@ -196,9 +199,11 @@ class emission(object):
         cspecgrid = cast2cpp(self.specgrid)
         #casting fixed arrays and variables to c++ pointers
         
-        csigma_array = cast2cpp(self.sigma_array_c)
-        ctempgrid = cast2cpp(self.tempgrid)
-        cdzarray = cast2cpp(self.dzarray)
+#         csigma_array = cast2cpp(self.sigma_array_c)
+        csigma_array = self.sigma_array_c.ctypes.data_as(C.POINTER(C.c_double))
+
+        csig_tempgrid = cast2cpp(self.sig_tempgrid)
+        cdzarray = cast2cpp(float64(self.dzarray))
         znew = zeros((len(self.z)))
         znew[:] = self.z
         cz  = cast2cpp(znew)
@@ -212,6 +217,7 @@ class emission(object):
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
         cn_lambda = C.c_int(len(self.specgrid))
+        cn_sig_temp= C.c_int(len(self.sig_tempgrid))
         
         #setting up output array
         FpFs = zeros((self.nlambda),dtype=float64)
@@ -220,7 +226,7 @@ class emission(object):
         cpath_int = self.cpathlib.cpath_int_emission
         
         cpath_int(cX,crho,ctemperature,cF_star,cspecgrid,csigma_array,cdzarray,
-                  cn_lambda,cRp,cRs,cnlayers,cn_gas,ctempgrid, C.c_void_p(FpFs.ctypes.data))
+                  cn_lambda,cRp,cRs,cnlayers,cn_gas,csig_tempgrid,cn_sig_temp, C.c_void_p(FpFs.ctypes.data))
         
         OUT = zeros((self.nlambda))
         OUT[:] = FpFs

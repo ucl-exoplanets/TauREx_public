@@ -1,4 +1,5 @@
 from numpy import *
+from numpy.ctypeslib import as_ctypes
 # from library.library_preselector import *
 import scipy, sys, glob, os, time,string
 from scipy.special import wofz
@@ -104,7 +105,7 @@ def cast2cpp(ARRAY):
     if ARRAY.dtype != float64:
         print 'WARNING: array not cast in float64'
         print 'current format: ', ARRAY.dtype
-        ARRAY = ARRAY.astype(float64)
+#         ARRAY = ARRAY.astype(float64)
   
     ARRdim = len(shape(ARRAY)) #getting number of dimensions
     if ARRdim == 1:
@@ -115,8 +116,13 @@ def cast2cpp(ARRAY):
         dbptr = C.POINTER(C.c_double)
         PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
         return PARR
-    else:
+    elif ARRdim == 3:
         PARR = ARRAY.ctypes.data_as(C.POINTER(C.c_double))
+        [s1,s2,s3] = shape(ARRAY)
+        dbptr = C.POINTER(C.c_double)
+        PARR = (dbptr*s1)(dbptr*s2)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
+#         PARR = as_ctypes(ARRAY)
+        
         return PARR
    
 
