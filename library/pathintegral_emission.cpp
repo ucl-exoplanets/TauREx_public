@@ -185,8 +185,8 @@ void cpath_int_emission(double ** X,  double * rho, double * temperature,
 
 //	//declaring arrays and variables
 	double exptau[n_lambda], BB_layer[n_lambda],tau_total[n_lambda],BB_surf[n_lambda];
-	double tau[nlayers],dtau[nlayers];
-	double sig_nearest_temp=0, BB_lambda, I_total;
+//	double tau[nlayers],dtau[nlayers];
+	double sig_nearest_temp=0, BB_lambda, I_total,tau, dtau;
 	int sig_index=0;
 
 	//surface layer
@@ -195,7 +195,7 @@ void cpath_int_emission(double ** X,  double * rho, double * temperature,
 
 	//calculating emission spectrum per lambda
 	for(int wl=0;wl<n_lambda;wl++){
-		tau[0] = 0.0;
+		tau = 0.0;
 		BB_lambda = 0.0;
 		I_total = 0.0;
 
@@ -208,35 +208,35 @@ void cpath_int_emission(double ** X,  double * rho, double * temperature,
 			}
 			//calculating tau through layers
 			for(int i=0;i<n_gas;i++){
-				tau[0] += (sigma_array_3d[sig_index][i][wl] * X[i][k] * rho[k] * dzarray[k]);
+				tau += (sigma_array_3d[sig_index][i][wl] * X[i][k] * rho[k] * dzarray[k]);
 				}
 		}
 
-		I_total += BB_lambda * (exp(-1.0*tau[0]));
+		I_total += BB_lambda * (exp(-1.0*tau));
 
 		//other layers
 		find_nearest(sig_tempgrid,n_sig_temp,temperature[0],sig_index,sig_nearest_temp);
 //		black_body_2(specgrid[wl],temperature[0],BB_lambda);
 		for(int j=1;j<nlayers;j++){
-			tau[j] = 0.0;
-			dtau[j] = 0.0;
+			tau = 0.0;
+			dtau = 0.0;
 			for(int k=j;k<nlayers;k++){
 				if(temperature[k] != temperature[k-1]){
 					find_nearest(sig_tempgrid,n_sig_temp,temperature[k],sig_index,sig_nearest_temp);
 				}
 				for(int i=0;i<n_gas;i++){
-					tau[j] += (sigma_array_3d[sig_index][i][wl] *X[i][k] *rho[k] *dzarray[k]);
+					tau += (sigma_array_3d[sig_index][i][wl] *X[i][k] *rho[k] *dzarray[k]);
 				}
 
 				if(k==j){
-					dtau[j] = tau[j];
+					dtau = tau;
 				}
 
 				if(temperature[j] != temperature[j-1]){
 					black_body_2(specgrid[wl],temperature[j],BB_lambda);
 				}
 			}
-			I_total += (BB_lambda * (exp(-1.0*tau[j]))* dtau[j]);
+			I_total += (BB_lambda * (exp(-1.0*tau))* dtau);
 		}
 		FpFs[wl] = (I_total /F_star[wl]) * pow((Rp/Rs),2);
 	}
