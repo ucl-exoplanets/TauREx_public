@@ -127,6 +127,7 @@ if params.gen_type == 'transmission':
 #plotting fits and data
 outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only
 
+
 if params.out_dump_internal:
     outputob.save_model(modelout=OUT, modelsaveas=params.out_internal_name)       #saving models to ascii
 
@@ -139,36 +140,36 @@ if params.out_dump_internal:
 
 ####profiling code
 # pr.disable()
-# 
+#  
 # PROFDIR = 'Profiling/'
 # if not os.path.isdir(PROFDIR):
 #         os.mkdir(PROFDIR)
-# 
+#  
 # # s = StringIO.StringIO()
 # sortby = 'cumulative'
 # # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-# 
+#  
 # #printing to terminal
 # # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
 # # globalstats.print_stats()
-# 
+#  
 # #redirecting output to files
 # sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
 # globalstats.print_stats()
-# 
+#  
 # sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
 # globalstats.print_stats()
-# 
+#  
 # sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
 # globalstats.print_stats()
-# 
+#  
 # sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
 # globalstats.print_stats()
-# 
+#  
 # sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
 # globalstats.print_stats()

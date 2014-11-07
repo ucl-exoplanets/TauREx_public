@@ -1,6 +1,6 @@
 [General]
 #verbose or not 
-verbose = False
+verbose = True
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
@@ -16,15 +16,15 @@ wavemin = 0.5
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 3000
+spec_res = 1000
 
 #specturm type (emission/transmission), for create_spectrum.py
-type = emission 
+type = transmission 
 
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/hd209_deming.txt
+spectrum_file = Input/observations/hd209_deming.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -41,7 +41,10 @@ abs_path = Input/crosssections/
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 1.0
+tempres = 1
+
+#Path to Phoenix/Atlas stellar models (required by emission code)
+star_path = Input/Star_spectra 
 
 #include varying stellar radii file. True/False 
 include_rad = False 
@@ -50,11 +53,10 @@ include_rad = False
 rad_file = Input/rad_star.rad
 
 #include H2-H2 collision induced absorption. True/False 
-include_cia = True 
+include_cia = False 
 
 #file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
-
 
 
 [Output]
@@ -65,10 +67,10 @@ path = Output/
 file_prefix = hd209_
 
 #save internal model to file. Useful for when only creating transmission/emisison model
-dump_internal = False
+dump_internal = True
 
 #internal model name save as
-internal_name = hd209_specmodel.dat
+internal_name = hd209_specmodel_nh3.dat
 
 #save plots to .pdf 
 save_plots = True
@@ -157,12 +159,12 @@ temp = 1450
 mu = 2.3
 
 #molecules considered
-molecules = 12C-1H4,1H2-16O,14N-1H3,12C-16O2
+molecules = 12C-1H4,1H2-16O,14N-1H3,12C-16O2,12C-16O
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 2.0e-3, 2.0e-3, 2.0e-3,2.0e-3
+mixing_ratios = 0.0, 0.0,2.0e-3,0.0,0.0
 
 #include cloud opacities. True/False 
 include_cld = False
