@@ -10,21 +10,22 @@ trans_cpp = True
 manual_waverange = True
 
 #short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.5
+wavemin = 1.0
 
 #long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 20.0
+wavemax = 10.0
 
 #resolution of internal model runs (R)
-spec_res = 1000
+spec_res = 150
 
-#specturm type (emission/transmission), for create_spectrum.py
-type = emission 
+#specturm type (emission/transmission), for create_spectrum.py 
+type = transmission 
+
 
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/gj3470b_test.txt
+spectrum_file = Input/observations/gj3470b_test.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -36,7 +37,7 @@ atm_file = Input/profile.atm
 abs_path = Input/crosssections/
 
 #run ExoMol cross section conversion from wavenumbers to microns
-convert2microns = False
+convert2microns = True
 
 #files containing absorption cores-sections 
 #you can specify several file names separated by commas
@@ -44,7 +45,7 @@ convert2microns = False
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 50
+tempres = 1
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
 star_path = Input/Star_spectra 
@@ -74,66 +75,19 @@ file_prefix = test_
 dump_internal = True
 
 #internal model name save as
-internal_name = testspec.dat
+internal_name = ariel_VO_2000_transmission.txt
 
 #save plots to .pdf 
 save_plots = True
-
-[Preselector]
-
-#Run preselector module to automatically estimate
-#number and types of molecules present in spectrum.
-#If run, the following parameters will be automatically
-#determined and overwritten by the pre-selector
-# [Input]: atm_file, abs_path (overwritten by cross_path), abs_files
-# [Input]: use_ATMfile = False,
-# [Planet]: temp, molec, (mu not yet)
-# [T-P profile]: num_gas
-# not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
-
-#run preselector
-run_pre = False
-
-#Path of spectral library folder
-speclib_path = Preselector/speclib/
-
-#Path of PCA preselector .pkl file
-pca_path = Preselector/
-
-#(re)generate spectral library
-generate_speclib = False
-
-#restrict temperature range for cross-section lists
-restrict_temp = False
-
-#setting temperature range (K) if restrict_temp = True : low, high 
-temp_range = 400, 1000
-
-#mixing ratios for which spectra are computed
-mixing_ratio = 1e-5,1e-4,1e-3,1e-2
-
-#(re)compute PCA preselector file
-generate_pca = False
-
-#masking threshold
-mask_thres = 0.6
-
-#force preselector to include following list of molecules
-mol_force_on = True
-
-#list of molecules to be added
-#naming convention must be same as cross-section file, comma separated 
-mol_force = 12C-16O,1H2-16O
-
 
 [Star]
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.568
+radius = 0.781
 
 #Stellar temperature (K)
-temp   = 3600
+temp   = 4900
 
 
 
@@ -141,32 +95,34 @@ temp   = 3600
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 0.440
+radius = 1.138
 
 #Orbital semi-major axis (AU)
-sma = 0.0356
+sma = 0.03099
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
 
 #Planetary surface gravity (ms^-2)
-grav = 7.9
+grav = 21.2
 
 #Planetary temperature (K)
-temp = 800
+temp = 2000
 
 #molecular weight of atmosphere 
 mu = 2.3
 
 #molecules considered
-molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
-#molecules = 1H2-16O
+#molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3, 1H-12C-14N, 1H3-p, 14N-16O, 28Si-16O, 48Ti-16O, 51V-16O
+#molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3, 1H-12C-14N
+molecules = 51V-16O, 1H2-16O
+
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
-#mixing_ratios = 2.0e-2
+#mixing_ratios = 2.0e-3,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+mixing_ratios = 2.0e-3,0.0
 
 
 #include cloud opacities. True/False 
@@ -181,6 +137,7 @@ cld_pressure = 1.0e-3, 0.1
 #file from which to read optical depths for extra opacities (e.g. clouds)
 #parameter not in use but placeholder for implementation if needed
 cld_file = Input/cloud1.cld
+
 
 
 [T-P profile]
@@ -208,80 +165,6 @@ atm_max_pressure = 1e6
 #set mixing ratios as variables
 var_mix = True
 
-
-[Fitting]
-#defines general fittings parameters 
-#independent of method
-
-#fit transmission model
-transmission = True
-
-#fit emission model
-emission     = False
-
-#free parameters, temperature, abundance
-param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
-
-#Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 200
-T_low = 200
-
-#Upper and lower bounds for mixing ratios 
-X_up  = 1e-2
-X_low = 0.0
-
-
-[MCMC]
-#defines MCMC specific parameters
-
-#run MCMC analysis on data
-run = True
-
-#update data standard deviation from dynamic fit.
-update_std = True
-
-
-#MCMC number of total iterations
-iter = 1000
-
-#MCMC burn in period 
-burn = 10
-
-#MCMC thinning factor
-thin = 2
-
-
-[MultiNest]
-#defines MultiNest specific parameters
-
-#run Nested Sampling analysis on data
-run = True
-
-#resume from previous run
-resume = False
-
-#verbose
-verbose = True
-
-#sampling chains directory
-nest_path = chains/
-
-#sampling efficiency (parameter, ...)
-sampling_eff = parameter
-
-#number of live points
-n_live_points = 2000
-
-#maximum no. of iterations (0=inf)
-max_iter = 0
-
-#importance nested sampling
-imp_sampling = False
-
-
-
-[NeuralNet]
-#defines Neural Network specific parameters
 
 
 

@@ -12,6 +12,25 @@ import ctypes as C
 # def linear_abs_temp_interpolator(TEMPLIST, ):
 
 
+def convert2microns(PATH, upcut=25):
+#Function converting ExoMol cross section files in dir:PATH from wavenumbers to microns and sorting
+#with ascending wavelength
+#output: .abs files
+
+    FILES = glob.glob(PATH)
+
+    for f in FILES:
+        if os.path.isfile(f[:-3]+'abs'):
+            pass
+        else:
+            print 'converting: ', f
+            tmp = loadtxt(f,dtype=float32)[1:,:]
+            tmp[:,0] = 10000.0/tmp[:,0]
+            idx = argsort(tmp[:,0],axis=-1)
+            tmp2 = tmp[idx,:][where(tmp[idx,0] < upcut)]
+            tmp2 = tmp2.astype(float32,copy=False)
+            savetxt(f[:-3]+'abs',tmp2,fmt="%.6e,%.8e")
+
 def find_nearest(arr, value):
     # find nearest value in array
     arr = array(arr)

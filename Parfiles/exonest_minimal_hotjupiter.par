@@ -34,6 +34,9 @@ atm_file = Input/profile.atm
 #Path of ExoMol cross section files folder
 abs_path = Input/crosssections/
 
+#run ExoMol cross section conversion from wavenumbers to microns
+convert2microns = False
+
 #files containing absorption cores-sections 
 #you can specify several file names separated by commas
 #WARNING: parameter is legacy input. Not used by code, define abs_path and planet_molec parameters instead.

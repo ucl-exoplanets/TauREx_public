@@ -42,6 +42,7 @@ class parameters(base):
         self.in_use_ATMfile        = parser.getboolean('Input','use_ATMfile')
         self.in_atm_file           = parser.get('Input','atm_file')
         self.in_abs_path           = parser.get('Input','abs_path')
+        self.in_convert2microns    = parser.getboolean('Input','convert2microns')
         self.in_abs_files          = parser.get('Input','__legacy__abs_files')
         
         self.in_tempres            = parser.getfloat('Input','tempres')
@@ -96,7 +97,6 @@ class parameters(base):
             self.pre_run               = parser.getboolean('Preselector','run_pre')
             self.pre_speclib_path      = parser.get('Preselector','speclib_path')
             self.pre_pca_path          = parser.get('Preselector','pca_path')
-            self.pre_conver2microns    = parser.getboolean('Preselector','convert2microns')
             self.pre_gen_speclib       = parser.getboolean('Preselector','generate_speclib')
             self.pre_restrict_temp     = parser.getboolean('Preselector','restrict_temp')
             self.pre_temp_range        = genfromtxt(StringIO(parser.get('Preselector', 'temp_range')), delimiter = ',')

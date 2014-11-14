@@ -43,6 +43,10 @@ class data(base):
         self.params = params
         self.KBOLTZ=1.380648813e-23
         
+        #converting absorption cross-sectinos from cm^-1 to microns
+        if params.in_convert2microns:
+            libgen.convert2microns(params.in_abs_path+'*')
+        
         #reading in spectrum data to be fitted
         self.spectrum = self.readfile(params.in_spectrum_file)
         self.nwave = len(self.spectrum[:,0])

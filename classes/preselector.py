@@ -90,23 +90,19 @@ class preselector(base):
 
 
 
-    def run_preprocess(self,convertLinelist=None,generateSpectra=None,generatePCA=None):
+    def run_preprocess(self,generateSpectra=None,generatePCA=None):
         #function running pre-processing steps
         #convertLinelist will convert ExoMol cross sections from wavenumbers to microns
         #generateSpectra will generate library of transmission spectra from linelists
         #generatePCA will run PCA on spectral library and compile final dictionary
 
         #getting booleans from parameter file if not set manually
-        if convertLinelist is None:
-            convertLinelist = self.params.pre_conver2microns
         if generateSpectra is None:
             generateSpectra = self.params.pre_gen_speclib
         if generatePCA is None:
             generatePCA = self.params.pre_gen_pca
 
         #doing the pre-processing
-        if convertLinelist:
-            convert2microns(self.params.in_abs_path+'*')
 #             print '1 done'
         if generateSpectra:
             generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,

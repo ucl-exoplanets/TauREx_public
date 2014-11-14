@@ -12,25 +12,6 @@ from data import *
 
 
 
-def convert2microns(PATH, upcut=25):
-#Function converting ExoMol cross section files in dir:PATH from wavenumbers to microns and sorting
-#with ascending wavelength
-#output: .abs files
-
-    FILES = glob.glob(PATH)
-
-    for f in FILES:
-        if os.path.isfile(f[:-3]+'abs'):
-            pass
-        else:
-            print 'converting: ', f
-            tmp = np.loadtxt(f,dtype=np.float32)[1:,:]
-            tmp[:,0] = 10000.0/tmp[:,0]
-            idx = np.argsort(tmp[:,0],axis=-1)
-            tmp2 = tmp[idx,:][np.where(tmp[idx,0] < upcut)]
-            tmp2 = tmp2.astype(np.float32,copy=False)
-            np.savetxt(f[:-3]+'abs',tmp2,fmt="%.6e,%.8e")
-
 
 def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #Generates transmission spectra from cross section files for given mixing ratios
