@@ -36,7 +36,7 @@ class tp_profile(base):
         self.boltzmann = 1.3806488e-23# m2 kg s-2 K-1
         
         #derived values
-        self.scaleheight = self.get_scaleheight(params.planet_temp, params.planet_grav, params.planet_mu)
+        self.scaleheight = self.get_scaleheight(params.planet_temp, data.planet_grav, params.planet_mu)
      
         
         

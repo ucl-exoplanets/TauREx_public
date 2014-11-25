@@ -41,7 +41,8 @@ class data(base):
         license_manager().run()
         
         self.params = params
-        self.KBOLTZ=1.380648813e-23
+        self.KBOLTZ = 1.380648813e-23
+        self.G      = 6.67384e-11
         
         #converting absorption cross-sectinos from cm^-1 to microns
         if params.in_convert2microns:
@@ -68,6 +69,9 @@ class data(base):
         #calculating spectral binning grid
         self.spec_bin_grid,self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)       
 
+        #setting planetary surface gravity
+        self.planet_grav = self.get_surface_gravity()
+        
         #calculating atmospheric scale height
         self.scaleheight = self.get_scaleheight()
 
@@ -120,17 +124,24 @@ class data(base):
         
         return ATM
 
+    def get_surface_gravity(self):
+        #calculate surface gravity of planet using Rp and Mp
+        
+        return (self.G * self.params.planet_mass) / (self.params.planet_radius**2)
+
     def get_scaleheight(self,T_aver=None,surf_g=None,mmw=None):
         #compute scaleheight of atmosphere
         if T_aver is None:
             T_aver = self.params.planet_temp
         if surf_g is None:
-            surf_g = self.params.planet_grav
+            surf_g = self.planet_grav
         if mmw is None:
             mmw = self.params.planet_mu
              
  
         return (self.KBOLTZ*T_aver)/(mmw*surf_g)
+
+        
 
     def get_specgrid(self,R=5000,lambda_min=0.1,lambda_max=20.0):
     #generating wavelength grid with uniform binning in log(lambda)

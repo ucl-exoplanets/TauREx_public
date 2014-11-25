@@ -7,7 +7,7 @@ verbose = True
 trans_cpp = True
 
 #manually set wavelength range (if False, range taken from input data)
-manual_waverange = True
+manual_waverange = False
 
 #short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.5
@@ -18,13 +18,13 @@ wavemax = 20.0
 #resolution of internal model runs (R)
 spec_res = 1000
 
-#specturm type (emission/transmission), for create_spectrum.py
-type = emission 
+#specturm type (emission/transmission), for create_spectrum.py 
+type = transmission 
 
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/gj3470b_test.txt
+spectrum_file = Input/observations/hotjupiter_r300_5e-5.dat
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -44,7 +44,7 @@ convert2microns = False
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 50
+tempres = 1.0
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
 star_path = Input/Star_spectra 
@@ -71,13 +71,14 @@ path = Output/
 file_prefix = test_
 
 #save internal model to file. Useful for when only creating transmission/emisison model
-dump_internal = True
+dump_internal = False
 
 #internal model name save as
-internal_name = testspec.dat
+internal_name = transmissionspec.dat
 
 #save plots to .pdf 
 save_plots = True
+
 
 [Preselector]
 
@@ -101,19 +102,19 @@ speclib_path = Preselector/speclib/
 pca_path = Preselector/
 
 #(re)generate spectral library
-generate_speclib = False
+generate_speclib = True
 
 #restrict temperature range for cross-section lists
-restrict_temp = False
+restrict_temp = True
 
 #setting temperature range (K) if restrict_temp = True : low, high 
-temp_range = 400, 1000
+temp_range = 800, 1600
 
 #mixing ratios for which spectra are computed
 mixing_ratio = 1e-5,1e-4,1e-3,1e-2
 
 #(re)compute PCA preselector file
-generate_pca = False
+generate_pca = True
 
 #masking threshold
 mask_thres = 0.6
@@ -130,10 +131,10 @@ mol_force = 12C-16O,1H2-16O
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.568
+radius = 0.781
 
 #Stellar temperature (K)
-temp   = 3600
+temp   = 4900
 
 
 
@@ -141,33 +142,30 @@ temp   = 3600
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 0.440
+radius = 1.138
+
+#Planetary mass (M_jupiter)
+mass = 1.138
 
 #Orbital semi-major axis (AU)
-sma = 0.0356
+sma = 0.03099
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
 
-#Planetary surface gravity (ms^-2)
-grav = 7.9
-
 #Planetary temperature (K)
-temp = 800
+temp = 1400
 
 #molecular weight of atmosphere 
 mu = 2.3
 
 #molecules considered
-molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4, 14N-1H3
-#molecules = 1H2-16O
+molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 4.0e-4, 1.0e-7, 4.0e-4, 7.0e-5, 1.0e-5
-#mixing_ratios = 2.0e-2
-
+mixing_ratios = 2.0e-3, 2.0e-8, 2.0e-3, 2.0e-5, 2.0e-7
 
 #include cloud opacities. True/False 
 include_cld = False
@@ -235,30 +233,30 @@ X_low = 0.0
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = True
+run = False
 
 #update data standard deviation from dynamic fit.
 update_std = True
 
 
 #MCMC number of total iterations
-iter = 1000
+iter = 300
 
 #MCMC burn in period 
 burn = 10
 
 #MCMC thinning factor
-thin = 2
+thin = 1
 
 
 [MultiNest]
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
-resume = False
+resume = True
 
 #verbose
 verbose = True
@@ -270,7 +268,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 2000
+n_live_points = 400
 
 #maximum no. of iterations (0=inf)
 max_iter = 0
@@ -282,6 +280,3 @@ imp_sampling = False
 
 [NeuralNet]
 #defines Neural Network specific parameters
-
-
-

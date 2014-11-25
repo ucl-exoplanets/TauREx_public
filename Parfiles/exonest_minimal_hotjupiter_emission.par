@@ -96,14 +96,14 @@ temp   = 4900
 #Planetary radius (R_jupiter)
 radius = 1.138
 
+#Planetary mass (M_jupiter)
+mass = 1.138
+
 #Orbital semi-major axis (AU)
 sma = 0.03099
 
 #Planetary bond albedo (0-1)
 albedo = 0.2
-
-#Planetary surface gravity (ms^-2)
-grav = 21.2
 
 #Planetary temperature (K)
 temp = 1400
