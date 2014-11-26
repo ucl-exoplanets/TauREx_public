@@ -201,6 +201,7 @@ if params.downhill_run:
     fitob.downhill_fit()    #simplex downhill fit
 if params.mcmc_run and pymc_import:
     fitob.mcmc_fit()    #MCMC fit
+    MPI.COMM.BARRIER()  # wait for everybody to synchronize here
 if params.nest_run and multinest_import:
     fitob.multinest_fit()   #Nested sampling fit
 
