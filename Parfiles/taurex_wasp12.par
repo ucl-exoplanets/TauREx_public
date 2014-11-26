@@ -285,7 +285,7 @@ n_live_points = 4000
 max_iter = 0
 
 #search for multiple modes 
-multimodes = False
+multimodes = True
 
 #maximum number of modes
 max_modes = 100

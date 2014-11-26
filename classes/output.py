@@ -110,7 +110,13 @@ class output(base):
                 parameters = range(self.fit.n_params)
             else:
                 parameters = param_names
-            plot_multinest_results(self.fit.NEST_FITDATA,parameters=parameters,save2pdf=save2pdf, out_path=self.params.out_path)
+            
+            if self.params.nest_multimodes:
+                plot_multinest_results(self.fit.NEST_FITDATA,parameters=parameters,save2pdf=save2pdf, out_path=self.params.out_path)
+            else:
+                if self.params.verbose:
+                    print 'WARNING: plotting routine for multimodes = False disabled. Please use plot_chains.py script.'
+
         else:
             print 'Multinest was not run. Nothing to see here. Go away... '
 

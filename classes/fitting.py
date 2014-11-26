@@ -341,14 +341,23 @@ class fitting(base):
 
         PFIT     = []
         PFIT_std = []
+      
+     
         for i in range(self.n_params):
-            PFIT.append(NESTstats['modes'][0]['maximum a posterior'][i])
-            PFIT_std.append(NESTstats['modes'][0]['sigma'][i])
+            if self.params.nest_multimodes:
+                PFIT.append(NESTstats['modes'][0]['maximum a posterior'][i])
+                PFIT_std.append(NESTstats['modes'][0]['sigma'][i])
+            else:
+                PFIT.append(NESTstats['marginals'][i]['median'])
+                PFIT_std.append(NESTstats['marginals'][i]['sigma'])
             
+
+        
         T,P,X = self.profile.TP_profile(PARAMS=PFIT)
         
         T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
         X_std = PFIT_std[:self.Pindex[0]]
+
 
         # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
         # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
@@ -413,9 +422,6 @@ class fitting(base):
                         n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter,init_MPI=False)
         # progress.stop()
 
-        #forcing slave processes to exit at this stage
-        if MPI.COMM_WORLD.Get_rank() != 0:
-            exit()
         
         
         #coallating results into arrays

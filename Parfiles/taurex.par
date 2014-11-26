@@ -244,6 +244,7 @@ type = L-BFGS-B
 options = {‘verbose’:False}
 
 
+
 [MCMC]
 #defines MCMC specific parameters
 
@@ -289,7 +290,7 @@ n_live_points = 400
 max_iter = 0
 
 #search for multiple modes 
-multimodes = False
+multimodes = True
 
 #maximum number of modes
 max_modes = 100
@@ -304,6 +305,3 @@ imp_sampling = False
 
 [NeuralNet]
 #defines Neural Network specific parameters
-
-
-
