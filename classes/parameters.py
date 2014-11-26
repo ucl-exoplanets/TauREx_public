@@ -8,6 +8,7 @@ from ConfigParser import SafeConfigParser
 import numpy as np
 from numpy import genfromtxt,arange,size
 from StringIO import StringIO
+import ast
 
 class parameters(base):
 #instantiation
@@ -124,6 +125,13 @@ class parameters(base):
             self.fit_transmission      = False
             self.fit_emission          = False
             pass
+        try: 
+            self.downhill_run          = parser.getboolean('Downhill','run')
+            self.downhill_type         = parser.get('Downhill', 'type')
+#         self.downhill_options      = ast.literal_eval(str(parser.get('Downhill','options')))
+        except:
+            self.downhill_run          = False
+            pass
         
         try:
             self.mcmc_run              = parser.getboolean('MCMC','run')
@@ -143,6 +151,9 @@ class parameters(base):
             self.nest_samp_eff         = parser.get('MultiNest','sampling_eff')
             self.nest_nlive            = parser.getint('MultiNest','n_live_points')
             self.nest_max_iter         = parser.getint('MultiNest','max_iter')
+            self.nest_multimodes       = parser.getboolean('MultiNest','multimodes')
+            self.nest_max_modes        = parser.getint('MultiNest','max_modes')
+            self.nest_const_eff        = parser.getboolean('MultiNest','const_eff')
             self.nest_imp_sampling     = parser.getboolean('MultiNest','imp_sampling')
         except:
             self.nest_run              = False

@@ -67,13 +67,13 @@ class output(base):
         #calculating final absorption/emission spectrum (currently only absorption)
 
         if self.MCMC:
-            self.spec_mcmc = self.model(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean)
+            self.spec_mcmc = self.model(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean,temperature=fit.MCMC_T_mean)
             self.spec_mcmc = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_mcmc)
         if self.NEST:
-            self.spec_nest = self.model(rho=self.profile.get_rho(T=fit.NEST_T_mean),X=fit.NEST_X_mean)
+            self.spec_nest = self.model(rho=self.profile.get_rho(T=fit.NEST_T_mean),X=fit.NEST_X_mean,temperature=fit.NEST_T_mean)
             self.spec_nest = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_nest)
         if self.DOWN:
-            self.spec_down = self.model(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean)
+            self.spec_down = self.model(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean,temperature=fit.DOWNHILL_T_mean)
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
 
 

@@ -72,6 +72,8 @@ Pnodes = [MAX_P,1e5, 100.0,MIN_P]
 Tnodes = [T_surf,T_surf,1200.0,1200.0]
 # Tnodes = [T_surf,T_surf,T_surf, T_surf]
 
+print 'Pnodes ',Pnodes
+
 #creating linear T-P profile
 # int_func1 = interpolate.interp1d(Pnodes[::-1],Tnodes[::-1],kind='quadratic')
 # TP = int_func1((PTA_arr[::-1])[:,0])
@@ -96,7 +98,7 @@ PTA_arr[:,1] = TP[::-1]
 #adding mixing ratios for molecules 
 # X = [6.0e-5,1.0e-5,5.0e-6]
 # X = [1.0e-7,1.0e-7,1.0e-7]
-X = [1.0e-5,1.0e-5]
+X = [5e-6,2e-7]
 
 for i in range(len(X)):
     PTA_arr[:,2+i+1] = X[i]

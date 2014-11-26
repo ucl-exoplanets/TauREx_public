@@ -67,6 +67,7 @@ class fitting(base):
         self.observation = data.spectrum
         self.nlayers     = params.tp_atm_levels
         self.ngas        = data.ngas
+        self.nspecbingrid= len(data.spec_bin_grid)
 #         self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         
         # self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
@@ -87,6 +88,7 @@ class fitting(base):
         #getting prior bounds for downhill algorithm
         self.bounds      = self.profile.bounds
         
+    
         #setting bounds for downhill algorithm
 #         self.bounds = []
 #         self.bounds.append((self.T_low,self.T_up))
@@ -122,7 +124,8 @@ class fitting(base):
         self.MCMC     = False
         self.NEST     = False
 
-
+        #DEBUG COUNTER
+        self.db_count = 0
 
 
 
@@ -140,7 +143,7 @@ class fitting(base):
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
         #binning internal model 
-        MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in range(1,len(self.dataob.spec_bin_grid))]
+        MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in xrange(1,self.nspecbingrid)]
         
         #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
 #         print PFIT
@@ -148,20 +151,26 @@ class fitting(base):
 #         print P
 #         ion()
 #         clf()
-#         figure(100)
+#         figure(1)
 #         plot(T,np.log(P))
 #         draw()
 
 #         ion()
+#         show()
+#         print isinteractive()
 #         clf()
-#         figure(101)
+#         figure(1)
 #         plot(DATA,'g')
 #         plot(MODEL_binned)
+#         show()
 #         draw()
 
-        # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
+        
 
+        # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
+        
         res = (DATA-MODEL_binned) / DATASTD
+#         print sum(res**2)
         return sum(res**2)
         
 ############################################################################### 
@@ -200,8 +209,9 @@ class fitting(base):
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
         
-        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='L-BFGS-B',bounds=(self.bounds))
-#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Powell',bounds=(self.bounds))
+        PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method=self.params.downhill_type,bounds=(self.bounds))
+#         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds))
+#         PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD),maxfun=10)
         
 #         print PFIT
 
@@ -332,18 +342,26 @@ class fitting(base):
             std_dev = pymc.Uniform('std_dev',0.0,2.0*max(DATASTD),value=DATASTD,observed=True,size=len(DATASTD))
         
         
-        @pymc.deterministic(plot=False)
-        def precision(std_dev=std_dev):
-                return std_dev
-    
+        #deterministic class needs to be initiliased directly as CYTHON doesnt like PYMC decorators
+#         @pymc.deterministic(plot=False)
+#         def precision_func(std_dev):
+#                 return std_dev
+#             
+#         precision = pymc.Deterministic(eval = precision_func,
+#                   name = 'precision',
+#                   parents = {'std_dev': std_dev}, doc = 'precision',
+#                   trace = True,
+#                   verbose = 0,
+#                   dtype=float,
+#                   plot=False,
+#                   cache_depth = 2)
         
-        # log-likelihood function
-        @pymc.stochastic(observed=True, plot=False)
-        def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
             
-#
-#             Pcontainer = np.hstack(PFIT)
-
+        
+        # log-likelihood function. Needs to be initialised directly since CYTHON does not like PYMC decorators
+#         @pymc.stochastic(observed=True, plot=False)
+#         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
+        def mcmc_loglikelihood(value, PFIT, DATASTD, DATA):
             #need to cast from numpy object array to float array. Slow but hstack is  slower. 
             #ideas?
             Pcontainer = np.zeros((self.n_params))
@@ -354,6 +372,27 @@ class fitting(base):
             llterms =   (-len(DATA)/2.0)*np.log(pi) -np.log(np.mean(DATASTD)) -0.5* chi_t
 #             llterms =  - 0.5* chi_t
             return llterms
+        
+        
+        mcmc_logp = pymc.Stochastic( logp = mcmc_loglikelihood,
+                doc = 'The switchpoint for mcmc loglikelihood.',
+                name = 'switchpoint',
+                parents = {'PFIT': priors, 'DATASTD': std_dev, 'DATA':DATA},
+#                 random = switchpoint_rand,
+                trace = True,
+                value = PINIT,
+                dtype=int,
+                rseed = 1.,
+                observed = True,
+                cache_depth = 2,
+                plot=False,
+                verbose = 0)
+
+        
+        
+
+
+
 
         #setting up folders for chain output
         OUTFOLDER = 'chains/MCMC/thread_'+str(self.MPIrank)
@@ -366,7 +405,7 @@ class fitting(base):
         if self.params.verbose: verbose = 1
         else: verbose = 0
             
-        R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=verbose,db='txt',
+        R = pymc.MCMC((priors, mcmc_logp), verbose=verbose,db='txt',
                       dbname='chains/MCMC/thread_'+str(self.MPIrank))  # build the model
 #         R = pymc.MCMC((priors, mcmc_loglikelihood), verbose=1)  # build the model
 
@@ -473,7 +512,7 @@ class fitting(base):
         def multinest_loglike(cube, ndim,nparams):
         #log-likelihood function called by multinest
         
-            PFIT = [cube[i] for i in range(self.n_params)]
+            PFIT = [cube[i] for i in xrange(self.n_params)]
             PFIT = asarray(PFIT)
 
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
@@ -491,7 +530,7 @@ class fitting(base):
     #         print cube[0]
 
             #converting mixing ratios from normalised grid to uniform prior
-            for i in range(self.n_params):
+            for i in xrange(self.n_params):
                 cube[i] = (cube[i] * (self.bounds[i][1]-self.bounds[i][0])) + self.bounds[i][0]
             # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
         
@@ -500,7 +539,7 @@ class fitting(base):
         DATASTD = self.observation[:,2] #data error 
         DATASTDmean = mean(DATASTD)
         
-        parameters = [str(i) for i in range(self.n_params)]
+        parameters = [str(i) for i in xrange(self.n_params)]
         n_params = self.n_params
         ndim = n_params
 
@@ -509,8 +548,9 @@ class fitting(base):
 
         # progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         # threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
-        pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,
-                        importance_nested_sampling = self.params.nest_imp_sampling, resume = resume,
+        pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,multimodal=self.params.nest_multimodes,
+                        max_modes=self.params.nest_max_modes, const_efficiency_mode = self.params.nest_const_eff,
+                        importance_nested_sampling = self.params.nest_imp_sampling,resume = resume,
                         verbose = self.params.nest_verbose,sampling_efficiency = self.params.nest_samp_eff,
                         n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter,init_MPI=False)
         # progress.stop()
