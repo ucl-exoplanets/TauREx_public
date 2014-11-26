@@ -223,12 +223,27 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 500
-T_low = 500
+T_up  = 200
+T_low = 200
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 1e-1
+X_up  = 1e-2
 X_low = 0.0
+
+
+[Downhill]
+#defines parameters for minimisation
+
+#run minimisation routine on data
+run = True
+
+#type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, 
+#L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
+#see scipy.optimize.minimize documentation
+type = L-BFGS-B
+
+#Supply extra parameters using options parameter. See scipy docu
+options = {‘verbose’:False}
 
 
 [MCMC]
@@ -242,10 +257,10 @@ update_std = True
 
 
 #MCMC number of total iterations
-iter = 50000
+iter = 300
 
 #MCMC burn in period 
-burn = 5000
+burn = 10
 
 #MCMC thinning factor
 thin = 1
@@ -255,10 +270,10 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
-resume = False
+resume = True
 
 #verbose
 verbose = True
@@ -270,10 +285,19 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 4000
+n_live_points = 400
 
 #maximum no. of iterations (0=inf)
 max_iter = 0
+
+#search for multiple modes 
+multimodes = False
+
+#maximum number of modes
+max_modes = 100
+
+#run in constant efficiency mode
+const_eff = False
 
 #importance nested sampling
 imp_sampling = False
@@ -282,6 +306,4 @@ imp_sampling = False
 
 [NeuralNet]
 #defines Neural Network specific parameters
-
-
 
