@@ -152,7 +152,7 @@ profileob = tp_profile(params, dataob)
 
 #initiating and running preselector instance
 if params.pre_run:
-    if params.verbose: print 'loading preprocessing'
+    if params.verbose and MPIverbose: print 'loading preprocessing'
     if params.fit_transmission:
         preob = preselector(params,dataob,transmission(params,dataob,profileob))
     elif params.fit_emission:
@@ -197,12 +197,15 @@ elif params.fit_emission:   fitob.set_model(emissob) #loading emission model int
 
 #fit data
 if params.verbose and MPIverbose: print 'fitting data'
-fitob.downhill_fit()    #simplex downhill fit
+if params.downhill_run:
+    fitob.downhill_fit()    #simplex downhill fit
 if params.mcmc_run and pymc_import:
     fitob.mcmc_fit()    #MCMC fit
 if params.nest_run and multinest_import:
     fitob.multinest_fit()   #Nested sampling fit
 
+#forcing slave processes to exit at this stage
+if MPI.COMM_WORLD.Get_rank() != 0: exit()
 
 #initiating output instance with fitted data from fitting class
 if params.verbose and MPIverbose: print 'loading output class'

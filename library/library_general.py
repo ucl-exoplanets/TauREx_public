@@ -1,4 +1,5 @@
 from numpy import *
+from numpy.ctypeslib import as_ctypes
 # from library.library_preselector import *
 import scipy, sys, glob, os, time,string
 from scipy.special import wofz
@@ -119,20 +120,33 @@ def find_single_absfile(PATH,MOLECULELIST,TEMPERATURE):
 
 def cast2cpp(ARRAY):
     #cast numpy array to C array
-
+  
     if ARRAY.dtype != float64:
         print 'WARNING: array not cast in float64'
         print 'current format: ', ARRAY.dtype
-
+#         ARRAY = ARRAY.astype(float64)
+  
     ARRdim = len(shape(ARRAY)) #getting number of dimensions
     if ARRdim == 1:
         s1 = len(ARRAY)
-        return ARRAY.ctypes.data_as(C.POINTER(C.c_double)), C.c_int(s1) #creating 1D pointer array
+        return ARRAY.ctypes.data_as(C.POINTER(C.c_double)) #creating 1D pointer array
     elif ARRdim == 2:
         [s1,s2] = shape(ARRAY)
         dbptr = C.POINTER(C.c_double)
         PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
-        return PARR, C.c_int(s1), C.c_int(s2)
+        return PARR
+    elif ARRdim == 3:
+        PARR = ARRAY.ctypes.data_as(C.POINTER(C.c_double))
+        [s1,s2,s3] = shape(ARRAY)
+        dbptr = C.POINTER(C.c_double)
+        PARR = (dbptr*s1)(dbptr*s2)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
+#         PARR = as_ctypes(ARRAY)
+        
+        return PARR
+   
+
+        
+        
     
 def redirect_stderr_stdout(stderr=sys.stderr, stdout=sys.stdout):
     #function decorator to re-direct standard output

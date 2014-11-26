@@ -4,7 +4,7 @@
 #
 # To compile type: ./c_setup.py build_ext --inplace
 
-import glob,os,shutil
+import glob,os,shutil,numpy
 from distutils.core import setup
 from Cython.Build import cythonize
 
@@ -15,7 +15,8 @@ librarylist = glob.glob('library/*.py')
 print 'Compiling code...'
 
 setup(
-    ext_modules = cythonize(classlist+librarylist)
+    ext_modules = cythonize(classlist+librarylist),
+    include_dirs=[numpy.get_include()]
 )
 
 

@@ -19,18 +19,22 @@
 from base import base    
 import numpy as np
 import pylab as pl
+import ctypes as C
 import library_emission as em
 import library_general
 from library_general import *
 import time
 
 
-class emission(base):
+class emission(object):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
         
         self.__ID__        = 'emission' #internal class identifier
+        
+        #type declations for arrays
+        self.DTYPE = np.float
         
         #loading data
         self.params        = params
@@ -38,21 +42,21 @@ class emission(base):
         self.Rs            = params['star_radius']
 
         self.n_gas         = data['ngas']
-        self.specgrid      = data['specgrid']
+        self.specgrid      = data['specgrid'].astype(self.DTYPE)
         self.sigma_dict    = data['sigma_dict']
-        self.X             = data['X']
+        self.X             = data['X'].astype(self.DTYPE)
         self.atmosphere    = data['atmosphere']
-        self.F_star        = data['F_star']
+        self.F_star        = data['F_star'].astype(self.DTYPE)
 
         self.nlayers       = profile['nlayers']
-        self.z             = profile['Z']        
-        self.T             = profile['T']
-        self.rho           = profile['rho']
-        self.p             = profile['P']
+        self.z             = profile['Z'].astype(self.DTYPE)        
+        self.T             = profile['T'].astype(self.DTYPE)
+        self.rho           = profile['rho'].astype(self.DTYPE)
+        self.p             = profile['P'].astype(self.DTYPE)
         self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
         
-        print 'z ',np.max(self.z)
-        print 'p ',np.max(self.p)
+#         print 'z ',np.max(self.z)
+#         print 'p ',np.max(self.p)
 
         self.dzarray       = self.get_dz()
 
@@ -61,7 +65,19 @@ class emission(base):
             self.set_lambdagrid(data['wavegrid'])
         else:
             self.set_lambdagrid(data['specgrid'])
+            
+            
+        #setting up static arrays for path_integral
+        self.I_total    = np.zeros((self.nlambda),dtype=self.DTYPE)  
+        self.tau        = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE) 
+        self.dtau       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE) 
+        self.tau_total  = np.zeros((self.nlambda),dtype=self.DTYPE) 
 
+        #loading c++ pathintegral library for faster computation
+        if params.trans_cpp:
+            # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
+            self.cpathlib = C.CDLL('./library/pathintegral_emission.so',mode=C.RTLD_GLOBAL)
+            self.sigma_array_c, self.sig_tempgrid = self.get_sigma_array_c()
     
     #class methods 
         
@@ -75,7 +91,19 @@ class emission(base):
     #getting sigma array from sigma_dic for given temperature 
 #         print temperature 
         return self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
+    
+    def get_sigma_array_c(self):
+    #generating 3D sigma_array from sigma_dict for c++ path integral
+        tempgrid = self.sigma_dict['tempgrid']
+        OUT = np.zeros((len(tempgrid),2,len(self.specgrid)),dtype=np.float64)
         
+        c=0
+        for t in tempgrid:
+            OUT[c,:,:] = self.sigma_dict[t]
+            c += 1
+        
+        return OUT, np.asarray(tempgrid,dtype=np.float64)
+    
         
     def get_dz(self):
         
@@ -85,7 +113,7 @@ class emission(base):
             
         dz.append(dz[-1])
         
-        return np.asarray(dz)
+        return np.asarray(dz,dtype=self.DTYPE)
         
 #     @profile #line-by-line profiling decorator
     def path_integral(self, X=None, rho=None,temperature=None):
@@ -97,125 +125,112 @@ class emission(base):
         if temperature is None:
             temperature = self.T#self.planet_temp
 
-            
-#         Tstar = 6000
         BB_star = self.F_star
 
         #constants 
-        molnum = len(X[:,0])
-        I_total    = np.zeros((self.nlambda))  
-        tau        = np.zeros((self.nlayers,self.nlambda)) 
-        dtau       = np.zeros((self.nlambda,self.nlambda)) 
-        tau_total  = np.zeros((self.nlambda)) 
+        self.I_total[:]   = 0
+        self.tau[:]       = 0
+        self.dtau[:]      = 0
+        self.tau_total[:] = 0
         
         #surface layer      
         BB_surf = em.black_body(self.specgrid,temperature[0])  
         sigma_array = self.get_sigma_array(temperature[0])
-#            
 
-        for k in range(self.nlayers):
-                sigma_array = self.get_sigma_array(temperature[k])
-                for i in range(molnum):
-                    tau[0,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
-#                 print tau[0,0], X[i,0], rho[0], self.dzarray[0]
-  
-        exptau = np.exp(-1.0*tau[0,:])
-        I_total += BB_surf*(exptau)
-#         
-#         print '-------------'
-#         pl.figure(100)
-#         pl.plot(self.specgrid,I_total)
-#         pl.plot(self.specgrid,BB_surf,'r')
-        
+        for k in xrange(self.nlayers):
+                if temperature[k] != temperature[k-1]:
+                    sigma_array = self.get_sigma_array(temperature[k])
+                    
+                for i in xrange(self.n_gas):
+                    self.tau[0,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                    
+        exptau = np.exp(-1.0*self.tau[0,:])
+        self.I_total += BB_surf*(exptau)
 
-        
-#         for j in xrange(self.nlayers-1,0,-1):
+#         for i in range(100):
+#             print BB_surf[i], self.tau[0,i], np.exp(-1.0*self.tau[0,i])
+            
+        #other layers
+        BB_layer = BB_surf
+        sigma_array = self.get_sigma_array(temperature[0])
         for j in xrange(1,self.nlayers):
 
-            for k in range(j,self.nlayers):
-                sigma_array = self.get_sigma_array(temperature[k])
-                for i in range(molnum):
-#                     print rho[k]
-                    tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
-
-#             sigma_array = self.get_sigma_array(temperature[j])
-#             for i in range(molnum):
-# #                     print rho[k]
-#                     tau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j] )
+            for k in xrange(j,self.nlayers):
+                if temperature[k] != temperature[k-1]:
+                    sigma_array = self.get_sigma_array(temperature[k])
                     
-                
-#                 pl.ion()
-#                 pl.figure(100)
-#                 pl.plot(rho[k],'x')
-#                 pl.draw()
-             
-             
-#         for j in range(self.nlayers-1):
-            
-#             dtau = tau[j+1,:] - tau[j,:]
-
-            for i in range(molnum):
-                dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
+                for i in xrange(self.n_gas):
+                    self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                if k is j:
+                    self.dtau[j,:] = self.tau[j,:]
+                      
+#             for i in xrange(self.n_gas):
+#                 self.dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
 
             
-            exptau =  np.exp(-1.0*tau[j,:]) 
+            exptau =  np.exp(-1.0*self.tau[j,:]) 
             
-#             taulist.append(dtau)
-#             print exptau
-                
-#             pl.ion()
-#             pl.figure(100)
-#             pl.plot(self.specgrid,exptau)
-#             pl.draw()
-
-             
-            BB_layer = em.black_body(self.specgrid,temperature[j])           
-            I_total += BB_layer*(exptau) * (dtau[j,:])
+            if temperature[j] != temperature[j-1]: 
+                BB_layer = em.black_body(self.specgrid,temperature[j])           
+            self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
             
-            
-#             pl.ion()
-#             pl.clf()
-#             pl.figure(101)
-#             pl.plot(self.specgrid,BB_layer*(exptau) * dtau[j,:],'b')
-#             pl.plot(self.specgrid,I_total,'g')
-#             pl.plot(self.specgrid,em.black_body(self.specgrid,temperature[0]),'k--')
-#             pl.plot(self.specgrid,em.black_body(self.specgrid,temperature[-1]),'k-')
-#             pl.plot(self.specgrid,BB_layer,'r')
-#             pl.title(str(j))
-#             pl.xscale('log')
-#             pl.xlim([0.0,15.0])
-#                   
-# #             pl.figure(102)
-# #             pl.plot(em.black_body(self.specgrid,temperature[0]),'k--')
-# #             pl.plot(em.black_body(self.specgrid,temperature[-1]),'k-')
-# #             pl.show()
-#             pl.draw()
-#                   
-#             if j < 20:
-#                 time.sleep(2)
 
-
-        FpFs = (I_total/ BB_star) *(self.Rp/self.Rs)**2
-        
-
-        
-        
-#         ble_surf = (em.black_body(self.specgrid,temperature[0]) /BB_star) *(self.Rp/self.Rs)**2
-#         ble_top = (em.black_body(self.specgrid,temperature[-1])/BB_star) *(self.Rp/self.Rs)**2
-        
-#         pl.ioff()
-#         pl.figure(102)
-#         pl.plot(self.specgrid,FpFs,label='spectrum')
-#         pl.plot(self.specgrid,ble_surf,'k',label='bottom layer temp')
-#         pl.plot(self.specgrid,ble_top,'k--',label='top layer temp')
-#         pl.legend()
-# #         pl.plot(self.specgrid,em.black_body(self.specgrid,1000))
-# #         pl.plot(self.specgrid,sta,'r')
-# #         pl.xscale('log')
-# #      
-# #         pl.figure(103)
-# #         pl.plot(dtau[:,0])
-# #         pl.title('dtau')
-#         pl.show()
-
+        FpFs = (self.I_total/ BB_star) *(self.Rp/self.Rs)**2
+ 
         return FpFs
+    
+    def cpath_integral(self, X = None, rho = None, temperature= None):
+        if X is None:
+            X = self.X
+        if rho is None:
+            rho = self.rho
+        if temperature is None:
+            temperature = self.T
+
+        
+        #casting changing arrays to c++ pointers
+        Xs1,Xs2 = shape(X)
+        Xnew = zeros((Xs1+1,Xs2))
+        Xnew[:-1,:] = X
+        cX = cast2cpp(Xnew)
+        crho = cast2cpp(rho)
+        ctemperature = cast2cpp(temperature)
+        cF_star =cast2cpp(self.F_star)
+        cspecgrid = cast2cpp(self.specgrid)
+        #casting fixed arrays and variables to c++ pointers
+        
+#         csigma_array = cast2cpp(self.sigma_array_c)
+        csigma_array = self.sigma_array_c.ctypes.data_as(C.POINTER(C.c_double))
+
+        csig_tempgrid = cast2cpp(self.sig_tempgrid)
+        cdzarray = cast2cpp(float64(self.dzarray))
+        znew = zeros((len(self.z)))
+        znew[:] = self.z
+        cz  = cast2cpp(znew)
+        cdz  = cast2cpp(self.dzarray)
+#         cRsig = cast2cpp(self.Rsig)
+#         cCsig = cast2cpp(self.Csig)
+            
+        cRp = C.c_double(self.Rp)
+        cRs = C.c_double(self.Rs)
+        clinecount = C.c_int(self.nlambda)
+        cnlayers = C.c_int(self.nlayers)
+        cn_gas = C.c_int(len(X[:,0]))
+        cn_lambda = C.c_int(len(self.specgrid))
+        cn_sig_temp= C.c_int(len(self.sig_tempgrid))
+        
+        #setting up output array
+        FpFs = zeros((self.nlambda),dtype=float64)
+
+        #retrieving function from cpp library
+        cpath_int = self.cpathlib.cpath_int_emission
+        
+        cpath_int(cX,crho,ctemperature,cF_star,cspecgrid,csigma_array,cdzarray,
+                  cn_lambda,cRp,cRs,cnlayers,cn_gas,csig_tempgrid,cn_sig_temp, C.c_void_p(FpFs.ctypes.data))
+        
+        OUT = zeros((self.nlambda))
+        OUT[:] = FpFs
+        del(FpFs)
+
+        return OUT
+        

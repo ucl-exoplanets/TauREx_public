@@ -240,25 +240,17 @@ class transmission(base):
         Xs1,Xs2 = shape(X)
         Xnew = zeros((Xs1+1,Xs2))
         Xnew[:-1,:] = X
-        cX, cs1,cs2 = cast2cpp(Xnew)
-        del(cs1); del(cs2);
-        crho, cs1 = cast2cpp(rho)
-        del(cs1);
+        cX = cast2cpp(Xnew)
+        crho = cast2cpp(rho)
         #casting fixed arrays and variables to c++ pointers
-        csigma_array, cs1,cs2 = cast2cpp(sigma_array)
-        del(cs1); del(cs2);
-        cdlarray, cs1 = cast2cpp(self.dlarray)
-        del(cs1);
+        csigma_array = cast2cpp(sigma_array)
+        cdlarray = cast2cpp(self.dlarray)
         znew = zeros((len(self.z)))
         znew[:] = self.z
-        cz, cs1   = cast2cpp(znew)
-        del(cs1);
-        cdz, cs1  = cast2cpp(self.dz)
-        del(cs1);
-        cRsig, cs1 = cast2cpp(self.Rsig)
-        del(cs1);
-        cCsig, cs1 = cast2cpp(self.Csig)
-        del(cs1);
+        cz   = cast2cpp(znew)
+        cdz  = cast2cpp(self.dz)
+        cRsig = cast2cpp(self.Rsig)
+        cCsig = cast2cpp(self.Csig)
             
         cRp = C.c_double(self.Rp)
         cRs = C.c_double(self.Rs)
@@ -267,10 +259,8 @@ class transmission(base):
         cn_gas = C.c_int(len(X[:,0]))
 
         #setting and casting cloud paramters
-        cP_bar,cs1    = cast2cpp(self.p_bar)
-        del(cs1)
-        cCld_sig,cs1  = cast2cpp(self.Cld_sig)
-        del(cs1)
+        cP_bar    = cast2cpp(self.p_bar)
+        cCld_sig  = cast2cpp(self.Cld_sig)
         if self.include_cld:
             cInclude_cld  = C.c_int(1)
             cCld_lowbound = C.c_double(self.cld_lowbound)
