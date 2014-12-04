@@ -7,7 +7,7 @@ import cPickle as pickle
 import transmission, emission,profile,data
 from transmission import *
 from emission import *
-from profile import *
+from tp_profile import *
 from data import *
 
 
@@ -16,7 +16,9 @@ from data import *
 def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #Generates transmission spectra from cross section files for given mixing ratios
     #output: 2 column ascii files (.spec)
-    
+
+    print 'Generate spectra library'
+
     #cleaning speclib folder before generating spectra
     oldfiles = glob.glob(OUTPATH+'*.spec')
     for i in oldfiles:
@@ -26,9 +28,10 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
     dataob_pca = data(PARAMS)
     dataob_pca.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 
-    profileob_pca = profile(PARAMS, dataob_pca)
-    MODEL.reset(dataob_pca)
+    profileob_pca = tp_profile(PARAMS, dataob_pca)
+    #MODEL.reset(dataob_pca)
 
+    MODEL.__init__(PARAMS, dataob_pca, profileob_pca)
 
     #reading available cross section lists in PATH
     globlist = glob.glob(PATH+'*.abs')
@@ -36,7 +39,6 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
     if not os.path.isdir(OUTPATH):
         os.mkdir(OUTPATH)
     # else:
-
 
     for FILE in globlist:
         print FILE
@@ -54,15 +56,17 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
             for mix in MIXING:
                 X_in   = zeros((1,int(profileob_pca.nlayers))) #setting up mixing ratio array
                 X_in  += mix #setting mixing ratio
+
                 rho_in = profileob_pca.get_rho(T=temp) #calculating T-P profile
-            
+
                 if PARAMS.in_include_cia or PARAMS.in_include_cld:
                     dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=True) #reading in cross section file
                 else:
                     dataob_pca.set_ABSfile(path=PATH,filelist=[fname],interpolate=False) #reading in cross section file
                         # dataob_pca.specgrid = dataob_pca.wavegrid
                         # dataob_pca.nspecgrid = dataob_pca.nwave
-                MODEL.reset(dataob_pca) #resets transob to reflect changes in dataob
+                #MODEL.reset(dataob_pca) #resets transob to reflect changes in dataob
+                MODEL.__init__(PARAMS, dataob_pca, profileob_pca)
     #                     pl.figure(21)
     #                     pl.plot(dataob_pca.specgrid,dataob_pca.sigma_array[0])
     #                     pl.show()

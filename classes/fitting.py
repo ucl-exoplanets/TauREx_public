@@ -55,7 +55,8 @@ class fitting(base):
         
         #loading transmission/emission model
         self.set_model(rad_model)
-        
+
+
         #loading profile object 
         self.profile     = profile
         
@@ -107,13 +108,14 @@ class fitting(base):
 #         print PFIT
         
         T,P,X = self.profile.TP_profile(PARAMS=PFIT) #calculating TP profile
+
         rho = self.profile.get_rho(T=T,P=P)          #calculating densities
 
         #the temperature parameter should work out of the box but check for transmission again
-        MODEL = self.model(rho=rho,X=X,temperature=T)
+        MODEL = self.model(rho=rho,X=X,temperature=T) # this is cpath_integral
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
-        #binning internal model 
+        #binning internal model
         MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in xrange(1,self.nspecbingrid)]
         
         #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
@@ -126,17 +128,12 @@ class fitting(base):
 #         plot(T,np.log(P))
 #         draw()
 
-#         ion()
-#         show()
-#         print isinteractive()
-#         clf()
-#         figure(1)
-#         plot(DATA,'g')
-#         plot(MODEL_binned)
-#         show()
-#         draw()
-
-        
+        #print PFIT, T, P
+#        plt.clf()
+#        plt.plot(DATA,'g')
+#        plt.plot(MODEL_binned)
+#        plt.draw()
+#        plt.pause(0.0001)
 
         # MODEL_interp = DATA+np.random.random(np.shape(MODEL_interp))
         
@@ -160,9 +157,15 @@ class fitting(base):
     def downhill_fit(self):
     # fits data using simplex downhill minimisation
 
+
+  #      plt.ion()
+  #      plt.show()
+
         PINIT = self.PINIT  # initial temperatures and abundances
         
         DATA = self.observation[:,1] #observed data
+
+
         DATASTD = self.observation[:,2] #data error 
         
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
@@ -171,8 +174,7 @@ class fitting(base):
         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method=self.params.downhill_type,bounds=(self.bounds))
 #         PFIT = minimize(self.chisq_trans,PINIT,args=(DATA,DATASTD),method='Nelder-Mead',bounds=(self.bounds))
 #         PFIT = fmin(self.chisq_trans,PINIT,args=(DATA,DATASTD),maxfun=10)
-        
-#         print PFIT
+
 
         Tout_mean, Xout_mean = self.collate_downhill_results(PFIT['x'])
         self.DOWNHILL = True
@@ -181,7 +183,6 @@ class fitting(base):
         self.DOWNHILL_PFIT   = PFIT['x']
 
 
-    
 ###############################################################################    
 #Markov Chain Monte Carlo algorithm
 
@@ -211,6 +212,8 @@ class fitting(base):
     def mcmc_fit(self):
     # adaptive Markov Chain Monte Carlo
 
+        print 'Start MCMC fit thread %i ' % self.MPIrank
+
         if self.DOWNHILL:
             PINIT = self.DOWNHILL_PFIT
         else:
@@ -225,7 +228,7 @@ class fitting(base):
 
         priors = empty(size(PINIT),dtype=object)
         #setting up main thread
-        if self.MPIrank == 0: 
+        if self.MPIrank == 0:
             
             for i in range(self.n_params):
                     priors[i] = pymc.Uniform('PFIT_%i' % (i), self.bounds[i][0],self.bounds[i][1],value=PINIT[i])  # uniform prior
@@ -254,7 +257,7 @@ class fitting(base):
 #         @pymc.stochastic(observed=True, plot=False)
 #         def mcmc_loglikelihood(value=PINIT, PFIT=priors, DATASTD=precision, DATA=DATA):
         def mcmc_loglikelihood(value, PFIT, DATASTD, DATA):
-            #need to cast from numpy object array to float array. Slow but hstack is  slower. 
+            #need to cq ast from numpy object array to float array. Slow but hstack is  slower.
             #ideas?
             Pcontainer = np.zeros((self.n_params))
             for i in range(self.n_params):
@@ -312,7 +315,12 @@ class fitting(base):
         self.MCMC_X_std  = Xout_std
         self.MCMC_STATS  = R.stats()
         self.MCMC_FITDATA= R
-        
+
+    #    print 'MCMC thread %i ' % self.MPIrank
+    #    print  self.MCMC_X_mean, self.MCMC_T_mean
+    #    print self.MCMC_X_std, self.MCMC_T_std
+
+
 #         MCMC_OUT = {}
 #         MCMC_OUT[self.MPIrank] = {}
 #         MCMC_OUT[self.MPIrank]['FITDATA'] = R
@@ -382,15 +390,15 @@ class fitting(base):
         
         def multinest_loglike(cube, ndim,nparams):
         #log-likelihood function called by multinest
-        
+
             PFIT = [cube[i] for i in xrange(self.n_params)]
             PFIT = asarray(PFIT)
 
             chi_t = self.chisq_trans(PFIT,DATA,DATASTD)
-            llterms =   (-ndim/2.0)*np.log(pi) -np.log(DATASTDmean) -0.5* chi_t
-#             llterms =    -0.5* chi_t
+            llterms =   (-ndim/2.0)*np.log(2.*pi*DATASTDmean**2) - 0.5*chi_t
+            #llterms =   (-ndim/2.0)*np.log(pi) -np.log(DATASTDmean) -0.5* chi_t
+            # llterms =    -0.5* chi_t
             return llterms
-    
     
         def multinest_uniform_prior(cube,ndim,nparams):
             #prior distributions called by multinest
@@ -400,7 +408,6 @@ class fitting(base):
             for i in xrange(self.n_params):
                 cube[i] = (cube[i] * (self.bounds[i][1]-self.bounds[i][0])) + self.bounds[i][0]
             # cube[1] = cube[1] * (self.X_up-self.X_low) + self.X_low
-        
 
         DATA = self.observation[:,1] #observed data
         DATASTD = self.observation[:,2] #data error 
@@ -411,31 +418,37 @@ class fitting(base):
         ndim = n_params
 
 
+        #progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
+        #threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
+        pymultinest.run(LogLikelihood=multinest_loglike,
+                        Prior=multinest_uniform_prior,
+                        n_dims=self.n_params,
+                        multimodal=self.params.nest_multimodes,
+                        max_modes=self.params.nest_max_modes,
+                        const_efficiency_mode = self.params.nest_const_eff,
+                        importance_nested_sampling = self.params.nest_imp_sampling,
+                        resume = resume,
+                        verbose = False, #self.params.nest_verbose,
+                        sampling_efficiency = self.params.nest_samp_eff,
+                        n_live_points = self.params.nest_nlive,
+                        max_iter= self.params.nest_max_iter,
+                        init_MPI=False)
+        #progress.stop()
+
+        MPI.COMM_WORLD.Barrier()
+
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            #coallating results into arrays
+            OUT = pymultinest.Analyzer(n_params=self.n_params)
+            #STATS = OUT.get_stats()
+            Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_multinest_result(OUT)
 
 
-        # progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
-        # threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
-        pymultinest.run(multinest_loglike, multinest_uniform_prior, n_params,multimodal=self.params.nest_multimodes,
-                        max_modes=self.params.nest_max_modes, const_efficiency_mode = self.params.nest_const_eff,
-                        importance_nested_sampling = self.params.nest_imp_sampling,resume = resume,
-                        verbose = self.params.nest_verbose,sampling_efficiency = self.params.nest_samp_eff,
-                        n_live_points = self.params.nest_nlive,max_iter= self.params.nest_max_iter,init_MPI=False)
-        # progress.stop()
-
-        
-        
-        #coallating results into arrays
-        OUT = pymultinest.Analyzer(n_params=n_params)
-        STATS = OUT.get_stats()
-        Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_multinest_result(OUT)
-
-        #saving arrays to object
-        self.NEST        = True
-        self.NEST_T_mean = Tout_mean
-        self.NEST_T_std  = Tout_std
-        self.NEST_X_mean = Xout_mean
-        self.NEST_X_std  = Xout_std
-        self.NEST_STATS  = STATS
-        self.NEST_FITDATA= OUT
-
-    
+            #saving arrays to object
+            self.NEST        = True
+            self.NEST_T_mean = Tout_mean
+            self.NEST_T_std  = Tout_std
+            self.NEST_X_mean = Xout_mean
+            self.NEST_X_std  = Xout_std
+            #self.NEST_STATS  = STATS
+            self.NEST_FITDATA= OUT

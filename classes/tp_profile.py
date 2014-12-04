@@ -29,6 +29,7 @@ class tp_profile(base):
     def __init__(self,params,data):
         
         self.params       = params
+        self.data = data
         self.transmission = self.params.fit_transmission
         self.emission     = self.params.fit_emission
         
@@ -38,8 +39,7 @@ class tp_profile(base):
         #derived values
         self.scaleheight = self.get_scaleheight(params.planet_temp, data.planet_grav, params.planet_mu)
      
-        
-        
+
         if params.tp_var_atm:
             self.nlayers = int(params.tp_atm_levels)
             self.ngas    = int(data.ngas)
@@ -52,6 +52,7 @@ class tp_profile(base):
             self.rho     = self.get_rho()
             
         else:           
+            print 'Set atm values from data'
             self.nlayers = data.nlayers
             self.pta     = data.pta
             self.P       = self.pta[:,0]
@@ -132,24 +133,30 @@ class tp_profile(base):
         
         
     # @profile #line-by-line profiling decorator
-    def setup_pta_grid(self):
+    def setup_pta_grid(self, T=None):
         #calculate pressure, temperature, altitude grid
         
         MAX_P    = self.params.tp_max_pres
-        N_SCALE  = self.params.tp_num_scale
+        N_SCALE  = self.params.tp_num_scale #thickness of atmosphere in number of atmospheric scale heights
         N_LAYERS = self.nlayers
-        
-        max_z    = N_SCALE * self.scaleheight
+
+        # get new scale height if T is provided. Otherwise assume defualt (should be params.planet_temp)
+        if T:
+            self.scaleheight = self.get_scaleheight(T[0],  self.data.planet_grav, self.params.planet_mu)
+
+        max_z = N_SCALE * self.scaleheight
         
 #         dz       = max_z / N_LAYERS
         
         #generatinng altitude-pressure array
         PTA_arr = np.zeros((N_LAYERS,3))
-        PTA_arr[:,2] = np.linspace(0,max_z,num=N_LAYERS)
+        PTA_arr[:,2] = np.linspace(0,max_z,num=N_LAYERS) # altitude
         PTA_arr[:,0] = MAX_P * np.exp(-PTA_arr[:,2]/self.scaleheight)
-        PTA_arr[:,1] = self.params.planet_temp
+        if T:
+            PTA_arr[:,1] = T
+        else:
+            PTA_arr[:,1] = self.params.planet_temp
 
-        
         return PTA_arr
         
     def setup_prior_bounds(self):
@@ -213,7 +220,7 @@ class tp_profile(base):
             for i in xrange(num_T_params-1):
                 PARAMS.append(np.mean(self.Ppriors[i]))
                 cpres += 1
-                
+
         COUNT.append(ctemp)
         COUNT.append(cpres)
 
@@ -222,14 +229,15 @@ class tp_profile(base):
         for i in xrange(1,len(COUNT)):
             cumidx += COUNT[i]
             INDEX.append(cumidx)
-    
 #         print PARAMS[:INDEX[0]], PARAMS[INDEX[0]:INDEX[1]], PARAMS[INDEX[1]:]
-        
         return PARAMS, INDEX, COUNT
                 
         
     
     def TP_profile(self,PARAMS, T=None, P=None):
+
+    # do we need T and P ? maybe not
+
     #main function defining basic parameterised TP-profile from 
     #PARAMS and INDEX. INDEX = [Chi, T,P]
     
@@ -249,13 +257,19 @@ class tp_profile(base):
         
 #         print INDEX, COUNT
 #         print X_params, T_params, P_params
-    
-        if P is None:
+
+        # Recalculate PTA profile, based on new Temperature.
+        if len(T_params) > 0:
+            pta = self.setup_pta_grid(T_params)
+            P = pta[:,0]
+        elif P is None:
             P = self.P
-            
+
+        # probably not needed?
         if T is not None: 
             return T, P, self.X
 
+        # if we have more than 1 temperature in PARAMS
         if COUNT[1] > 1:
             P_params =  [self.params.tp_max_pres] + list(P_params) + [np.min(P)]
             T_params = list(T_params) + [T_params[-1]]
@@ -276,7 +290,9 @@ class tp_profile(base):
        # @profile #line-by-line profiling decorator
     def get_rho(self,T=None,P=None):
         #calculate atmospheric densities for given temperature and pressure
-        
+
+
+
         if P is None:
             P = self.P
         if T is None:

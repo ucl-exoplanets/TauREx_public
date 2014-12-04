@@ -146,6 +146,10 @@ elif params.verbose and MPIverbose: print 'MPI disabled.'
 if params.verbose and MPIverbose: print 'loading data'
 dataob = data(params)
 
+#adding bulk composition to the atmosphere
+dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
+
 #initialising TP profile instance
 if params.verbose and MPIverbose: print 'loading profile'
 profileob = tp_profile(params, dataob)
@@ -163,10 +167,6 @@ if params.pre_run:
     params = preob.update_params()
     dataob.reset(params)
 
-
-#adding bulk composition to the atmosphere
-dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #printing a few data object attributes
 # print dataob.atmosphere['mol']
@@ -193,15 +193,18 @@ if params.verbose and MPIverbose: print 'loading fitting class'
 fitob = fitting(params, dataob, profileob)
 if params.fit_transmission: fitob.set_model(transob) #loading transmission model into fitting object
 elif params.fit_emission:   fitob.set_model(emissob) #loading emission model into fitting object
-    
 
 #fit data
 if params.verbose and MPIverbose: print 'fitting data'
 if params.downhill_run:
+    print 'Downhill fit'
     fitob.downhill_fit()    #simplex downhill fit
+
 if params.mcmc_run and pymc_import:
+    print 'MCMC fit'
     fitob.mcmc_fit()    #MCMC fit
-    MPI.COMM.BARRIER()  # wait for everybody to synchronize here
+    MPI.COMM_WORLD.Barrier()  # wait for everybody to synchronize here
+
 if params.nest_run and multinest_import:
     fitob.multinest_fit()   #Nested sampling fit
 

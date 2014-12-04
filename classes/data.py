@@ -31,12 +31,12 @@ import library_emission as libem
 import license
 from license import *
 
-
-
 class data(base):
 
 #initialisation
     def __init__(self,params):
+
+
         #checking taurex license
         license_manager().run()
         
@@ -111,14 +111,13 @@ class data(base):
             self.F_star = self.get_star_SED()
 
 
-
 #class functions    
     def init_atmosphere(self, mu=0.0, def_mu=2.3):
     #initialising atmosphere dictionary
         ATM = {}
         ATM['mol'] = {}
         ATM['info'] = {}
-        ATM['info']['def_mu']  = def_mu #default atmos 85% H2, 15% H2 --> mu~2.3
+        ATM['info']['def_mu']  = def_mu #default atmos 85% H2, 15% He --> mu~2.3
         ATM['info']['mu']      = mu
         ATM['info']['nmol']    = 0      #number of molecule index
         
@@ -202,6 +201,8 @@ class data(base):
             if size(mixing) is not self.ngas:
                 raise IOError('Wrong  number of mixing ratios to molecules in parameter file')
                 exit()
+
+            # X = np.tile(mixing, [self.nlayers, 1]).transpose()
             for i in range(self.ngas):
                 X[i,:] += float(mixing[i])
         return X
@@ -381,9 +382,7 @@ class data(base):
         OUT = OUT[argsort(OUT[:,2]),:]
         
         return OUT[:,0:3],transpose(OUT[:,3:])
-    
-    
-    
+
     def readABSfiles(self,extfilelist=None, extpath= None,interpolate2grid=True,outputwavegrid=False):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
     #

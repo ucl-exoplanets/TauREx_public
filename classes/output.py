@@ -76,7 +76,6 @@ class output(base):
             self.spec_down = self.model(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean,temperature=fit.DOWNHILL_T_mean)
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
 
-
     #class methods
     
 

@@ -71,7 +71,7 @@ class transmission(base):
         #calculating optical path lengths
         self.dlarray,self.iteridx = self.get_path_length()
         self.dz            = self.get_dz()
-        
+
         #calculating rayleigh scattering cross sections
         self.mol_list      = self.atmosphere['mol'].keys()
         self.ray_thres     = 50.0 * (self.atmosphere['mol'][self.mol_list[0]]['radius'] * 1.0e6);
@@ -96,14 +96,11 @@ class transmission(base):
             self.cpathlib = C.CDLL('./library/pathintegral.so',mode=C.RTLD_GLOBAL)
 
 
-
 #class methods
     def set_lambdagrid(self,GRID):
     #sets internal memory of wavelength grid to be used
         self.lambdagrid = GRID
         self.nlambda = len(GRID)
-
-
 
     def get_path_length(self):
         #calculates the layerlength 
@@ -112,8 +109,8 @@ class transmission(base):
         kl = []
         cl = []
         count = 0
-        for j in range(self.nlayers):    
-            for k in range(1,self.nlayers-j):
+        for j in range(self.nlayers):    # loop through atmosphere layers
+            for k in range(1,self.nlayers-j):    # loop through each layer to sum up path length
                 dl = 2.0 * (sqrt(pow((self.Rp + self.z[k+j]),2) - pow((self.Rp + self.z[j]),2)) -
                             sqrt(pow((self.Rp + self.z[k-1+j]),2) - pow((self.Rp + self.z[j]),2)))
                 dlarray.append(dl)
@@ -125,7 +122,8 @@ class transmission(base):
         iteridx = zip(cl,jl,kl)
         dlarray = asarray(dlarray)      
 #         dlarray[isnan(dlarray)] = 0
-         
+
+
         return dlarray, iteridx
     
     def get_dz(self):
@@ -242,6 +240,7 @@ class transmission(base):
         Xnew[:-1,:] = X
         cX = cast2cpp(Xnew)
         crho = cast2cpp(rho)
+
         #casting fixed arrays and variables to c++ pointers
         csigma_array = cast2cpp(sigma_array)
         cdlarray = cast2cpp(self.dlarray)
@@ -290,8 +289,7 @@ class transmission(base):
 
         return OUT
         
-        
-    
+
     def scatterRayleigh(self,wl,NAME):
         '''
          Formula from Liou 2002, 'An Introduction to Atmospheric Radiation', pp.92-93. Also uses 'minimum volume' approximation pg.97, 
