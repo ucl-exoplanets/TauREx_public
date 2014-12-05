@@ -27,6 +27,8 @@ import ctypes as C
 import library_general,library_transmission
 from library_general import *
 from library_transmission import *
+import loading
+
 # from mpi4py import MPI
 
 class transmission(base):
@@ -34,6 +36,8 @@ class transmission(base):
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
         
+        logging.info('Initialise object transmission')
+
         self.__ID__        = 'transmission' #internal class identifier
         
         #loading data

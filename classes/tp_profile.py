@@ -20,14 +20,15 @@
 from base import base   
 import numpy as np
 import pylab as pl
-
+import logging
 
 
 class tp_profile(base):
 
-
     def __init__(self,params,data):
-        
+
+        logging.info('Initialising tp_profile object')
+
         self.params       = params
         self.data = data
         self.transmission = self.params.fit_transmission

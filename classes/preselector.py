@@ -30,11 +30,14 @@ from copy import deepcopy
 import library_preselector
 from library_preselector import *
 import scipy.stats.stats as st
-
+import logging
 
 class preselector(base):
+
     def __init__(self, params,data,model_object):
-        #
+
+        logging.info('Initialising preselector object')
+
         self.params       = params
         self.data         = data
         self.model_object = model_object
@@ -359,6 +362,8 @@ class preselector(base):
     def update_params(self):
     #updates the parameter object with perselector derived values and returns
     #updated copy to main code
+
+        logging.info('Update parameters object: %s' % preob.molselected)
 
         newparams = deepcopy(self.params)
 

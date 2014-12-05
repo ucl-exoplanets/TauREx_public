@@ -37,6 +37,7 @@ class data(base):
 #initialisation
     def __init__(self,params):
 
+        logging.info('Initialising data object')
 
         #checking taurex license
         license_manager().run()

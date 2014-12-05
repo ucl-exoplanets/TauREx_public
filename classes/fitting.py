@@ -42,7 +42,9 @@ except ImportError:
     pass
 
 class fitting(base):
-    def __init__(self,params,data,profile,rad_model=None):
+    def __init__(self, params, data, profile, rad_model=None):
+
+        logging.info('Initialise object fitting')
 
         # this is equivalent to type(instance)
         self.__ID__      = 'fitting' 
@@ -54,8 +56,6 @@ class fitting(base):
         else:
             self.MPIrank     = 0
             self.MPIsize     = 0
-
-        logging.info('Initialise class fitting')
 
         #loading profile, data and params objects
         self.profile     = profile

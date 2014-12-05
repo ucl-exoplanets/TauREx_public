@@ -24,13 +24,15 @@ import library_emission as em
 import library_general
 from library_general import *
 import time
-
+import logging
 
 class emission(object):
 
 #initialisation
     def __init__(self,params,data,profile,usedatagrid=False):
         
+        logging.info('Initialise object emission')
+
         self.__ID__        = 'emission' #internal class identifier
         
         #type declations for arrays

@@ -32,6 +32,8 @@ from library_plotting import *
 class output(base):
     def __init__(self,params,data,fit):
 
+        logging.info('Initialise object output')
+
         self.params   = params
         self.data     = data
         self.fit      = fit
@@ -46,7 +48,7 @@ class output(base):
         else:
             self.set_model(fit) #abstracting emission/transmission model 
         
-        
+
         #dumping fitted paramter list to file 
         with open('chains/parameters.dat','w') as parfile:
             parfile.write('Temperature \n')

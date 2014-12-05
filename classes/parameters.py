@@ -43,7 +43,7 @@ class parameters(base):
         self.default_parser = SafeConfigParser()
         self.default_parser.read('Parfiles/default.par')
 
-        self.verbose               = self.parser.getboolean('General', 'verbose')
+        self.verbose               = self.getpar('General', 'verbose', 'bool')
 
         # configure logging instance
         logging.basicConfig(filename=os.path.join(self.parser.get('Output','path'), 'taurex.log'),

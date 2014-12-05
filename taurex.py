@@ -25,6 +25,8 @@ import numpy, pylab, sys, os, optparse, time
 from numpy import * #nummerical array library 
 from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
+import logging
+
 #trying to initiate MPI parallelisation
 try:
     from mpi4py import MPI
@@ -54,7 +56,7 @@ try:
     import pymultinest
     multinest_import = True
 except:
-    print 'WARNING: Multinest library is not loaded. Multinest functionality will be disabled.'
+    logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
     multinest_import = False
 
 
@@ -64,7 +66,7 @@ try:
     import pymc
     pymc_import = True
 except:
-    print 'WARNING: PYMC library is not loaded. MCMC functionality will be disabled.'
+    logging.warning('PYMC library is not loaded. MCMC functionality will be disabled')
     pymc_import = False
 
 
@@ -139,31 +141,33 @@ params = parameters(options.param_filename)
 #beginning of main code
 
 #MPI related message
-if params.verbose and MPIverbose and MPIimport: print 'MPI enabled. Running on',MPIsize,' cores.'
-elif params.verbose and MPIverbose: print 'MPI disabled.'
+if MPIverbose and MPIimport:
+    logging.info('MPI enabled. Running on %i cores' % MPIsize)
+elif MPIverbose:
+    logging.info('MPI disabled')
 
-#initialising data object
-if params.verbose and MPIverbose: print 'loading data'
+# initialising data object
 dataob = data(params)
 
-#adding bulk composition to the atmosphere
+#adding bulk composition to the atmosphere @todo move to better place
 dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #initialising TP profile instance
-if params.verbose and MPIverbose: print 'loading profile'
 profileob = tp_profile(params, dataob)
+
 
 #initiating and running preselector instance
 if params.pre_run:
-    if params.verbose and MPIverbose: print 'loading preprocessing'
+
     if params.fit_transmission:
-        preob = preselector(params,dataob,transmission(params,dataob,profileob))
+        preob = preselector(params, dataob, transmission(params,dataob,profileob))
+
     elif params.fit_emission:
-        preob = preselector(params,dataob,emission(params,dataob,profileob))
-    # preob.run_preprocess(convertLinelist=False,generateSpectra=True,generatePCA=True)
+        preob = preselector(params, dataob, emission(params,dataob,profileob))
+
     preob.run()
-    if params.verbose: print preob.molselected
+    logging.info('Molecule pre-selected: %s' % preob.molselected)
     params = preob.update_params()
     dataob.reset(params)
 
@@ -173,46 +177,46 @@ if params.pre_run:
 # print dataob.atmosphere['info']['mu']
 # print dataob.atmosphere['mol'].keys()
 
-
 #initialising transmission radiative transfer code instance
 if params.fit_transmission:
-    if params.verbose and MPIverbose: print 'loading transmission class'
-    transob = transmission(params, dataob,profileob)
+    transob = transmission(params, dataob, profileob)
 
 #initialising emission radiative transfer code instance
 if params.fit_emission:
-    if params.verbose and MPIverbose: print 'loading emission class'
     emissob = emission(params,dataob,profileob)
 #     emissob.path_integral()
 
 # exit()
 
 #initialising fitting object
-if params.verbose and MPIverbose: print 'loading fitting class'
 fitob = fitting(params, dataob, profileob)
-if params.fit_transmission: fitob.set_model(transob) #loading transmission model into fitting object
-elif params.fit_emission:   fitob.set_model(emissob) #loading emission model into fitting object
+
+if params.fit_transmission:
+    fitob.set_model(transob) #loading transmission model into fitting object
+elif params.fit_emission:
+    fitob.set_model(emissob) #loading emission model into fitting object
 
 #fit data
-if params.verbose and MPIverbose: print 'fitting data'
 if params.downhill_run:
     # @todo should we run the downhill fit only on the first thread? Or maybe use different starting points
     fitob.downhill_fit()    #simplex downhill fit
 
 if params.mcmc_run and pymc_import:
-    fitob.mcmc_fit()    #MCMC fit
-    MPI.COMM_WORLD.Barrier()  # wait for everybody to synchronize here
+    fitob.mcmc_fit() # MCMC fit
+    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 if params.nest_run and multinest_import:
-    fitob.multinest_fit()   #Nested sampling fit
+    fitob.multinest_fit()   # Nested sampling fit
 
 #forcing slave processes to exit at this stage
-if MPI.COMM_WORLD.Get_rank() != 0: exit()
+if MPI.COMM_WORLD.Get_rank() != 0:
+    exit()
 
 #initiating output instance with fitted data from fitting class
-if params.verbose and MPIverbose: print 'loading output class'
-outputob = output(params, dataob, fitob) 
-#
+outputob = output(params, dataob, fitob)
+
+
+
 #plotting fits and data
 if params.verbose and MPIverbose: print 'plotting/saving results'
 if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.out_save_plots)
