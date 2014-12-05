@@ -36,7 +36,7 @@ class base(object):
         self.__init__(params)
         
     
-    def set_model(self,INPUT = None):
+    def set_model(self, INPUT = None):
         #loads emission/transmission model pointer into fitting class
         if INPUT == None: 
             self.model = None

@@ -174,7 +174,6 @@ if params.pre_run:
 # print dataob.atmosphere['mol'].keys()
 
 
-
 #initialising transmission radiative transfer code instance
 if params.fit_transmission:
     if params.verbose and MPIverbose: print 'loading transmission class'
@@ -197,11 +196,10 @@ elif params.fit_emission:   fitob.set_model(emissob) #loading emission model int
 #fit data
 if params.verbose and MPIverbose: print 'fitting data'
 if params.downhill_run:
-    print 'Downhill fit'
+    # @todo should we run the downhill fit only on the first thread? Or maybe use different starting points
     fitob.downhill_fit()    #simplex downhill fit
 
 if params.mcmc_run and pymc_import:
-    print 'MCMC fit'
     fitob.mcmc_fit()    #MCMC fit
     MPI.COMM_WORLD.Barrier()  # wait for everybody to synchronize here
 

@@ -26,6 +26,7 @@ from StringIO import StringIO
 from scipy.interpolate import interp1d
 import library_general as libgen
 import library_emission as libem
+import logging
 
 #loading taurex license manager. Only loaded in data class
 import license
@@ -187,11 +188,14 @@ class data(base):
 
     def set_mixing_ratios(self):
     #setting up mixing ratio array from parameter file inputs
-        try:
-            mixing = [self.params.planet_mixing.item()] #necessary for 0d numpy arrays
-        except ValueError:
-            mixing = self.params.planet_mixing   
-            
+
+#        try:
+#            mixing = [self.params.planet_mixing.item()] #necessary for 0d numpy arrays @todo maybe fixed by new parameters class
+#        except ValueError:
+#            mixing = self.params.planet_mixing
+
+        mixing = self.params.planet_mixing
+
         #checking if number of mixing ratios = number of gasses
         X = zeros((self.ngas,self.nlayers))
         
@@ -286,11 +290,13 @@ class data(base):
     def build_sigma_dic(self,tempstep=50):
         #building temperature dependent sigma_array
         
-        try:
-            mollist = [self.params.planet_molec.item()] #necessary for 0d numpy arrays
-        except ValueError:
-            mollist = self.params.planet_molec
-        
+#        try:
+#            mollist = [self.params.planet_molec.item()] #necessary for 0d numpy arrays
+#        except ValueError:
+#            mollist = self.params.planet_molec
+
+        mollist = self.params.planet_molec
+
 #         print self.params.planet_molec
         
         tempmin = []
@@ -300,6 +306,9 @@ class data(base):
         
         
         for molecule in mollist:
+
+            logging.info('Load sigma array for molecule %s' % molecule)
+
             moldict[molecule] ={}
             
             absfiles, templist = libgen.find_absfiles(self.params.in_abs_path,molecule)

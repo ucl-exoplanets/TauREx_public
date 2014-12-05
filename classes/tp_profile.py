@@ -260,8 +260,8 @@ class tp_profile(base):
 
         # Recalculate PTA profile, based on new Temperature.
         if len(T_params) > 0:
-            pta = self.setup_pta_grid(T_params)
-            P = pta[:,0]
+            self.pta = self.setup_pta_grid(T_params)
+            P = self.pta[:,0]
         elif P is None:
             P = self.P
 
