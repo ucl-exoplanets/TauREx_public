@@ -27,50 +27,58 @@ import ctypes as C
 import library_general,library_transmission
 from library_general import *
 from library_transmission import *
-import loading
+import logging
 
 # from mpi4py import MPI
 
 class transmission(base):
 
-#initialisation
-    def __init__(self,params,data,profile,usedatagrid=False):
-        
+#    def __init__(self,params,data,profile,usedatagrid=False):
+    def __init__(self, profile, data=None, params=None, usedatagrid=False):
+
         logging.info('Initialise object transmission')
 
         self.__ID__        = 'transmission' #internal class identifier
-        
-        #loading data
-        self.params        = params
-        self.Rp            = params['planet_radius']
-        self.Rs            = params['star_radius']
 
-        self.n_gas         = data['ngas']
-        self.sigma_dict    = data['sigma_dict']
-        self.X             = data['X']
-        self.atmosphere    = data['atmosphere']
+        if params:
+            self.params = params
+        else:
+            self.params = profile.params #get params object from profile
+
+        if data:
+            self.data = data
+        else:
+            self.data = profile.data    # get data object from profile
+
+        self.Rp            = self.params.planet_radius   # @todo As long as they don't change, better not to reassign params vars to new local variables
+        self.Rs            = self.params.star_radius     #
+
+        self.ngas          = self.data.ngas               # @todo If var comes from data object, better to be explicit later as well
+        self.sigma_dict    = self.data.sigma_dict
+        self.X             = self.data.X
+        self.atmosphere    = self.data.atmosphere
         
-        self.nlayers       = profile['nlayers']
-        self.z             = profile['Z']
-        self.rho           = profile['rho']
-        self.p             = profile['P']
-        self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
+        self.nlayers       = profile.nlayers              # @todo same here
+        self.z             = profile.z
+        self.rho           = profile.rho
+        self.P             = profile.P
+        self.P_bar         = self.P * 1.0e-5 #convert pressure from Pa to bar # @todo move to tp_profile
         
-        self.planet_temp   = int(params.planet_temp)
+        self.planet_temp   = int(self.params.planet_temp)
 
         #cloud specific parameters.
-        self.include_cld   = params.in_include_cld
+        self.include_cld   = self.params.in_include_cld # @todo and here
         if self.include_cld:
-            self.cld_m         = params.in_cld_m #refractive index for cloud cross sections
-            self.cld_a         = params.in_cld_a #cloud particle size (microns)
-            self.cld_upbound   = params.in_cld_pressure[1] #pressure (in bar) of upper pressure/lower altitude cloud bound
-            self.cld_lowbound  = params.in_cld_pressure[0] #pressure (in bar) of lower pressure/upper altitude cloud bound
+            self.cld_m         = self.params.in_cld_m #refractive index for cloud cross sections
+            self.cld_a         = self.params.in_cld_a #cloud particle size (microns)
+            self.cld_upbound   = self.params.in_cld_pressure[1] #pressure (in bar) of upper pressure/lower altitude cloud bound
+            self.cld_lowbound  = self.params.in_cld_pressure[0] #pressure (in bar) of lower pressure/upper altitude cloud bound
         
         if usedatagrid:
-        #use wavelengthgrid of data or internal specgrid defined in data class
-            self.set_lambdagrid(data['wavegrid'])
+            #use wavelengthgrid of data or internal specgrid defined in data class
+            self.set_lambdagrid(self.data.wavegrid)
         else:
-            self.set_lambdagrid(data['specgrid'])
+            self.set_lambdagrid(self.data.specgrid)
 
         #calculating optical path lengths
         self.dlarray,self.iteridx = self.get_path_length()
@@ -82,8 +90,8 @@ class transmission(base):
         self.Rsig          = self.get_Rsig()
 
         #calculating collision induced absorption cross sections
-        if params.in_include_cia:
-            self.cia       = data['cia']
+        if self.params.in_include_cia:
+            self.cia       = self.data.cia
             self.Csig      = self.get_Csig()
         else:
             self.Csig      = zeros((self.nlambda))
@@ -95,16 +103,16 @@ class transmission(base):
            self.Cld_sig = zeros((self.nlambda)) #unused but needed to cast to cpp code
         
         #loading c++ pathintegral library for faster computation
-        if params.trans_cpp:
+        if self.params.trans_cpp:
             # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
-            self.cpathlib = C.CDLL('./library/pathintegral.so',mode=C.RTLD_GLOBAL)
+            self.cpathlib = C.CDLL('./library/pathintegral.so', mode=C.RTLD_GLOBAL)
 
 
 #class methods
-    def set_lambdagrid(self,GRID):
+    def set_lambdagrid(self, grid):
     #sets internal memory of wavelength grid to be used
-        self.lambdagrid = GRID
-        self.nlambda = len(GRID)
+        self.lambdagrid = grid
+        self.nlambda = len(grid)
 
     def get_path_length(self):
         #calculates the layerlength 
@@ -206,10 +214,10 @@ class transmission(base):
                 
                 #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
                 if self.include_cld:                    
-                    if self.p_bar[k+j] < self.cld_upbound and self.p_bar[k+j] > self.cld_lowbound:
+                    if self.P_bar[k+j] < self.cld_upbound and self.P_bar[k+j] > self.cld_lowbound:
                         #= log(cloud density), assuming linear decrease with decreasing log pressure
                         #following Ackerman & Marley (2001), Fig. 6
-                        cld_log_rho = interp_value(np.log(self.p_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0) 
+                        cld_log_rho = interp_value(np.log(self.P_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0) 
                         cld_tau[j] += ( self.Cld_sig[wl] * (self.dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
                 
                 #adding all taus together
@@ -262,7 +270,7 @@ class transmission(base):
         cn_gas = C.c_int(len(X[:,0]))
 
         #setting and casting cloud paramters
-        cP_bar    = cast2cpp(self.p_bar)
+        cP_bar    = cast2cpp(self.P_bar)
         cCld_sig  = cast2cpp(self.Cld_sig)
         if self.include_cld:
             cInclude_cld  = C.c_int(1)
@@ -344,7 +352,7 @@ class transmission(base):
 # #                     dl = 2.0 * (sqrt(pow((self.Rp + self.z[k+j]),2) - pow((self.Rp + self.z[j]),2)) - sqrt(pow((self.Rp + self.z[k-1+j]),2) - pow((self.Rp + self.z[j]),2)))
 #                      
 # #                     print dl , self.dlarray[k+j]
-# #                     for l in range(self.n_gas):
+# #                     for l in range(self.ngas):
 #  
 #  
 #                     tau[j] += (self.sigma_array[:,wl] * transpose(self.X[k+j,:]) * self.rho[k+j] * self.dlarray[cidx])

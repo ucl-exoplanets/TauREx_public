@@ -34,14 +34,20 @@ import logging
 
 class preselector(base):
 
-    def __init__(self, params,data,model_object):
+    def __init__(self, model_object, params=None):
 
         logging.info('Initialising preselector object')
 
-        self.params       = params
-        self.data         = data
+
+        if params:
+            self.params = params
+        else:
+            self.params = data.params
+
+
         self.model_object = model_object
-        
+        self.data         = model_object.data
+
         #setting emission/transmission model
         self.set_model(model_object)
 
@@ -363,24 +369,26 @@ class preselector(base):
     #updates the parameter object with perselector derived values and returns
     #updated copy to main code
 
+        # @todo looks like only important parameter that changes is params.planet_molec
+
         logging.info('Update parameters object: %s' % preob.molselected)
 
         newparams = deepcopy(self.params)
 
         #setting useATM_file to False
-        newparams.in_use_ATMfile = False
+        newparams.in_use_ATMfile = False # @really needed?
 
         #setting planetary temperature
 #         newparams.planet_temp = self.Tplanet
 
         #setting number of gases/molecules
-        newparams.tp_num_gas = self.numgas
+        newparams.tp_num_gas = self.numgas # @todo deprecated!
 
         #setting molecules list
         newparams.planet_molec = self.molselected
 
         #setting new abs_files path
-        newparams.in_abs_path = self.params.in_abs_path
+        newparams.in_abs_path = self.params.in_abs_path # @todo why? Does it change?
 
 #         #determining correct abs files to be read in
 #         #reading available cross section lists in PATH

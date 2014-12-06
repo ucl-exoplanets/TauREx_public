@@ -29,71 +29,80 @@ import logging
 class emission(object):
 
 #initialisation
-    def __init__(self,params,data,profile,usedatagrid=False):
-        
+#    def __init__(self,params,data,profile,usedatagrid=False):
+    def __init__(self, profile, data=None, params=None, usedatagrid=False):
+
         logging.info('Initialise object emission')
 
+        if params:
+            self.params = params
+        else:
+            self.params = profile.params #get params object from profile
+
+        if data:
+            self.data = data
+        else:
+            self.data = profile.data    # get data object from profile
+
         self.__ID__        = 'emission' #internal class identifier
-        
+
         #type declations for arrays
         self.DTYPE = np.float
-        
+
         #loading data
-        self.params        = params
-        self.Rp            = params['planet_radius']
-        self.Rs            = params['star_radius']
+        self.Rp            = self.params.planet_radius
+        self.Rs            = self.params.star_radius
 
-        self.n_gas         = data['ngas']
-        self.specgrid      = data['specgrid'].astype(self.DTYPE)
-        self.sigma_dict    = data['sigma_dict']
-        self.X             = data['X'].astype(self.DTYPE)
-        self.atmosphere    = data['atmosphere']
-        self.F_star        = data['F_star'].astype(self.DTYPE)
+        self.n_gas         = self.data.ngas
+        self.specgrid      = self.data.specgrid.astype(self.DTYPE)
+        self.sigma_dict    = self.data.sigma_dict
+        self.X             = self.data.X.astype(self.DTYPE)
+        self.atmosphere    = self.data.atmosphere
+        self.F_star        = self.data.F_star.astype(self.DTYPE)
 
-        self.nlayers       = profile['nlayers']
-        self.z             = profile['Z'].astype(self.DTYPE)        
-        self.T             = profile['T'].astype(self.DTYPE)
-        self.rho           = profile['rho'].astype(self.DTYPE)
-        self.p             = profile['P'].astype(self.DTYPE)
-        self.p_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
-        
-#         print 'z ',np.max(self.z)
-#         print 'p ',np.max(self.p)
+        self.nlayers       = profile.nlayers
+        self.z             = profile.z.astype(self.DTYPE)
+        self.T             = profile.T.astype(self.DTYPE)
+        self.rho           = profile.rho.astype(self.DTYPE)
+        self.P             = profile.P.astype(self.DTYPE)
+        self.P_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
+
+        #         print 'z ',np.max(self.z)
+        #         print 'p ',np.max(self.P)
 
         self.dzarray       = self.get_dz()
 
         if usedatagrid:
         #use wavelengthgrid of data or internal specgrid defined in data class
-            self.set_lambdagrid(data['wavegrid'])
+            self.set_lambdagrid(self.data['wavegrid'])
         else:
-            self.set_lambdagrid(data['specgrid'])
-            
-            
+            self.set_lambdagrid(self.data['specgrid'])
+
+
         #setting up static arrays for path_integral
-        self.I_total    = np.zeros((self.nlambda),dtype=self.DTYPE)  
-        self.tau        = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE) 
-        self.dtau       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE) 
-        self.tau_total  = np.zeros((self.nlambda),dtype=self.DTYPE) 
+        self.I_total    = np.zeros((self.nlambda),dtype=self.DTYPE)
+        self.tau        = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE)
+        self.dtau       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE)
+        self.tau_total  = np.zeros((self.nlambda),dtype=self.DTYPE)
 
         #loading c++ pathintegral library for faster computation
-        if params.trans_cpp:
+        if self.params.trans_cpp:
             # self.cpathlib = C.cdll.LoadLibrary('./library/pathintegral_test.so')
             self.cpathlib = C.CDLL('./library/pathintegral_emission.so',mode=C.RTLD_GLOBAL)
             self.sigma_array_c, self.sig_tempgrid = self.get_sigma_array_c()
-    
-    #class methods 
-        
+
+    #class methods
     def set_lambdagrid(self,GRID):
-    #sets internal memory of wavelength grid to be used
+        #sets internal memory of wavelength grid to be used
         self.lambdagrid = GRID
-        self.nlambda = len(GRID)       
-        
-    
+        self.nlambda = len(GRID)
+
+
     def get_sigma_array(self,temperature):
-    #getting sigma array from sigma_dic for given temperature 
-#         print temperature 
+    #getting sigma array from sigma_dic for given temperature
+    #         print temperature
         return self.sigma_dict[find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
-    
+
     def get_sigma_array_c(self):
     #generating 3D sigma_array from sigma_dict for c++ path integral
         tempgrid = self.sigma_dict['tempgrid']

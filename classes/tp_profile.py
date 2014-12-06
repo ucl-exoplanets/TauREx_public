@@ -25,45 +25,48 @@ import logging
 
 class tp_profile(base):
 
-    def __init__(self,params,data):
+    def __init__(self, data, params=None):
 
         logging.info('Initialising tp_profile object')
 
-        self.params       = params
+        if params:
+            self.params = params
+        else:
+            self.params = data.params
+
         self.data = data
-        self.transmission = self.params.fit_transmission
+        self.transmission = self.params.fit_transmission # @todo bad! Use different variable names (same as classes)
         self.emission     = self.params.fit_emission
         
         #constants
-        self.boltzmann = 1.3806488e-23# m2 kg s-2 K-1
+        self.boltzmann = 1.3806488e-23# m2 kg s-2 K-1 # @todo consider using Astropy units
         
-        #derived values
-        self.scaleheight = self.get_scaleheight(params.planet_temp, data.planet_grav, params.planet_mu)
-     
+        #derived values @todo check planet_mu?
+        self.scaleheight = self.get_scaleheight(self.params.planet_temp, data.planet_grav, self.params.planet_mu)
 
-        if params.tp_var_atm:
-            self.nlayers = int(params.tp_atm_levels)
+        if self.params.tp_var_atm:
+            self.nlayers = int(self.params.tp_atm_levels)
             self.ngas    = int(data.ngas)
             self.pta     = self.setup_pta_grid()
             self.P       = self.pta[:,0]
             self.T       = self.pta[:,1]
-            self.Z       = self.pta[:,2]
+            self.z       = self.pta[:,2]
             self.X       = np.zeros((self.ngas,self.nlayers))
             self.X      += 1e-5  #setting up initial mixing ratios
             self.rho     = self.get_rho()
             
         else:           
-            print 'Set atm values from data'
+            logging.info('Set atm values from data')
             self.nlayers = data.nlayers
             self.pta     = data.pta
             self.P       = self.pta[:,0]
             self.T       = data.pta[:,1]
-            self.Z       = self.pta[:,2]
+            self.z       = self.pta[:,2]
             self.X       = data.X     
             self.ngas    = int(data.ngas)  
             self.rho     = self.get_rho(T=self.T,P=self.P)
             
-        self.num_T_params = 3 #number of free temperature parameters
+        self.num_T_params = 3 #number of free temperature parameters @todo what is it ?
         
 #         pl.figure(104)
 #         pl.plot(self.T,np.log(self.P))
@@ -75,7 +78,7 @@ class tp_profile(base):
             self.setup_prior_bounds()
             
         if self.params.fit_emission:
-            self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)    
+            self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)    #@todo Change PARAMS to sth else!
 #             self.PARAMS[4] = 1200.0
             
         if self.params.fit_transmission:

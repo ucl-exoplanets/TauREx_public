@@ -30,21 +30,30 @@ from library_plotting import *
 
 
 class output(base):
-    def __init__(self,params,data,fit):
+    def __init__(self, fitting, data=None, params=None):
 
         logging.info('Initialise object output')
 
-        self.params   = params
-        self.data     = data
-        self.fit      = fit
-        self.profile  = tp_profile(params,data) #loading profile class
+        if params:
+            self.params = params
+        else:
+            self.params = fitting.params #get params object from profile
+
+        if data:
+            self.data = data
+        else:
+            self.data = fitting.data    # get data object from profile
+
+        self.fitting = fitting
+        #self.profile  = tp_profile(params, data) #loading profile class (not needed, profile object is in fitting object)
+        self.profile = fitting.profile
         
         #inheriting emission/transmission model from fitting object if loaded
         # 'fit' can either be the fitting instance or the emission/transmission instances
         
-        if fit.__ID__ == 'fitting': 
-            self.model        = fit.model #directly inheriting model instance from fitting instance
-            self.__MODEL_ID__ = fit.__MODEL_ID__
+        if fitting.__ID__ == 'fitting':
+            self.model        = fitting.model #directly inheriting model instance from fitting instance
+            self.__MODEL_ID__ = fitting.__MODEL_ID__
         else:
             self.set_model(fit) #abstracting emission/transmission model 
         
@@ -52,15 +61,15 @@ class output(base):
         #dumping fitted paramter list to file 
         with open('chains/parameters.dat','w') as parfile:
             parfile.write('Temperature \n')
-            for mol in params.planet_molec:
+            for mol in self.params.planet_molec:
                 parfile.write(mol+' \n')
                 
         
         #determining which fits were performed
-        if fit.__ID__ == 'fitting':
-            self.MCMC = fit.MCMC
-            self.NEST = fit.NEST
-            self.DOWN = fit.DOWNHILL
+        if fitting.__ID__ == 'fitting':
+            self.MCMC = fitting.MCMC
+            self.NEST = fitting.NEST
+            self.DOWN = fitting.DOWNHILL
         else:
             self.MCMC = False
             self.NEST = False
@@ -69,13 +78,13 @@ class output(base):
         #calculating final absorption/emission spectrum (currently only absorption)
 
         if self.MCMC:
-            self.spec_mcmc = self.model(rho=self.profile.get_rho(T=fit.MCMC_T_mean),X=fit.MCMC_X_mean,temperature=fit.MCMC_T_mean)
+            self.spec_mcmc = self.model(rho=self.profile.get_rho(T=fitting.MCMC_T_mean),X=fitting.MCMC_X_mean,temperature=fitting.MCMC_T_mean)
             self.spec_mcmc = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_mcmc)
         if self.NEST:
-            self.spec_nest = self.model(rho=self.profile.get_rho(T=fit.NEST_T_mean),X=fit.NEST_X_mean,temperature=fit.NEST_T_mean)
+            self.spec_nest = self.model(rho=self.profile.get_rho(T=fitting.NEST_T_mean),X=fitting.NEST_X_mean,temperature=fitting.NEST_T_mean)
             self.spec_nest = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_nest)
         if self.DOWN:
-            self.spec_down = self.model(rho=self.profile.get_rho(T=fit.DOWNHILL_T_mean),X=fit.DOWNHILL_X_mean,temperature=fit.DOWNHILL_T_mean)
+            self.spec_down = self.model(rho=self.profile.get_rho(T=fitting.DOWNHILL_T_mean),X=fitting.DOWNHILL_X_mean,temperature=fitting.DOWNHILL_T_mean)
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
 
     #class methods
@@ -97,9 +106,9 @@ class output(base):
         #plotting MCMC sampled distributions
         if self.MCMC:
             if param_names:
-                plot_mcmc_results(self.fit.MCMC_FITDATA,parameters=param_names,save2pdf=save2pdf, out_path=self.params.out_path)
+                plot_mcmc_results(self.fitting.MCMC_FITDATA,parameters=param_names,save2pdf=save2pdf, out_path=self.params.out_path)
             else:
-                plot_mcmc_results(self.fit.MCMC_FITDATA,save2pdf=save2pdf, out_path=self.params.out_path)
+                plot_mcmc_results(self.fitting.MCMC_FITDATA,save2pdf=save2pdf, out_path=self.params.out_path)
         else:
             print 'MCMC was not run. Nothing to see here. Go away... '
 
@@ -108,12 +117,12 @@ class output(base):
         #plotting nested sampling distributions
         if self.NEST:
             if not param_names:
-                parameters = range(self.fit.n_params)
+                parameters = range(self.fitting.n_params)
             else:
                 parameters = param_names
             
             if self.params.nest_multimodes:
-                plot_multinest_results(self.fit.NEST_FITDATA,parameters=parameters,save2pdf=save2pdf, out_path=self.params.out_path)
+                plot_multinest_results(self.fitting.NEST_FITDATA,parameters=parameters,save2pdf=save2pdf, out_path=self.params.out_path)
             else:
                 if self.params.verbose:
                     print 'WARNING: plotting routine for multimodes = False disabled. Please use plot_chains.py script.'

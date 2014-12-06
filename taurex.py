@@ -154,42 +154,47 @@ dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #initialising TP profile instance
-profileob = tp_profile(params, dataob)
-
+profileob = tp_profile(dataob)
 
 #initiating and running preselector instance
 if params.pre_run:
 
     if params.fit_transmission:
-        preob = preselector(params, dataob, transmission(params,dataob,profileob))
+
+        model_object = transmission(profileob)
+        preob = preselector(model_object)
 
     elif params.fit_emission:
-        preob = preselector(params, dataob, emission(params,dataob,profileob))
+        model_object = emission(params,dataob,profileob) #@todo fix it as well
+        preob = preselector(model_object)
 
     preob.run()
-    logging.info('Molecule pre-selected: %s' % preob.molselected)
+    logging.info('Molecule pre-selected using Marple module: %s' % preob.molselected)
+    logging.info('Updating parameters object values')
     params = preob.update_params()
-    dataob.reset(params)
 
+    #dataob.reset(updated_params) # @todo check! tp_profile needs to be updated as well
 
-#printing a few data object attributes
-# print dataob.atmosphere['mol']
-# print dataob.atmosphere['info']['mu']
-# print dataob.atmosphere['mol'].keys()
+    # here we need to reinitialise the dataob and tp_profile objects:
+    # @todo However, we could move everything related to the atmospheric composition to tp_profile.
+    logging.info('Reinitialising data and tp_profile objects')
+    dataob = data(updated_params)
+    profileob = tp_profile(dataob)
+
 
 #initialising transmission radiative transfer code instance
 if params.fit_transmission:
-    transob = transmission(params, dataob, profileob)
+    transob = transmission(profileob)
 
 #initialising emission radiative transfer code instance
 if params.fit_emission:
-    emissob = emission(params,dataob,profileob)
+    emissob = emission(profileob)
 #     emissob.path_integral()
 
 # exit()
 
-#initialising fitting object
-fitob = fitting(params, dataob, profileob)
+#initialising fitting object  @todo here we should actually have the transmission or emission objects as input. Then get rid of self.set_model()
+fitob = fitting(profileob)
 
 if params.fit_transmission:
     fitob.set_model(transob) #loading transmission model into fitting object
@@ -206,20 +211,21 @@ if params.mcmc_run and pymc_import:
     MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 if params.nest_run and multinest_import:
-    fitob.multinest_fit()   # Nested sampling fit
+    fitob.multinest_fit() # Nested sampling fit
 
 #forcing slave processes to exit at this stage
 if MPI.COMM_WORLD.Get_rank() != 0:
     exit()
 
 #initiating output instance with fitted data from fitting class
-outputob = output(params, dataob, fitob)
-
-
+outputob = output(fitob)
 
 #plotting fits and data
-if params.verbose and MPIverbose: print 'plotting/saving results'
-if params.verbose or params.out_save_plots: outputob.plot_all(save2pdf=params.out_save_plots)
+logging.info('Plotting and saving results')
+
+if params.verbose or params.out_save_plots:
+    outputob.plot_all(save2pdf=params.out_save_plots)
+
 # outputob.plot_spectrum()   #plotting data only
 # outputob.plot_multinest()  #plotting multinest posteriors
 # outputob.plot_mcmc()       #plotting mcmc posterios
@@ -274,4 +280,5 @@ outputob.save_model()       #saving models to ascii
 
 
 #last line. displays any diagrams generated. must be run after profiling
-if params.verbose: show()
+if params.verbose:
+    show()

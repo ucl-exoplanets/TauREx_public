@@ -34,8 +34,9 @@ from license import *
 
 class data(base):
 
-#initialisation
-    def __init__(self,params):
+    # @todo general comment: maybe move some stuff from this class to the tp_profile, if appropriate
+
+    def __init__(self, params):
 
         logging.info('Initialising data object')
 
@@ -81,8 +82,8 @@ class data(base):
         #or generating it from parameter file values
         #pta = pressure, temp, alt
         #X = mixing ratios of molecules
-        if self.params.in_use_ATMfile:
-            self.pta,self.X = self.readATMfile()
+        if self.params.in_use_ATMfile: # @todo maybe move to tp_profile?
+            self.pta, self.X = self.readATMfile()
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
         else:
@@ -94,19 +95,19 @@ class data(base):
 
 
         #setting up dictionary with atmosphere parameters
-        self.atmosphere = self.init_atmosphere()
+        self.atmosphere = self.init_atmosphere() # @todo this needs to be improved --> move to tp_profile
         
         #reading in absorption coefficient data 
 #         self.sigma_array = self.readABSfiles()
-        self.sigma_dict = self.build_sigma_dic(tempstep=params.in_tempres)
+        self.sigma_dict = self.build_sigma_dic(tempstep=params.in_tempres) # @todo move to tp_profile?
 
         #reading in other files if specified in parameter file
         if params.in_include_rad:
-            self.rad = self.readfile(self.params_in_rad_file,INTERPOLATE=True)
+            self.rad = self.readfile(self.params.in_rad_file, interpolate=True)
         if params.in_include_cia:
-            self.cia = self.readfile(self.params.in_cia_file,INTERPOLATE=True)
+            self.cia = self.readfile(self.params.in_cia_file, interpolate=True)
 #         if params.in_include_cld:
-#             self.cld = self.readfile(self.params.in_cld_file,INTERPOLATE=True) 
+#             self.cld = self.readfile(self.params.in_cld_file,interpolate=True)
             
         #reading in Phoenix stellar model library (if emission is calculated only)
         if self.params.gen_type == 'emission' or self.params.fit_emission:
@@ -188,12 +189,8 @@ class data(base):
         return bingrid, bingrid_idx 
 
     def set_mixing_ratios(self):
-    #setting up mixing ratio array from parameter file inputs
 
-#        try:
-#            mixing = [self.params.planet_mixing.item()] #necessary for 0d numpy arrays @todo maybe fixed by new parameters class
-#        except ValueError:
-#            mixing = self.params.planet_mixing
+        #setting up mixing ratio array from parameter file inputs
 
         mixing = self.params.planet_mixing
 
@@ -433,44 +430,44 @@ class data(base):
     def __readABSfiles_sub(self,path, filelist, interpolate2grid,num):
         if interpolate2grid:
             OUT = zeros((num,self.nspecgrid))
-            WAVE = transpose(self.readfile(path+filelist[0],INTERPOLATE=True)[:,0])
+            WAVE = transpose(self.readfile(path+filelist[0], interpolate=True)[:,0])
         else:
-            tmp = self.readfile(path+filelist[0],INTERPOLATE=False)
+            tmp = self.readfile(path+filelist[0], interpolate=False)
             ABSsize = len(tmp[:,0])
             OUT = zeros((num,ABSsize))
             WAVE = transpose(tmp[:,0])
 
         for i in range(num):
             # print filelist[i]
-            OUT[i,:] = transpose(self.readfile(path+filelist[i],INTERPOLATE=interpolate2grid)[:,1])* 1e-4 #converting cm^2 to m^2
+            OUT[i,:] = transpose(self.readfile(path+filelist[i], interpolate=interpolate2grid)[:,1])* 1e-4 #converting cm^2 to m^2
 
         return OUT, WAVE
 
 
-    def readfile(self,NAME,INTERPOLATE=False):
+    def readfile(self, name, interpolate=False):
     #reads in data file with columns wavelength and data
         try:
-            OUT = loadtxt(NAME)
+            out = loadtxt(name)
         except ValueError:
-            OUT = loadtxt(NAME,delimiter=',')
-        if len(OUT[:,0]) < len(OUT[0,:]):
-            OUT = transpose(OUT)
+            out = loadtxt(name, delimiter=',')
+        if len(out[:,0]) < len(out[0,:]):
+            out = transpose(out)
         
         #sorting data along ascending first column    
-        OUT = OUT[argsort(OUT[:,0]),:]
+        out = out[argsort(out[:,0]),:]
 
 #         figure()
-#         plot(OUT[:,0], OUT[:,1])
+#         plot(out[:,0], out[:,1])
 
         #interpolating to specgrid
-        if INTERPOLATE:
-#             interpflux = interp1d(OUT[:,0],OUT[:,1],axis=0,kind='cubic')(self.wavegrid)
-            interpflux = interp(self.specgrid,OUT[:,0],OUT[:,1])
+        if interpolate:
+#             interpflux = interp1d(out[:,0],out[:,1],axis=0,kind='cubic')(self.wavegrid)
+            interpflux = interp(self.specgrid, out[:,0], out[:,1])
 #             print interpflux
-            OUT = transpose(vstack((self.specgrid,interpflux)))
-        # print 'ble',np.shape(OUT)
-#         plot(OUT[:,0], OUT[:,1], c='r')
+            out = transpose(vstack((self.specgrid, interpflux)))
+        # print 'ble',np.shape(out)
+#         plot(out[:,0], out[:,1], c='r')
 #         show()
-        return OUT
+        return out
 
         

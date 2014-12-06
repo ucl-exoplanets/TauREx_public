@@ -42,9 +42,24 @@ except ImportError:
     pass
 
 class fitting(base):
-    def __init__(self, params, data, profile, rad_model=None):
+#    def __init__(self, params, data, profile, rad_model=None):
+    def __init__(self, profile, params=None, data=None, rad_model=None):
+
+        # @todo here we should actually have the transmission or emission objects as input. Then get rid of self.set_model()
 
         logging.info('Initialise object fitting')
+
+        if params:
+            self.params = params
+        else:
+            self.params = profile.params #get params object from profile
+
+        if data:
+            self.data = data
+        else:
+            self.data = profile.data    # get data object from profile
+
+        self.profile     = profile
 
         # this is equivalent to type(instance)
         self.__ID__      = 'fitting' 
@@ -57,11 +72,6 @@ class fitting(base):
             self.MPIrank     = 0
             self.MPIsize     = 0
 
-        #loading profile, data and params objects
-        self.profile     = profile
-        self.params      = params
-        self.dataob      = data
-
         # set some folder names
         self.dir_chains = os.path.join(self.params.out_path, 'chains')
         self.dir_mcmc = os.path.join(self.dir_chains, 'MCMC')
@@ -72,19 +82,17 @@ class fitting(base):
             folders = [self.dir_chains, self.dir_mcmc, self.dir_mutlinest]
             for f in folders:
                 if not os.path.isdir(f):
-                    logging.debug('Create folder %s')
+                    logging.info('Create folder %s' % f)
                     os.mkdir(f)
-
-
 
         #loading transmission/emission model
         self.set_model(rad_model)
 
         #loading data and parameters
-        self.observation = data.spectrum
-        self.nlayers     = params.tp_atm_levels
-        self.ngas        = data.ngas
-        self.nspecbingrid= len(data.spec_bin_grid)
+        self.observation = self.data.spectrum
+        self.nlayers     = self.params.tp_atm_levels # @todo nlayers should be stored in the tp_profile object
+        self.ngas        = self.data.ngas
+        self.nspecbingrid= len(self.data.spec_bin_grid) # @todo move to data object
 
         #self.n_params    = int(self.ngas  + 1) #+1 for only one temperature so far
         #self.n_params    = 2 #restricting to one temperature and one column density parameter at the moment
@@ -96,10 +104,10 @@ class fitting(base):
         self.T_low       = self.params.planet_temp - self.params.fit_T_low
 
         #getting parameter grid with initial estimates
-        self.PINIT       = self.profile.PARAMS
+        self.PINIT       = self.profile.PARAMS  # @todo find better var name (confusion with params!)
         self.Pindex      = self.profile.TPindex
         self.Pshape      = shape(self.PINIT)
-        self.n_params    = len(self.PINIT)
+        self.n_params    = len(self.PINIT) # @todo find better var name (confusion with params!)
         
         #getting prior bounds for downhill algorithm
         self.bounds      = self.profile.bounds
@@ -127,9 +135,9 @@ class fitting(base):
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
         #binning internal model
-        MODEL_binned = [MODEL[self.dataob.spec_bin_grid_idx == i].mean() for i in xrange(1,self.nspecbingrid)]
+        MODEL_binned = [MODEL[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.nspecbingrid)]
         
-        #         MODEL_interp = np.interp(self.dataob.wavegrid,self.dataob.specgrid,MODEL)
+        #         MODEL_interp = np.interp(self.data.wavegrid,self.data.specgrid,MODEL)
 #         print PFIT
 #         print T
 #         print P
@@ -387,6 +395,20 @@ class fitting(base):
         if resume is None:
             resume = self.params.nest_resume
 
+        if resume:
+            filename = os.path.join(self.dir_mutlinest, '1-live.points')
+            livepoints = sum(1 for line in open(filename))
+            if livepoints != self.params.nest_nlive:
+                logging.warning('Cannot resume previous MULTINEST run, the number of live points has changed')
+                logging.warning('Removing previous MULTINEST chains')
+                for file in os.listdir(self.dir_mutlinest):
+                    file_path = os.path.join(self.dir_mutlinest, file)
+                    try:
+                        if os.path.isfile(file_path):
+                            os.unlink(file_path)
+                    except Exception, e:
+                        logging.error('Cannot remove files in %s' % self.dir_multinest)
+
         def show(filepath): 
             # open the output (pdf) file for the user
             if os.name == 'mac':
@@ -425,7 +447,7 @@ class fitting(base):
                         n_dims=self.n_params,
                         multimodal=self.params.nest_multimodes,
                         max_modes=self.params.nest_max_modes,
-                        outputfiles_basename=os.path.join(self.dir_mutlinest, "1-"),
+                        outputfiles_basename=os.path.join(self.dir_mutlinest, '1-'),
                         const_efficiency_mode = self.params.nest_const_eff,
                         importance_nested_sampling = self.params.nest_imp_sampling,
                         resume = resume,
