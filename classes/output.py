@@ -18,7 +18,7 @@
 ################################################
 
 #loading libraries
-from base import base   
+from base import base
 import numpy as np
 import os
 import pylab as py
@@ -59,17 +59,17 @@ class output(base):
             self.model        = fitting.model #directly inheriting model instance from fitting instance
             self.__MODEL_ID__ = fitting.__MODEL_ID__
         else:
-            self.set_model(fit) #abstracting emission/transmission model 
-        
+            self.set_model(fit) #abstracting emission/transmission model
+
 
         #dumping fitted paramter names to file and list. @todo Assuming only one temperature!!
         self.parameters = []
-        with open(os.path.join(self.params.out_path, 'chains', 'parameters.dat'), 'w') as parfile:
-            parfile.write('Temperature \n')
-            self.parameters.append('Temperature')
+        with open(os.path.join(self.params.out_path, 'parameters.dat'), 'w') as parfile:
             for mol in self.params.planet_molec:
                 parfile.write(mol+' \n')
                 self.parameters.append(mol)
+            parfile.write('Temperature \n')
+            self.parameters.append('Temperature')
 
         #determining which fits were performed
         if fitting.__ID__ == 'fitting':
@@ -183,10 +183,10 @@ class output(base):
         py.xlabel('Wavelength ($\mu m$)')
 
         if self.__MODEL_ID__ == 'transmission':
-            py.ylabel('$(Rp/Rs)^2$') 
+            py.ylabel('$(Rp/Rs)^2$')
         elif self.__MODEL_ID__ == 'emission':
-            py.ylabel('$F_p/F_s$') 
-        
+            py.ylabel('$F_p/F_s$')
+
         if save2pdf:
             filename = os.path.join(self.params.out_path, 'spectrum_data.pdf')
             fig.savefig(filename)
@@ -221,10 +221,10 @@ class output(base):
         py.xlabel('Wavelength ($\mu m$)')
 
         if self.__MODEL_ID__ == 'transmission':
-            py.ylabel('$(Rp/Rs)^2$') 
+            py.ylabel('$(Rp/Rs)^2$')
         elif self.__MODEL_ID__ == 'emission':
-            py.ylabel('$F_p/F_s$') 
-        
+            py.ylabel('$F_p/F_s$')
+
         if save2pdf:
             filename = os.path.join(self.params.out_path, 'model_fit.pdf')
             fig.savefig(filename)
@@ -240,10 +240,10 @@ class output(base):
         py.xlabel('Wavelength ($\mu m$)')
 
         if self.__MODEL_ID__ == 'transmission':
-            py.ylabel('$(Rp/Rs)^2$') 
+            py.ylabel('$(Rp/Rs)^2$')
         elif self.__MODEL_ID__ == 'emission':
-            py.ylabel('$F_p/F_s$') 
-        
+            py.ylabel('$F_p/F_s$')
+
         if save2pdf:
             filename = os.path.join(self.params.out_path, 'spectrum.pdf')
             fig.savefig(filename)
@@ -279,5 +279,5 @@ class output(base):
 
         if modelout is not None: # ???
             np.savetxt(self.params.out_path+modelsaveas,modelout)
-            
-            
+
+

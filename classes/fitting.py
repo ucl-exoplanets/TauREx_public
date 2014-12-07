@@ -73,13 +73,12 @@ class fitting(base):
             self.MPIsize     = 0
 
         # set some folder names
-        self.dir_chains = os.path.join(self.params.out_path, 'chains')
-        self.dir_mcmc = os.path.join(self.dir_chains, 'MCMC')
-        self.dir_mutlinest = os.path.join(self.dir_chains, 'multinest')
+        self.dir_mcmc = os.path.join(self.params.out_path, 'MCMC')
+        self.dir_mutlinest = os.path.join(self.params.out_path, 'multinest')
 
         # create some folders.
         if self.MPIrank == 0:
-            folders = [self.params.out_path, self.dir_chains, self.dir_mcmc, self.dir_mutlinest]
+            folders = [self.params.out_path, self.dir_mcmc, self.dir_mutlinest]
             for f in folders:
                 if not os.path.isdir(f):
                     logging.info('Create folder %s' % f)
@@ -444,7 +443,8 @@ class fitting(base):
 
         #progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         #threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
-        print 'Livepoints %i ' % self.params.nest_nlive
+        logging.debug('Multinest output dir %s' % self.dir_mutlinest)
+
         pymultinest.run(LogLikelihood=multinest_loglike,
                         Prior=multinest_uniform_prior,
                         n_dims=self.n_params,
@@ -467,7 +467,8 @@ class fitting(base):
         if MPI.COMM_WORLD.Get_rank() == 0:
 
             #coallating results into arrays (only for the main thread)
-            OUT = pymultinest.Analyzer(n_params=self.n_params)
+            OUT = pymultinest.Analyzer(n_params=self.n_params,
+                                       outputfiles_basename=os.path.join(self.dir_mutlinest, '1-'))
 
             Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_multinest_result(OUT)
 

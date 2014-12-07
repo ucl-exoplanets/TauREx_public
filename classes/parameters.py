@@ -47,8 +47,8 @@ class parameters(base):
         self.verbose_all_threads = self.getpar('General', 'verbose_all_threads', 'bool')
 
         # configure logging instance
-        logging.basicConfig(filename=os.path.join(self.parser.get('Output','path'), 'taurex.log'),
-                            level=logging.INFO)
+        logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
+                            level=logging.DEBUG)
 
         if (MPIrank == 0 and not self.verbose_all_threads) or self.verbose_all_threads:
 

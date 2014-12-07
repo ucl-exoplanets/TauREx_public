@@ -33,6 +33,7 @@ import optparse
 import time
 import logging
 import pickle
+import datetime
 
 from numpy import * #nummerical array library
 from pylab import * #science and plotting library for python
@@ -168,6 +169,7 @@ for resolution in resolutions:
         if not os.path.isdir(os.path.join(params.out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))):
             os.mkdir(os.path.join(params.out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr)))
         params.out_path = os.path.join(params.out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))
+
         logging.info('Output chains and plots will be stored in %s' % params.out_path)
 
         logging.info('Generating spectrum with SNR=%.1f and R=%i' % (snr, resolution))
@@ -254,7 +256,6 @@ for resolution in resolutions:
 
             # output
             outputob = output(fitob)
-            print 'Save pdf %s ' % params.out_save_plots
 
             outputob.plot_all(save2pdf=params.out_save_plots)
 
@@ -287,7 +288,8 @@ for resolution in resolutions:
             planet_dict['X_std'] = fitob.NEST_X_std
             planet_dict['T'] = fitob.NEST_T_mean
             planet_dict['T_std'] = fitob.NEST_T_std
-            planet_dict['NEST_STATS'] = fitob.NEST_STATS
+            planet_dict['NEST_OUT'] = fitob.NEST_FITDATA
+            planet_dict['datetime'] = datetime.datetime.now()
 
             pickle_file.append(planet_dict)
 
