@@ -186,8 +186,8 @@ for resolution in resolutions:
 
         # create spectrum
         # Planet & atmosphere properties are defined in the user provided par file
-
         params.gen_spec_res = resolution
+        params.gen_manual_waverange = True
         dataob = data(params)
         profileob = tp_profile(dataob)
 
@@ -289,6 +289,7 @@ for resolution in resolutions:
             planet_dict['T'] = fitob.NEST_T_mean
             planet_dict['T_std'] = fitob.NEST_T_std
             planet_dict['NEST_OUT'] = fitob.NEST_FITDATA
+            planet_dict['params'] = params
             planet_dict['datetime'] = datetime.datetime.now()
 
             pickle_file.append(planet_dict)
