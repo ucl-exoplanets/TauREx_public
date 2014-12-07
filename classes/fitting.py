@@ -79,7 +79,7 @@ class fitting(base):
 
         # create some folders.
         if self.MPIrank == 0:
-            folders = [self.dir_chains, self.dir_mcmc, self.dir_mutlinest]
+            folders = [self.params.out_path, self.dir_chains, self.dir_mcmc, self.dir_mutlinest]
             for f in folders:
                 if not os.path.isdir(f):
                     logging.info('Create folder %s' % f)
@@ -130,13 +130,14 @@ class fitting(base):
         rho = self.profile.get_rho(T=T, P=P)          # calculating densities
 
         #the temperature parameter should work out of the box but check for transmission again
-        MODEL = self.model(rho=rho,X=X,temperature=T) # model() is in the base class!
+        MODEL = self.model(rho=rho, X=X, temperature=T) # model() is in the base class!
 
 #         MODEL = self.transmod.cpath_integral(rho=rho,X=X,temperature=1400)
 
         #binning internal model
         MODEL_binned = [MODEL[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.nspecbingrid)]
-        
+
+
         #         MODEL_interp = np.interp(self.data.wavegrid,self.data.specgrid,MODEL)
 #         print PFIT
 #         print T
@@ -187,7 +188,7 @@ class fitting(base):
         
         # PFIT, err, out3, out4, out5 = fmin(self.chisq_trans, PINIT, args=(DATA,DATASTD), xtol=1e-5, ftol=1e-5,maxiter=1e6,
         #                                    disp=1, full_output=1)
-        
+
         PFIT = minimize(fun=self.chisq_trans,
                         x0=PINIT,
                         args=(DATA,DATASTD),
@@ -342,14 +343,14 @@ class fitting(base):
 
         # each MCMC chain is run on a separate thread. Save all outputs
         logging.info('Store the MCMC results')
-        MCMC_OUT = {}
-        MCMC_OUT[self.MPIrank] = {}
-        MCMC_OUT[self.MPIrank]['FITDATA'] = R
-        MCMC_OUT[self.MPIrank]['STATS']   = R.stats()
-        MCMC_OUT[self.MPIrank]['T_mean']  = Tout_mean
-        MCMC_OUT[self.MPIrank]['T_std']   = Tout_std
-        MCMC_OUT[self.MPIrank]['X_mean']  = Xout_mean
-        MCMC_OUT[self.MPIrank]['X_std']   = Xout_std
+        self.MCMC_OUT = {}
+        self.MCMC_OUT[self.MPIrank] = {}
+        self.MCMC_OUT[self.MPIrank]['FITDATA'] = R
+        self.MCMC_OUT[self.MPIrank]['STATS']   = R.stats()
+        self.MCMC_OUT[self.MPIrank]['T_mean']  = Tout_mean
+        self.MCMC_OUT[self.MPIrank]['T_std']   = Tout_std
+        self.MCMC_OUT[self.MPIrank]['X_mean']  = Xout_mean
+        self.MCMC_OUT[self.MPIrank]['X_std']   = Xout_std
 
         #saving MCMC results to file as pickle. Do it later.
         #with gzip.GzipFile(self.params.out_path+'MCMC_results.pkl.zip','wb') as outhandle:
@@ -397,17 +398,18 @@ class fitting(base):
 
         if resume:
             filename = os.path.join(self.dir_mutlinest, '1-live.points')
-            livepoints = sum(1 for line in open(filename))
-            if livepoints != self.params.nest_nlive:
-                logging.warning('Cannot resume previous MULTINEST run, the number of live points has changed')
-                logging.warning('Removing previous MULTINEST chains')
-                for file in os.listdir(self.dir_mutlinest):
-                    file_path = os.path.join(self.dir_mutlinest, file)
-                    try:
-                        if os.path.isfile(file_path):
-                            os.unlink(file_path)
-                    except Exception, e:
-                        logging.error('Cannot remove files in %s' % self.dir_multinest)
+            if os.path.isfile(filename):
+                livepoints = sum(1 for line in open(filename))
+                if livepoints != self.params.nest_nlive:
+                    logging.warning('Cannot resume previous MULTINEST run, the number of live points has changed')
+                    logging.warning('Removing previous MULTINEST chains')
+                    for file in os.listdir(self.dir_mutlinest):
+                        file_path = os.path.join(self.dir_mutlinest, file)
+                        try:
+                            if os.path.isfile(file_path):
+                                os.unlink(file_path)
+                        except Exception, e:
+                            logging.error('Cannot remove files in %s' % self.dir_multinest)
 
         def show(filepath): 
             # open the output (pdf) file for the user
@@ -442,6 +444,7 @@ class fitting(base):
 
         #progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         #threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
+        print 'Livepoints %i ' % self.params.nest_nlive
         pymultinest.run(LogLikelihood=multinest_loglike,
                         Prior=multinest_uniform_prior,
                         n_dims=self.n_params,

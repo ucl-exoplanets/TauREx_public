@@ -34,7 +34,7 @@ import logging
 
 class preselector(base):
 
-    def __init__(self, model_object, params=None):
+    def __init__(self, model_object, data=None, params=None):
 
         logging.info('Initialising preselector object')
 
@@ -44,9 +44,13 @@ class preselector(base):
         else:
             self.params = data.params
 
+        if data:
+            self.data = data
+        else:
+            self.data = model_object.data
+
 
         self.model_object = model_object
-        self.data         = model_object.data
 
         #setting emission/transmission model
         self.set_model(model_object)

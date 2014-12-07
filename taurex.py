@@ -141,9 +141,9 @@ params = parameters(options.param_filename)
 #beginning of main code
 
 #MPI related message
-if MPIverbose and MPIimport:
+if MPIimport:
     logging.info('MPI enabled. Running on %i cores' % MPIsize)
-elif MPIverbose:
+else:
     logging.info('MPI disabled')
 
 # initialising data object
@@ -160,12 +160,11 @@ profileob = tp_profile(dataob)
 if params.pre_run:
 
     if params.fit_transmission:
-
         model_object = transmission(profileob)
         preob = preselector(model_object)
 
     elif params.fit_emission:
-        model_object = emission(params,dataob,profileob) #@todo fix it as well
+        model_object = emission(profileob)
         preob = preselector(model_object)
 
     preob.run()
@@ -277,7 +276,6 @@ outputob.save_model()       #saving models to ascii
 #
 # # ps.print_stats()
 # # print s.getvalue()
-
 
 #last line. displays any diagrams generated. must be run after profiling
 if params.verbose:

@@ -1,6 +1,8 @@
 [General]
 #verbose or not
 verbose = True
+verbose_all_threads = False
+
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
@@ -18,9 +20,8 @@ wavemax = 20.0
 #resolution of internal model runs (R)
 spec_res = 1000
 
-#specturm type (emission/transmission), for create_spectrum.py
+#specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
-
 
 [Input]
 #Observed spectrum to be fitted

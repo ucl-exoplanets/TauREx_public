@@ -36,7 +36,7 @@ class data(base):
 
     # @todo general comment: maybe move some stuff from this class to the tp_profile, if appropriate
 
-    def __init__(self, params):
+    def __init__(self, params, spectrum=None):
 
         logging.info('Initialising data object')
 
@@ -52,31 +52,47 @@ class data(base):
             libgen.convert2microns(params.in_abs_path+'*')
         
         #reading in spectrum data to be fitted
-        self.spectrum = self.readfile(params.in_spectrum_file)
-        self.nwave = len(self.spectrum[:,0])
-        self.wavegrid = self.spectrum[:,0]
-        
+        if isinstance(spectrum, (np.ndarray, np.generic)):
+            # read spectrum from argument
+            self.spectrum = spectrum
+        elif params.in_spectrum_file:
+            # read spectrum from file
+            self.spectrum = self.readfile(params.in_spectrum_file)
+        else:
+            # if running only forward model, input spectrum can be omitted
+            self.spectrum = False
+
+        if isinstance(self.spectrum, (np.ndarray, np.generic)):
+
+            # set observed spectrum specific variables (only if spectrum is provided)
+            self.nwave = len(self.spectrum[:,0])
+            self.wavegrid = self.spectrum[:,0]
+
         #calculating wavelength grids
         if params.gen_manual_waverange:
-            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                          lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
+            # manual wavelength range provided in parameter file
+            self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
+                                                               lambda_min=self.params.gen_wavemin,
+                                                               lambda_max=self.params.gen_wavemax)
         else:
-            #increase model wavelength range by one data spectral bin in blue and red. This ensures correct 
-            #model binning at the edges
+            # user wavelength range from observed spectrum, but increase model wavelength range by one data spectral bin
+            # in blue and red. This ensures correct model binning at the edges
             bin_up = self.wavegrid[-1]-self.wavegrid[-2]
             bin_low = self.wavegrid[1]-self.wavegrid[0]
-            self.specgrid,self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                          lambda_min=self.wavegrid[0]-bin_low,lambda_max=self.wavegrid[-1]+bin_up)
+            self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
+                                                               lambda_min=self.wavegrid[0]-bin_low,
+                                                               lambda_max=self.wavegrid[-1]+bin_up)
         self.nspecgrid = len(self.specgrid)
 
-        #calculating spectral binning grid
-        self.spec_bin_grid,self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)       
+        if isinstance(self.spectrum, (np.ndarray, np.generic)):
+            #calculating spectral binning grid, only if observed spectrum is provided
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)
 
         #setting planetary surface gravity
         self.planet_grav = self.get_surface_gravity()
         
         #calculating atmospheric scale height
-        self.scaleheight = self.get_scaleheight()
+        self.scaleheight = self.get_scaleheight() # @todo needed? Check. Scaleheight is more specific to tp_profile class
 
         #reading in atmospheric profile file
         #or generating it from parameter file values
@@ -113,10 +129,10 @@ class data(base):
         if self.params.gen_type == 'emission' or self.params.fit_emission:
             self.F_star = self.get_star_SED()
 
+    #class functions
 
-#class functions    
     def init_atmosphere(self, mu=0.0, def_mu=2.3):
-    #initialising atmosphere dictionary
+        #initialising atmosphere dictionary
         ATM = {}
         ATM['mol'] = {}
         ATM['info'] = {}

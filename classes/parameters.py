@@ -43,18 +43,22 @@ class parameters(base):
         self.default_parser = SafeConfigParser()
         self.default_parser.read('Parfiles/default.par')
 
-        self.verbose               = self.getpar('General', 'verbose', 'bool')
+        self.verbose = self.getpar('General', 'verbose', 'bool')
+        self.verbose_all_threads = self.getpar('General', 'verbose_all_threads', 'bool')
 
         # configure logging instance
         logging.basicConfig(filename=os.path.join(self.parser.get('Output','path'), 'taurex.log'),
                             level=logging.INFO)
 
-        # define a Handler which writes INFO messages or higher to the sys.stderr
-        console = logging.StreamHandler()
-        console.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
-        console.setFormatter(formatter)
-        logging.getLogger('').addHandler(console)
+        if (MPIrank == 0 and not self.verbose_all_threads) or self.verbose_all_threads:
+
+            # define a Handler which writes INFO messages or higher to the sys.stderr
+            console = logging.StreamHandler()
+            console.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
+            console.setFormatter(formatter)
+            logging.getLogger('').addHandler(console)
+            logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
 
         logging.info('Initialise parameters object')
 
@@ -73,8 +77,10 @@ class parameters(base):
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')
         self.gen_spec_res          = self.getpar('General','spec_res', 'float')
         self.gen_type              = self.getpar('General','type')
-        
+
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
+        if self.in_spectrum_file == 'False':
+            self.in_spectrum_file = False
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
         self.in_abs_path           = self.getpar('Input','abs_path')
@@ -99,8 +105,9 @@ class parameters(base):
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
         self.star_temp             = self.getpar('Star','temp', 'float')
         
+        self.planet_name           = self.getpar('Planet', 'name')
         self.planet_radius         = self.getpar('Planet', 'radius', 'float')  *RJUP
-        self.planet_mass          = self.getpar('Planet', 'mass', 'float')     *MJUP
+        self.planet_mass           = self.getpar('Planet', 'mass', 'float')     *MJUP
         self.planet_sma            = self.getpar('Planet', 'sma', 'float')     *AU
         self.planet_albedo         = self.getpar('Planet','albedo', 'float')
         self.planet_temp           = self.getpar('Planet', 'temp', 'float')
@@ -183,7 +190,7 @@ class parameters(base):
             self.nest_run              = self.getpar('MultiNest','run', 'bool')
             self.nest_resume           = self.getpar('MultiNest','resume', 'bool')
             self.nest_verbose          = self.getpar('MultiNest','verbose', 'bool')
-            self.nest_path             = self.getpar('MultiNest','nest_path')
+            self.nest_path             = self.getpar('MultiNest','nest_path') # @todo not used?
             self.nest_samp_eff         = self.getpar('MultiNest','sampling_eff')
             self.nest_nlive            = self.getpar('MultiNest','n_live_points', 'int')
             self.nest_max_iter         = self.getpar('MultiNest','max_iter', 'int')
