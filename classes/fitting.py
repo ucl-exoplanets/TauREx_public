@@ -175,7 +175,7 @@ class fitting(base):
     # @profile #line-by-line profiling decorator
     def downhill_fit(self):
 
-        logging.info('Fits data using simplex downhill minimisation')
+        logging.info('Fits data using '+self.params.downhill_type+' minimisation')
 
   #      plt.ion()
   #      plt.show()

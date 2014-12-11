@@ -93,13 +93,11 @@ dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 
 #initialising TP profile object
-if params.verbose: print 'loading profile'
-profileob = tp_profile(params, dataob)
+profileob = tp_profile(dataob)
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
-    if params.verbose: print 'loading transmission'
-    transob = transmission(params, dataob,profileob)
+    transob = transmission(profileob)
 
     if params.trans_cpp:
         MODEL = transob.cpath_integral()  # computing transmission
@@ -108,8 +106,7 @@ if params.gen_type == 'transmission':
         
 #initialising transmission radiative transfer code object
 if params.gen_type == 'emission':
-    if params.verbose: print 'loading emission'
-    emisob = emission(params, dataob,profileob)
+    emisob = emission(profileob)
     
     MODEL = emisob.path_integral()  # computing transmission        
     
@@ -120,9 +117,9 @@ OUT[:,1] = MODEL
 # OUT[:,2] += 1e-5 #adding errorbars. can be commented
 
 if params.gen_type == 'emission':
-    outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class
+    outputob = output(forwardmodel=emisob,data=dataob,profile=profileob,params=params) #initiating output object with fitted data from fitting class
 if params.gen_type == 'transmission':
-    outputob = output(params, dataob,transob) #initiating output object with fitted data from fitting class
+    outputob = output(forwardmodel=transob,data=dataob,profile=profileob,params=params) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
 outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only

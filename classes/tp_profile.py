@@ -29,14 +29,15 @@ class tp_profile(base):
 
         logging.info('Initialising tp_profile object')
 
-        if params:
+        if params is not None:
             self.params = params
         else:
             self.params = data.params
 
+        
         self.data = data
-        self.transmission = self.params.fit_transmission # @todo bad! Use different variable names (same as classes)
-        self.emission     = self.params.fit_emission
+        self.fit_transmission = self.params.fit_transmission 
+        self.fit_emission     = self.params.fit_emission
         
         #constants
         self.boltzmann = 1.3806488e-23# m2 kg s-2 K-1 # @todo consider using Astropy units
@@ -100,7 +101,7 @@ class tp_profile(base):
 #         print self.bounds
 #         
 #          
-#         self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(emission=True)  
+#         self.PARAMS,self.TPindex, self.TPcount = self.setup_parameter_grid(fit_emission=True)  
 #         print self.PARAMS
 #         PARAMS2 = self.PARAMS
 #         PARAMS2[2] = 1400
@@ -144,8 +145,8 @@ class tp_profile(base):
         N_SCALE  = self.params.tp_num_scale #thickness of atmosphere in number of atmospheric scale heights
         N_LAYERS = self.nlayers
 
-        # get new scale height if T is provided. Otherwise assume defualt (should be params.planet_temp)
-        if T:
+        # get new scale height if T is provided. Otherwise assume default (should be params.planet_temp)
+        if T is not None:
             self.scaleheight = self.get_scaleheight(T[0],  self.data.planet_grav, self.params.planet_mu)
 
         max_z = N_SCALE * self.scaleheight
@@ -156,10 +157,10 @@ class tp_profile(base):
         PTA_arr = np.zeros((N_LAYERS,3))
         PTA_arr[:,2] = np.linspace(0,max_z,num=N_LAYERS) # altitude
         PTA_arr[:,0] = MAX_P * np.exp(-PTA_arr[:,2]/self.scaleheight)
-        if T:
-            PTA_arr[:,1] = T
-        else:
-            PTA_arr[:,1] = self.params.planet_temp
+#         if T is not None:
+#             PTA_arr[:,1] = T
+#         else:
+        PTA_arr[:,1] = self.params.planet_temp
 
         return PTA_arr
         
@@ -177,9 +178,9 @@ class tp_profile(base):
         bounds = []
         for i in xrange(self.ngas):
             bounds.append((self.Xpriors[0],self.Xpriors[1]))
-        if self.transmission:
+        if self.fit_transmission:
             bounds.append((self.Tpriors[0],self.Tpriors[1]))
-        if self.emission:
+        if self.fit_emission:
             for i in xrange(self.num_T_params):
                 bounds.append((self.Tpriors[0],self.Tpriors[1]))
             for i in xrange(self.num_T_params-1):

@@ -65,7 +65,7 @@ class emission(object):
         self.T             = profile.T.astype(self.DTYPE)
         self.rho           = profile.rho.astype(self.DTYPE)
         self.P             = profile.P.astype(self.DTYPE)
-        self.P_bar         = self.p * 1.0e-5 #convert pressure from Pa to bar
+        self.P_bar         = self.P * 1.0e-5 #convert pressure from Pa to bar
 
         #         print 'z ',np.max(self.z)
         #         print 'p ',np.max(self.P)
