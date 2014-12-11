@@ -144,8 +144,8 @@ class tp_profile(base):
         N_SCALE  = self.params.tp_num_scale #thickness of atmosphere in number of atmospheric scale heights
         N_LAYERS = self.nlayers
 
-        # get new scale height if T is provided. Otherwise assume defualt (should be params.planet_temp)
-        if T:
+        # get new scale height if T is provided. Otherwise assume default (should be params.planet_temp)
+        if T is not None:
             self.scaleheight = self.get_scaleheight(T[0],  self.data.planet_grav, self.params.planet_mu)
 
         max_z = N_SCALE * self.scaleheight
@@ -156,10 +156,10 @@ class tp_profile(base):
         PTA_arr = np.zeros((N_LAYERS,3))
         PTA_arr[:,2] = np.linspace(0,max_z,num=N_LAYERS) # altitude
         PTA_arr[:,0] = MAX_P * np.exp(-PTA_arr[:,2]/self.scaleheight)
-        if T:
-            PTA_arr[:,1] = T
-        else:
-            PTA_arr[:,1] = self.params.planet_temp
+#         if T is not None:
+#             PTA_arr[:,1] = T
+#         else:
+        PTA_arr[:,1] = self.params.planet_temp
 
         return PTA_arr
         

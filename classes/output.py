@@ -257,23 +257,25 @@ class output(base):
         out = np.zeros((len(self.data.spectrum[:,0]),2))
         out[:,0] = self.data.spectrum[:,0]
 
-        basename = os.path.join(self.params.out_path, self.params.out_file_prefix, self.__MODEL_ID__)
+        basename = self.params.out_path+self.params.out_file_prefix+self.__MODEL_ID__
+
+        print self.__MODEL_ID__
 
         if self.MCMC and ascii:
                 out[:,1] = np.transpose(self.spec_mcmc)
-                filename = os.path.join(basename, '_spectrum_mcmc.dat')
+                filename = str(basename)+'_spectrum_mcmc.dat'
                 logging.info('Saving MCMC spectrum to %s' % filename)
                 np.savetxt(filename, out)
 
         if self.NEST and ascii:
                 out[:,1] = np.transpose(self.spec_nest)
-                filename = os.path.join(basename, '_spectrum_nest.dat')
+                filename = str(basename)+'_spectrum_nest.dat'
                 logging.info('Saving MCMC spectrum to %s' % filename)
                 np.savetxt(filename, out)
 
         if self.DOWN and ascii:
                 out[:,1] = np.transpose(self.spec_down)
-                filename = os.path.join(basename, '_spectrum_down.dat')
+                filename = str(basename)+'_spectrum_down.dat'
                 logging.info('Saving MCMC spectrum to %s' % filename)
                 np.savetxt(filename, out)
 
