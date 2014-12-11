@@ -30,36 +30,38 @@ from library_plotting import *
 
 
 class output(base):
-    def __init__(self, fitting, data=None, profile=None, params=None):
-
+    def __init__(self, fitting=None, forwardmodel=None, data=None, profile=None, params=None):
+         
         logging.info('Initialise object output')
 
-        if params:
+        if params is not None:
             self.params = params
         else:
             self.params = fitting.params #get params object from profile
 
-        if data:
+        if data is not None:
             self.data = data
         else:
             self.data = fitting.data    # get data object from profile
 
-        if profile:
+        if profile is not None:
             self.profile = profile
         else:
             self.profile = fitting.profile    # get data object from profile
 
+#         if fitting is not None:
         self.fitting = fitting
         #self.profile  = tp_profile(params, data) #loading profile class (not needed, profile object is in fitting object)
 
         #inheriting emission/transmission model from fitting object if loaded
         # 'fit' can either be the fitting instance or the emission/transmission instances
 
-        if fitting.__ID__ == 'fitting':
-            self.model        = fitting.model #directly inheriting model instance from fitting instance
-            self.__MODEL_ID__ = fitting.__MODEL_ID__
-        else:
-            self.set_model(fit) #abstracting emission/transmission model
+        if fitting is not None:
+            if fitting.__ID__ == 'fitting':
+                self.model        = fitting.model #directly inheriting model instance from fitting instance
+                self.__MODEL_ID__ = fitting.__MODEL_ID__
+        elif forwardmodel is not None:
+            self.set_model(forwardmodel) #abstracting emission/transmission model
 
 
         #dumping fitted paramter names to file and list. @todo Assuming only one temperature!!
@@ -72,7 +74,7 @@ class output(base):
             self.parameters.append('Temperature')
 
         #determining which fits were performed
-        if fitting.__ID__ == 'fitting':
+        if fitting is not None and fitting.__ID__ == 'fitting':
             self.MCMC = fitting.MCMC
             self.NEST = fitting.NEST
             self.DOWN = fitting.DOWNHILL
@@ -270,13 +272,13 @@ class output(base):
         if self.NEST and ascii:
                 out[:,1] = np.transpose(self.spec_nest)
                 filename = str(basename)+'_spectrum_nest.dat'
-                logging.info('Saving MCMC spectrum to %s' % filename)
+                logging.info('Saving Nested Sampling spectrum to %s' % filename)
                 np.savetxt(filename, out)
 
         if self.DOWN and ascii:
                 out[:,1] = np.transpose(self.spec_down)
                 filename = str(basename)+'_spectrum_down.dat'
-                logging.info('Saving MCMC spectrum to %s' % filename)
+                logging.info('Saving MLE spectrum to %s' % filename)
                 np.savetxt(filename, out)
 
         if modelout is not None: # ???
