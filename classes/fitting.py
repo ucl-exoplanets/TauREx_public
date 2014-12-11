@@ -74,11 +74,11 @@ class fitting(base):
 
         # set some folder names
         self.dir_mcmc = os.path.join(self.params.out_path, 'MCMC')
-        self.dir_mutlinest = os.path.join(self.params.out_path, 'multinest')
+        self.dir_multinest = os.path.join(self.params.out_path, 'multinest')
 
         # create some folders.
         if self.MPIrank == 0:
-            folders = [self.params.out_path, self.dir_mcmc, self.dir_mutlinest]
+            folders = [self.params.out_path, self.dir_mcmc, self.dir_multinest]
             for f in folders:
                 if not os.path.isdir(f):
                     logging.info('Create folder %s' % f)
@@ -396,14 +396,14 @@ class fitting(base):
             resume = self.params.nest_resume
 
         if resume:
-            filename = os.path.join(self.dir_mutlinest, '1-live.points')
+            filename = os.path.join(self.dir_multinest, '1-live.points')
             if os.path.isfile(filename):
                 livepoints = sum(1 for line in open(filename))
                 if livepoints != self.params.nest_nlive:
                     logging.warning('Cannot resume previous MULTINEST run, the number of live points has changed')
                     logging.warning('Removing previous MULTINEST chains')
-                    for file in os.listdir(self.dir_mutlinest):
-                        file_path = os.path.join(self.dir_mutlinest, file)
+                    for file in os.listdir(self.dir_multinest):
+                        file_path = os.path.join(self.dir_multinest, file)
                         try:
                             if os.path.isfile(file_path):
                                 os.unlink(file_path)
@@ -443,14 +443,14 @@ class fitting(base):
 
         #progress = pymultinest.ProgressPlotter(n_params = n_params); progress.start()
         #threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
-        logging.debug('Multinest output dir %s' % self.dir_mutlinest)
+        logging.debug('Multinest output dir %s' % self.dir_multinest)
 
         pymultinest.run(LogLikelihood=multinest_loglike,
                         Prior=multinest_uniform_prior,
                         n_dims=self.n_params,
                         multimodal=self.params.nest_multimodes,
                         max_modes=self.params.nest_max_modes,
-                        outputfiles_basename=os.path.join(self.dir_mutlinest, '1-'),
+                        outputfiles_basename=os.path.join(self.dir_multinest, '1-'),
                         const_efficiency_mode = self.params.nest_const_eff,
                         importance_nested_sampling = self.params.nest_imp_sampling,
                         resume = resume,
@@ -468,7 +468,7 @@ class fitting(base):
 
             #coallating results into arrays (only for the main thread)
             OUT = pymultinest.Analyzer(n_params=self.n_params,
-                                       outputfiles_basename=os.path.join(self.dir_mutlinest, '1-'))
+                                       outputfiles_basename=os.path.join(self.dir_multinest, '1-'))
 
             Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_multinest_result(OUT)
 

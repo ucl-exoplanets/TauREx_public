@@ -80,6 +80,7 @@ internal_name = transmissionspec.dat
 #save plots to .pdf
 save_plots = True
 
+plot_contour = True
 
 [Preselector]
 

@@ -33,7 +33,7 @@ def parse_commands(argv):
     
     plot_nest = False; plot_mcmc = False; plot_show = False; interactive = False; timestamp = False
     plot_contour = True
-    chaindir = 'chains/'
+    chaindir = 'Output/chains/'
     outdir = './'
     timestamp2 = ''
     
@@ -108,8 +108,10 @@ def parse_commands(argv):
     
     #setting mcmc directory 
     mcmcdir = chaindir+'MCMC/'
-    
-    return chaindir, mcmcdir, outdir, plot_nest, plot_mcmc, plot_show, plot_contour, timestamp, timestamp2
+    nestdir = chaindir+'multinest/'
+
+
+    return chaindir, mcmcdir, nestdir, outdir, plot_nest, plot_mcmc, plot_show, plot_contour, timestamp, timestamp2
 
 
 
@@ -306,7 +308,7 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
 
 def main(argv):
     
-    chaindir, mcmcdir, outdir, plot_nest, plot_mcmc, plot_show, plot_contour, timestamp,timestamp2 = parse_commands(argv)
+    chaindir, mcmcdir, nestdir, outdir, plot_nest, plot_mcmc, plot_show, plot_contour, timestamp,timestamp2 = parse_commands(argv)
 
     global BINS
     BINS = 50
@@ -356,13 +358,13 @@ def main(argv):
     if plot_nest:
         import pymultinest as pymn
         #reading in Nested data
-        nest_raw = pymn.Analyzer(n_params=n_params,outputfiles_basename=chaindir+'1-')
+        nest_raw = pymn.Analyzer(n_params=n_params,outputfiles_basename=nestdir+'1-')
         nested = {}
         # n_params = nest_raw.n_params 
         #only one thread for nested sampling hence nested[0]
         nested[0]= {}
         nested[0]['state'] = nest_raw.get_stats()
-        nest_data = np.loadtxt(chaindir+'1-.txt')#nest_raw.get_equal_weighted_posterior()
+        nest_data = np.loadtxt(nestdir+'1-.txt')#nest_raw.get_equal_weighted_posterior()
         n_params = len(nest_data[0,:])-2
         params_nest = []
         for i in range(n_params):

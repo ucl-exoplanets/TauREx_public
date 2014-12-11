@@ -150,10 +150,11 @@ class output(base):
 
                 logging.info('Plotting nested sampling distributions. Saving to %s' % self.params.out_path)
 
-                plot_multinest_results(self.fitting.NEST_FITDATA,
+                plot_multinest_results(self.fitting.dir_multinest,
                                        parameters=parameters,
                                        save2pdf=save2pdf,
-                                       out_path=self.params.out_path)
+                                       out_path=self.params.out_path,
+                                       plot_contour=self.params.out_plot_contour)
             else:
                 logging.warning('WARNING: plotting routine for multimodes = False disabled. '
                                 'Please use plot_chains.py script.')

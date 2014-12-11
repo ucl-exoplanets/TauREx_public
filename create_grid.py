@@ -144,6 +144,9 @@ else:
 resolutions = [int(m) for m in options.resolution.split(',')]
 snrs = [float(m) for m in options.snr.split(',')]
 
+
+out_path = params.out_path
+
 for resolution in resolutions:
     for snr in snrs:
 
@@ -151,7 +154,7 @@ for resolution in resolutions:
         # This dictionary (and the pickle file) can be incrementally populated if -inc=True
 
         # set output pickle location.
-        pickle_location = os.path.join(params.out_path, 'create_grid', 'grid.pickle')
+        pickle_location = os.path.join(out_path, 'create_grid', 'grid.pickle')
         if options.incremental_db == 'True':
             pickle_incremental = True
         else:
@@ -160,15 +163,18 @@ for resolution in resolutions:
         logging.info('Incremental saving set to %s' % pickle_location)
 
         # set output location of plots and chains
-        if not os.path.isdir(os.path.join(params.out_path, 'create_grid')):
-            os.mkdir(os.path.join(params.out_path, 'create_grid'))
-        if not os.path.isdir(os.path.join(params.out_path, 'create_grid', params.planet_name)):
-            os.mkdir(os.path.join(params.out_path, 'create_grid', params.planet_name))
-        if not os.path.isdir(os.path.join(params.out_path, 'create_grid', params.planet_name)):
-            os.mkdir(os.path.join(params.out_path, 'create_grid', params.planet_name))
-        if not os.path.isdir(os.path.join(params.out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))):
-            os.mkdir(os.path.join(params.out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr)))
-        params.out_path = os.path.join(params.out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))
+        if not os.path.isdir(os.path.join(out_path, 'create_grid')):
+            os.mkdir(os.path.join(out_path, 'create_grid'))
+        if not os.path.isdir(os.path.join(out_path, 'create_grid', params.planet_name)):
+            os.mkdir(os.path.join(out_path, 'create_grid', params.planet_name))
+        if not os.path.isdir(os.path.join(out_path, 'create_grid', params.planet_name)):
+            os.mkdir(os.path.join(out_path, 'create_grid', params.planet_name))
+        if not os.path.isdir(os.path.join(out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))):
+            os.mkdir(os.path.join(out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr)))
+
+
+        # update params output folder
+        params.out_path = os.path.join(out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))
 
         logging.info('Output chains and plots will be stored in %s' % params.out_path)
 
@@ -206,6 +212,7 @@ for resolution in resolutions:
             emisob = emission(profileob)
             model = emisob.path_integral()  # computing transmission
 
+        # save simulated spectrum
         spectrum = np.zeros((len(dataob.specgrid),3))
         spectrum[:,0] = dataob.specgrid
         spectrum[:,1] = model
@@ -268,7 +275,6 @@ for resolution in resolutions:
 
             # store output in dictionary, then store to pickle file
             # the pickle is a list of dictionaries
-
             if pickle_incremental == True:
                 if os.path.isfile(pickle_location):
                     pickle_file = pickle.load(open(pickle_location, 'rb'))
@@ -278,20 +284,23 @@ for resolution in resolutions:
                 pickle_file = []
 
             planet_dict = {}
-            planet_dict['name'] = params.planet_name
-            planet_dict['snr'] = snr
-            planet_dict['resolution'] = resolution
-            planet_dict['molecules'] = params.planet_molec
-            planet_dict['spectrum'] = spectrum
-            planet_dict['fitted_spectrum'] = fitted_spectrum
-            planet_dict['X'] = fitob.NEST_X_mean
-            planet_dict['X_std'] = fitob.NEST_X_std
-            planet_dict['T'] = fitob.NEST_T_mean
-            planet_dict['T_std'] = fitob.NEST_T_std
-            planet_dict['NEST_OUT'] = fitob.NEST_FITDATA
-            planet_dict['params'] = params
+            planet_dict['name'] = params.planet_name # planet name
+            planet_dict['radius'] = params.planet_radius # planet name
+            planet_dict['mass'] = params.planet_mass # planet name
+            planet_dict['albedo'] = params.planet_albedo # planet name
+            planet_dict['mu'] = params.planet_mu # planet name
+            planet_dict['snr'] = snr # simulated spectrum signal to noise
+            planet_dict['resolution'] = resolution # simulated spectrum resolution
+            planet_dict['molecules_input'] = params.planet_molec # input molecules names
+            planet_dict['mixing_input'] = params.planet_mixing # input mixing ratio value
+            planet_dict['temperature_input'] = params.planet_temp # input mixing ratio value
+            planet_dict['observed_spectrum'] = spectrum # observed spectrum (array)
+            planet_dict['fitted_spectrum'] = fitted_spectrum # fitted spectrum (array)
+            planet_dict['X'] = fitob.NEST_X_mean # mixing ratios as a function of atm layer (2d array)
+            planet_dict['X_std'] = fitob.NEST_X_std # error on mixing ratio (1d array)
+            planet_dict['T'] = fitob.NEST_T_mean # fitted temperature
+            planet_dict['T_std'] = fitob.NEST_T_std # fitted T error
+            planet_dict['dir_multinest'] = os.path.abspath(fitob.dir_multinest) # directory where nested sampling outputs are stored
             planet_dict['datetime'] = datetime.datetime.now()
-
             pickle_file.append(planet_dict)
-
             pickle.dump(pickle_file, open(pickle_location, 'wb'))
