@@ -144,7 +144,6 @@ else:
 resolutions = [int(m) for m in options.resolution.split(',')]
 snrs = [float(m) for m in options.snr.split(',')]
 
-
 out_path = params.out_path
 
 for resolution in resolutions:
