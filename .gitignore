@@ -9,9 +9,10 @@ chains/
 output/
 .metadata/
 .project
-.idea/
+.idea/*
 .pydevproject
 .settings
 test-code/
 Input/
 Preselector/
+marco_fixes.txt

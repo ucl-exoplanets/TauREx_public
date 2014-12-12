@@ -69,8 +69,6 @@ except:
     logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
     multinest_import = False
 
-
-
 #loading classes
 sys.path.append('./classes')
 sys.path.append('./library')
@@ -97,26 +95,25 @@ from library_plotting import *
 RSOL = 6.955e8 # solar radius in m
 RJUP = 6.9911e7 # jupiter radius in m
 
+
+# get arguments
 parser = optparse.OptionParser()
 parser.add_option('-p', '--parfile',
                   dest="param_filename",
-                  default="exonest.par",
+                  help='Parameter filename')
+parser.add_option('-o', '--output',
+                  dest="out_dir",
+                  help='Output folder',
 )
 parser.add_option('-r', '--resolution',
                   dest="resolution",
-                  default=50,
+                  default=False,
+                  help='Resolution(s), separated by comma (if not specified, will be taken from parameter file)'
 )
 parser.add_option('-s', '--signaltonoise',
                   dest="snr",
-                  default=10,
-)
-parser.add_option('-o', '--output',
-                  dest="output",
                   default=False,
-)
-parser.add_option('-i', '--incremenetal',
-                  dest="incremental_db",
-                  default=False,
+                  help='Signal to noise ratio(s), separated by comma (if not specified, will be taken from parameter file)'
 )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
@@ -125,67 +122,89 @@ parser.add_option('-v', '--verbose',
 )
 options, remainder = parser.parse_args()
 
+if not options.param_filename or not options.out_dir:
+    print parser.print_help()
+    sys.exit()
+
+# get parameters from .par file
 params = parameters(options.param_filename)
+out_dir = options.out_dir
 
-if options.output:
-    params.out_path = options.output
-
-
-#####################################################################
-#beginning of main code
-
-#MPI related message
+# Import MPI
 if MPIimport:
     logging.info('MPI enabled. Running on %i cores' % MPIsize)
 else:
     logging.info('MPI disabled')
 
+# get resolutions and snr (from arguments or par file)
+if options.resolution:
+    resolutions = [int(m) for m in options.resolution.split(',')]
+elif params.grid_res:
+    resolutions = params.grid_res
+else:
+    logging.error('Specify resolution(s) for your model spectra')
+    exit()
 
-resolutions = [int(m) for m in options.resolution.split(',')]
-snrs = [float(m) for m in options.snr.split(',')]
+if options.snr:
+    snrs = [float(m) for m in options.snr.split(',')]
+elif params.grid_snr:
+    snrs = params.grid_snr
+else:
+    logging.error('Specify snr(s) for your model spectra')
+    exit()
 
-out_path = params.out_path
 
+# check if output pickle file already exist
+pickle_location = os.path.join(out_dir, 'grid.db')
+if os.path.isfile(pickle_location):
+    logging.error('The output pickle file already exists (%s). Delete it or rename it' % pickle_location)
+    exit()
+
+logging.info('Output grid will be saved into: %s' % pickle_location)
+logging.info('Chains and plots for each snr/res set stored in: %s' % out_dir)
+
+# initialise output pickle file and store planet/spectrum details
+outdb = {
+    'radius': params.planet_radius,
+    'mass': params.planet_mass,
+    'albedo': params.planet_albedo,
+    'mu': params.planet_mu,
+    'molecules_input': params.planet_molec,
+    'mixing_input': params.planet_mixing,
+    'temperature_input': params.planet_temp,
+    'wavelength_range': (params.gen_wavemin, params.gen_wavemax),
+    'resolutions': resolutions,
+    'snrs': snrs,
+    'model_fitting': {}
+}
+
+# loop over all resolutions and snrs
+# each iteration is saved as a dictionary dictionary into outdb['model_fitting'][resoltion][snr]
 for resolution in resolutions:
+
+    if MPIrank == 0 and not resolution in outdb['model_fitting']:
+        outdb['model_fitting'][resolution] = {}
+
     for snr in snrs:
-
-        # Fitted parameters will be stored in a dictionary stored into a pickle file.
-        # This dictionary (and the pickle file) can be incrementally populated if -inc=True
-
-        # set output pickle location.
-        pickle_location = os.path.join(out_path, 'create_grid', 'grid.pickle')
-        if options.incremental_db == 'True':
-            pickle_incremental = True
-        else:
-            pickle_incremental = False
-        logging.info('Fitted parameters will be stored in a dictionary stored into a pickle file: %s' % pickle_location)
-        logging.info('Incremental saving set to %s' % pickle_location)
-
-        # set output location of plots and chains
-        if not os.path.isdir(os.path.join(out_path, 'create_grid')):
-            os.mkdir(os.path.join(out_path, 'create_grid'))
-        if not os.path.isdir(os.path.join(out_path, 'create_grid', params.planet_name)):
-            os.mkdir(os.path.join(out_path, 'create_grid', params.planet_name))
-        if not os.path.isdir(os.path.join(out_path, 'create_grid', params.planet_name)):
-            os.mkdir(os.path.join(out_path, 'create_grid', params.planet_name))
-        if not os.path.isdir(os.path.join(out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))):
-            os.mkdir(os.path.join(out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr)))
-
+        if MPIrank == 0:
+            # set output location of plots and chains
+            if not os.path.isdir(out_dir):
+                os.mkdir(out_dir)
+            if not os.path.isdir(os.path.join(out_dir, 'r%.1f-snr%1.f' % (resolution, snr))):
+                os.mkdir(os.path.join(out_dir, 'r%.1f-snr%1.f' % (resolution, snr)))
 
         # update params output folder
-        params.out_path = os.path.join(out_path, 'create_grid', params.planet_name, 'r%.1f-snr%1.f' % (resolution, snr))
+        params.out_path = os.path.join(out_dir, 'r%.1f-snr%1.f' % (resolution, snr))
 
+        # print some logs
+        logging.info('Fitting for snr=%.1f and res=%.1f' % (snr, resolution))
         logging.info('Output chains and plots will be stored in %s' % params.out_path)
-
-        logging.info('Generating spectrum with SNR=%.1f and R=%i' % (snr, resolution))
-
+        logging.info('Generating spectrum with snr=%.1f and res=%.1f' % (snr, resolution))
         logging.info('Wavelength range: %.1f - %.1f micron' % (params.gen_wavemin, params.gen_wavemax))
-
-        logging.info('Planet (%s): R=%.3e R_J, M=%.3e M_J, T=%.1f, albedo=%.1f' % (params.planet_name,
-                                                                                   params.planet_radius,
-                                                                                   params.planet_mass,
-                                                                                   params.planet_temp,
-                                                                                   params.planet_albedo))
+        logging.info('Planet: R=%.3e R_J, M=%.3e M_J, T=%.1f, albedo=%.1f' % (params.planet_radius,
+                                                                              params.planet_mass,
+                                                                              params.planet_temp,
+                                                                              params.planet_albedo))
         logging.info('Atmospheric composition: %s (X= %s)' % (', '.join(params.planet_molec),
                                                               ', '.join(format(x, ".2e") for x in params.planet_mixing)))
 
@@ -211,7 +230,7 @@ for resolution in resolutions:
             emisob = emission(profileob)
             model = emisob.path_integral()  # computing transmission
 
-        # save simulated spectrum
+        # store simulated spectrum
         spectrum = np.zeros((len(dataob.specgrid),3))
         spectrum[:,0] = dataob.specgrid
         spectrum[:,1] = model
@@ -222,9 +241,9 @@ for resolution in resolutions:
         sigma = spec_mean_amp / snr
         spectrum[:,2] = sigma
 
+        # Fitting spectrum
         logging.info('Fitting spectrum')
 
-        # Fitting spectrum
         params.gen_spec_res = 1000
         params.gen_manual_waverange = False
 
@@ -249,57 +268,40 @@ for resolution in resolutions:
         elif params.gen_type == 'emission':
             fitob.set_model(emissob) #loading emission model into fitting object
 
-
         # use nested sampling to get posteriors
         fitob.multinest_fit() # Nested sampling fit
 
-        # wait for everyone to syncronise
-        MPI.COMM_WORLD.Barrier() # @todo needed?
-
         # save output only from main thread
-        if MPI.COMM_WORLD.Get_rank() == 0:
-
+        if MPIrank == 0:
 
             # output
             outputob = output(fitob)
+            #outputob.plot_all(save2pdf=params.out_save_plots)
 
-            outputob.plot_all(save2pdf=params.out_save_plots)
-
-            logging.info('Saving results to pickle file: %s' % pickle_location)
-
-            # store fitted spectrum
+           # store fitted spectrum
             fitted_spectrum = np.zeros((len(spectrum[:,0]),2))
             fitted_spectrum[:,0] = spectrum[:,0]
             fitted_spectrum[:,1] = np.transpose(outputob.spec_nest)
 
-            # store output in dictionary, then store to pickle file
-            # the pickle is a list of dictionaries
-            if pickle_incremental == True:
-                if os.path.isfile(pickle_location):
-                    pickle_file = pickle.load(open(pickle_location, 'rb'))
-                else:
-                    pickle_file = []
-            else:
-                pickle_file = []
+            fit_dict = {
+                'observed_spectrum': spectrum, # observed spectrum (array)
+                'fitted_spectrum': fitted_spectrum ,# fitted spectrum (array)
+                'X': fitob.NEST_X_mean, # mixing ratios as a function of atm layer (2d array)
+                'X_std': fitob.NEST_X_std, # error on mixing ratio (1d array)
+                'T': fitob.NEST_T_mean, # fitted temperature
+                'T_std': fitob.NEST_T_std, # fitted T error
+                'dir_multinest': os.path.abspath(fitob.dir_multinest), # directory where nested sampling outputs are stored
+                'datetime': datetime.datetime.now(),
+            }
 
-            planet_dict = {}
-            planet_dict['name'] = params.planet_name # planet name
-            planet_dict['radius'] = params.planet_radius # planet name
-            planet_dict['mass'] = params.planet_mass # planet name
-            planet_dict['albedo'] = params.planet_albedo # planet name
-            planet_dict['mu'] = params.planet_mu # planet name
-            planet_dict['snr'] = snr # simulated spectrum signal to noise
-            planet_dict['resolution'] = resolution # simulated spectrum resolution
-            planet_dict['molecules_input'] = params.planet_molec # input molecules names
-            planet_dict['mixing_input'] = params.planet_mixing # input mixing ratio value
-            planet_dict['temperature_input'] = params.planet_temp # input mixing ratio value
-            planet_dict['observed_spectrum'] = spectrum # observed spectrum (array)
-            planet_dict['fitted_spectrum'] = fitted_spectrum # fitted spectrum (array)
-            planet_dict['X'] = fitob.NEST_X_mean # mixing ratios as a function of atm layer (2d array)
-            planet_dict['X_std'] = fitob.NEST_X_std # error on mixing ratio (1d array)
-            planet_dict['T'] = fitob.NEST_T_mean # fitted temperature
-            planet_dict['T_std'] = fitob.NEST_T_std # fitted T error
-            planet_dict['dir_multinest'] = os.path.abspath(fitob.dir_multinest) # directory where nested sampling outputs are stored
-            planet_dict['datetime'] = datetime.datetime.now()
-            pickle_file.append(planet_dict)
-            pickle.dump(pickle_file, open(pickle_location, 'wb'))
+            outdb['model_fitting'][resolution][snr] = fit_dict
+            logging.info('+++++++++++++ Fitting for snr=%.1f res=%.1f completed! +++++++++++++' % (resolution, snr))
+
+        # wait for everyone to syncronise
+        MPI.COMM_WORLD.Barrier()
+
+if MPIrank == 0:
+    logging.info('Fits for all snr/res comptued! Saving results to pickle file: %s' % pickle_location)
+    pickle.dump(outdb, open(pickle_location, 'wb'))
+
+logging.info('Program terminated')

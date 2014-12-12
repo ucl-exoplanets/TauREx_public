@@ -202,7 +202,12 @@ class parameters(base):
         except:
             self.nest_run              = False
             pass
-        
+
+        try:
+            self.grid_res              = self.getpar('Grid','resolution', 'list-float')
+            self.grid_snr              = self.getpar('Grid','snr', 'list-float')
+        except:
+            pass
         
         #####################################################################
         #additional parser commands. Checking parameter compatibility and stuff 
