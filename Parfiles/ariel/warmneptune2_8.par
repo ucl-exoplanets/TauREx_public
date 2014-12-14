@@ -39,3 +39,7 @@ var_mix = True
 [MultiNest]
 n_live_points = 4000
 verbose = False
+
+[Fitting]
+T_up  = 600
+T_low = 600
