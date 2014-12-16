@@ -59,9 +59,12 @@ class tp_profile(base):
         else:           
             logging.info('Set atm values from data')
             self.nlayers = data.nlayers
-            self.pta     = data.pta
+            if self.params.in_use_ATMfile: #@todo this is a fix to whats happening in data class. all needs to be moved over here
+                self.pta     = data.pta
+            else:
+                self.pta     = self.setup_pta_grid()
             self.P       = self.pta[:,0]
-            self.T       = data.pta[:,1]
+            self.T       = self.pta[:,1]
             self.z       = self.pta[:,2]
             self.X       = data.X     
             self.ngas    = int(data.ngas)  

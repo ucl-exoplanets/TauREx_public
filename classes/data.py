@@ -90,6 +90,7 @@ class data(base):
 
         #setting planetary surface gravity
         self.planet_grav = self.get_surface_gravity()
+ 
         
         #calculating atmospheric scale height
         self.scaleheight = self.get_scaleheight() # @todo needed? Check. Scaleheight is more specific to tp_profile class
@@ -107,7 +108,7 @@ class data(base):
             self.nlayers = self.params.tp_atm_levels
             self.ngas    = size(self.params.planet_molec)
 #             self.pta     = self.setup_pta_grid() #if not read from file, pta will be calculated by profile class
-            self.X       = self.set_mixing_ratios() #mixing ratios are read from parameter file or preselector class
+            self.X       = self.set_mixing_ratios() #mixing ratios are read from parameter file or preselector class @todo move to atmosphere class?
 
 
         #setting up dictionary with atmosphere parameters
