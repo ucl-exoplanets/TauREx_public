@@ -37,7 +37,7 @@ atm_max_pressure = 1e6
 var_mix = True
 
 [MultiNest]
-n_live_points = 4000
+n_live_points = 1000
 verbose = False
 
 [Fitting]
