@@ -67,6 +67,60 @@ for mol in range(len(db['molecules_input'])): # loop for each molecule
                                                          fit['X_std'][mol]))
 f.close()
 
+# create contour plots
+'''
+levels = [10,50,100,200,500]
+X, Y = np.meshgrid(db['resolutions'], db['snrs'])
+data_grid= np.zeros((len(db['resolutions']), len(db['snrs'])))
+fig = plt.figure(figsize=(15,10))
+p = 0 # plot number
+i = 0
+for res in db['resolutions']: # loop for temperature
+    j = 0
+    for snr in db['snrs']:
+        fit = db['model_fitting'][res][snr]
+        data_grid[i,j] = float(fit['T_std']/fit['T'])*100.
+        j += 1
+    i += 1
+
+ax = fig.add_subplot(2,3,p+1)
+cont = ax.contourf(X,Y, data_grid, levels, cmap=cm.winter, origin='lower')
+cbar = ax.colorbar(cont)
+ax.set_xlabel('Resolution')
+ax.set_ylabel('SNR')
+cbar.ax.set_ylabel('Normalised errorbar (\%)')
+ax.set_title('Temperature')
+
+plt.show()
+exit()
+
+for mol in range(len(db['molecules_input'])): # loop over molecules
+    data_grid= np.zeros((len(db['resolutions']), len(db['snrs'])))
+    i = 0
+    for res in db['resolutions']:
+        j = 0
+        for snr in db['snrs']:
+            fit = db['model_fitting'][res][snr]
+            data_grid[i,j] = float(fit['X_std'][mol]/fit['X'][mol][0])*100.
+            j += 1
+        i += 1
+    p += 1 # plot number
+    ax = fig.add_subplot(2,3,p+1)
+    cont = ax.contourf(X,Y, data_grid, levels, cmap=cm.winter, linewidth=0.5, antialiased=True)
+    ax.clabel(cont, fmt = '%2.1f', colors = 'w', fontsize=12)
+    ax.colorbar(cont)
+    ax.set_xlabel('Resolution')
+    ax.set_ylabel('SNR')
+    ax.set_title('%s' % db['molecules_input'][mol])
+if options.name:
+    h = fig.suptitle(options.name, fontsize=22)
+
+plt.show()
+#plt.savefig(os.path.join(options.folder, 'contourf_plots.pdf'))
+'''
+
+
+
 # create surface plots
 X, Y = np.meshgrid(db['resolutions'], db['snrs'])
 data_grid= np.zeros((len(db['resolutions']), len(db['snrs'])))

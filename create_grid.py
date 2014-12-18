@@ -234,11 +234,13 @@ for resolution in resolutions:
         spectrum = np.zeros((len(dataob.specgrid),3))
         spectrum[:,0] = dataob.specgrid
         spectrum[:,1] = model
+        planet_star_ratio = (params.planet_radius*RJUP)/(params.star_radius*RSOL)
+
+        print planet_star_ratio
 
         # adding errorbars to spectrum
-        planet_star_ratio = (params.planet_radius*RJUP)/(params.star_radius*RSOL)
-        spec_mean_amp = np.mean(spectrum[:,1] - planet_star_ratio)
-        sigma = spec_mean_amp / snr
+        spec_amp = np.max(spectrum[:,1])-np.min(spectrum[:,1])
+        sigma = spec_amp / float(snr)
         spectrum[:,2] = sigma
 
         # Fitting spectrum
