@@ -14,7 +14,10 @@ matplotlib.use('Qt4Agg')
 sys.path.append('./classes')
 sys.path.append('./library')
 
+'''
+coap
 
+'''
 import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
 from parameters import *
 from emission import *
@@ -40,9 +43,7 @@ class Qt4MplCanvas(FigureCanvas):
         # plot definition
         self.fig = Figure()
         self.axes = self.fig.add_subplot(111)
-        t = np.arange(0.0, 3.0, 0.01)
-        s = np.cos(2*np.pi*t)
-        self.axes.plot(t, s)
+
         # initialization of the canvas
         FigureCanvas.__init__(self, self.fig)
         # set the parent widget
@@ -65,11 +66,11 @@ class PlotWindow(QtGui.QMainWindow, gui_class):
         # create a vertical box layout widget
         vbl = QtGui.QVBoxLayout(self.main_widget)
         # instantiate our Matplotlib canvas widget
-        qmc = Qt4MplCanvas(self.main_widget)
+        self.qmc = Qt4MplCanvas(self.main_widget)
         # instantiate the navigation toolbar
-        ntb = NavigationToolbar(qmc, self.main_widget)
+        ntb = NavigationToolbar(self.qmc, self.main_widget)
         # pack these widget into the vertical box
-        vbl.addWidget(qmc)
+        vbl.addWidget(self.qmc)
         vbl.addWidget(ntb)
         # set the focus on the main widget
         self.main_widget.setFocus()
@@ -91,6 +92,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
         self.aw = PlotWindow()
         self.aw.show()
+
 
 
 
@@ -135,6 +137,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         OUT[:,1] = MODEL
         # OUT[:,2] += 1e-5 #adding errorbars. can be commented
 
+        self.aw.qmc.axes.plot(OUT[:,0], OUT[:,1])
+        self.aw.qmc.draw()
 
 #put the main window here
 def main():
