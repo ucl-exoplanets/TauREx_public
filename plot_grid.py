@@ -169,6 +169,7 @@ plt.savefig(os.path.join(options.folder, 'surface_plots.pdf'))
 # as a function of snr
 fig = plt.figure(figsize=(15,10))
 cmap = cm.get_cmap('winter')
+x = np.asarray(db['snrs'])
 i = 0
 r = 0 # counter for plot colours
 for res in db['resolutions']: # loop for temperature
@@ -179,10 +180,12 @@ for res in db['resolutions']: # loop for temperature
     for snr in db['snrs']:
         fit = db['model_fitting'][res][snr]
         errors.append(float(fit['T_std']/fit['T'])*100.)
-    ax.plot(db['snrs'], errors, label='R=%i' % int(res), c=cmap(r/5.))
+    errors = np.asarray(errors)
+    ax.plot(x[errors<500], errors[errors<500], label='R=%i' % int(res), c=cmap(r/5.))
     r += 1
 i += 1
-ax.set_ylim((0, 50))
+#ax.set_ylim((0, 50))
+
 ax.set_xlabel('SNR')
 ax.set_ylabel(r'Normalised error bar (\%)')
 ax.set_title('Temperature ($T_\mathrm{in} = %i\,$K)' % int(db['temperature_input']))
@@ -200,13 +203,14 @@ for mol in range(len(db['molecules_input'])): # loop over molecules
             fit = db['model_fitting'][res][snr]
             error = float(fit['X_std'][mol]/fit['X'][mol][0])*100.
             errors.append(error)
-        ax.plot(db['snrs'], errors, c=cmap(r/5.))
+        errors = np.asarray(errors)
+        ax.plot(x[errors<500], errors[errors<500], c=cmap(r/5.))
         r += 1
 
     ax.set_xlabel('SNR')
     ax.set_ylabel(r'Normalised error bar (\%)')
     ax.set_title('%s ($X_\mathrm{in} = %s$)' % (db['molecules_input'][mol], latex_float(db['mixing_input'][mol])))
-    ax.set_ylim((0, 200))
+    #ax.set_ylim((0, 200))
     i += 1
 if options.name:
     h = fig.suptitle(options.name, fontsize=22)
@@ -217,6 +221,7 @@ plt.savefig(os.path.join(options.folder, 'params_vs_snr.pdf'))
 
 fig = plt.figure(figsize=(15,10))
 cmap = cm.get_cmap('winter')
+x = np.asarray(db['resolutions'])
 i = 0
 r = 0 # counter for plot colours
 for snr in db['snrs']:
@@ -225,10 +230,11 @@ for snr in db['snrs']:
     for res in db['resolutions']: # loop for temperature
         fit = db['model_fitting'][res][snr]
         errors.append(float(fit['T_std']/fit['T'])*100.)
-    ax.plot(db['resolutions'], errors, label='snr=%.1f' % snr, c=cmap(r/5.))
+    errors = np.asarray(errors)
+    ax.plot(x[errors<500], errors[errors<500], label='snr=%.1f' % snr, c=cmap(r/5.))
     r += 1
 i += 1
-ax.set_ylim((0, 50))
+#ax.set_ylim((0, 20))
 ax.set_xlabel('Resolution')
 ax.set_ylabel(r'Normalised error bar (\%)')
 ax.set_title('Temperature ($T_\mathrm{in} = %i\,$K)' % int(db['temperature_input']))
@@ -247,13 +253,14 @@ for mol in range(len(db['molecules_input'])): # loop over molecules
             fit = db['model_fitting'][res][snr]
             error = float(fit['X_std'][mol]/fit['X'][mol][0])*100.
             errors.append(error)
-        ax.plot(db['resolutions'], errors, c=cmap(r/5.))
+        errors = np.asarray(errors)
+        ax.plot(x[errors<500], errors[errors<500], c=cmap(r/5.))
         r += 1
 
     ax.set_xlabel('Resolution')
     ax.set_ylabel(r'Normalised error bar (\%)')
     ax.set_title('%s ($X_\mathrm{in} = %s$)' % (db['molecules_input'][mol], latex_float(db['mixing_input'][mol])))
-    ax.set_ylim((0, 200))
+    #ax.set_ylim((0, 50))
     i += 1
 if options.name:
     h = fig.suptitle(options.name, fontsize=22)
