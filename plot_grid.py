@@ -55,7 +55,8 @@ f = open(grid_filename,'w')
 for res in db['resolutions']: # loop over molecules
     for snr in db['snrs']:
         fit = db['model_fitting'][res][snr]
-        f.write('Temperature, %i, %i, %i, %.2e, %.2e \n' % (db['temperature_input'],res, snr, fit['T'], fit['T_std']))
+        f.write('Temperature, %i, %i, %i, %.2e, %.2e \n' %
+                (db['temperature_input'],res, snr, fit['T'], fit['T_std']))
 for mol in range(len(db['molecules_input'])): # loop for each molecule
     for res in db['resolutions']:
         for snr in db['snrs']:
@@ -181,7 +182,7 @@ for res in db['resolutions']: # loop for temperature
         fit = db['model_fitting'][res][snr]
         errors.append(float(fit['T_std']/fit['T'])*100.)
     errors = np.asarray(errors)
-    ax.plot(x[errors<500], errors[errors<500], label='R=%i' % int(res), c=cmap(r/5.))
+    ax.plot(x, errors, label='R=%i' % int(res), c=cmap(r/5.))
     r += 1
 i += 1
 #ax.set_ylim((0, 50))
@@ -204,7 +205,7 @@ for mol in range(len(db['molecules_input'])): # loop over molecules
             error = float(fit['X_std'][mol]/fit['X'][mol][0])*100.
             errors.append(error)
         errors = np.asarray(errors)
-        ax.plot(x[errors<500], errors[errors<500], c=cmap(r/5.))
+        ax.plot(x, errors, c=cmap(r/5.))
         r += 1
 
     ax.set_xlabel('SNR')
@@ -231,7 +232,7 @@ for snr in db['snrs']:
         fit = db['model_fitting'][res][snr]
         errors.append(float(fit['T_std']/fit['T'])*100.)
     errors = np.asarray(errors)
-    ax.plot(x[errors<500], errors[errors<500], label='snr=%.1f' % snr, c=cmap(r/5.))
+    ax.plot(x, errors, label='snr=%.1f' % snr, c=cmap(r/5.))
     r += 1
 i += 1
 #ax.set_ylim((0, 20))
@@ -254,7 +255,7 @@ for mol in range(len(db['molecules_input'])): # loop over molecules
             error = float(fit['X_std'][mol]/fit['X'][mol][0])*100.
             errors.append(error)
         errors = np.asarray(errors)
-        ax.plot(x[errors<500], errors[errors<500], c=cmap(r/5.))
+        ax.plot(x, errors, c=cmap(r/5.))
         r += 1
 
     ax.set_xlabel('Resolution')

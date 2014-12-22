@@ -195,6 +195,8 @@ for resolution in resolutions:
 
         # update params output folder
         params.out_path = os.path.join(out_dir, 'r%.1f-snr%1.f' % (resolution, snr))
+        params.out_save_plots = params.out_path
+
 
         # print some logs
         logging.info('Fitting for snr=%.1f and res=%.1f' % (snr, resolution))
@@ -235,8 +237,6 @@ for resolution in resolutions:
         spectrum[:,0] = dataob.specgrid
         spectrum[:,1] = model
         planet_star_ratio = (params.planet_radius*RJUP)/(params.star_radius*RSOL)
-
-        print planet_star_ratio
 
         # adding errorbars to spectrum
         spec_amp = np.max(spectrum[:,1])-np.min(spectrum[:,1])
@@ -280,18 +280,30 @@ for resolution in resolutions:
             outputob = output(fitob)
             #outputob.plot_all(save2pdf=params.out_save_plots)
 
+
            # store fitted spectrum
-            fitted_spectrum = np.zeros((len(spectrum[:,0]),2))
-            fitted_spectrum[:,0] = spectrum[:,0]
-            fitted_spectrum[:,1] = np.transpose(outputob.spec_nest)
+            fitted_spectra = []
+            for spec in outputob.spec_nest:
+                fitted_spectrum = np.zeros((len(spectrum[:,0]),2))
+                fitted_spectrum[:,0] = spectrum[:,0]
+                fitted_spectrum[:,1] = np.transpose(spec)
+                fitted_spectra.append(fitted_spectrum)
+                #if params.out_dump_internal: #saving models to ascii
+                #    @todo needs to save output to ascii
+                #    outputob.save_model(modelout=fitted_spectrum, modelsaveas=params.out_internal_name)
+
+            if params.out_save_plots:
+                outputob.plot_all(save2pdf=params.out_save_plots)
 
             fit_dict = {
                 'observed_spectrum': spectrum, # observed spectrum (array)
-                'fitted_spectrum': fitted_spectrum ,# fitted spectrum (array)
-                'X': fitob.NEST_X_mean, # mixing ratios as a function of atm layer (2d array)
+                'fitted_spectra': fitted_spectra ,# fitted spectrum (array)
+                'modes': fitob.NEST_modes, # mixing ratios as a function of atm layer
+                'X': fitob.NEST_X_mean, # mixing ratios as a function of atm layer
                 'X_std': fitob.NEST_X_std, # error on mixing ratio (1d array)
                 'T': fitob.NEST_T_mean, # fitted temperature
                 'T_std': fitob.NEST_T_std, # fitted T error
+                'stats': fitob.NEST_stats,
                 'dir_multinest': os.path.abspath(fitob.dir_multinest), # directory where nested sampling outputs are stored
                 'datetime': datetime.datetime.now(),
             }

@@ -5,11 +5,20 @@ wavemax = 10.0
 type = transmission
 
 [Grid]
-resolution = 20, 40, 80, 100, 120, 140, 160
-snr = 5, 7, 9, 11, 13, 15, 17
+resolution = 20, 40, 60, 80, 100, 120, 140, 160, 180, 200
+snr = 5, 7, 9, 11, 13, 15, 17, 19, 21, 23
 
 [Input]
 spectrum_file = False
+
+[Output]
+#path for output files
+path = Output/
+file_prefix = ariel_
+dump_internal = True
+save_plots = True
+plot_contour = True
+
 
 [Star]
 radius = 0.750
@@ -41,5 +50,5 @@ n_live_points = 4000
 verbose = False
 
 [Fitting]
-T_up  = 600
-T_low = 600
+T_up  = 200
+T_low = 200

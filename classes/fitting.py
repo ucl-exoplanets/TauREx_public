@@ -359,34 +359,50 @@ class fitting(base):
 ############################################################################### 
 #Nested Sampling algorithm
 
-    def collate_multinest_result(self,NESTout):
+    def collate_multinest_result(self, NESTout):
+
+        # @todo to think about!
+        # Multinest in multimdes can return two or more sets of solutions.
+        # if only one solution is found, it returns a list with a tuple with 4 elements: [(T, T_std, X, X_std)]
+        # if N (>1) solutions are found, it returns a list with N tuples with 4 elements each
+        #    e.g. [(T1, T_std1, X1, X_std1), (T2 T_std2, X2, X_std2), ... ]
 
         logging.info('Unpacking the MULTINEST results')
 
         NESTstats = NESTout.get_stats()
 
+        if self.params.nest_multimodes:
+            if len(NESTstats['modes']) > 1:
+                # more than one mode found
+                out_list = []
+                for n in range(len(NESTstats['modes'])):
+                    PFIT     = []
+                    PFIT_std = []
+                    for i in range(self.n_params):
+                        PFIT.append(NESTstats['modes'][n]['maximum a posterior'][i])
+                        PFIT_std.append(NESTstats['modes'][n]['sigma'][i])
+
+                    T, P, X = self.profile.TP_profile(PARAMS=PFIT)
+                    T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
+                    X_std = PFIT_std[:self.Pindex[0]]
+
+                    out_list.append((np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)))
+                return out_list
+
+        # only one set of solutions found
         PFIT     = []
         PFIT_std = []
-      
         for i in range(self.n_params):
-            if self.params.nest_multimodes:
-                PFIT.append(NESTstats['modes'][0]['maximum a posterior'][i])
-                PFIT_std.append(NESTstats['modes'][0]['sigma'][i])
-            else:
-                PFIT.append(NESTstats['marginals'][i]['median'])
-                PFIT_std.append(NESTstats['marginals'][i]['sigma'])
+            PFIT.append(NESTstats['marginals'][i]['median'])
+            PFIT_std.append(NESTstats['marginals'][i]['sigma'])
 
         T,P,X = self.profile.TP_profile(PARAMS=PFIT)
-        
         T_std = PFIT_std[self.Pindex[0]:self.Pindex[1]]
         X_std = PFIT_std[:self.Pindex[0]]
-        # Xout_mean = Xout_mean.reshape(self.ngas,self.nlayers)
-        # Xout_std = Xout_std.reshape(self.ngas,self.nlayers)
 
-        return np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)
+        return [(np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std))]
 
 
-    
     def multinest_fit(self,resume=None):
         #multinest fitting routine (wrapper around PyMultiNest)
 
@@ -467,18 +483,20 @@ class fitting(base):
         if MPI.COMM_WORLD.Get_rank() == 0:
 
             #coallating results into arrays (only for the main thread)
+
+            logging.info('Store the MULTINEST results')
             OUT = pymultinest.Analyzer(n_params=self.n_params,
                                        outputfiles_basename=os.path.join(self.dir_multinest, '1-'))
 
-            Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_multinest_result(OUT)
-
-            logging.info('Store the MULTINEST results')
+            # this returns a list of solutions: [(T1, T_std1, X1, X_std1), (T2 T_std2, X2, X_std2), ... ]
+            multinest_result = self.collate_multinest_result(OUT)
 
             #saving arrays to object
             self.NEST        = True
-            self.NEST_T_mean = Tout_mean
-            self.NEST_T_std  = Tout_std
-            self.NEST_X_mean = Xout_mean
-            self.NEST_X_std  = Xout_std
-            self.NEST_STATS  = OUT.get_stats()
+            self.NEST_modes  = len(multinest_result) # number of modes detected
+            self.NEST_T_mean = [solution[0] for solution in multinest_result]
+            self.NEST_T_std  = [solution[1] for solution in multinest_result]
+            self.NEST_X_mean = [solution[2] for solution in multinest_result]
+            self.NEST_X_std  = [solution[3] for solution in multinest_result]
+            self.NEST_stats  = OUT.get_stats()
             self.NEST_FITDATA= OUT
