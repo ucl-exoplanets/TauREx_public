@@ -170,7 +170,7 @@ if params.pre_run:
     preob.run()
     logging.info('Molecule pre-selected using Marple module: %s' % preob.molselected)
     logging.info('Updating parameters object values')
-    params = preob.update_params()
+    updated_params = preob.update_params()
 
     #dataob.reset(updated_params) # @todo check! tp_profile needs to be updated as well
 
@@ -178,6 +178,10 @@ if params.pre_run:
     # @todo However, we could move everything related to the atmospheric composition to tp_profile.
     logging.info('Reinitialising data and tp_profile objects')
     dataob = data(updated_params)
+    #adding bulk composition to the atmosphere @todo move to better place
+    dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+    dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
+    
     profileob = tp_profile(dataob)
 
 

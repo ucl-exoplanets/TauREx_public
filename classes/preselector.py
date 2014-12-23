@@ -24,11 +24,11 @@
 from base import base
 import numpy as np
 import pylab as pl
-import gzip,os
+import gzip,os, copy
 import cPickle as pickle
-from copy import deepcopy
-import library_preselector
-from library_preselector import *
+# from copy import deepcopy
+import library_preselector as lib_pre
+# from library_preselector import *
 import scipy.stats.stats as st
 import logging
 
@@ -118,15 +118,14 @@ class preselector(base):
         #doing the pre-processing
 #             print '1 done'
         if generateSpectra:
-            console.setLevel(30) #setting logging level to exclude INFO 
-            generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
+            lib_pre.generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
                                  MODEL=self.model_object,MIXING=self.params.pre_mixing_ratios)
-            console.setLevel(NOTSET)
+            self.params.console.setLevel(20)
 #             print '2 done'
         if generatePCA:
-            console.setLevel(30)
-            generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
-            console.setLevel(NOTSET)
+            self.params.console.setLevel(30)
+            lib_pre.generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
+            self.params.console.setLevel(20)
 #             print '3 done'
 
 
@@ -237,20 +236,20 @@ class preselector(base):
 #             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
 #             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
             try:
-                eucdist_pc1 = np.sum(sqrt((datanorm_m-pc1)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                eucdist_pc1 = np.sum(np.sqrt((datanorm_m-pc1)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc1 = 1000
             try:
-                eucdist_pc2 = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                eucdist_pc2 = np.sum(np.sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc2 = 1000
                 
             try:
-                eucdist_pc1_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                eucdist_pc1_inv = np.sum(np.sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc1_inv = 1000
             try:
-                eucdist_pc2_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                eucdist_pc2_inv = np.sum(np.sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc2_inv = 1000
                 
@@ -266,9 +265,10 @@ class preselector(base):
             eucdist = [eucdist_pc1,eucdist_pc2]
             eucdist_inv = [eucdist_pc1_inv, eucdist_pc2_inv]
             
-            print 'molecule ', molecule
-            print 'eucdist ',eucdist
-            print 'eucdist_inv ', eucdist_inv
+#             logging.info('Molecule: %s, eucdist: %d, inv_eucdist: %d' % (molecule,eucdist[0],eucdist_inv[0]))
+#             print 'molecule ', molecule
+#             print 'eucdist ',eucdist
+#             print 'eucdist_inv ', eucdist_inv
             
             corrcoeff_pc1 = st.pearsonr(datanorm_m,pc1)
             corrcoeff_pc2 = st.pearsonr(datanorm_m,pc2)
@@ -285,18 +285,19 @@ class preselector(base):
                 self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
 
 
-
-            print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
-            pl.figure(1)
-            pl.plot(datanorm_m,'b')
-            pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
-            pl.plot(pc2,'g')
-#             # pl.plot(pc2_inv,'y')
-#             #
-#             pl.figure(2)
-#             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
-            pl.show()
+            logging.info('Molecule: {:10s}, corrcoeff: {:4g}, eucdist: {:4g}, inv_eucdist: {:4g}'.format(molecule,corrcoeff_pc1[0], eucdist[0],eucdist_inv[0]))
+            
+#             print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
+#             pl.figure(1)
+#             pl.plot(datanorm_m,'b')
+#             pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
+#             pl.plot(pc2,'g')
+# #             # pl.plot(pc2_inv,'y')
+# #             #
+# #             pl.figure(2)
+# #             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+#             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+#             pl.show()
 
 
     def rank_molecules(self):
@@ -343,7 +344,7 @@ class preselector(base):
     #calculating planetary parameters from stellar and orbital parameters
 
         #calculating mean planetary surface temperature
-        self.Tplanet = self.params.star_temp * sqrt(self.params.star_radius / (
+        self.Tplanet = self.params.star_temp * np.sqrt(self.params.star_radius / (
             2. * self.params.planet_sma)) * (1 - self.params.planet_albedo) ** (1. / 4.)
         # self.Tplanet = 1400
 
@@ -379,24 +380,26 @@ class preselector(base):
 
         # @todo looks like only important parameter that changes is params.planet_molec
 
-        logging.info('Update parameters object: %s' % preob.molselected)
+#         logging.info('Update parameters object: %s' % self.molselected)
 
-        newparams = deepcopy(self.params)
+        
+#         newparams = copy.deppcopy(self.params) #@todo due to the logging in the parameter class we cannot copy it anymore. 
+        newparams = self.params #@todo setting parameters directly in original instance. may not matter or be a very bad idea. Ideas?
 
         #setting useATM_file to False
-        newparams.in_use_ATMfile = False # @really needed?
+        newparams.in_use_ATMfile = False # @todo really needed? - IPW: yes i think so 
 
         #setting planetary temperature
 #         newparams.planet_temp = self.Tplanet
 
         #setting number of gases/molecules
-        newparams.tp_num_gas = self.numgas # @todo deprecated!
+        newparams.ngas = self.numgas # @todo deprecated!
 
         #setting molecules list
         newparams.planet_molec = self.molselected
 
         #setting new abs_files path
-        newparams.in_abs_path = self.params.in_abs_path # @todo why? Does it change?
+        newparams.in_abs_path = self.params.in_abs_path # @todo why? Does it change? -IPW: it used to but not any more so yes... useless
 
 #         #determining correct abs files to be read in
 #         #reading available cross section lists in PATH
