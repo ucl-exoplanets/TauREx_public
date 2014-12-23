@@ -30,10 +30,10 @@ class base(object):
     def __getitem__(self,name):
         return self.__dict__[name] 
 
-    def reset(self,params):
+    def reset(self,params, **kwargs):
     #allows to reset the original instance to reflect changes in the data instance
     #this avoids an initialisation of a separate instance.
-        self.__init__(params)
+        self.__init__(params,**kwargs)
         
     
     def set_model(self, INPUT = None):

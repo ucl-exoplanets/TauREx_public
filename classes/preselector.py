@@ -36,13 +36,13 @@ class preselector(base):
 
     def __init__(self, model_object, data=None, params=None):
 
-        logging.info('Initialising preselector object')
+        logging.info('Initialising Marple object')
 
 
         if params:
             self.params = params
         else:
-            self.params = data.params
+            self.params = model_object.params
 
         if data:
             self.data = data
@@ -56,7 +56,7 @@ class preselector(base):
         self.set_model(model_object)
 
         #reading in spectrum data to be fitted
-        self.spectrum = data.spectrum
+        self.spectrum = self.data.spectrum
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
 
@@ -118,11 +118,15 @@ class preselector(base):
         #doing the pre-processing
 #             print '1 done'
         if generateSpectra:
+            console.setLevel(30) #setting logging level to exclude INFO 
             generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
                                  MODEL=self.model_object,MIXING=self.params.pre_mixing_ratios)
+            console.setLevel(NOTSET)
 #             print '2 done'
         if generatePCA:
+            console.setLevel(30)
             generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
+            console.setLevel(NOTSET)
 #             print '3 done'
 
 
@@ -135,14 +139,14 @@ class preselector(base):
             with gzip.open(PATH+'spec_pcalib.pkl.zip',mode='rb') as filehandle:
                 self.PCALIB = pickle.load(filehandle)
         except IOError:
-            print 'WARNING: cannot find spec_pcalib.pkl.zip in: ',PATH
+            logging.warning('WARNING: cannot find spec_pcalib.pkl.zip in: ',PATH)
             redo = raw_input('Try to generate library from scratch? (y/n) [n]: ')
             if redo == 'N' or redo == 'n' or redo == 'no' or redo == '':
                 exit()
             elif redo == 'Y' or redo == 'y' or redo == 'yes':
-                print 'generating library...'
+                logging.info('generating library...')
                 self.run_preprocess(convertLinelist=True,generateSpectra=True,generatePCA=True)
-                print 'loading library...'
+                logging.info('loading library...')
                 with gzip.open(PATH+'spec_pcalib.pkl.zip',mode='rb') as filehandle:
                     self.PCALIB = pickle.load(filehandle)
 
@@ -283,16 +287,16 @@ class preselector(base):
 
 
             print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
-#             pl.figure(1)
-#             pl.plot(datanorm_m,'b')
-#             pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
-#             pl.plot(pc2,'g')
+            pl.figure(1)
+            pl.plot(datanorm_m,'b')
+            pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
+            pl.plot(pc2,'g')
 #             # pl.plot(pc2_inv,'y')
 #             #
 #             pl.figure(2)
 #             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
-#             pl.show()
+            pl.show()
 
 
     def rank_molecules(self):
