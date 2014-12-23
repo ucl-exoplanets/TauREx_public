@@ -92,7 +92,7 @@ save_plots = True
 # not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
 
 #run preselector
-run_pre = False
+run_pre = True
 
 #Path of spectral library folder
 speclib_path = Preselector/speclib/
@@ -116,10 +116,10 @@ mixing_ratio = 1e-5,1e-4,1e-3,1e-2
 generate_pca = False
 
 #masking threshold
-mask_thres = 0.5
+mask_thres = 0.1
 
 #force preselector to include following list of molecules
-mol_force_on = True
+mol_force_on = False
 
 #list of molecules to be added
 #naming convention must be same as cross-section file, comma separated 
