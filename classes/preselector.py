@@ -221,6 +221,8 @@ class preselector(base):
         data = self.spectrum[:,1]
         datanorm = data - np.min(data)
         datanorm /= np.max(datanorm)
+        errnorm = self.spectrum[:,2] * (datanorm / (data-np.min(data)))
+#         errnorm = errnorm[:-1]
 
 
         molkeys = self.PCALIB.keys()
@@ -232,33 +234,38 @@ class preselector(base):
             mask = self.PCALIB[molecule]['PCA']['interp_mask']
 
             datanorm_m = datanorm[mask]-np.mean(datanorm[mask])
-            # datanorm_m /= np.max(datanorm[mask])
+
             pc1 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,0] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0])
             pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
-            # pc2 /= np.max(pc2)
+
             pc1_inv = (-1.0*(pc1-np.mean(pc1)))#+np.mean(pc1)
             pc2_inv = (-1.0*(pc2-np.mean(pc2)))#+np.mean(pc2)
 
-#             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
-#             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+
+            # calculating the euclidian distance between PC1/PC2 and normalised data 
             try:
-                eucdist_pc1 = np.sum(np.sqrt((datanorm_m-pc1)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist1 = np.abs((datanorm_m-pc1))
+                eucdist_pc1 = np.sum(dist1) /  float(len(datanorm)) #len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc1 = 1000
             try:
-                eucdist_pc2 = np.sum(np.sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist2 = np.abs((datanorm_m-pc2))
+                eucdist_pc2 = np.sum(dist2)/  float(len(datanorm)) # len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc2 = 1000
                 
             try:
-                eucdist_pc1_inv = np.sum(np.sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist3 = np.abs((datanorm_m-pc1_inv))
+                eucdist_pc1_inv = np.sum(dist3)/  float(len(datanorm)) #len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc1_inv = 1000
             try:
-                eucdist_pc2_inv = np.sum(np.sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist4 = np.abs((datanorm_m-pc2_inv))
+                eucdist_pc2_inv = np.sum(dist4)/  float(len(datanorm)) #len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc2_inv = 1000
                 
+            #checking for broken numbers
             if np.isnan(eucdist_pc1):
                 eucdist_pc1 = 1000
             if np.isnan(eucdist_pc1_inv):
@@ -268,38 +275,46 @@ class preselector(base):
             if np.isnan(eucdist_pc2_inv):
                 eucdist_pc2_inv = 1000
 
-            eucdist = [eucdist_pc1,eucdist_pc2] #include both principal components for correlation analysis
-#             eucdist = [eucdist_pc1]  #only include the first PC
-            eucdist_inv = [eucdist_pc1_inv, eucdist_pc2_inv] #include both PCs for correlation, flipped upside down
-#             eucdist_inv = [eucdist_pc1_inv] #only include the first PC
+#             eucdist = [eucdist_pc1,eucdist_pc2] #include both principal components for correlation analysis
+            eucdist = [eucdist_pc1]  #only include the first PC
+#             eucdist_inv = [eucdist_pc1_inv, eucdist_pc2_inv] #include both PCs for correlation, flipped upside down
+            eucdist_inv = [eucdist_pc1_inv] #only include the first PC
             
 #             logging.info('Molecule: %s, eucdist: %d, inv_eucdist: %d' % (molecule,eucdist[0],eucdist_inv[0]))
 #             print 'molecule ', molecule
 #             print 'eucdist ',eucdist
 #             print 'eucdist_inv ', eucdist_inv
             
+            #calculating pearson correlation coefficients between PCs and data 
             corrcoeff_pc1 = st.pearsonr(datanorm_m,pc1)
             corrcoeff_pc2 = st.pearsonr(datanorm_m,pc2)
             
 
 
             self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff_pc1
-            # self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist
+            self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
+            
+            #@todo the inverse correlation is now disabled. doesnt make too much sense for transmission but may need implementation for emission.
 #             if corrcoeff_pc1[0] <0.0:
-            if min(eucdist_inv) < min(eucdist):
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist_inv)
-
-            else:
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
+# #             if min(eucdist_inv) < min(eucdist):
+#                 self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist_inv)
+# 
+#             else:
+#                 self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
+                
 
 
             logging.info('Molecule: {:10s}, corrcoeff: {:4g}, eucdist: {:4g}, inv_eucdist: {:4g}'.format(molecule,corrcoeff_pc1[0], np.min(eucdist),np.min(eucdist_inv)))
             
 #             print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
+            xnums = np.arange(len(datanorm_m))
+            xnums_pc1 = np.arange(len(pc1))
+  
             pl.figure(1)
-            pl.plot(datanorm_m,'b')
-            pl.plot(pc1,'r')
-            pl.plot(pc2,'g')
+            pl.plot(xnums,datanorm_m,'b')
+#             pl.errorbar(xnums,datanorm_m,errnorm[:-1])
+            pl.plot(xnums_pc1,pc1,'r')
+            pl.plot(xnums_pc1,pc2,'g')
 #             
 #             pl.figure(2)
 #             pl.plot(self.PCALIB[molecule]['wavegrid'],self.PCALIB[molecule]['PCA']['norm'][:,0],'r')
@@ -330,8 +345,7 @@ class preselector(base):
             if (sortdist[i+1]-sortdist[i]) > diff:
                 diff = (sortdist[i+1]-sortdist[i])
                 diffidx = i
-                print 'diff ', diff
-                print 'diffidx ', i
+
 
         self.mol_rank = np.asarray(molkeys)[idx]
         print self.mol_rank
