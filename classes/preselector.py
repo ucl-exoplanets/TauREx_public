@@ -310,11 +310,12 @@ class preselector(base):
             xnums = np.arange(len(datanorm_m))
             xnums_pc1 = np.arange(len(pc1))
   
-            pl.figure(1)
-            pl.plot(xnums,datanorm_m,'b')
-#             pl.errorbar(xnums,datanorm_m,errnorm[:-1])
-            pl.plot(xnums_pc1,pc1,'r')
-            pl.plot(xnums_pc1,pc2,'g')
+#             pl.figure(1)
+#             pl.plot(xnums,datanorm_m,'b')
+# #             pl.errorbar(xnums,datanorm_m,errnorm[:-1])
+#             pl.plot(xnums_pc1,pc1,'r')
+#             pl.plot(xnums_pc1,pc2,'g')
+            
 #             
 #             pl.figure(2)
 #             pl.plot(self.PCALIB[molecule]['wavegrid'],self.PCALIB[molecule]['PCA']['norm'][:,0],'r')
@@ -325,7 +326,7 @@ class preselector(base):
 # # #             pl.figure(2)
 # # #             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
 # #             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
-            pl.show()
+#             pl.show()
 
 
     def rank_molecules(self):
@@ -366,9 +367,9 @@ class preselector(base):
 #         print np.asarray(molkeys)[idx]
         # print diffidx, diff
         #
-        pl.figure(3)
-        pl.plot(np.asarray(distance)[idx])
-        pl.show()
+#         pl.figure(3)
+#         pl.plot(np.asarray(distance)[idx])
+#         pl.show()
 
 
     def calc_astroparams(self):
