@@ -5,7 +5,8 @@ import numpy as np
 import pylab as pl
 from numpy import array
 import scipy.ndimage as ndimage
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter,ScalarFormatter
+
 
 
 #function time
@@ -222,27 +223,41 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
     #     nested_plot.plot_marginal(i, with_ellipses=True, with_points=True, use_log_values=False, grid_points=50)
         if i == 0:
             pl.ylabel("Prob. density",fontsize=20)
-        pl.xlabel(display_params[i],fontsize=20)
+        pl.xlabel(display_params[i],x=0.6, ha='right', fontsize=20)
         globalxlims= ax.get_xlim()
 #         print globalxlims
        
         
-        #scaling axis labels 
-    #     ax.xaxis.get_major_formatter().set_powerlimits((0, 100))
+        #scaling axis labels @todo labels can be improved but works now at least
+        pl.rc('font', size=20)
+        SciFormatter = ScalarFormatter(useMathText=True,useOffset=True,useLocale=True)
+#         SciFormatter.set_scientific(True)
+        SciFormatter.set_powerlimits((-1, 4))
+        ax.get_xaxis().set_major_formatter(SciFormatter)
+        ax.get_xaxis().get_offset_text().set_x(0.9)
+#         ax.set_xlabel('{0} ({1})'.format(ax.get_xlabel(), ax.get_xaxis().get_offset_text().get_text()))
+        
+#         print ax.xaxis.get_offset_text().get_text()
+        
+#         print SciFormatter.offset
+        
     #     ax.ticklabel_format(style='sci')
     #     print np.int(np.round(np.log10(mcmc[0][params[i]][0])))   
     #     print nested[0][params[i]][0]
 #        print np.log10(data[0][params[i]]['data'][0])
-        scale_tmp = np.round(np.log10(data[0][params[i]]['data'][0]))
-        if np.isfinite(scale_tmp):
-            scale_pow = np.int(scale_tmp) 
-        else:
-            scale_pow = 0.0
-    #     print scale_pow
-        
-        if scale_pow < 0.0:
-            ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
-            ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
+
+
+#         DEPRECIATED CODE
+#         scale_tmp = np.round(np.log10(data[0][params[i]]['data'][0]))
+#         if np.isfinite(scale_tmp):
+#             scale_pow = np.int(scale_tmp) 
+#         else:
+#             scale_pow = 0.0
+#     #     print scale_pow
+#         
+#         if scale_pow < 0.0:
+#             ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
+#             ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
 
 #             ax.set_xlabel(params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
         
