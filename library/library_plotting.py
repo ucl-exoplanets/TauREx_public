@@ -118,13 +118,13 @@ def plot_mcmc_results(DATA, parameters=False, save2pdf=False, out_path=None):
             ax = pl.subplot(n_params, n_params, n_params * j + i + 1)
             ax.ticklabel_format(style='sci')
             pl.plot(DATA.trace(names[i])[:],DATA.trace(names[j])[:],'.',color='k')
-            pl.xlabel(plotnames[i])
-            pl.ylabel(plotnames[j])
+            pl.xlabel(parameters[i])
+            pl.ylabel(parameters[j])
             for tick in ax.xaxis.get_major_ticks():
                     tick.label.set_rotation(-30)
 
     if save2pdf:
-            filename = os.path.join(self.params.out_path, 'mcmc_posteriors.pdf')
+            filename = os.path.join(out_path, 'mcmc_posteriors.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 

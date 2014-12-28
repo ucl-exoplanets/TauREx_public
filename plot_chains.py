@@ -330,7 +330,7 @@ def main(argv):
     # n_params = 6
     
     disp_params = np.loadtxt(chaindir+'parameters.dat',dtype='string')
-    disp_params[0] = disp_params[0]+' (K)' #add units to temperature parameter
+#     disp_params[0] = disp_params[0]+' (K)' #add units to temperature parameter
     n_params = len(disp_params)
     
     
