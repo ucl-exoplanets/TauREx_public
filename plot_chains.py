@@ -34,7 +34,7 @@ def parse_commands(argv):
     
     plot_nest = False; plot_mcmc = False; plot_show = False; interactive = False; timestamp = False
     plot_contour = True
-    chaindir = 'Output/chains/'
+    chaindir = 'Output/'
     outdir = './'
     timestamp2 = ''
     
@@ -129,7 +129,7 @@ def ellipse(ra,rb,ang,x0,y0,Nb=100):
 
 
 
-def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppressAxes=False):
+def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppressAxes=False,alpha=0.05):
     
 #     std1 = data[0][varname0]['sigma']
 #     mean1 = data[0][varname0]['mean']
@@ -137,7 +137,7 @@ def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppr
 #     mean2 = data[0][varname]['mean']
     
     #plot 2D distributions
-    axis.plot(data[thread][varname0]['data'],data[0][varname]['data'],'k.',alpha=0.05)
+    axis.plot(data[thread][varname0]['data'],data[0][varname]['data'],'k.',alpha=alpha)
     
     
 
@@ -209,7 +209,7 @@ def exp_formatter_fun(x, p):
         
         
         
-def plot_posteriors(data,n_params,params,display_params,plot_contour):
+def plot_posteriors(data,n_params,params,display_params,plot_contour,alpha=0.05):
     fig = pl.figure(figsize=(5*n_params, 5*n_params))
 #     pl.title('Nested posteriors')
     seq = 0
@@ -296,7 +296,7 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
 #             ax2.annotate('i ='+str(i)+' j ='+str(j)+' n ='+str(n_params * j + i + 1)+' s ='+str(seq),xy=(0.7,0.1),xycoords='axes fraction',
 #                         horizontalalignment='center', verticalalignment='center')
             ax2.ticklabel_format(style='sci')
-            plot_2Ddistribution(ax2,data, 0,params[i],params[j],suppressAxes=True,confidence=plot_contour)
+            plot_2Ddistribution(ax2,data, 0,params[i],params[j],suppressAxes=True,confidence=plot_contour,alpha=alpha)
     #         nested_plot.plot_conditional(i, j,with_ellipses=False, with_points=True, grid_points=50)
             pl.subplots_adjust(hspace=0.0,wspace=0.0)
             ax2.set_xlim(globalxlims)
@@ -353,8 +353,8 @@ def main(argv):
                 mcmc[id][traceid]['stats'][0] = {}
                 mcmc[id][traceid]['stats'][0]['sigma'] = np.std(mcmc[id][traceid]['data'])
                 mcmc[id][traceid]['stats'][0]['mean'] = np.mean(mcmc[id][traceid]['data'])
-                print id, traceid, 'mean: ', np.mean(mcmc[id][traceid]['data'])
-                print id, traceid, 'std: ', np.std(mcmc[id][traceid]['data'])
+#                 print id, traceid, 'mean: ', np.mean(mcmc[id][traceid]['data'])
+#                 print id, traceid, 'std: ', np.std(mcmc[id][traceid]['data'])
 
                 
         
@@ -418,7 +418,7 @@ def main(argv):
     # n_params = 3
     
     if plot_nest: 
-        fig_nest = plot_posteriors(nested,n_params,params_nest,disp_params,plot_contour=plot_contour)
+        fig_nest = plot_posteriors(nested,n_params,params_nest,disp_params,plot_contour=plot_contour,alpha=0.01)
         if timestamp: 
             fig_nest.savefig(outdir+'nested_posterior_'+timestamp2+'.pdf')
             fig_nest.savefig(outdir+'nested_posterior_'+timestamp2+'.jpg')
@@ -426,7 +426,7 @@ def main(argv):
             fig_nest.savefig(outdir+'nested_posterior.pdf')
             fig_nest.savefig(outdir+'nested_posterior.jpg')
     if plot_mcmc: 
-        fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params,plot_contour=plot_contour)
+        fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,disp_params,plot_contour=plot_contour,alpha=0.05)
         if timestamp:
             fig_mcmc.savefig(outdir+'mcmc_posterior_'+timestamp2+'.pdf')
             fig_mcmc.savefig(outdir+'mcmc_posterior_'+timestamp2+'.jpg')
