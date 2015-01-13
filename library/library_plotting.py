@@ -17,6 +17,7 @@ try:
 except:
     multinest_import = False
 
+scale_pow = 0
 
 def plot_multinest_results(nestdir, parameters,  save2pdf=False, out_path=None, plot_contour=True):
 
@@ -42,15 +43,18 @@ def plot_multinest_results(nestdir, parameters,  save2pdf=False, out_path=None, 
                 nested[0][str(i)]['stats'][j]['sigma'] = nested[0]['state']['modes'][j]['sigma'][i]
                 nested[0][str(i)]['stats'][j]['mean'] = nested[0]['state']['modes'][j]['mean'][i]
                 if j == 1:
-                    break #only take the first two modes if many are detected
+                    # only take the first two modes if many are detected
+                    break
             params_nest.append(str(i))
 
         fig_nest = plot_posteriors(nested,n_params,params_nest,parameters,plot_contour=plot_contour)
 
         if save2pdf:
-                filename = os.path.join(out_path, 'nested_posteriors.pdf')
-                fig_nest.savefig(filename)
-                logging.info('Plot saved in %s' % filename)
+                filename1 = os.path.join(out_path, 'nested_posteriors.pdf')
+                filename2 = os.path.join(out_path, 'nested_posteriors.jpg')
+                fig_nest.savefig(filename1)
+                fig_nest.savefig(filename2)
+                logging.info('Plot saved in %s and %s' % (filename1, filename2))
 
 def _plot_multinest_results(DATA, parameters,  save2pdf=False, out_path=None):
 
@@ -130,6 +134,9 @@ def plot_mcmc_results(DATA, parameters=False, save2pdf=False, out_path=None):
 
 
 def plot_posteriors(data,n_params,params,display_params,plot_contour):
+
+    global scale_pow
+
     fig = pl.figure(figsize=(5*n_params, 5*n_params))
 #     pl.title('Nested posteriors')
     seq = 0
@@ -162,6 +169,7 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
     #     print scale_pow
 
         if scale_pow < 0.0:
+
             ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
             ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
 
@@ -291,18 +299,21 @@ def plot_1Dposterior(axis,data,varname,confidence):
 
 
 def exp_formatter_fun(x, p):
-        if x < 1.0:
-            try:
-                scale = np.int(np.round(np.log10(x)))
-            except OverflowError:
-                scale = x
-#             print x, (10 ** np.abs(scale)), (x * (10 ** np.abs(scale)))
-            return "%.2f" % (x * (10 ** np.abs(scale)))
+
+    global scale_pow
+
+    if x < 1.0:
+        return "%.2f" % (x * (10 ** np.abs(scale_pow)))
+#        try:
+#            scale = np.int(np.round(np.log10(x)))
+#        except OverflowError:
+#            scale = x
+#        print x, (10 ** np.abs(scale)), (x * (10 ** np.abs(scale)))
+
+#        return "%.2f" % (x * (10 ** np.abs(scale)))
 #             return "%.2f" % (x / np.exp(scale_pow))
-        if x >= 1.0:
-            return "%.2f" % (x)
-
-
+    if x >= 1.0:
+        return "%.2f" % (x)
 
 def ellipse(ra,rb,ang,x0,y0,Nb=100):
     # Define a function to make the ellipses
