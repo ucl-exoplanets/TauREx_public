@@ -94,10 +94,15 @@ class output(base):
             self.spec_mcmc = np.interp(self.data.wavegrid, self.data.specgrid, self.spec_mcmc)
 
         if self.NEST:
-            self.spec_nest = self.model(rho=self.profile.get_rho(T=fitting.NEST_T_mean),
-                                        X=fitting.NEST_X_mean,
-                                        temperature=fitting.NEST_T_mean)
-            self.spec_nest = np.interp(self.data.wavegrid, self.data.specgrid, self.spec_nest)
+            # separate solutions (modes) have different spectra. These are stored in self.spec_nest[i],
+            # for the i-th solutions
+            self.spec_nest = [self.model(rho=self.profile.get_rho(T=fitting.NEST_T_mean[i]),
+                                         X=fitting.NEST_X_mean[i],
+                                         temperature=fitting.NEST_T_mean[i]) \
+                              for i in range(fitting.NEST_modes)]
+
+            self.spec_nest = [np.interp(self.data.wavegrid, self.data.specgrid, self.spec_nest[i]) \
+                                        for i in range(fitting.NEST_modes)]
 
         if self.DOWN:
             self.spec_down = self.model(rho=self.profile.get_rho(T=fitting.DOWNHILL_T_mean),
@@ -218,7 +223,9 @@ class output(base):
         if self.MCMC:
             py.plot(self.data.spectrum[:,0],transpose(self.spec_mcmc),c='r',label='MCMC',linewidth=linewidth)
         if self.NEST:
-            py.plot(self.data.spectrum[:,0],transpose(self.spec_nest),c='g',label='NESTED',linewidth=linewidth)
+            for i in range(self.fitting.NEST_modes):
+                py.plot(self.data.spectrum[:,0],transpose(self.spec_nest[i]),
+                        label='NESTED %i' % i, linewidth=linewidth)
 
         py.legend()
         py.title('Data and Model')
@@ -261,9 +268,7 @@ class output(base):
         out = np.zeros((len(self.data.spectrum[:,0]),2))
         out[:,0] = self.data.spectrum[:,0]
 
-        basename = self.params.out_path+self.params.out_file_prefix+self.__MODEL_ID__
-
-        print self.__MODEL_ID__
+        basename = os.path.join(self.params.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
 
         if self.MCMC and ascii:
                 out[:,1] = np.transpose(self.spec_mcmc)
@@ -272,9 +277,10 @@ class output(base):
                 np.savetxt(filename, out)
 
         if self.NEST and ascii:
-                out[:,1] = np.transpose(self.spec_nest)
-                filename = str(basename)+'_spectrum_nest.dat'
-                logging.info('Saving Nested Sampling spectrum to %s' % filename)
+            for i in range(self.fitting.NEST_modes):
+                out[:,1] = np.transpose(self.spec_nest[i])
+                filename = '%s_spectrum_nest_%i.dat' % (basename, i)
+                logging.info('Saving Nested Sampling spectrum for solution %i to %s' % (i, filename))
                 np.savetxt(filename, out)
 
         if self.DOWN and ascii:
@@ -285,5 +291,6 @@ class output(base):
 
         if modelout is not None: # ???
             np.savetxt(self.params.out_path+modelsaveas,modelout)
+
 
 

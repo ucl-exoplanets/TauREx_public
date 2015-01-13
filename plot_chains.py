@@ -450,7 +450,6 @@ def main(argv):
 
     if plot_show:
         pl.show()
-    
 
 #run the entire thing
 if __name__ == "__main__":

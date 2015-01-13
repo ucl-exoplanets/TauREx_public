@@ -1,0 +1,54 @@
+[General]
+manual_waverange = True
+wavemin = 1.0
+wavemax = 10.0
+type = transmission
+
+[Grid]
+resolution = 20, 40, 60, 80, 100, 120, 140, 160, 180, 200
+snr = 5, 7, 9, 11, 13, 15, 17, 19, 21, 23
+
+[Input]
+spectrum_file = False
+
+
+[Output]
+#path for output files
+path = Output/
+file_prefix = ariel_
+dump_internal = True
+save_plots = True
+plot_contour = True
+
+[Star]
+radius = 0.766
+temp   = 5090
+
+[Planet]
+name = hotjupiter
+radius = 1.138
+mass = 1.138
+sma = 0.03099
+albedo = 0.2
+temp = 1400
+mu = 2.3
+molecules = 1H2-16O, 12C-1H4, 12C-16O, 14N-1H3
+mixing_ratios = 5.0e-4, 1.0e-4, 1.0e-5, 1.0e-5
+include_cld = False
+
+[T-P profile]
+var_atm = True
+num_scaleheights = 20
+atm_levels = 60
+var_temp = True
+var_pres = True
+atm_max_pressure = 1e6
+var_mix = True
+
+[MultiNest]
+n_live_points = 4000
+verbose = False
+
+[Fitting]
+T_up  = 350
+T_low = 350
