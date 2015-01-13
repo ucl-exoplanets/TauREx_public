@@ -125,7 +125,7 @@ class output(base):
 
     def plot_mcmc(self, param_names=False, save2pdf=False):
 
-        logging.info('Plotting MCMC sampled distributions')
+        logging.info('Plotting nested sampling distributions. Saving to %s' % self.params.out_path)
 
         if self.MCMC:
 
@@ -135,10 +135,11 @@ class output(base):
                 parameters = param_names
 
             if param_names:
-                plot_mcmc_results(self.fitting.MCMC_FITDATA,
+                plot_mcmc_results(self.fitting.dir_mcmc,
                                   parameters=parameters,
                                   save2pdf=save2pdf,
-                                  out_path=self.params.out_path)
+                                  out_path=self.params.out_path,
+                                  plot_contour=self.params.out_plot_contour)
         else:
             logging.warning('MCMC was not run. Nothing to see here. Go away...')
 

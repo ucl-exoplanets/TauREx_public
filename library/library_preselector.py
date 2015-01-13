@@ -1,10 +1,10 @@
 import numpy as np
 import pylab as pl
 import sklearn.decomposition as sk
-import glob,string,gzip,os
+import glob,string,gzip,os, logging
 import cPickle as pickle
 
-import transmission, emission,profile,data
+import transmission, emission,tp_profile,data
 from transmission import *
 from emission import *
 from tp_profile import *
@@ -17,7 +17,7 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
     #Generates transmission spectra from cross section files for given mixing ratios
     #output: 2 column ascii files (.spec)
 
-    print 'Generate spectra library'
+    logging.info('Generate spectra library')
 
     #cleaning speclib folder before generating spectra
     oldfiles = glob.glob(OUTPATH+'*.spec')
@@ -28,10 +28,9 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
     dataob_pca = data(PARAMS)
     dataob_pca.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 
-    profileob_pca = tp_profile(PARAMS, dataob_pca)
-    #MODEL.reset(dataob_pca)
-
-    MODEL.__init__(PARAMS, dataob_pca, profileob_pca)
+    profileob_pca = tp_profile(dataob_pca)
+    MODEL.reset(profileob_pca) #resets model to reflect new data and tp-profile objects
+#     MODEL.__init__(PARAMS, dataob_pca, profileob_pca)
 
     #reading available cross section lists in PATH
     globlist = glob.glob(PATH+'*.abs')
@@ -41,7 +40,8 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
     # else:
 
     for FILE in globlist:
-        print FILE
+#         print FILE
+        logging.debug('Processing: %s',FILE)
         fname = string.rsplit(FILE,'/',1)[1] #splitting the name
         temp  = float(string.rsplit(fname,'_',2)[1][:-1]) #getting temperature from file name
 
@@ -53,8 +53,10 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
                 run = True
                 
         if run:
+            PARAMS.console.setLevel(30) #setting logging level to exclude INFO 
+
             for mix in MIXING:
-                X_in   = zeros((1,int(profileob_pca.nlayers))) #setting up mixing ratio array
+                X_in   = np.zeros((1,int(profileob_pca.nlayers))) #setting up mixing ratio array
                 X_in  += mix #setting mixing ratio
 
                 rho_in = profileob_pca.get_rho(T=temp) #calculating T-P profile
@@ -66,13 +68,14 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
                         # dataob_pca.specgrid = dataob_pca.wavegrid
                         # dataob_pca.nspecgrid = dataob_pca.nwave
                 #MODEL.reset(dataob_pca) #resets transob to reflect changes in dataob
-                MODEL.__init__(PARAMS, dataob_pca, profileob_pca)
+                
+                MODEL.reset(profileob_pca, data=dataob_pca)
     #                     pl.figure(21)
     #                     pl.plot(dataob_pca.specgrid,dataob_pca.sigma_array[0])
     #                     pl.show()
     #         
                         #manually setting mixing ratio and T-P profile
-                if MODEL.__ID__ is 'transmission' and PARAMS.trans_cpp:
+                if MODEL.__ID__ is 'transmission' and PARAMS.trans_cpp: #@todo this needs to be extended to emission 
                     mod_out = MODEL.cpath_integral(rho=rho_in,X=X_in) #using C# implementation of path integral
                 else:
                     mod_out = MODEL.path_integral(rho=rho_in,X=X_in) #using python implementation of path integral
@@ -81,6 +84,7 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
 #                 pl.show()
     #               exit()
                 np.savetxt(OUTPATH+fname[:-4]+'_'+str(mix)+'d.spec',np.column_stack((dataob_pca.specgrid,mod_out)))
+            PARAMS.console.setLevel(0) #setting logging level to include DEBUG 
 
 
 def find_nearest(arr, value):
@@ -97,7 +101,7 @@ def PCA(DATA0,PCnum):
 
     u,S,PC = np.linalg.svd(DATA)
     feature = np.transpose(PC)
-    print 'no. of PCs: ', len(PC[:,0])
+    logging.info('no. of PCs: ', len(PC[:,0]))
     feature = feature[:PCnum,:]
     return feature, PC
 
@@ -147,7 +151,7 @@ def generate_PCA_library(PARAMS,PATH,OUTPATH=False,comp_num=2):
                 
                 if PARAMS.pre_restrict_temp: #imposing temperature range restrictions
                     if temp > float(PARAMS.pre_temp_range[0]) and temp < float(PARAMS.pre_temp_range[1]): 
-                        print f
+                        logging.debug('PCA on file: %s',f)
                         DATA[:,j] = tmp[:,1]
                         if temp not in templist:
                             templist.append(temp)

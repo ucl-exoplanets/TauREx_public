@@ -3,12 +3,12 @@
 #
 ###############################
 
-import  os, sys,string
+import  os, sys,string, glob
 import pylab as pl
 import numpy as np
 from numpy import array
 import scipy.ndimage as ndimage
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter,ScalarFormatter
 import logging
 
 try:  
@@ -47,7 +47,7 @@ def plot_multinest_results(nestdir, parameters,  save2pdf=False, out_path=None, 
                     break
             params_nest.append(str(i))
 
-        fig_nest = plot_posteriors(nested,n_params,params_nest,parameters,plot_contour=plot_contour)
+        fig_nest = plot_posteriors(nested,n_params,params_nest,parameters,plot_contour=plot_contour,alpha=0.01)
 
         if save2pdf:
                 filename1 = os.path.join(out_path, 'nested_posteriors.pdf')
@@ -97,7 +97,47 @@ def _plot_multinest_results(DATA, parameters,  save2pdf=False, out_path=None):
             logging.info('Plot saved in %s' % filename)
 
 
-def plot_mcmc_results(DATA, parameters=False, save2pdf=False, out_path=None):
+def plot_mcmc_results(mcmcdir, parameters,  save2pdf=False, out_path=None, plot_contour=True):
+    #routine plotting MCMC chains. @todo needs to be checekd for bugs
+    
+    n_params = len(parameters) #number of parameters
+    
+    mcmc = {}
+    for thread in glob.glob(mcmcdir+'*'):
+        id = int(thread[-1])
+        mcmc[id] = {}
+                 
+        with open(mcmcdir+'thread_0/state.txt','r') as statefile:
+            mcmc[id]['state'] = eval(statefile.read())
+                 
+        chainlist = glob.glob(thread+'/Chain_0/*')
+        for trace in chainlist:
+            traceid = string.rsplit(trace, '/')[-1][:-4]
+            mcmc[id][traceid] ={}
+            mcmc[id][traceid]['data'] = np.loadtxt(trace)
+            mcmc[id][traceid]['stats'] = {}
+            mcmc[id][traceid]['stats'][0] = {}
+            mcmc[id][traceid]['stats'][0]['sigma'] = np.std(mcmc[id][traceid]['data'])
+            mcmc[id][traceid]['stats'][0]['mean'] = np.mean(mcmc[id][traceid]['data'])
+#                 print id, traceid, 'mean: ', np.mean(mcmc[id][traceid]['data'])
+#                 print id, traceid, 'std: ', np.std(mcmc[id][traceid]['data'])
+
+                
+        
+    #     print mcmc.keys()
+    params_mcmc = mcmc[0]['state']['stochastics'].keys()
+    params_mcmc[1:] = np.sort(params_mcmc[1:])
+    
+    fig_mcmc = plot_posteriors(mcmc,n_params,params_mcmc,parameters,plot_contour=plot_contour,alpha=0.05)
+
+    if save2pdf:
+            filename = os.path.join(out_path, 'mcmc_posteriors.pdf')
+            fig_mcmc.savefig(filename)
+            logging.info('Plot saved in %s' % filename)
+
+
+
+def _plot_mcmc_results(DATA, parameters=False, save2pdf=False, out_path=None):
     #routine plotting MCMC posterior distributions and marginals
     # n_params = len(parameters)
 
@@ -122,21 +162,31 @@ def plot_mcmc_results(DATA, parameters=False, save2pdf=False, out_path=None):
             ax = pl.subplot(n_params, n_params, n_params * j + i + 1)
             ax.ticklabel_format(style='sci')
             pl.plot(DATA.trace(names[i])[:],DATA.trace(names[j])[:],'.',color='k')
-            pl.xlabel(plotnames[i])
-            pl.ylabel(plotnames[j])
+            pl.xlabel(parameters[i])
+            pl.ylabel(parameters[j])
             for tick in ax.xaxis.get_major_ticks():
                     tick.label.set_rotation(-30)
 
     if save2pdf:
-            filename = os.path.join(self.params.out_path, 'mcmc_posteriors.pdf')
+            filename = os.path.join(out_path, 'mcmc_posteriors.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
 
+<<<<<<< HEAD
 def plot_posteriors(data,n_params,params,display_params,plot_contour):
 
     global scale_pow
 
+=======
+
+
+
+
+
+
+def plot_posteriors(data,n_params,params,display_params,plot_contour,alpha=0.05):
+>>>>>>> a46a742a31aa51622acc651ab8c1217b6f035c3f
     fig = pl.figure(figsize=(5*n_params, 5*n_params))
 #     pl.title('Nested posteriors')
     seq = 0
@@ -150,28 +200,48 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
     #     nested_plot.plot_marginal(i, with_ellipses=True, with_points=True, use_log_values=False, grid_points=50)
         if i == 0:
             pl.ylabel("Prob. density",fontsize=20)
-        pl.xlabel(display_params[i],fontsize=20)
+        pl.xlabel(display_params[i],x=0.6, ha='right', fontsize=20)
         globalxlims= ax.get_xlim()
 #         print globalxlims
-
-
-        #scaling axis labels
-    #     ax.xaxis.get_major_formatter().set_powerlimits((0, 100))
+       
+        
+        #scaling axis labels @todo labels can be improved but works now at least
+        pl.rc('font', size=20)
+        SciFormatter = ScalarFormatter(useMathText=True,useOffset=True,useLocale=True)
+#         SciFormatter.set_scientific(True)
+        SciFormatter.set_powerlimits((-1, 4))
+        ax.get_xaxis().set_major_formatter(SciFormatter)
+        ax.get_xaxis().get_offset_text().set_x(0.9)
+#         ax.set_xlabel('{0} ({1})'.format(ax.get_xlabel(), ax.get_xaxis().get_offset_text().get_text()))
+        
+#         print ax.xaxis.get_offset_text().get_text()
+        
+#         print SciFormatter.offset
+        
     #     ax.ticklabel_format(style='sci')
-    #     print np.int(np.round(np.log10(mcmc[0][params[i]][0])))
+    #     print np.int(np.round(np.log10(mcmc[0][params[i]][0])))   
     #     print nested[0][params[i]][0]
 #        print np.log10(data[0][params[i]]['data'][0])
-        scale_tmp = np.round(np.log10(data[0][params[i]]['data'][0]))
-        if np.isfinite(scale_tmp):
-            scale_pow = np.int(scale_tmp)
-        else:
-            scale_pow = 0.0
-    #     print scale_pow
 
+<<<<<<< HEAD
         if scale_pow < 0.0:
 
             ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
             ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
+=======
+
+#         DEPRECIATED CODE
+#         scale_tmp = np.round(np.log10(data[0][params[i]]['data'][0]))
+#         if np.isfinite(scale_tmp):
+#             scale_pow = np.int(scale_tmp) 
+#         else:
+#             scale_pow = 0.0
+#     #     print scale_pow
+#         
+#         if scale_pow < 0.0:
+#             ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
+#             ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
+>>>>>>> a46a742a31aa51622acc651ab8c1217b6f035c3f
 
 #             ax.set_xlabel(params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
 
@@ -209,7 +279,7 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
 #             ax2.annotate('i ='+str(i)+' j ='+str(j)+' n ='+str(n_params * j + i + 1)+' s ='+str(seq),xy=(0.7,0.1),xycoords='axes fraction',
 #                         horizontalalignment='center', verticalalignment='center')
             ax2.ticklabel_format(style='sci')
-            plot_2Ddistribution(ax2,data, 0,params[i],params[j],suppressAxes=True,confidence=plot_contour)
+            plot_2Ddistribution(ax2,data, 0,params[i],params[j],suppressAxes=True,confidence=plot_contour,alpha=alpha)
     #         nested_plot.plot_conditional(i, j,with_ellipses=False, with_points=True, grid_points=50)
             pl.subplots_adjust(hspace=0.0,wspace=0.0)
             ax2.set_xlim(globalxlims)
@@ -232,7 +302,7 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour):
 
 
 
-def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppressAxes=False):
+def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppressAxes=False,alpha=0.05):
 
 #     std1 = data[0][varname0]['sigma']
 #     mean1 = data[0][varname0]['mean']
@@ -240,7 +310,7 @@ def plot_2Ddistribution(axis,data,thread,varname0,varname,confidence=False,suppr
 #     mean2 = data[0][varname]['mean']
 
     #plot 2D distributions
-    axis.plot(data[thread][varname0]['data'],data[0][varname]['data'],'k.',alpha=0.05)
+    axis.plot(data[thread][varname0]['data'],data[0][varname]['data'],'k.',alpha=alpha)
 
 
 
@@ -297,7 +367,7 @@ def plot_1Dposterior(axis,data,varname,confidence):
             axis.axvline(x=mean1,linestyle='--',color='red')
     return axis
 
-
+#@todo the plot label bug must be somewhere around here
 def exp_formatter_fun(x, p):
 
     global scale_pow

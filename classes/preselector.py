@@ -24,11 +24,11 @@
 from base import base
 import numpy as np
 import pylab as pl
-import gzip,os
+import gzip,os, copy
 import cPickle as pickle
-from copy import deepcopy
-import library_preselector
-from library_preselector import *
+# from copy import deepcopy
+import library_preselector as lib_pre
+# from library_preselector import *
 import scipy.stats.stats as st
 import logging
 
@@ -36,13 +36,13 @@ class preselector(base):
 
     def __init__(self, model_object, data=None, params=None):
 
-        logging.info('Initialising preselector object')
+        logging.info('Initialising Marple object')
 
 
         if params:
             self.params = params
         else:
-            self.params = data.params
+            self.params = model_object.params
 
         if data:
             self.data = data
@@ -56,7 +56,7 @@ class preselector(base):
         self.set_model(model_object)
 
         #reading in spectrum data to be fitted
-        self.spectrum = data.spectrum
+        self.spectrum = self.data.spectrum
         self.nwave = len(self.spectrum[:,0])
         self.wavegrid = self.spectrum[:,0]
 
@@ -118,11 +118,14 @@ class preselector(base):
         #doing the pre-processing
 #             print '1 done'
         if generateSpectra:
-            generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
+            lib_pre.generate_spectra_lib(self.params,self.params.in_abs_path,self.params.pre_speclib_path,
                                  MODEL=self.model_object,MIXING=self.params.pre_mixing_ratios)
+            self.params.console.setLevel(20)
 #             print '2 done'
         if generatePCA:
-            generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
+            self.params.console.setLevel(30)
+            lib_pre.generate_PCA_library(self.params,self.params.pre_speclib_path+'*',self.params.pre_pca_path)
+            self.params.console.setLevel(20)
 #             print '3 done'
 
 
@@ -135,14 +138,14 @@ class preselector(base):
             with gzip.open(PATH+'spec_pcalib.pkl.zip',mode='rb') as filehandle:
                 self.PCALIB = pickle.load(filehandle)
         except IOError:
-            print 'WARNING: cannot find spec_pcalib.pkl.zip in: ',PATH
+            logging.warning('WARNING: cannot find spec_pcalib.pkl.zip in: ',PATH)
             redo = raw_input('Try to generate library from scratch? (y/n) [n]: ')
             if redo == 'N' or redo == 'n' or redo == 'no' or redo == '':
                 exit()
             elif redo == 'Y' or redo == 'y' or redo == 'yes':
-                print 'generating library...'
+                logging.info('generating library...')
                 self.run_preprocess(convertLinelist=True,generateSpectra=True,generatePCA=True)
-                print 'loading library...'
+                logging.info('loading library...')
                 with gzip.open(PATH+'spec_pcalib.pkl.zip',mode='rb') as filehandle:
                     self.PCALIB = pickle.load(filehandle)
 
@@ -156,8 +159,14 @@ class preselector(base):
             interpc    = np.zeros((self.nwave,np.shape(normpc)[1]))
             for i in range(np.shape(normpc)[1]):
                 interpc[:,i] = np.interp(self.wavegrid,pcwavegrid,normpc[:,i])
+                
+                #applying a second normalisation to be within 0-1 of self.wavegrid range
+                interpc[:,i] = (interpc[:,i] - np.min(interpc[:,i])) / np.max((interpc[:,i] - np.min(interpc[:,i])))
+                
             self.PCALIB[molecule]['PCA']['norm_interp'] = interpc
-
+            
+            
+            
 
 
     def generate_mask(self,thres=0.5):
@@ -212,6 +221,8 @@ class preselector(base):
         data = self.spectrum[:,1]
         datanorm = data - np.min(data)
         datanorm /= np.max(datanorm)
+        errnorm = self.spectrum[:,2] * (datanorm / (data-np.min(data)))
+#         errnorm = errnorm[:-1]
 
 
         molkeys = self.PCALIB.keys()
@@ -223,33 +234,38 @@ class preselector(base):
             mask = self.PCALIB[molecule]['PCA']['interp_mask']
 
             datanorm_m = datanorm[mask]-np.mean(datanorm[mask])
-            # datanorm_m /= np.max(datanorm[mask])
+
             pc1 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,0] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0])
             pc2 = self.PCALIB[molecule]['PCA']['norm_interp'][mask,1] - np.mean(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1])
-            # pc2 /= np.max(pc2)
-            pc1_inv = (-1.0*(pc1-np.mean(pc1)))+np.mean(pc1)
-            pc2_inv = (-1.0*(pc2-np.mean(pc2)))+np.mean(pc2)
 
-#             eucdist = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])
-#             eucdist_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])
+            pc1_inv = (-1.0*(pc1-np.mean(pc1)))#+np.mean(pc1)
+            pc2_inv = (-1.0*(pc2-np.mean(pc2)))#+np.mean(pc2)
+
+
+            # calculating the euclidian distance between PC1/PC2 and normalised data 
             try:
-                eucdist_pc1 = np.sum(sqrt((datanorm_m-pc1)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist1 = np.abs((datanorm_m-pc1))
+                eucdist_pc1 = np.sum(dist1) /  float(len(datanorm)) #len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc1 = 1000
             try:
-                eucdist_pc2 = np.sum(sqrt((datanorm_m-pc2)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist2 = np.abs((datanorm_m-pc2))
+                eucdist_pc2 = np.sum(dist2)/  float(len(datanorm)) # len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc2 = 1000
                 
             try:
-                eucdist_pc1_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist3 = np.abs((datanorm_m-pc1_inv))
+                eucdist_pc1_inv = np.sum(dist3)/  float(len(datanorm)) #len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc1_inv = 1000
             try:
-                eucdist_pc2_inv = np.sum(sqrt((datanorm_m-pc2_inv)**2))/len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
+                dist4 = np.abs((datanorm_m-pc2_inv))
+                eucdist_pc2_inv = np.sum(dist4)/  float(len(datanorm)) #len(datanorm[mask])* (float(len(datanorm))/float(len(datanorm[mask])))
             except ZeroDivisionError:
                 eucdist_pc2_inv = 1000
                 
+            #checking for broken numbers
             if np.isnan(eucdist_pc1):
                 eucdist_pc1 = 1000
             if np.isnan(eucdist_pc1_inv):
@@ -259,39 +275,57 @@ class preselector(base):
             if np.isnan(eucdist_pc2_inv):
                 eucdist_pc2_inv = 1000
 
-            eucdist = [eucdist_pc1,eucdist_pc2]
-            eucdist_inv = [eucdist_pc1_inv, eucdist_pc2_inv]
+#             eucdist = [eucdist_pc1,eucdist_pc2] #include both principal components for correlation analysis
+            eucdist = [eucdist_pc1]  #only include the first PC
+#             eucdist_inv = [eucdist_pc1_inv, eucdist_pc2_inv] #include both PCs for correlation, flipped upside down
+            eucdist_inv = [eucdist_pc1_inv] #only include the first PC
             
-            print 'molecule ', molecule
-            print 'eucdist ',eucdist
-            print 'eucdist_inv ', eucdist_inv
+#             logging.info('Molecule: %s, eucdist: %d, inv_eucdist: %d' % (molecule,eucdist[0],eucdist_inv[0]))
+#             print 'molecule ', molecule
+#             print 'eucdist ',eucdist
+#             print 'eucdist_inv ', eucdist_inv
             
+            #calculating pearson correlation coefficients between PCs and data 
             corrcoeff_pc1 = st.pearsonr(datanorm_m,pc1)
             corrcoeff_pc2 = st.pearsonr(datanorm_m,pc2)
             
 
 
             self.PCALIB[molecule]['preselect']['pearson'] = corrcoeff_pc1
-            # self.PCALIB[molecule]['preselect']['euclid_dist'] = eucdist
+            self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
+            
+            #@todo the inverse correlation is now disabled. doesnt make too much sense for transmission but may need implementation for emission.
 #             if corrcoeff_pc1[0] <0.0:
-            if min(eucdist_inv) < min(eucdist):
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist_inv)
+# #             if min(eucdist_inv) < min(eucdist):
+#                 self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist_inv)
+# 
+#             else:
+#                 self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
+                
 
-            else:
-                self.PCALIB[molecule]['preselect']['euclid_dist'] = min(eucdist)
 
-
-
-            print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
+            logging.info('Molecule: {:10s}, corrcoeff: {:4g}, eucdist: {:4g}, inv_eucdist: {:4g}'.format(molecule,corrcoeff_pc1[0], np.min(eucdist),np.min(eucdist_inv)))
+            
+#             print molecule,': ',corrcoeff_pc1, '... ',eucdist,'... ',eucdist_inv
+            xnums = np.arange(len(datanorm_m))
+            xnums_pc1 = np.arange(len(pc1))
+  
 #             pl.figure(1)
-#             pl.plot(datanorm_m,'b')
-#             pl.plot(self.PCALIB[molecule]['PCA']['norm_interp'][mask,0],'r')
-#             pl.plot(pc2,'g')
-#             # pl.plot(pc2_inv,'y')
-#             #
+#             pl.plot(xnums,datanorm_m,'b')
+# #             pl.errorbar(xnums,datanorm_m,errnorm[:-1])
+#             pl.plot(xnums_pc1,pc1,'r')
+#             pl.plot(xnums_pc1,pc2,'g')
+            
+#             
 #             pl.figure(2)
-#             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
-            # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
+#             pl.plot(self.PCALIB[molecule]['wavegrid'],self.PCALIB[molecule]['PCA']['norm'][:,0],'r')
+#             pl.plot(self.PCALIB[molecule]['wavegrid'],self.PCALIB[molecule]['PCA']['norm'][:,1],'g')
+#             pl.xlim([self.wavegrid[0], self.wavegrid[-1]])
+# # #             # pl.plot(pc2_inv,'y')
+# # #             #
+# # #             pl.figure(2)
+# # #             pl.hist(sqrt((datanorm_m-pc2)**2)/len(datanorm[mask]),100)
+# #             # # # pl.scatter(self.PCALIB[molecule]['PCA']['norm_interp'][mask,1],(sqrt((datanorm[mask]-self.PCALIB[molecule]['PCA']['norm_interp'][mask,1]))**2))
 #             pl.show()
 
 
@@ -300,6 +334,7 @@ class preselector(base):
         molkeys = self.PCALIB.keys()
         distance = []
         for molecule in molkeys:
+            print molecule, self.PCALIB[molecule]['preselect']['euclid_dist']
             distance.append(self.PCALIB[molecule]['preselect']['euclid_dist'])
 
         idx = np.argsort(distance)
@@ -307,12 +342,14 @@ class preselector(base):
         diff = 0
         diffidx = 0
         sortdist = np.asarray(distance)[idx]
-        for i in range(len(sortdist)-2):
-            if (sortdist[i+2]-sortdist[i+1]) > diff:
-                diff = (sortdist[i+2]-sortdist[i+1])
+        for i in range(len(sortdist)-1):
+            if (sortdist[i+1]-sortdist[i]) > diff:
+                diff = (sortdist[i+1]-sortdist[i])
                 diffidx = i
 
+
         self.mol_rank = np.asarray(molkeys)[idx]
+        print self.mol_rank
         self.mol_dist = sortdist
         if diffidx < 2:
             self.mol_idx = 4
@@ -332,14 +369,14 @@ class preselector(base):
         #
 #         pl.figure(3)
 #         pl.plot(np.asarray(distance)[idx])
-#         show()
+#         pl.show()
 
 
     def calc_astroparams(self):
     #calculating planetary parameters from stellar and orbital parameters
 
         #calculating mean planetary surface temperature
-        self.Tplanet = self.params.star_temp * sqrt(self.params.star_radius / (
+        self.Tplanet = self.params.star_temp * np.sqrt(self.params.star_radius / (
             2. * self.params.planet_sma)) * (1 - self.params.planet_albedo) ** (1. / 4.)
         # self.Tplanet = 1400
 
@@ -375,24 +412,26 @@ class preselector(base):
 
         # @todo looks like only important parameter that changes is params.planet_molec
 
-        logging.info('Update parameters object: %s' % preob.molselected)
+#         logging.info('Update parameters object: %s' % self.molselected)
 
-        newparams = deepcopy(self.params)
+        
+#         newparams = copy.deppcopy(self.params) #@todo due to the logging in the parameter class we cannot copy it anymore. 
+        newparams = self.params #@todo setting parameters directly in original instance. may not matter or be a very bad idea. Ideas?
 
         #setting useATM_file to False
-        newparams.in_use_ATMfile = False # @really needed?
+        newparams.in_use_ATMfile = False # @todo really needed? - IPW: yes i think so 
 
         #setting planetary temperature
 #         newparams.planet_temp = self.Tplanet
 
         #setting number of gases/molecules
-        newparams.tp_num_gas = self.numgas # @todo deprecated!
+        newparams.ngas = self.numgas # @todo deprecated!
 
         #setting molecules list
         newparams.planet_molec = self.molselected
 
         #setting new abs_files path
-        newparams.in_abs_path = self.params.in_abs_path # @todo why? Does it change?
+        newparams.in_abs_path = self.params.in_abs_path # @todo why? Does it change? -IPW: it used to but not any more so yes... useless
 
 #         #determining correct abs files to be read in
 #         #reading available cross section lists in PATH

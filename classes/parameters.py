@@ -53,11 +53,11 @@ class parameters(base):
         if (MPIrank == 0 and not self.verbose_all_threads) or self.verbose_all_threads:
 
             # define a Handler which writes INFO messages or higher to the sys.stderr
-            console = logging.StreamHandler()
-            console.setLevel(logging.DEBUG)
+            self.console = logging.StreamHandler()
+            self.console.setLevel(logging.DEBUG)
             formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
-            console.setFormatter(formatter)
-            logging.getLogger('').addHandler(console)
+            self.console.setFormatter(formatter)
+            logging.getLogger('').addHandler(self.console)
             logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
 
         logging.info('Initialise parameters object')
