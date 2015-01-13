@@ -48,13 +48,13 @@ except:
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
+import parameters,emission,transmission,output,fitting,atmosphere,data,preselector
 from parameters import *
 from emission import *
 from transmission import *
 from output import *
 from fitting import *
-from tp_profile import *
+from atmosphere import *
 from data import *
 from preselector import *
 
@@ -78,56 +78,38 @@ parser.add_option('-v', '--verbose',
 )
 options, remainder = parser.parse_args()
 
-#Initialise parameters object
-params = parameters(options.param_filename)
-
-
 #####################################################################
+
+#initialising parameters object
+params = parameters(options.param_filename)
 
 #initialising data object
 dataob = data(params)
 
-#adding some molecules to the atmosphere
-dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
-
-
 #initialising TP profile object
-profileob = tp_profile(dataob)
+atmosphereob = atmosphere(dataob)
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
-    transob = transmission(profileob)
+    forwardmodelob = transmission(profileob)
+elif params.gen_type == 'emission':
+    forwardmodelob = emission(profileob)
 
-    if params.trans_cpp:
-        MODEL = transob.cpath_integral()  # computing transmission
-    else:
-        MODEL = transob.path_integral()  # computing transmission
-        
-#initialising transmission radiative transfer code object
-if params.gen_type == 'emission':
-    emisob = emission(profileob)
-    
-    MODEL = emisob.path_integral()  # computing transmission        
-    
-# # 
-OUT = np.zeros((len(dataob.specgrid),2))
-OUT[:,0] = dataob.specgrid
-OUT[:,1] = MODEL
-# OUT[:,2] += 1e-5 #adding errorbars. can be commented
+out = np.zeros((len(dataob.specgrid),2))
+out[:,0] = dataob.specgrid
+out[:,1] = forwardmodelob.model()
+# out[:,2] += 1e-5 #adding errorbars. can be commented
 
-if params.gen_type == 'emission':
-    outputob = output(forwardmodel=emisob,data=dataob,profile=profileob,params=params) #initiating output object with fitted data from fitting class
-if params.gen_type == 'transmission':
-    outputob = output(forwardmodel=transob,data=dataob,profile=profileob,params=params) #initiating output object with fitted data from fitting class
-#
+#initiating output object with fitted data from fitting class
+outputob = output(forwardmodel=forwardmodelob, data=dataob, atmosphere=atmosphereob, params=params)
+
+
 #plotting fits and data
-outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only
-
+outputob.plot_manual(out, save2pdf=params.out_save_plots)
 
 if params.out_dump_internal:
-    outputob.save_model(modelout=OUT, modelsaveas=params.out_internal_name)       #saving models to ascii
-
+    #saving models to ascii
+    outputob.save_model(modelout=out, modelsaveas=params.out_internal_name)
 
 
 #end of main code

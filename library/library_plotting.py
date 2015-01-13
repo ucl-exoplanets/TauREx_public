@@ -99,18 +99,22 @@ def _plot_multinest_results(DATA, parameters,  save2pdf=False, out_path=None):
 
 def plot_mcmc_results(mcmcdir, parameters,  save2pdf=False, out_path=None, plot_contour=True):
     #routine plotting MCMC chains. @todo needs to be checekd for bugs
-    
+
     n_params = len(parameters) #number of parameters
     
     mcmc = {}
-    for thread in glob.glob(mcmcdir+'*'):
+    for thread in glob.glob(os.path.join(mcmcdir, '*')):
+        print thread
+        print thread[-1]
+        print
+
         id = int(thread[-1])
         mcmc[id] = {}
                  
-        with open(mcmcdir+'thread_0/state.txt','r') as statefile:
+        with open(os.path.join(mcmcdir, 'thread_0', 'state.txt'),'r') as statefile:
             mcmc[id]['state'] = eval(statefile.read())
                  
-        chainlist = glob.glob(thread+'/Chain_0/*')
+        chainlist = glob.glob(os.path.join(thread, 'Chain_0', '*'))
         for trace in chainlist:
             traceid = string.rsplit(trace, '/')[-1][:-4]
             mcmc[id][traceid] ={}
@@ -173,20 +177,8 @@ def _plot_mcmc_results(DATA, parameters=False, save2pdf=False, out_path=None):
             logging.info('Plot saved in %s' % filename)
 
 
-<<<<<<< HEAD
-def plot_posteriors(data,n_params,params,display_params,plot_contour):
-
-    global scale_pow
-
-=======
-
-
-
-
-
-
 def plot_posteriors(data,n_params,params,display_params,plot_contour,alpha=0.05):
->>>>>>> a46a742a31aa51622acc651ab8c1217b6f035c3f
+
     fig = pl.figure(figsize=(5*n_params, 5*n_params))
 #     pl.title('Nested posteriors')
     seq = 0
@@ -223,12 +215,9 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour,alpha=0.05)
     #     print nested[0][params[i]][0]
 #        print np.log10(data[0][params[i]]['data'][0])
 
-<<<<<<< HEAD
-        if scale_pow < 0.0:
-
-            ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
-            ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
-=======
+#        if scale_pow < 0.0:
+#            ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
+#            ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
 
 #         DEPRECIATED CODE
 #         scale_tmp = np.round(np.log10(data[0][params[i]]['data'][0]))
@@ -241,7 +230,6 @@ def plot_posteriors(data,n_params,params,display_params,plot_contour,alpha=0.05)
 #         if scale_pow < 0.0:
 #             ax.get_xaxis().set_major_formatter(FuncFormatter(exp_formatter_fun))
 #             ax.set_xlabel(display_params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
->>>>>>> a46a742a31aa51622acc651ab8c1217b6f035c3f
 
 #             ax.set_xlabel(params[i]  + ' (x $10^{{{0:d}}})$'.format(scale_pow))
 

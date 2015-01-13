@@ -22,15 +22,15 @@ from base import base
 import numpy as np
 import os
 import pylab as py
-import emission, transmission, tp_profile, library_plotting
+import emission, transmission, atmosphere, library_plotting
 from emission import *
 from transmission import *
-from tp_profile import *
+from atmosphere import *
 from library_plotting import *
 
 
 class output(base):
-    def __init__(self, fitting=None, forwardmodel=None, data=None, profile=None, params=None):
+    def __init__(self, fitting, forwardmodel=None, data=None, atmosphere=None, params=None):
          
         logging.info('Initialise object output')
 
@@ -44,27 +44,30 @@ class output(base):
         else:
             self.data = fitting.data    # get data object from profile
 
-        if profile is not None:
-            self.profile = profile
+        if atmosphere is not None:
+            self.atmosphere = atmosphere
         else:
-            self.profile = fitting.profile    # get data object from profile
+            self.atmosphere = fitting.atmosphere    # get data object from profile
 
-#         if fitting is not None:
+        if forwardmodel is not None:
+            self.forwardmodel = forwardmodel
+        else:
+            self.forwardmodel = fitting.forwardmodel    # get data object from profile
+
         self.fitting = fitting
-        #self.profile  = tp_profile(params, data) #loading profile class (not needed, profile object is in fitting object)
 
         #inheriting emission/transmission model from fitting object if loaded
         # 'fit' can either be the fitting instance or the emission/transmission instances
+        # if fitting is not None:
+        #     if fitting.__ID__ == 'fitting':
+        #         self.fitting.model        = fitting.model #directly inheriting model instance from fitting instance
+        #         self.__MODEL_ID__ = fitting.__MODEL_ID__
+        # elif forwardmodel is not None:
+        #     self.set_model(forwardmodel) #abstracting emission/transmission model
 
-        if fitting is not None:
-            if fitting.__ID__ == 'fitting':
-                self.model        = fitting.model #directly inheriting model instance from fitting instance
-                self.__MODEL_ID__ = fitting.__MODEL_ID__
-        elif forwardmodel is not None:
-            self.set_model(forwardmodel) #abstracting emission/transmission model
+        self.__MODEL_ID__ = type(self.forwardmodel).__name__
 
-
-        #dumping fitted paramter names to file and list. @todo Assuming only one temperature!!
+        #dumping fitted paramter names to file and list. @todo This assumes only one temperature! Careful with emission
         self.parameters = []
         with open(os.path.join(self.params.out_path, 'parameters.dat'), 'w') as parfile:
             for mol in self.params.planet_molec:
@@ -87,27 +90,27 @@ class output(base):
         # @todo Why reinterpolation to observed wavelengths?? We should probably bin to obs spectrum rather than interpolate?
 
         if self.MCMC:
-            # @todo how to manage MCMC outputs from multiple threads? All results are in fitting.MCMC_OUT[MPIRank]
-            self.spec_mcmc = self.model(rho=self.profile.get_rho(T=fitting.MCMC_T_mean),
-                                        X=fitting.MCMC_X_mean,
-                                        temperature=fitting.MCMC_T_mean)
+            # @todo This is only for thread 0. Maybe output results of all chains, stored in fitting.MCMC_OUT[MPIRank]
+            self.spec_mcmc = self.fitting.model(rho=self.atmosphere.get_rho(T=fitting.MCMC_T_mean),
+                                                X=fitting.MCMC_X_mean,
+                                                temperature=fitting.MCMC_T_mean)
             self.spec_mcmc = np.interp(self.data.wavegrid, self.data.specgrid, self.spec_mcmc)
 
         if self.NEST:
             # separate solutions (modes) have different spectra. These are stored in self.spec_nest[i],
             # for the i-th solutions
-            self.spec_nest = [self.model(rho=self.profile.get_rho(T=fitting.NEST_T_mean[i]),
-                                         X=fitting.NEST_X_mean[i],
-                                         temperature=fitting.NEST_T_mean[i]) \
+            self.spec_nest = [self.fitting.model(rho=self.atmosphere.get_rho(T=fitting.NEST_T_mean[i]),
+                                                 X=fitting.NEST_X_mean[i],
+                                                 temperature=fitting.NEST_T_mean[i]) \
                               for i in range(fitting.NEST_modes)]
 
             self.spec_nest = [np.interp(self.data.wavegrid, self.data.specgrid, self.spec_nest[i]) \
                                         for i in range(fitting.NEST_modes)]
 
         if self.DOWN:
-            self.spec_down = self.model(rho=self.profile.get_rho(T=fitting.DOWNHILL_T_mean),
-                                        X=fitting.DOWNHILL_X_mean,
-                                        temperature=fitting.DOWNHILL_T_mean)
+            self.spec_down = self.fitting.model(rho=self.atmosphere.get_rho(T=fitting.DOWNHILL_T_mean),
+                                                X=fitting.DOWNHILL_X_mean,
+                                                temperature=fitting.DOWNHILL_T_mean)
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
 
     #class methods
@@ -277,6 +280,8 @@ class output(base):
                 np.savetxt(filename, out)
 
         if self.NEST and ascii:
+            logging.info('MultiNest detected %i different modes. '
+                         'Saving one model spectrum for each solution' % self.fitting.NEST_modes)
             for i in range(self.fitting.NEST_modes):
                 out[:,1] = np.transpose(self.spec_nest[i])
                 filename = '%s_spectrum_nest_%i.dat' % (basename, i)

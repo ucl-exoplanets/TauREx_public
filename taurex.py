@@ -102,13 +102,16 @@ except:
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
+import parameters, emission, transmission, output, fitting, atmosphere, data, preselector
+
+
+
 from parameters import *
 from emission import *
 from transmission import *
 from output import *
 from fitting import *
-from tp_profile import *
+from atmosphere import *
 from data import *
 from preselector import *
 
@@ -150,21 +153,21 @@ else:
 dataob = data(params)
 
 #adding bulk composition to the atmosphere @todo move to better place
-dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
+#dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+#dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
 
 #initialising TP profile instance
-profileob = tp_profile(dataob)
+atmosphereob = atmosphere(dataob)
 
 #initiating and running preselector instance
 if params.pre_run:
 
     if params.fit_transmission:
-        model_object = transmission(profileob)
+        model_object = transmission(atmosphereob)
         preob = preselector(model_object)
 
     elif params.fit_emission:
-        model_object = emission(profileob)
+        model_object = emission(atmosphereob)
         preob = preselector(model_object)
 
     preob.run()
@@ -172,57 +175,45 @@ if params.pre_run:
     logging.info('Updating parameters object values')
     updated_params = preob.update_params()
 
-    #dataob.reset(updated_params) # @todo check! tp_profile needs to be updated as well
-
-    # here we need to reinitialise the dataob and tp_profile objects:
-    # @todo However, we could move everything related to the atmospheric composition to tp_profile.
-    logging.info('Reinitialising data and tp_profile objects')
+    logging.info('Reinitialising data and atmosphereob objects')
     dataob = data(updated_params)
     #adding bulk composition to the atmosphere @todo move to better place
     dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
     dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
     
-    profileob = tp_profile(dataob)
+    atmosphereob = atmosphere(dataob)
 
 
 #initialising transmission radiative transfer code instance
 if params.fit_transmission:
-    transob = transmission(profileob)
+    forwardmodelob = transmission(atmosphereob)
 
 #initialising emission radiative transfer code instance
 if params.fit_emission:
-    emissob = emission(profileob)
-#     emissob.path_integral()
-
-# exit()
+    forwardmodelob = emission(atmosphereob)
 
 #initialising fitting object  @todo here we should actually have the transmission or emission objects as input. Then get rid of self.set_model()
-fitob = fitting(profileob)
-
-if params.fit_transmission:
-    fitob.set_model(transob) #loading transmission model into fitting object
-elif params.fit_emission:
-    fitob.set_model(emissob) #loading emission model into fitting object
+fittingob = fitting(forwardmodelob)
 
 #fit data
 if params.downhill_run:
     # @todo should we run the downhill fit only on the first thread? Or maybe use different starting points
-    fitob.downhill_fit()    #simplex downhill fit
+    fittingob.downhill_fit()    #simplex downhill fit
 
 if params.mcmc_run and pymc_import:
-    fitob.mcmc_fit() # MCMC fit
+    fittingob.mcmc_fit() # MCMC fit
     MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 if params.nest_run and multinest_import:
-    fitob.multinest_fit() # Nested sampling fit
+    fittingob.multinest_fit() # Nested sampling fit
 
 #forcing slave processes to exit at this stage
 if MPI.COMM_WORLD.Get_rank() != 0:
-#     MPI.MPI_Finalize()
+    #MPI.MPI_Finalize()
     exit()
 
 #initiating output instance with fitted data from fitting class
-outputob = output(fitob)
+outputob = output(fittingob)
 
 #plotting fits and data
 logging.info('Plotting and saving results')
@@ -240,8 +231,6 @@ outputob.save_model()       #saving models to ascii
 
 #end of main code
 #####################################################################
-
-
 
 ####profiling code
 # pr.disable()

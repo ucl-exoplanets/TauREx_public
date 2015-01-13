@@ -139,7 +139,6 @@ radius = 0.781
 temp   = 4900
 
 
-
 [Planet]
 #defines planetary specific (fixed or starting) parameters:
 
@@ -182,6 +181,9 @@ cld_pressure = 1.0e-3, 0.1
 #parameter not in use but placeholder for implementation if needed
 cld_file = Input/cloud1.cld
 
+# H2 and He fractions. Used to calculate Raylaigh scattering
+H2_fraction = 0.15
+He_fraction = 0.85
 
 [T-P profile]
 #let mixing ratios and T-P profile vary
