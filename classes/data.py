@@ -129,7 +129,7 @@ class data(base):
 
         #reading in Phoenix stellar model library (if emission is calculated only)
         if self.params.gen_type == 'emission' or self.params.fit_emission:
-            self.F_star = self.get_star_SED()
+            self.F_star = self.get_star_SED() #@todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment 
 
     #class functions
 
@@ -264,7 +264,10 @@ class data(base):
                 logging.warning('WARNING: Stellar temp. in .par file exceeds range %.1f - %.1f K. '
                                 'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
             self.star_blackbody = True
-            SED = libem.black_body(self.specgrid,self.params.star_temp)
+            SED = libem.black_body(self.specgrid,self.params.star_temp) #@todo bug here! not multiplied by size of star 4piRs^2
+#             SED *= self.params.star_radius**2 * np.pi * 4.
+
+#             SED *= self.params.star_radius**2 * np.pi * 4.
         else:
             # finding closest match to stellar temperature in parameter file
             [tmpselect, idx] = libgen.find_nearest(tmpind, self.params.star_temp)
@@ -275,7 +278,8 @@ class data(base):
                     self.SED_filename = file
 
             #reading in correct file and interpolating it onto self.specgrid
-            SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
+            SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#') #@todo bug here! not multiplied by size of star 4piRs^2 and units are wrong as well
+            SED_raw *= 10.
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         return SED
 
