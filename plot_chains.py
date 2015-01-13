@@ -352,6 +352,8 @@ def main(argv):
                 mcmc[id][traceid]['stats'] = {}
                 mcmc[id][traceid]['stats'][0] = {}
                 mcmc[id][traceid]['stats'][0]['sigma'] = np.std(mcmc[id][traceid]['data'])
+#                 n,bins,patches = pl.hist(mcmc[id][traceid]['data'],bins=BINS,normed=True)
+#                 mcmc[id][traceid]['stats'][0]['mean'] = np.argmax(n)
                 mcmc[id][traceid]['stats'][0]['mean'] = np.mean(mcmc[id][traceid]['data'])
 #                 print id, traceid, 'mean: ', np.mean(mcmc[id][traceid]['data'])
 #                 print id, traceid, 'std: ', np.std(mcmc[id][traceid]['data'])
