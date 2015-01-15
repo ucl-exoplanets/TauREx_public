@@ -30,24 +30,33 @@ from library_plotting import *
 
 
 class output(base):
-    def __init__(self, fitting, forwardmodel=None, data=None, atmosphere=None, params=None):
+    def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None):
          
         logging.info('Initialise object output')
 
         if params is not None:
             self.params = params
         else:
-            self.params = fitting.params #get params object from profile
+            if fitting:
+                self.params = fitting.params #get params object from profile
+            elif forwardmodel:
+                self.params = forwardmodel.params
 
         if data is not None:
             self.data = data
         else:
-            self.data = fitting.data    # get data object from profile
+            if fitting:
+                self.data = fitting.data    # get data object from profile
+            elif forwardmodel:
+                self.data = forwardmodel.data
 
         if atmosphere is not None:
             self.atmosphere = atmosphere
         else:
-            self.atmosphere = fitting.atmosphere    # get data object from profile
+            if fitting:
+                self.atmosphere = fitting.atmosphere    # get data object from profile
+            elif forwardmodel:
+                self.atmosphere = forwardmodel.atmosphere
 
         if forwardmodel is not None:
             self.forwardmodel = forwardmodel

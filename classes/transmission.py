@@ -95,6 +95,9 @@ class transmission(base):
         if self.params.trans_cpp:
             self.cpathlib = C.CDLL('./library/pathintegral.so', mode=C.RTLD_GLOBAL)
 
+        # set forward model function
+        self.model = self.cpath_integral
+
     #class methods
 
     def get_path_length(self):

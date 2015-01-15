@@ -62,10 +62,14 @@ class atmosphere(base):
             self.X = np.zeros((self.ngas,self.nlayers)) + (1e-5) #setting up initial mixing ratios
             self.pta, self.X = self.readATMfile()
 
+
+
+
         self.P = self.pta[:,0] # pressure array
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.T = self.pta[:,1] # temperature array
         self.z = self.pta[:,2] # altitude array
+        self.rho = self.get_rho(T=self.T, P=self.P)
 
         self.num_T_params = 3 #number of free temperature parameters @todo what is it ?
 

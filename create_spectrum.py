@@ -91,9 +91,9 @@ atmosphereob = atmosphere(dataob)
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
-    forwardmodelob = transmission(profileob)
+    forwardmodelob = transmission(atmosphereob)
 elif params.gen_type == 'emission':
-    forwardmodelob = emission(profileob)
+    forwardmodelob = emission(atmosphereob)
 
 out = np.zeros((len(dataob.specgrid),2))
 out[:,0] = dataob.specgrid
@@ -101,7 +101,7 @@ out[:,1] = forwardmodelob.model()
 # out[:,2] += 1e-5 #adding errorbars. can be commented
 
 #initiating output object with fitted data from fitting class
-outputob = output(forwardmodel=forwardmodelob, data=dataob, atmosphere=atmosphereob, params=params)
+outputob = output(forwardmodel=forwardmodelob)
 
 
 #plotting fits and data

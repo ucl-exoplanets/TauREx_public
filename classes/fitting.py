@@ -91,12 +91,6 @@ class fitting(base):
                     logging.info('Create folder %s' % f)
                     os.mkdir(f)
 
-        # loading transmission/emission model
-        if self.forwardmodel_type == 'transmission':
-            self.model = self.forwardmodel.cpath_integral
-        elif self.forwardmodel_type == 'emission':
-            self.model = self.forwardmodel.path_integral
-
         #getting parameter grid with initial estimates
         self.fit_params_init = self.atmosphere.fit_params
         self.fit_index = self.atmosphere.fit_index
@@ -123,7 +117,7 @@ class fitting(base):
         rho = self.atmosphere.get_rho(T=T, P=P)
 
         #the temperature parameter should work out of the box but check for transmission again
-        model = self.model(rho=rho, X=X, temperature=T)
+        model = self.forwardmodel.model(rho=rho, X=X, temperature=T)
 
         #binning internal model
         model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
