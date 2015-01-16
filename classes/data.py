@@ -218,7 +218,6 @@ class data(base):
 
             #reading in correct file and interpolating it onto self.specgrid
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#') #@todo bug here! not multiplied by size of star 4piRs^2 and units are wrong as well
-            SED_raw *= 10.
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         return SED
 
