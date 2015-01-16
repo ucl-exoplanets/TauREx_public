@@ -184,6 +184,7 @@ cld_file = Input/cloud1.cld
 # H2 and He fractions. Used to calculate Raylaigh scattering
 H2_fraction = 0.15
 He_fraction = 0.85
+N2_fraction = 0.
 
 [T-P profile]
 #let mixing ratios and T-P profile vary
