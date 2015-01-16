@@ -48,28 +48,33 @@ class atmosphere(base):
         self.scaleheight = self.get_scaleheight(self.params.planet_temp, data.planet_grav, self.params.planet_mu)
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
-        if self.params.tp_var_atm:
-            # atmospheric profile is fitted
-            self.nlayers = int(self.params.tp_atm_levels)
-            self.ngas = int(len(self.params.planet_molec))
-            self.X = self.set_mixing_ratios() # mixing ratios are read from parameter file or set to 1e-4 if preselector = True
-            self.pta = self.setup_pta_grid()
-
-        elif self.params.in_use_ATMfile:
+        if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
             # reading atmospheric profile from .atm file
-            self.nlayers = len(self.pta[:,0])
-            self.ngas = len(self.X[:,0])
-            self.X = np.zeros((self.ngas,self.nlayers)) + (1e-5) #setting up initial mixing ratios
-            self.pta, self.X = self.readATMfile()
+            self.pta      = self.data.pta
+            self.X        = self.data.X
+            self.nlayers  = self.data.nlayers
+            self.ngas     = self.data.ngas
+#             self.X        = np.zeros((self.ngas,self.nlayers)) + (1e-5) #setting up initial mixing ratios
+            
+        elif self.params.tp_var_atm:
+            # atmospheric profile is fitted
+            self.nlayers  = int(self.params.tp_atm_levels)
+            self.ngas     = int(len(self.params.planet_molec))
+            self.X        = self.set_mixing_ratios() # mixing ratios are read from parameter file or set to 1e-4 if preselector = True
+            self.pta      = self.setup_pta_grid()
 
 
 
-
-        self.P = self.pta[:,0] # pressure array
-        self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
-        self.T = self.pta[:,1] # temperature array
-        self.z = self.pta[:,2] # altitude array
-        self.rho = self.get_rho(T=self.T, P=self.P)
+        self.P          = self.pta[:,0] # pressure array
+        self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
+        self.T          = self.pta[:,1] # temperature array
+        self.z          = self.pta[:,2] # altitude array
+        self.rho        = self.get_rho(T=self.T, P=self.P)
+        self.sigma_dict = self.data.sigma_dict
+        if self.params.in_include_rad:
+            self.rad        = self.data.rad
+        if self.params.in_include_cia:
+            self.cia        = self.data.cia
 
         self.num_T_params = 3 #number of free temperature parameters @todo what is it ?
 
@@ -82,14 +87,7 @@ class atmosphere(base):
         if self.params.fit_transmission:
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
 
-        # reading in absorption coefficient data.
-        self.sigma_dict = self.build_sigma_dic(tempstep=self.params.in_tempres)
 
-        #reading in other files if specified in parameter file
-        if self.params.in_include_rad:
-            self.rad = self.data.readfile(self.params.in_rad_file, interpolate=True)
-        if self.params.in_include_cia:
-            self.cia = self.data.readfile(self.params.in_cia_file, interpolate=True)
 #
 #         self.fit_params[0] = 5e-6
 #         self.fit_params[1] = 2e-7
@@ -317,154 +315,10 @@ class atmosphere(base):
         return X
 
 
-    def readATMfile(self):
-    #reads in .atm file
-        try:
-            out = loadtxt(self.params.in_atm_file)
-        except ValueError:
-            out = loadtxt(self.params.in_atm_file,comments='*',skiprows=10)
-#         OUT[:,2] *= 1000. #converting from km to m
-
-        out = out[argsort(OUT[:,2]),:]
-
-        return out[:,0:3],transpose(out[:,3:])
 
 
-    def build_sigma_dic(self,tempstep=50):
-
-        #building temperature dependent sigma_array
-
-        mollist = self.params.planet_molec
-
-        tempmin = []
-        tempmax = []
-
-        moldict = {}
-
-        for molecule in mollist:
-
-            logging.info('Load sigma array for molecule %s' % molecule)
-
-            moldict[molecule] ={}
-
-            absfiles, templist = libgen.find_absfiles(self.params.in_abs_path,molecule)
-            tempmax.append(np.max(templist))
-            tempmin.append(np.min(templist))
-
-            sigtmp = self.readABSfiles(extfilelist=absfiles,
-                                       extpath=self.params.in_abs_path,
-                                       interpolate2grid=True,
-                                       outputwavegrid = False)
-            sigshape = np.shape(sigtmp)
-
-            moldict[molecule]['sigma'] = sigtmp
-            moldict[molecule]['templist'] = templist
-            moldict[molecule]['tempmin'] = tempmin
-            moldict[molecule]['tempmax'] = tempmax
-
-        #setting up new temperature grid
-        temp_totmin = np.max(tempmin)
-        temp_totmax = np.min(tempmax)
-        tempgrid = [i for i in range(int(temp_totmin),int(temp_totmax),int(tempstep))]
-        tempgrid.append(int(temp_totmax))
-        moldict['tempgrid'] = tempgrid
-
-        #interpolating absorption cross sections to new temperature grid
-        for molecule in mollist:
-            interpsigma = np.zeros((len(tempgrid),sigshape[1]))
-
-            for i in range(sigshape[1]):
-                interpsigma[:,i] = np.interp(tempgrid,moldict[molecule]['templist'],moldict[molecule]['sigma'][:,i]) #linear interpolation. to be changed with hill et al method
-            moldict[molecule]['interpsigma'] = interpsigma
-
-        #building final sigma_array dictionary
-        sigma_dict = {}
-        sigma_dict['tempgrid'] = tempgrid
-        for i in range(len(tempgrid)):
-            sigma_dict[tempgrid[i]] = {}
-
-            sigma_array = np.zeros((len(mollist),sigshape[1]))
-            j = 0
-            for molecule in mollist:
-                sigma_array[j,:] = moldict[molecule]['interpsigma'][i,:]
-                j += 1
-            sigma_dict[tempgrid[i]] = sigma_array
-
-        return sigma_dict
-
-    def readABSfiles(self,extfilelist=None, extpath= None,interpolate2grid=True,outputwavegrid=False):
-    #reading in all absorption coefficient files and interpolating them to wavelength grid
-    #
-    # if filename = None, the absorption coefficient files will be read from the parameter file
-    # if filename = [ascii list], absorption coefficient files will be read from user specified list
-    # if outputwavegrid = True, it takes the first column of the ABS file and outputs as separate wavelength grid
 
 
-        if extfilelist is None:
-            #reading in list of abs files from parameter file
-            if isinstance(self.params.in_abs_files,str):
-                absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
-                try:
-                    abslist = [absfiles.item()] #necessary for 0d numpy arrays
-                except ValueError:
-                    abslist = absfiles
-            else:
-                abslist = self.params.in_abs_files
-
-            #checking if number of gasses in parameters file is consistent with gass columns in atm file
-            if self.params.in_use_ATMfile and len(abslist) != self.ngas:
-                print len(abslist)
-                print self.ngas
-                raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
-                exit()
-
-            out, wave = self.__readABSfiles_sub(path=self.params.in_abs_path,filelist=abslist, interpolate2grid=interpolate2grid,num=self.ngas)
-
-        else:
-            out, wave = self.__readABSfiles_sub(path=extpath,filelist=extfilelist, interpolate2grid=interpolate2grid,num=len(extfilelist))
-
-        if outputwavegrid:
-            return out, wave
-        else:
-            return out
-
-
-    def __readABSfiles_sub(self, path, filelist, interpolate2grid,num):
-        if interpolate2grid:
-            out = np.zeros((num,self.data.nspecgrid))
-            wave = np.transpose(self.data.readfile(path+filelist[0], interpolate=True)[:,0])
-        else:
-            tmp = self.data.readfile(path+filelist[0], interpolate=False)
-            ABSsize = len(tmp[:,0])
-            out = np.zeros((num,ABSsize))
-            wave = np.transpose(tmp[:,0])
-
-        for i in range(num):
-            # print filelist[i]
-            out[i,:] = np.transpose(self.data.readfile(path+filelist[i], interpolate=interpolate2grid)[:,1])* 1e-4 #converting cm^2 to m^2
-
-        return out, wave
-
-
-    def set_ABSfile(self,path=None,filelist=None,interpolate = False,temperature=None):
-        # @todo This should appear in the Preselector! CHECK!
-
-        #manually overwrites absorption coefficients from new file
-        #input path needs to be given and list of filename strings
-        if path is None:
-            extpath = self.params.in_abs_path
-        if filelist is None:
-            raise IOError('No input ABS file specified')
-        if temperature is None:
-            temperature = self.params.planet_temp
-        sigma_array,self.specgrid = self.readABSfiles(extpath=path,
-                                                      extfilelist=filelist,
-                                                      interpolate2grid=interpolate,
-                                                      outputwavegrid=True)
-        self.sigma_dict = {}
-        self.sigma_dict['tempgrid'] = [int(temperature)]
-        self.sigma_dict[int(temperature)] = sigma_array
-        self.data.nspecgrid = len(self.specgrid)
 
 
 
