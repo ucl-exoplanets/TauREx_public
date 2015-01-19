@@ -178,8 +178,8 @@ if params.pre_run:
     logging.info('Reinitialising data and atmosphereob objects')
     dataob = data(updated_params)
     #adding bulk composition to the atmosphere @todo move to better place
-    dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-    dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
+#     dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+#     dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
     
     atmosphereob = atmosphere(dataob)
 
