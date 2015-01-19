@@ -29,7 +29,7 @@ else:
 
 class parameters(base):
 #instantiation
-    def __init__(self, parfile):
+    def __init__(self, parfile=None):
         '''
         a parameter file is parsed and initial parameter values are set.  
         to add a new parameter edit this file and the input .par file.
@@ -38,7 +38,9 @@ class parameters(base):
 
         #config file parser
         self.parser = SafeConfigParser()
-        self.parser.read(parfile)
+
+        if parfile:
+            self.parser.read(parfile)
 
         self.default_parser = SafeConfigParser()
         self.default_parser.read('Parfiles/default.par')
@@ -117,6 +119,7 @@ class parameters(base):
         self.planet_mixing         = self.getpar('Planet','mixing_ratios', 'list-float') #genfromtxt(StringIO(self.getpar('Planet','mixing_ratios')),delimiter = ',',dtype='str',autostrip=True)
         self.planet_H2_fraction    = self.getpar('Planet', 'H2_fraction', 'float')
         self.planet_He_fraction    = self.getpar('Planet', 'He_fraction', 'float')
+        self.planet_N2_fraction    = self.getpar('Planet', 'N2_fraction', 'float')
 
         try:
             self.in_include_cld        = self.getpar('Planet','include_cld', 'bool')
