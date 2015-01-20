@@ -121,6 +121,13 @@ class fitting(base):
 
         #binning internal model
         model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
+        
+        ion()
+        figure(1)
+        clf()
+        plot(self.data.spectrum[:,0],self.data.spectrum[:,1])
+        plot(self.data.spectrum[:,0], model_binned)
+        draw()
 
         res = (data - model_binned) / datastd
 
@@ -150,6 +157,8 @@ class fitting(base):
         self.DOWNHILL_T_mean = Tout_mean
         self.DOWNHILL_X_mean = Xout_mean
         self.DOWNHILL_fit_output = fit_output['x']
+        
+        print self.DOWNHILL_fit_output
 
     def collate_downhill_results(self, fit_params):
 

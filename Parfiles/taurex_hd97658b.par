@@ -24,7 +24,7 @@ type = transmission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/knutson_hd97658b.txt
+spectrum_file = Input/observations/HD97658_LINFIT_SPECTRUM_2.txt
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -102,7 +102,7 @@ speclib_path = Preselector/speclib/
 pca_path = Preselector/
 
 #(re)generate spectral library
-generate_speclib = False
+generate_speclib = True
 
 #restrict temperature range for cross-section lists
 restrict_temp = True
@@ -114,10 +114,10 @@ temp_range = 800, 1600
 mixing_ratio = 1e-5,1e-4,1e-3,1e-2
 
 #(re)compute PCA preselector file
-generate_pca = False
+generate_pca = True
 
 #masking threshold
-mask_thres = 0.5
+mask_thres = 0.05
 
 #force preselector to include following list of molecules
 mol_force_on = True
@@ -131,7 +131,7 @@ mol_force = 1H2-16O,12C-16O2,12C-1H4
 #defines stellar specific (fixed or starting) parameters:
 
 #Stellar radius (R_sun)
-radius = 0.74
+radius = 0.76
 
 #Stellar temperature (K)
 temp   = 5119
@@ -142,7 +142,7 @@ temp   = 5119
 #defines planetary specific (fixed or starting) parameters:
 
 #Planetary radius (R_jupiter)
-radius = 0.213
+radius = 0.200
 
 #Planetary mass (M_jupiter)
 mass = 0.024

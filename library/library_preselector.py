@@ -26,7 +26,7 @@ def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1
 
     #initiating objects needed
     dataob_pca = data(PARAMS)
-    dataob_pca.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+#     dataob_pca.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
 
     profileob_pca = tp_profile(dataob_pca)
     MODEL.reset(profileob_pca) #resets model to reflect new data and tp-profile objects
