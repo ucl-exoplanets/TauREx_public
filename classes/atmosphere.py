@@ -146,8 +146,13 @@ class atmosphere(base):
         n_layers = self.nlayers
 
         # get new scale height if T is provided. Otherwise assume default (should be params.planet_temp)
-        if T is not None:
-            self.scaleheight = self.get_scaleheight(T[0],  self.data.planet_grav, self.params.planet_mu)
+        #if T is not None:
+
+        if not T:
+            T = self.params.planet_temp
+
+        self.planet_grav = self.data.get_surface_gravity(mass=self.params.planet_mass, radius=self.params.planet_radius)
+        self.scaleheight = self.get_scaleheight(T,  self.planet_grav, self.params.planet_mu)
 
         max_z = n_scale * self.scaleheight
 
@@ -239,8 +244,6 @@ class atmosphere(base):
 
 
     def TP_profile(self, fit_params, T=None, P=None):
-
-    # @todo do we need T and P ? maybe not
 
     # main function defining basic parameterised TP-profile from
     # PARAMS and INDEX. INDEX = [Chi, T, P]

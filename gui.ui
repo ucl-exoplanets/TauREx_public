@@ -361,7 +361,7 @@
        <x>10</x>
        <y>10</y>
        <width>237</width>
-       <height>230</height>
+       <height>201</height>
       </rect>
      </property>
      <layout class="QFormLayout" name="formLayout_3">
@@ -414,42 +414,45 @@
        </widget>
       </item>
       <item row="3" column="0">
+       <widget class="QLabel" name="label_27">
+        <property name="text">
+         <string>Planet mass (M_Jup)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>Mean molecular weight</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_mu">
         <property name="decimals">
          <number>3</number>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="label_14">
         <property name="text">
          <string>Surf. P (Pa x 10^6)</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_surf_pressure">
         <property name="decimals">
          <number>3</number>
         </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="label_27">
-        <property name="text">
-         <string>Surface grav. (ms^-2)</string>
+        <property name="singleStep">
+         <double>0.001000000000000</double>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_surf_grav">
+      <item row="3" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_mass">
         <property name="decimals">
          <number>3</number>
         </property>
@@ -729,14 +732,20 @@
        </property>
       </widget>
      </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_plot">
-       <property name="text">
-        <string>Plot</string>
-       </property>
-      </widget>
-     </item>
     </layout>
+   </widget>
+   <widget class="QPushButton" name="pushButton_plot">
+    <property name="geometry">
+     <rect>
+      <x>650</x>
+      <y>380</y>
+      <width>93</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Plot</string>
+    </property>
    </widget>
    <zorder>frame</zorder>
    <zorder>frame_2</zorder>
@@ -746,6 +755,7 @@
    <zorder>frame_5</zorder>
    <zorder>horizontalLayoutWidget</zorder>
    <zorder>pushButton_overplot</zorder>
+   <zorder>pushButton_plot</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

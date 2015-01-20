@@ -143,11 +143,11 @@ class transmission(base):
         Rsig = zeros((self.nlambda))
         count = 0
         for wl in self.lambdagrid: # loop through wavelentghs
-            if wl > 100: # above this wavelength (in micron) Rsig is not calculated
-                pass
-            else:
-                Rsig[count] += self.params.planet_H2_fraction * self.scatterRayleigh(wl, 'H2')
-                Rsig[count] += self.params.planet_He_fraction * self.scatterRayleigh(wl, 'He')
+            #if wl > 100: # above this wavelength (in micron) Rsig is not calculated
+            #    pass
+            #else:
+            Rsig[count] += self.params.planet_H2_fraction * self.scatterRayleigh(wl, 'H2')
+            Rsig[count] += self.params.planet_He_fraction * self.scatterRayleigh(wl, 'He')
             count += 1
         
         return Rsig
@@ -186,32 +186,27 @@ class transmission(base):
         '''
         #sigma_R=0.0 # Rayleigh absorption coefficient (from Liou, An Introduction to Atmospheric Radiation)
 
-        # @todo IMPORTANT: check these numbers, they might be wrong wrong wrong (especially N2)
         if molecule == 'H2':
             radius = 2.e-9
             refractive_index = 1.0001384
+            delta = 0.035
+
         elif molecule == 'He':
             radius = 1.e-9
             refractive_index = 1.0000350
-        elif molecule == 'N2':
-            radius = 1.e-9
-            refractive_index = 1.0002984
-
-
+            delta = 0.0     # no asymmetry for He
 
         wl *= 1.0e-6  #convert wavelengths to m
         r_sq = refractive_index**2
-        r_red = (r_sq-1) / (r_sq+2);
-        delta = 0.035;               #molecular anisotropy factor
-        if molecule == 'He':
-            f_delta = 1.;                  #no asymmetry for helium molecules
-        else:
-            f_delta = (6.+(3.*delta)) / (6.-(7.*delta));   #King correction factor
+        r_red = (r_sq-1.) / (r_sq+2.);
+        f_delta = (6.+(3.*delta)) / (6.-(7.*delta));   #King correction factor
+
+        #f_delta = 1.
 
         # Find cross-section
         sigma_R = (128./3.) * (pow(pi,5) * pow(radius,6) / pow(wl,4)) * r_red * r_red * f_delta # gives sigma_R in m^2
 
-
+        #sigma_R = 4.577e-49 * f_delta * pow(r_red, 2) / pow(wl,4)
 
         return sigma_R
         

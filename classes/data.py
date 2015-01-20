@@ -129,9 +129,15 @@ class data(base):
 
 
     #class functions
-    def get_surface_gravity(self):
+    def get_surface_gravity(self, mass=None, radius=None):
+
+        if not mass:
+            mass = self.params.planet_mass
+        if not radius:
+            radius = self.params.planet_radius
+
         #calculate surface gravity of planet using Rp and Mp
-        return (G * self.params.planet_mass) / (self.params.planet_radius**2)
+        return (G * mass) / (radius**2)
     #
     # def get_scaleheight(self,T_aver=None,surf_g=None,mmw=None):
     #     #compute scaleheight of atmosphere
