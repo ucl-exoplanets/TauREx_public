@@ -122,12 +122,12 @@ class fitting(base):
         #binning internal model
         model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
         
-        ion()
-        figure(1)
-        clf()
-        plot(self.data.spectrum[:,0],self.data.spectrum[:,1])
-        plot(self.data.spectrum[:,0], model_binned)
-        draw()
+#         ion()
+#         figure(1)
+#         clf()
+#         plot(self.data.spectrum[:,0],self.data.spectrum[:,1])
+#         plot(self.data.spectrum[:,0], model_binned)
+#         draw()
 
         res = (data - model_binned) / datastd
 
@@ -151,10 +151,11 @@ class fitting(base):
                               method=self.params.downhill_type,
                               bounds=(self.bounds))
 
-        Tout_mean, Xout_mean = self.collate_downhill_results(fit_output['x'])
+        Tout_mean, Pout_mean, Xout_mean = self.collate_downhill_results(fit_output['x'])
 
         self.DOWNHILL = True
         self.DOWNHILL_T_mean = Tout_mean
+        self.DOWNHILL_P_mean = Pout_mean
         self.DOWNHILL_X_mean = Xout_mean
         self.DOWNHILL_fit_output = fit_output['x']
         
@@ -166,7 +167,7 @@ class fitting(base):
 
         T, P, X = self.atmosphere.TP_profile(fit_params=fit_params)
 
-        return T, X
+        return T,P, X
 
 
 ###############################################################################    
