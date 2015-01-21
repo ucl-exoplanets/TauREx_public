@@ -272,5 +272,5 @@ outputob.save_model()       #saving models to ascii
 # # print s.getvalue()
 
 #last line. displays any diagrams generated. must be run after profiling
-if params.verbose:
-    show()
+#if params.verbose:
+#    show()
