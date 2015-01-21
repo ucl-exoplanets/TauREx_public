@@ -1,6 +1,6 @@
 [General]
 #verbose or not 
-verbose = True
+verbose = False
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
@@ -102,7 +102,7 @@ speclib_path = Preselector/speclib/
 pca_path = Preselector/
 
 #(re)generate spectral library
-generate_speclib = True
+generate_speclib = False
 
 #restrict temperature range for cross-section lists
 restrict_temp = True
@@ -145,7 +145,7 @@ temp   = 5119
 radius = 0.200
 
 #Planetary mass (M_jupiter)
-mass = 0.024
+mass = 0.022
 
 #Orbital semi-major axis (AU)
 sma = 0.08
@@ -154,18 +154,19 @@ sma = 0.08
 albedo = 0.2
 
 #Planetary temperature (K)
-temp = 757
+temp = 800
 
 #molecular weight of atmosphere 
 mu = 2.3
 
 #molecules considered
-molecules = 1H2-16O,12C-1H4,14N-1H3,12C-16O2
+molecules = 1H2-16O,12C-1H4,14N-1H3,12C-16O2,12C-16O, 1H-12C-14N,48Ti-16O
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
-mixing_ratios = 1.0e-4, 1.0e-4, 1.0e-4,1.0e-4
+#mixing_ratios = 1.0e-5, 1.0e-5, 1.0e-5,1.0e-5,1.0e-5,1.0e-3,
+mixing_ratios = 1.0e-5, 0.0,0.0, 0.0,0.0,0.0,0.0
 
 #include cloud opacities. True/False 
 include_cld = False
@@ -223,11 +224,11 @@ emission     = False
 param_free = 1,42 #currently not used. not sure whether should be implemented and in what form
 
 #Upper and lower bounds for temperature (equilibrium +- value)
-T_up  = 200
-T_low = 200
+T_up  = 100
+T_low = 100
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 1e-2
+X_up  = 1e-1
 X_low = 0.0
 
 
@@ -270,7 +271,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = False
+run = True
 
 #resume from previous run
 resume = True
@@ -285,7 +286,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 400
+n_live_points = 500
 
 #maximum no. of iterations (0=inf)
 max_iter = 0

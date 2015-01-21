@@ -125,7 +125,7 @@ class fitting(base):
 #         ion()
 #         figure(1)
 #         clf()
-#         plot(self.data.spectrum[:,0],self.data.spectrum[:,1])
+#         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
 #         plot(self.data.spectrum[:,0], model_binned)
 #         draw()
 

@@ -44,13 +44,13 @@ except:
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,output,fitting,tp_profile,data,preselector
+import parameters,emission,transmission,output,fitting,atmosphere,data,preselector
 from parameters import *
 from emission import *
 from transmission import *
 from output import *
 from fitting import *
-from tp_profile import *
+from atmosphere import *
 from data import *
 from preselector import *
 
@@ -66,7 +66,7 @@ from library_plotting import *
 parser = optparse.OptionParser()
 parser.add_option('-p', '--parfile',
                   dest="param_filename",
-                  default="exonest.par",
+                  default="Parfiles/taurex.par",
 )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
@@ -90,12 +90,12 @@ parser.add_option('-a', '--all',
 )
 parser.add_option('-i', '--inputdir',
                   dest="chaindir",
-                  default='chains/',
+                  default='Output/',
                   action="store",
 )
 parser.add_option('-o', '--outdir',
                   dest="outdir",
-                  default='./',
+                  default='./Output',
                   action="store",
 )
 
@@ -158,12 +158,12 @@ if plot_mcmc:
         params.planet_mixing.append(float(mcmcstate['stochastics'][mix]))
 
     
-    
+nestdir = chaindir+'multinest/'
 if plot_nest:
     params.out_internal_name = 'nested_' +params.out_internal_name
     import pymultinest as pymn
     #reading in Nested data
-    nest_raw = pymn.Analyzer(n_params=len(fit_params),outputfiles_basename=chaindir+'1-')
+    nest_raw = pymn.Analyzer(n_params=len(fit_params),outputfiles_basename=nestdir+'1-')
     neststate = nest_raw.get_stats()
     
     #setting planetary temperature
@@ -192,19 +192,20 @@ params.planet_molec  =  np.array(params.planet_molec)
 #initialising data object
 dataob = data(params)
 
-#adding some molecules to the atmosphere
-dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
-
-
 #initialising TP profile object
-if params.verbose: print 'loading profile'
-profileob = tp_profile(params, dataob)
+if params.verbose: print 'loading atmosphere'
+atmob = atmosphere(dataob)
+
+#adding some molecules to the atmosphere
+# atmob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
+# atmob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
+
+
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
     if params.verbose: print 'loading transmission'
-    transob = transmission(params, dataob,profileob)
+    transob = transmission(atmob)
 
     if params.trans_cpp:
         MODEL = transob.cpath_integral()  # computing transmission
@@ -214,7 +215,7 @@ if params.gen_type == 'transmission':
 #initialising transmission radiative transfer code object
 if params.gen_type == 'emission':
     if params.verbose: print 'loading emission'
-    emisob = emission(params, dataob,profileob)
+    emisob = emission(atmob)
     
     MODEL = emisob.path_integral()  # computing transmission        
     
@@ -225,9 +226,9 @@ OUT[:,1] = MODEL
 # OUT[:,2] += 1e-5 #adding errorbars. can be commented
 
 if params.gen_type == 'emission':
-    outputob = output(params, dataob,emisob) #initiating output object with fitted data from fitting class
+    outputob = output(params=params, data=dataob,forwardmodel=emisob) #initiating output object with fitted data from fitting class
 if params.gen_type == 'transmission':
-    outputob = output(params, dataob,transob) #initiating output object with fitted data from fitting class
+    outputob = output(params=params, data=dataob,forwardmodel=transob) #initiating output object with fitted data from fitting class
 #
 #plotting fits and data
 outputob.plot_manual(OUT,save2pdf=params.out_save_plots)   #plotting data only
