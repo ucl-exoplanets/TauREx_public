@@ -372,7 +372,7 @@ class data(base):
         #manually overwrites absorption coefficients from new file
         #input path needs to be given and list of filename strings
         if path is None:
-            extpath = self.params.in_abs_path
+            path = self.params.in_abs_path
         if filelist is None:
             raise IOError('No input ABS file specified')
         if temperature is None:
@@ -384,7 +384,7 @@ class data(base):
         self.sigma_dict = {}
         self.sigma_dict['tempgrid'] = [int(temperature)]
         self.sigma_dict[int(temperature)] = sigma_array
-        self.data.nspecgrid = len(self.specgrid)
+        self.nspecgrid = len(self.specgrid)
         
         
     def readATMfile(self):
