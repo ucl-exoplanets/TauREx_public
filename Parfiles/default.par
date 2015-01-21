@@ -226,12 +226,18 @@ emission     = False
 #free parameters, temperature, abundance. Currently not used. not sure whether should be implemented and in what form
 param_free = 1,42
 
+# turn on/off free parameters. True means the parameter is fixed
+fix_radius = False
+fix_temp = False
+fix_mu = False
+fix_P0 = False
+
 #Upper and lower bounds for temperature (equilibrium +- value)
 T_up  = 200
 T_low = 200
 
 #Upper and lower bounds for mixing ratios
-X_up  = 1e-2
+X_up  = 0.1
 X_low = 0.0
 
 

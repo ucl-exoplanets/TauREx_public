@@ -124,7 +124,7 @@ class data(base):
         self.all_inactive_gases = ['He', 'H2', 'N2']
 
         # dictionary with parameters (e.g. mean molecular weight, refractive index, etc) for each gas (absorbers and inactive)
-        self.all_gases_properties = get_gases_properties()
+        #self.all_gases_properties = get_gases_properties()
 
     #class functions
 

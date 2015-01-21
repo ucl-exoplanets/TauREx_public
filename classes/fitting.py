@@ -41,6 +41,15 @@ except ImportError:
     MPIimport = False
     pass
 
+#conversion constants
+RSOL  = 6.955e8         #stellar radius to m
+RJUP  = 6.9911e7        #jupiter radius to m
+MJUP  = 1.898e27        #jupiter mass to kg
+REARTH= 6.371e3         #earth radius to m
+AU    = 1.49e11         #semi-major axis (AU) to m
+AMU   = 1.660538921e-27 #atomic mass to kg
+
+
 class fitting(base):
 
     def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None):
@@ -92,12 +101,15 @@ class fitting(base):
                     os.mkdir(f)
 
         #getting parameter grid with initial estimates
-        self.fit_params_init = self.atmosphere.fit_params
-        self.fit_index = self.atmosphere.fit_index
-        self.fit_nparams = len(self.atmosphere.fit_params)
+        #self.fit_params_init = self.atmosphere.fit_params
+        #self.fit_index = self.atmosphere.fit_index
+        #self.fit_nparams = len(self.atmosphere.fit_params)
 
         #getting prior bounds for downhill algorithm
-        self.bounds = self.atmosphere.bounds
+        #self.bounds = self.atmosphere.bounds
+
+        # set priors, starting values, and fitting parameters
+        self.set_fitting_data()
 
         #initialising output tags
         self.DOWNHILL = False
@@ -107,30 +119,135 @@ class fitting(base):
         #DEBUG COUNTER
         self.db_count = 0
 
+    def set_fitting_data(self):
+
+        # set priors
+        self.fit_priors = {
+            'temp': (self.atmosphere.planet_temp - self.params.fit_T_low,
+                     self.atmosphere.planet_temp + self.params.fit_T_up),
+            'mu': (0, 50/AMU),
+            'radius': (self.atmosphere.planet_radius_10mbar - self.atmosphere.planet_radius_10mbar * 0.25,
+                       self.atmosphere.planet_radius_10mbar + self.atmosphere.planet_radius_10mbar * 0.25),
+            'P0': (0, 1e8), # in Pascal
+            'X': [],
+        }
+        for n in range(self.atmosphere.ngas):
+            self.fit_priors['X'].append((self.params.fit_X_low, self.params.fit_X_up))
+
+        # set fitting parameters starting values
+        self.fit_values = {
+            'temp': self.atmosphere.planet_temp,
+            'mu': self.atmosphere.planet_mu,
+            'radius': self.atmosphere.planet_radius_10mbar,
+            'P0': np.mean(self.fit_priors['P0']),
+            'X': [],
+        }
+        for n in range(self.atmosphere.ngas):
+            self.fit_values['X'].append(np.mean(self.fit_priors['X'][n]))
+
+        # set fit_params list (input to fitting routines)
+        self.build_fit_params()
+
+
+    def build_fit_params(self):
+
+        # build the fit_param list, input to all the fitting routines.
+        # build the fit_bounds list, input to scipy.minimize and ?
+        self.fit_params = []
+        self.fit_bounds = []
+
+        # include T, P0, r, mu only if we want to fit for them. Otherwise self.fit_values are assumed
+        if not self.params.fit_fix_temp:
+            self.fit_params.append(self.fit_values['temp'])
+            self.fit_bounds.append(self.fit_priors['temp'])
+
+        if not self.params.fit_fix_mu:
+            self.fit_params.append(self.fit_values['mu'])
+            self.fit_bounds.append(self.fit_priors['mu'])
+
+        if not self.params.fit_fix_radius:
+            self.fit_params.append(self.fit_values['radius'])
+            self.fit_bounds.append(self.fit_priors['radius'])
+
+        if not self.params.fit_fix_P0:
+            self.fit_params.append(self.fit_values['P0'])
+            self.fit_bounds.append(self.fit_priors['P0'])
+
+        # mixing ratios are always fitted
+        self.fit_params += self.fit_values['X']
+        self.fit_bounds += self.fit_priors['X']
+
+        print self.fit_params
+        print self.fit_bounds
+
+
     def chisq_trans(self, fit_params, data, datastd):
 
-        #chisquare minimisation bit
 
-        T, P, X = self.atmosphere.TP_profile(fit_params=fit_params)  # calculating TP profile
+        # chisquare minimisation bit
+        # only working for transmission
 
-        # calculating densities
-        rho = self.atmosphere.get_rho(T=T, P=P)
+        count = 0
+        change_scaleheight = False
 
+        # update atmospheric parameters with new values from fit_params
+
+        # fitting for temperature
+        if not self.params.fit_fix_temp:
+            self.forwardmodel.atmosphere.planet_temp = fit_params[0]
+            change_scaleheight = True
+            count += 1
+
+        # fitting for mean molecular weight mu
+        if not self.params.fit_fix_mu:
+            self.forwardmodel.atmosphere.planet_mu = fit_params[count]
+            change_scaleheight = True
+            count += 1
+
+        # fitting for the radius
+        if not self.params.fit_fix_radius:
+            self.forwardmodel.atmosphere.planet_radius_10mbar = fit_params[count]
+            change_scaleheight = True
+            count += 1
+
+        # we need to update surface gravity and scale height if temp, mu, or radius have changed
+        # note that surface gravity is calculated at the 10mbar pressure radius...
+        if change_scaleheight:
+            self.forwardmodel.atmosphere.planet_grav = self.forwardmodel.atmosphere.get_surface_gravity()
+            self.forwardmodel.atmosphere.scaleheight = self.forwardmodel.atmosphere.get_scaleheight()
+
+        # fitting for surface pressure
+        if not self.params.fit_fix_P0:
+            self.forwardmodel.atmosphere.max_pressure = fit_params[count]
+            self.forwardmodel.atmosphere.pta = self.forwardmodel.atmosphere.setup_pta_grid()
+            self.forwardmodel.atmosphere.P = self.forwardmodel.atmosphere.pta[:,0] # pressure array
+            self.forwardmodel.atmosphere.P_bar = self.forwardmodel.atmosphere.P * 1.0e-5 #convert pressure from Pa to bar
+            self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.pta[:,1] # temperature array
+            self.forwardmodel.atmosphere.z = self.forwardmodel.atmosphere.pta[:,2] # altitude array
+            count += 1
+
+        # fitting for mixing ratios
+        for i in range(self.forwardmodel.atmosphere.ngas):
+            self.forwardmodel.atmosphere.X[i,:] = fit_params[count+i]
+
+        # recalculate density
+        self.forwardmodel.atmosphere.rho = self.forwardmodel.atmosphere.get_rho()
 
         #the temperature parameter should work out of the box but check for transmission again
-        model = self.forwardmodel.model(rho=rho, X=X, temperature=T)
+        model = self.forwardmodel.model()
 
         #binning internal model
         model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
-        
-        ion()
-        figure(1)
+
         clf()
-        plot(self.data.spectrum[:,0],self.data.spectrum[:,1])
+        errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1], yerr=self.data.spectrum[:,2])
         plot(self.data.spectrum[:,0], model_binned)
         draw()
+        pause(0.01)
 
         res = (data - model_binned) / datastd
+
+        print sum(res**2), fit_params
 
         return sum(res**2)
 
@@ -139,6 +256,8 @@ class fitting(base):
 
     def downhill_fit(self):
 
+        ion()
+
         logging.info('Fit data using %s minimisation' % self.params.downhill_type)
 
         # @todo here we could use different starting points for different threads?
@@ -146,11 +265,13 @@ class fitting(base):
         data = self.data.spectrum[:,1] # observed data
         datastd = self.data.spectrum[:,2] # data error
 
+        fit_params = self.build_fit_params()
+
         fit_output = minimize(fun=self.chisq_trans,
-                              x0=self.fit_params_init,
+                              x0=self.fit_params,
                               args=(data,datastd),
                               method=self.params.downhill_type,
-                              bounds=(self.bounds))
+                              bounds=(self.fit_bounds))
 
         Tout_mean, Xout_mean = self.collate_downhill_results(fit_output['x'])
 

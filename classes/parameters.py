@@ -27,6 +27,15 @@ else:
     MPIsize     = 0
 
 
+#conversion constants
+RSOL  = 6.955e8         #stellar radius to m
+RJUP  = 6.9911e7        #jupiter radius to m
+MJUP  = 1.898e27        #jupiter mass to kg
+REARTH= 6.371e3         #earth radius to m
+AU    = 1.49e11         #semi-major axis (AU) to m
+AMU   = 1.660538921e-27 #atomic mass to kg
+
+
 class parameters(base):
 #instantiation
     def __init__(self, parfile=None):
@@ -64,13 +73,6 @@ class parameters(base):
 
         logging.info('Initialise parameters object')
 
-        #conversion constants
-        RSOL  = 6.955e8         #stellar radius to m
-        RJUP  = 6.9911e7        #jupiter radius to m
-        MJUP  = 1.898e27        #jupiter mass to kg
-        REARTH= 6.371e3         #earth radius to m
-        AU    = 1.49e11         #semi-major axis (AU) to m
-        AMU   = 1.660538921e-27 #atomic mass to kg
 
         self.trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
         
@@ -163,6 +165,11 @@ class parameters(base):
             self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
             self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
             self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)
+            self.fit_fix_temp          = self.getpar('Fitting', 'fix_temp', 'bool')
+            self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
+            self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
+            self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
+
             self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
             self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
             self.fit_X_up              = self.getpar('Fitting','X_up', 'float')

@@ -45,11 +45,15 @@ class atmosphere(base):
         self.fit_transmission = self.params.fit_transmission
         self.fit_emission     = self.params.fit_emission
 
-        #derived values @todo planet gravity depends on radius as well.
-        self.scaleheight = self.get_scaleheight(self.params.planet_temp, data.planet_grav, self.params.planet_mu)
 
-        #setting planetary surface gravity
+        # set atmosphere specific parameters. These parameters can be fitted
+        self.max_pressure = self.params.tp_max_pres
+        self.planet_temp = self.params.planet_temp          # single temperature
+        self.planet_radius_10mbar = self.params.planet_radius
         self.planet_grav = self.get_surface_gravity()
+        self.planet_mu = self.params.planet_mu
+        self.scaleheight = self.get_scaleheight()
+        self.planet_radius_P0 = self.get_surface_radius()
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
         if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
@@ -77,36 +81,43 @@ class atmosphere(base):
 
         self.inactive_gases_X = self.params.planet_inactive_gases_X
 
+        self.num_T_params = 3 #number of free temperature parameters @todo leave it here. used for emission
+
         if self.params.in_include_rad:
             self.rad        = self.data.rad
         if self.params.in_include_cia:
             self.cia        = self.data.cia
 
-        if self.params.fit_emission or self.params.fit_transmission:
-            self.bounds = self.get_prior_bounds()
-
+        # get prior bounds. Only valid for emission.
         if self.params.fit_emission:
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(emission=True)
+            self.bounds = self.get_prior_bounds()
+            self.fit_params, self.fit_index, self.fit_count = self._setup_parameter_grid(emission=True)
 
-        if self.params.fit_transmission:
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
-
-        #self.bulk_composition = self.get_bulk_composition()
 
 
     #class methods
 
-    def get_scaleheight(self,T,g,mu):
+    def get_scaleheight(self, T=None, g=None, mu=None):
+
+        if not T:
+            T = self.planet_temp
+        if not g:
+            g = self.planet_grav
+        if not mu:
+            mu = self.planet_mu
+
         return (KBOLTZ*T)/(mu*g)
 
     def get_surface_gravity(self, mass=None, radius=None):
 
         #calculate surface gravity of planet using Rp and Mp
+        # todo surface gravity calculated at 10 mbar radius. Is it ok? Can't really use radius at P0, as it depends on
+        # todo the TP profile, which depends on scaleheight, which depends on surface gravity... it's a loop!
 
         if not mass:
             mass = self.params.planet_mass
         if not radius:
-            radius = self.params.planet_radius
+            radius = self.planet_radius_10mbar
 
         return (G * mass) / (radius**2)
 
@@ -117,37 +128,31 @@ class atmosphere(base):
             P = self.P
         if T is None:
             T = self.T
+
         return  (P)/(KBOLTZ*T)
 
+    def get_surface_radius(self):
+        return self.planet_radius_10mbar - self.scaleheight * np.log(self.max_pressure/0.01)
 
-
-    def setup_pta_grid(self, T=None):
+    def setup_pta_grid(self):
 
         #calculate pressure, temperature, altitude grid
 
-        max_p    = self.params.tp_max_pres
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        n_layers = self.nlayers
-
-        # if T is not None:
-        if not T:
-            T = self.params.planet_temp
-
-        self.planet_grav = self.data.get_surface_gravity(mass=self.params.planet_mass, radius=self.params.planet_radius)
-        self.scaleheight = self.get_scaleheight(T,  self.planet_grav, self.params.planet_mu)
-
         max_z = n_scale * self.scaleheight
 
         #generatinng altitude-pressure array
-        pta_arr = np.zeros((n_layers,3))
-        pta_arr[:,2] = np.linspace(0,max_z,num=n_layers) # altitude
-        pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight)
-
-        pta_arr[:,1] = self.params.planet_temp
+        pta_arr = np.zeros((self.nlayers,3))
+        pta_arr[:,2] = np.linspace(0,max_z,num=self.nlayers) # altitude
+        pta_arr[:,0] = self.max_pressure * np.exp(-pta_arr[:,2]/self.scaleheight)
+        pta_arr[:,1] = self.planet_temp
 
         return pta_arr
 
     def get_prior_bounds(self):
+
+        # this is only used in emission now...
+
         #partially to be moved to parameter file i guess
 
         self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
@@ -171,7 +176,12 @@ class atmosphere(base):
 
         return bounds
 
+
+
+
     def setup_parameter_grid(self, transmission=False, emission=False):
+
+        # old parameter grid. works for emission though...
 
         # fit_params    [abundances (ngas), temperatures (num_T_params), pressures (num_T_params-1)]
         # fit_count     [no. abundances, no. temperatures, no. pressures]

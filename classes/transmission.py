@@ -100,8 +100,7 @@ class transmission(base):
 
         nlayers = self.atmosphere.nlayers
         z = self.atmosphere.z
-
-        Rp = self.params.planet_radius
+        Rp = self.atmosphere.planet_radius_P0
 
         dlarray = []
         jl = []
@@ -127,8 +126,8 @@ class transmission(base):
 
         #calculate area of circles of atmosphere
 
-        dz = zeros((nlayers))
-        for j in range(nlayers-1):
+        dz = zeros((self.atmosphere.nlayers))
+        for j in range(self.atmosphere.nlayers-1):
             dz[j] = self.atmosphere.z[j+1] - self.atmosphere.z[j]
 
         return dz
@@ -143,7 +142,7 @@ class transmission(base):
 
             # loop through all gases (absorbing + inactive)
             for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
-                Rsig[count] += self.get_gas_fraction(gasname) * self.scatterRayleigh(wl, gasname)
+                Rsig[count] += 0#  self.get_gas_fraction(gasname) * self.scatterRayleigh(wl, gasname)
 
             count += 1
         
@@ -169,7 +168,7 @@ class transmission(base):
 
         # getting sigma array from sigma_dic for given temperature
 
-        return self.atmosphere.sigma_dict[find_nearest(self.atmosphere.sigma_dict['tempgrid'], temperature)[0]]
+        return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
 
     def get_gas_fraction(self, gasname):
 
@@ -195,30 +194,33 @@ class transmission(base):
         '''
         #sigma_R=0.0 # Rayleigh absorption coefficient (from Liou, An Introduction to Atmospheric Radiation)
 
-        if molecule == 'H2':
-            radius = 2.e-9
-            refractive_index = 1.0001384
-            delta = 0.035
+        # if molecule == 'H2':
+        #     radius = 2.e-9
+        #     refractive_index = 1.0001384
+        #     delta = 0.035
+        #
+        # elif molecule == 'He':
+        #     radius = 1.e-9
+        #     refractive_index = 1.0000350
+        #     delta = 0.0     # no asymmetry for He
+        #
+        # wl *= 1.0e-6  #convert wavelengths to m
+        # r_sq = refractive_index**2
+        # r_red = (r_sq-1.) / (r_sq+2.);
+        # f_delta = (6.+(3.*delta)) / (6.-(7.*delta));   #King correction factor
+        #
+        # #f_delta = 1.
+        #
+        # # Find cross-section
+        # sigma_R = (128./3.) * (pow(pi,5) * pow(radius,6) / pow(wl,4)) * r_red * r_red * f_delta # gives sigma_R in m^2
+        #
+        # #sigma_R = 4.577e-49 * f_delta * pow(r_red, 2) / pow(wl,4)
+        #
+        # return sigma_R
+        return 0
 
-        elif molecule == 'He':
-            radius = 1.e-9
-            refractive_index = 1.0000350
-            delta = 0.0     # no asymmetry for He
 
-        wl *= 1.0e-6  #convert wavelengths to m
-        r_sq = refractive_index**2
-        r_red = (r_sq-1.) / (r_sq+2.);
-        f_delta = (6.+(3.*delta)) / (6.-(7.*delta));   #King correction factor
 
-        #f_delta = 1.
-
-        # Find cross-section
-        sigma_R = (128./3.) * (pow(pi,5) * pow(radius,6) / pow(wl,4)) * r_red * r_red * f_delta # gives sigma_R in m^2
-
-        #sigma_R = 4.577e-49 * f_delta * pow(r_red, 2) / pow(wl,4)
-
-        return sigma_R
-        
     def scatterCIA(self,coeff,amount):
         '''
         Optical depth given by tau = alpha * L * c_1 * c_2 ; alpha = abs coeff (cm^5 mol^-2), L = path length (cm), c_i = concentration of collider i (mol cm^-3)
@@ -241,7 +243,7 @@ class transmission(base):
             temperature = self.params.planet_temp
 
         nlayers = self.atmosphere.nlayers
-        P_bar = self.atmoshere.P_bar
+        P_bar = self.atmosphere.P_bar
 
         self.X = X
 
@@ -292,8 +294,8 @@ class transmission(base):
 
                 exptau[j]= exp(-tau[j])
 
-            integral = 2.0* sum(((self.params.planet_radius+self.atmosphere.z)*(1.0-exptau)*self.dz))
-            absorption[wl] = (self.params.planet_radius**2 + integral) / (self.params.star_radius**2)
+            integral = 2.0* sum(((self.atmosphere.planet_radius_P0+self.atmosphere.z)*(1.0-exptau)*self.dz))
+            absorption[wl] = (self.atmosphere.planet_radius_P0**2 + integral) / (self.params.star_radius**2)
 
         return absorption
 
@@ -304,7 +306,7 @@ class transmission(base):
         if rho is None:
             rho = self.atmosphere.rho
         if temperature is None:
-            temperature = self.params.planet_temp
+            temperature = self.atmosphere.planet_temp
 
         #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
@@ -325,7 +327,8 @@ class transmission(base):
         cdz = cast2cpp(self.dz)
         cRsig = cast2cpp(self.Rsig)
         cCsig = cast2cpp(self.Csig)
-        cRp = C.c_double(self.params.planet_radius)
+        #cRp = C.c_double(self.atmosphere.planet_radius_P0)
+        cRp = C.c_double(self.atmosphere.planet_radius_10mbar)
         cRs = C.c_double(self.params.star_radius)
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.atmosphere.nlayers)
