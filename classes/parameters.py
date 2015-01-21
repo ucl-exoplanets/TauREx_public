@@ -117,9 +117,8 @@ class parameters(base):
         self.planet_mu             = self.getpar('Planet', 'mu', 'float')      *AMU
         self.planet_molec          = self.getpar('Planet','molecules', 'list-str')  #genfromtxt(StringIO(self.getpar('Planet','molecules')),delimiter = ',',dtype='str',autostrip=True)
         self.planet_mixing         = self.getpar('Planet','mixing_ratios', 'list-float') #genfromtxt(StringIO(self.getpar('Planet','mixing_ratios')),delimiter = ',',dtype='str',autostrip=True)
-        self.planet_H2_fraction    = self.getpar('Planet', 'H2_fraction', 'float')
-        self.planet_He_fraction    = self.getpar('Planet', 'He_fraction', 'float')
-        self.planet_N2_fraction    = self.getpar('Planet', 'N2_fraction', 'float')
+        self.planet_inactive_gases     = self.getpar('Planet', 'inactive_gases', 'list-str')
+        self.planet_inactive_gases_X   = self.getpar('Planet', 'inactive_gases_X', 'list-float')
 
         try:
             self.in_include_cld        = self.getpar('Planet','include_cld', 'bool')

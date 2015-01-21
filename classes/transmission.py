@@ -51,12 +51,6 @@ class transmission(base):
 
         self.atmosphere = atmosphere
 
-        # inherit some variables from atmosphere object
-        self.nlayers = self.atmosphere.nlayers
-        self.z = self.atmosphere.z
-        self.P = self.atmosphere.P
-        self.P_bar = self.atmosphere.P_bar
-
         #cloud specific parameters
         if self.params.in_include_cld:
             self.cld_m = self.params.in_cld_m #refractive index for cloud cross sections
@@ -104,6 +98,9 @@ class transmission(base):
 
         #calculates the layerlength
 
+        nlayers = self.atmosphere.nlayers
+        z = self.atmosphere.z
+
         Rp = self.params.planet_radius
 
         dlarray = []
@@ -111,10 +108,10 @@ class transmission(base):
         kl = []
         cl = []
         count = 0
-        for j in range(self.nlayers): # loop through atmosphere layers
-            for k in range(1,self.nlayers-j): # loop through each layer to sum up path length
-                dl = 2.0 * (sqrt(pow((Rp + self.z[k+j]),2) - pow((Rp + self.z[j]),2)) -
-                            sqrt(pow((Rp + self.z[k-1+j]),2) - pow((Rp + self.z[j]),2)))
+        for j in range(nlayers): # loop through atmosphere layers
+            for k in range(1,nlayers-j): # loop through each layer to sum up path length
+                dl = 2.0 * (sqrt(pow((Rp + z[k+j]),2) - pow((Rp + z[j]),2)) -
+                            sqrt(pow((Rp + z[k-1+j]),2) - pow((Rp + z[j]),2)))
                 dlarray.append(dl)
                 jl.append(j)
                 kl.append(k)
@@ -130,9 +127,9 @@ class transmission(base):
 
         #calculate area of circles of atmosphere
 
-        dz = zeros((self.nlayers))
-        for j in range(self.nlayers-1):
-            dz[j] = self.z[j+1] - self.z[j]
+        dz = zeros((nlayers))
+        for j in range(nlayers-1):
+            dz[j] = self.atmosphere.z[j+1] - self.atmosphere.z[j]
 
         return dz
     
@@ -143,11 +140,11 @@ class transmission(base):
         Rsig = zeros((self.nlambda))
         count = 0
         for wl in self.lambdagrid: # loop through wavelentghs
-            #if wl > 100: # above this wavelength (in micron) Rsig is not calculated
-            #    pass
-            #else:
-            Rsig[count] += self.params.planet_H2_fraction * self.scatterRayleigh(wl, 'H2')
-            Rsig[count] += self.params.planet_He_fraction * self.scatterRayleigh(wl, 'He')
+
+            # loop through all gases (absorbing + inactive)
+            for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
+                Rsig[count] += self.get_gas_fraction(gasname) * self.scatterRayleigh(wl, gasname)
+
             count += 1
         
         return Rsig
@@ -173,6 +170,18 @@ class transmission(base):
         # getting sigma array from sigma_dic for given temperature
 
         return self.atmosphere.sigma_dict[find_nearest(self.atmosphere.sigma_dict['tempgrid'], temperature)[0]]
+
+    def get_gas_fraction(self, gasname):
+
+        # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
+        if gasname in self.data.all_absorbing_gases:
+            index = self.params.planet_molec.index(gasname)
+            return self.atmosphere.X[index, 0]
+
+        elif gasname in self.data.all_inactive_gases:
+            index = self.params.planet_inactive_gases.index(gasname)
+            return self.atmosphere.inactive_gases_X[index]
+
 
     def scatterRayleigh(self, wl, molecule):
         '''
@@ -231,16 +240,21 @@ class transmission(base):
         if temperature is None:
             temperature = self.params.planet_temp
 
+        nlayers = self.atmosphere.nlayers
+        P_bar = self.atmoshere.P_bar
+
+        self.X = X
+
         #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
 
         #setting up arrays
         absorption = zeros((self.nlambda))
-        tau = zeros((self.nlayers))
-        Rtau = zeros((self.nlayers))
-        Ctau = zeros((self.nlayers))
-        cld_tau = zeros((self.nlayers))
-        exptau = zeros((self.nlayers))
+        tau = zeros((nlayers))
+        Rtau = zeros((nlayers))
+        Ctau = zeros((nlayers))
+        cld_tau = zeros((nlayers))
+        exptau = zeros((nlayers))
 
         molnum = len(X[:,0])
 
@@ -265,10 +279,10 @@ class transmission(base):
 
                 #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
                 if self.params.in_include_cld:
-                    if self.P_bar[k+j] < self.cld_upbound and self.P_bar[k+j] > self.cld_lowbound:
+                    if P_bar[k+j] < self.cld_upbound and P_bar[k+j] > self.cld_lowbound:
                         # = log(cloud density), assuming linear decrease with decreasing log pressure
                         # following Ackerman & Marley (2001), Fig. 6
-                        cld_log_rho = interp_value(np.log(self.P_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0)
+                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0)
                         cld_tau[j] += ( self.Cld_sig[wl] * (self.dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
 
                 #adding all taus together
@@ -278,7 +292,7 @@ class transmission(base):
 
                 exptau[j]= exp(-tau[j])
 
-            integral = 2.0* sum(((self.params.planet_radius+self.z)*(1.0-exptau)*self.dz))
+            integral = 2.0* sum(((self.params.planet_radius+self.atmosphere.z)*(1.0-exptau)*self.dz))
             absorption[wl] = (self.params.planet_radius**2 + integral) / (self.params.star_radius**2)
 
         return absorption
@@ -305,8 +319,8 @@ class transmission(base):
         #casting fixed arrays and variables to c++ pointers
         csigma_array = cast2cpp(sigma_array)
         cdlarray = cast2cpp(self.dlarray)
-        znew = zeros((len(self.z)))
-        znew[:] = self.z
+        znew = zeros((len(self.atmosphere.z)))
+        znew[:] = self.atmosphere.z
         cz = cast2cpp(znew)
         cdz = cast2cpp(self.dz)
         cRsig = cast2cpp(self.Rsig)
@@ -314,11 +328,11 @@ class transmission(base):
         cRp = C.c_double(self.params.planet_radius)
         cRs = C.c_double(self.params.star_radius)
         clinecount = C.c_int(self.nlambda)
-        cnlayers = C.c_int(self.nlayers)
+        cnlayers = C.c_int(self.atmosphere.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
 
         #setting and casting cloud paramters
-        cP_bar = cast2cpp(self.P_bar)
+        cP_bar = cast2cpp(self.atmosphere.P_bar)
         cCld_sig = cast2cpp(self.Cld_sig)
         if self.params.in_include_cld:
             cInclude_cld = C.c_int(1)
@@ -352,11 +366,12 @@ class transmission(base):
 ###################################
 #old code sniplets do not delete
 
-            
-#             for j in range(self.nlayers-1):    
-#                 for k in range(1,self.nlayers-j):
+#             nlayers = self.atmosphere.nlayers
+#             z = self.atmosphere.z
+#             for j in range(nlayers-1):
+#                 for k in range(1,nlayers-j):
 #                     # Calculate half-path length, and double (from system geometry) to get full path distance
-# #                     dl = 2.0 * (sqrt(pow((self.params.planet_radius + self.z[k+j]),2) - pow((self.params.planet_radius + self.z[j]),2)) - sqrt(pow((self.params.planet_radius + self.z[k-1+j]),2) - pow((self.params.planet_radius + self.z[j]),2)))
+# #                     dl = 2.0 * (sqrt(pow((self.params.planet_radius + z[k+j]),2) - pow((self.params.planet_radius + z[j]),2)) - sqrt(pow((self.params.planet_radius + z[k-1+j]),2) - pow((self.params.planet_radius + z[j]),2)))
 #                      
 # #                     print dl , self.dlarray[k+j]
 # #                     for l in range(self.data.ngas):
@@ -367,14 +382,14 @@ class transmission(base):
 #                 exptau[j]= exp(-tau[j])
         
             #calculate area of circles of atmos
-#             dz = zeros((self.nlayers))
-#             for j in range(self.nlayers-1):
-#                 dz[j] = self.z[j+1] - self.z[j]
+#             dz = zeros((nlayers))
+#             for j in range(nlayers-1):
+#                 dz[j] = z[j+1] - z[j]
 #             dz[-1] = dz[-2]
 
 #             integral = 0.0
-#             for j in range(self.nlayers):
-#                 integral += ((self.params.planet_radius+self.z[j])*(1.0-exptau[j])*self.dz[j])
+#             for j in range(nlayers):
+#                 integral += ((self.params.planet_radius+z[j])*(1.0-exptau[j])*self.dz[j])
 #             integral *= 2.0
             
             
@@ -387,7 +402,7 @@ class transmission(base):
 #                 tau[j] += (self.sigma_array[:,wl] * transpose(self.atmosphere.X[j+k,:]) * self.atmosphere.rho[j+k] * self.dlarray[c])
 #                 exptau[j]= exp(-tau[j])
 # 
-#             integral = 2.0* sum(((self.params.planet_radius+self.z)*(1.0-exptau)*self.dz))
+#             integral = 2.0* sum(((self.params.planet_radius+z)*(1.0-exptau)*self.dz))
 #             absorption[wl] = (self.params.planet_radius**2 + integral) / (self.params.star_radius**2)
 
 
@@ -401,7 +416,7 @@ class transmission(base):
 #             tau[j] += (self.sigma_array[:,wl] * self.atmosphere.X[:,j+k] * self.atmosphere.rho[j+k] * self.dlarray[c])
 #             tau[j] += self.Rsig[wl] * rho[j+k] * self.dlarray[c]
 #             exptau[j]= exp(-tau[j])
-#             integral = 2.0* sum(((self.params.planet_radius+self.z)*(1.0-exptau)*self.dz))
+#             integral = 2.0* sum(((self.params.planet_radius+z)*(1.0-exptau)*self.dz))
 #             absorption[wl] = (self.params.planet_radius**2 + integral) / (self.params.star_radius**2)
             
 #         endtime = time.clock()

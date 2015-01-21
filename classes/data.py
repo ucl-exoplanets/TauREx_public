@@ -88,10 +88,6 @@ class data(base):
             self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)
             self.n_spec_bin_grid= len(self.spec_bin_grid)
 
-
-        #setting planetary surface gravity
-        self.planet_grav = self.get_surface_gravity()
-
         #calculating atmospheric scale height
         #self.scaleheight = self.get_scaleheight() # @todo needed? Check. Scaleheight is more specific to tp_profile class
 
@@ -103,15 +99,9 @@ class data(base):
             self.pta, self.X = self.readATMfile()
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
-        else:
-            #if no pta file provided, pta will be calculated by the atmosphere class
-            self.nlayers = self.params.tp_atm_levels
-            self.ngas    = size(self.params.planet_molec)
 
         #reading in absorption coefficient data
-#         self.sigma_array = self.readABSfiles() #completely depreciated
         self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
-
 
         # #reading in other files if specified in parameter file
         if params.in_include_rad:
@@ -119,39 +109,24 @@ class data(base):
         if params.in_include_cia:
             self.cia = self.readfile(self.params.in_cia_file, interpolate=True)
         if params.in_include_cld:
-            self.cld = self.readfile(self.params.in_cld_file,interpolate=True)
+            self.cld = self.readfile(self.params.in_cld_file, interpolate=True)
 
 
         #reading in Phoenix stellar model library (if emission is calculated only)
         if self.params.gen_type == 'emission' or self.params.fit_emission:
             self.F_star = self.get_star_SED() #@todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment 
 
+        # list of all molecules for which we have cross sections
+        self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
+                                    '28Si-16O', '48Ti-16O', '51V-16O']
 
+        # list of all inactive gases we take care of
+        self.all_inactive_gases = ['He', 'H2', 'N2']
+
+        # dictionary with parameters (e.g. mean molecular weight, refractive index, etc) for each gas (absorbers and inactive)
+        self.all_gases_properties = get_gases_properties()
 
     #class functions
-    def get_surface_gravity(self, mass=None, radius=None):
-
-        if not mass:
-            mass = self.params.planet_mass
-        if not radius:
-            radius = self.params.planet_radius
-
-        #calculate surface gravity of planet using Rp and Mp
-        return (G * mass) / (radius**2)
-    #
-    # def get_scaleheight(self,T_aver=None,surf_g=None,mmw=None):
-    #     #compute scaleheight of atmosphere
-    #     if T_aver is None:
-    #         T_aver = self.params.planet_temp
-    #     if surf_g is None:
-    #         surf_g = self.planet_grav
-    #     if mmw is None:
-    #         mmw = self.params.planet_mu
-    #
-    #
-    #     return (KBOLTZ*T_aver)/(mmw*surf_g)
-    #
-    #
 
     def get_specgrid(self, R=5000, lambda_min=0.1, lambda_max=20.0):
         #generating wavelength grid with uniform binning in log(lambda)
@@ -398,3 +373,56 @@ class data(base):
         out = out[np.argsort(out[:,2]),:]
 
         return out[:,0:3],np.transpose(out[:,3:])
+
+    def get_refractive_index(self, gasname, wl):
+
+        # returns the refractive index of a given gas gasname at a specific wavelength wl
+        # Formulae taken from Allen Astrophysical Quantities if not otherwise specified
+
+        if gasname == 'He':
+            r = 1 + 3.48e-5 * (1. + 2.3e-3 / wl**2)
+        elif gasname == 'H2':
+            r = 1 + 13.58e-5 * (1. + 7.52e-3 / wl**2)
+        elif gasname == 'N2':
+            r = 1 + 29.06-5 * (1. + 7.7e-3 / wl**2)
+        elif gasname == 'O2':
+            r = 1 + 26.63-5 * (1. + 5.07e-3 / wl**2)
+        elif gasname == '12C-16O2':
+            r = 1 + 43.9e-5 * (1. + 6.4e-3 / wl**2)
+        elif gasname == '12C-1H4':
+            r = 1.000441,
+        elif gasname == '12C-16O':
+            r = 1 + 32.7e-5 * (1. + 8.1e-3 / wl**2)
+        elif gasname == '14N-1H3':
+            r = 1 + 37.0e-5 * (1. + 12.0e-3 / wl**2)
+        elif gasname == '1H2-16O':
+            # r = 0.85 r(air) (Edlen 1966)
+            # dispersion formula for air: P. E. Ciddor. Refractive index of air: new equations for the visible and near infrared, Appl. Optics 35, 1566-1573 (1996)
+            r = 0.85 * (1 + (0.05792105/(238.0185 - wl**-2) + 0.00167917/(57.362-wl**-2)))
+        else:
+            r = 1
+
+        return r
+
+    def get_molecular_weight(self, gasname):
+
+        if gasname == 'He':
+            mw = 4.
+        elif gasname == 'H2':
+            mw = 2.
+        elif gasname == 'N2':
+            mw = 14.
+        elif gasname == 'O2':
+            mw = 32.
+        elif gasname == '12C-16O2':
+            mw = 44.
+        elif gasname == '12C-1H4':
+            mw = 16.
+        elif gasname == '12C-16O':
+            mw = 28.
+        elif gasname == '14N-1H3':
+            mw = 17.
+        elif gasname == '1H2-16O':
+            mw = 18.
+
+        return mw

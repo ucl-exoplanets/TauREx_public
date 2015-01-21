@@ -168,6 +168,12 @@ molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
 #many mixing ratios as molecules above. Comma separated list.
 mixing_ratios = 2.0e-3, 2.0e-8, 2.0e-3, 2.0e-5, 2.0e-7
 
+# spectrally-inactive gases
+inactive_gases = He, H2, N2
+
+# mixing ratios of spectrally inactive gases
+inactive_gases_X = 0.15, 0.85, 0.
+
 #include cloud opacities. True/False
 include_cld = False
 
@@ -180,11 +186,6 @@ cld_pressure = 1.0e-3, 0.1
 #file from which to read optical depths for extra opacities (e.g. clouds)
 #parameter not in use but placeholder for implementation if needed
 cld_file = Input/cloud1.cld
-
-# H2 and He fractions. Used to calculate Raylaigh scattering
-H2_fraction = 0.15
-He_fraction = 0.85
-N2_fraction = 0.
 
 [T-P profile]
 #let mixing ratios and T-P profile vary

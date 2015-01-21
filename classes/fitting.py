@@ -116,6 +116,7 @@ class fitting(base):
         # calculating densities
         rho = self.atmosphere.get_rho(T=T, P=P)
 
+
         #the temperature parameter should work out of the box but check for transmission again
         model = self.forwardmodel.model(rho=rho, X=X, temperature=T)
 

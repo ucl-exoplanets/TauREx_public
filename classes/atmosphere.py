@@ -40,43 +40,47 @@ class atmosphere(base):
             self.params = params
         else:
             self.params = data.params
+
         self.data = data
         self.fit_transmission = self.params.fit_transmission
         self.fit_emission     = self.params.fit_emission
 
-        #derived values @todo check planet_mu?
+        #derived values @todo planet gravity depends on radius as well.
         self.scaleheight = self.get_scaleheight(self.params.planet_temp, data.planet_grav, self.params.planet_mu)
+
+        #setting planetary surface gravity
+        self.planet_grav = self.get_surface_gravity()
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
         if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
+
             # reading atmospheric profile from .atm file
-            self.pta      = self.data.pta
-            self.X        = self.data.X
             self.nlayers  = self.data.nlayers
             self.ngas     = self.data.ngas
-#             self.X        = np.zeros((self.ngas,self.nlayers)) + (1e-5) #setting up initial mixing ratios
-            
+            self.X        = self.data.X
+            self.pta      = self.data.pta
+
         elif self.params.tp_var_atm:
+
             # atmospheric profile is fitted
             self.nlayers  = int(self.params.tp_atm_levels)
             self.ngas     = int(len(self.params.planet_molec))
             self.X        = self.set_mixing_ratios() # mixing ratios are read from parameter file or set to 1e-4 if preselector = True
             self.pta      = self.setup_pta_grid()
 
-
-
         self.P          = self.pta[:,0] # pressure array
         self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.T          = self.pta[:,1] # temperature array
         self.z          = self.pta[:,2] # altitude array
-        self.rho        = self.get_rho(T=self.T, P=self.P)
-        self.sigma_dict = self.data.sigma_dict
+
+        self.rho        = self.get_rho() # assume self.T, self.P
+
+        self.inactive_gases_X = self.params.planet_inactive_gases_X
+
         if self.params.in_include_rad:
             self.rad        = self.data.rad
         if self.params.in_include_cia:
             self.cia        = self.data.cia
-
-        self.num_T_params = 3 #number of free temperature parameters @todo what is it ?
 
         if self.params.fit_emission or self.params.fit_transmission:
             self.bounds = self.get_prior_bounds()
@@ -87,55 +91,35 @@ class atmosphere(base):
         if self.params.fit_transmission:
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
 
+        #self.bulk_composition = self.get_bulk_composition()
 
-#
-#         self.fit_params[0] = 5e-6
-#         self.fit_params[1] = 2e-7
-#         self.fit_params[2] = 1400
-#         self.fit_params[3] = 1400
-#         self.fit_params[4] = 1200
-#         self.fit_params[5] = 1e5
-#         self.fit_params[6] = 100.0
-
-
-#         self.bounds = [(0.0, 0.01), (0.0, 0.01), (1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0), (50000.0, 500000.0), (50.0, 150.0)]
-#         self.Tpriors = [(1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0)]
-#         self.Ppriors = [(50000.0, 500000.0), (50.0, 150.0)]
-#         self.Xpriors = [(0.0, 0.01), (0.0, 0.01)]
-#         print self.bounds
-#
-#
-#         self.fit_params,self.fit_index, self.fit_count = self.setup_parameter_grid(fit_emission=True)
-#         print self.fit_params
-#         PARAMS2 = self.fit_params
-#         PARAMS2[2] = 1400
-#         PARAMS2[3] = 1400
-#         PARAMS2[4] = 1200
-# #
-# #         print PARAMS2
-# #
-#         self.T,self.P,self.X = self.TP_profile(PARAMS=PARAMS2)
-#         self.rho = self.get_rho(T=self.T,P=self.P)
-#
-#         pl.figure(104)
-#         pl.plot(T,np.log(P))
-#
-#         rho = self.get_rho(T=T, P=P)
-#         pl.figure(105)
-#         pl.plot(rho)
-#         pl.show()
-#         exit()
-#         pl.figure(200)
-#         pl.plot(T,P)
-#         pl.yscale('log')
-#         pl.gca().invert_yaxis()
-#         pl.show()
-#         exit()
 
     #class methods
 
     def get_scaleheight(self,T,g,mu):
         return (KBOLTZ*T)/(mu*g)
+
+    def get_surface_gravity(self, mass=None, radius=None):
+
+        #calculate surface gravity of planet using Rp and Mp
+
+        if not mass:
+            mass = self.params.planet_mass
+        if not radius:
+            radius = self.params.planet_radius
+
+        return (G * mass) / (radius**2)
+
+    def get_rho(self, T=None, P=None):
+
+        #calculate atmospheric densities for given temperature and pressure
+        if P is None:
+            P = self.P
+        if T is None:
+            T = self.T
+        return  (P)/(KBOLTZ*T)
+
+
 
     def setup_pta_grid(self, T=None):
 
@@ -145,9 +129,7 @@ class atmosphere(base):
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
         n_layers = self.nlayers
 
-        # get new scale height if T is provided. Otherwise assume default (should be params.planet_temp)
-        #if T is not None:
-
+        # if T is not None:
         if not T:
             T = self.params.planet_temp
 
@@ -160,9 +142,7 @@ class atmosphere(base):
         pta_arr = np.zeros((n_layers,3))
         pta_arr[:,2] = np.linspace(0,max_z,num=n_layers) # altitude
         pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight)
-#         if T is not None:
-#             PTA_arr[:,1] = T
-#         else:
+
         pta_arr[:,1] = self.params.planet_temp
 
         return pta_arr
@@ -190,8 +170,6 @@ class atmosphere(base):
                 bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
 
         return bounds
-
-
 
     def setup_parameter_grid(self, transmission=False, emission=False):
 
@@ -285,16 +263,6 @@ class atmosphere(base):
             T = T_params
             return T, P, self.X
 
-    def get_rho(self, T=None, P=None):
-
-        #calculate atmospheric densities for given temperature and pressure
-        if P is None:
-            P = self.P
-        if T is None:
-            T = self.T # used to be params.planet_temp!
-        return  (P)/(KBOLTZ*T)
-
-
 
     def set_mixing_ratios(self):
 
@@ -316,14 +284,6 @@ class atmosphere(base):
             for i in range(self.ngas):
                 X[i,:] += float(mixing[i])
         return X
-
-
-
-
-
-
-
-
 
 
 
