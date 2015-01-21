@@ -100,7 +100,7 @@ class output(base):
 
         if self.MCMC:
             # @todo This is only for thread 0. Maybe output results of all chains, stored in fitting.MCMC_OUT[MPIRank]
-            self.spec_mcmc = self.fitting.forwardmodel(rho=self.atmosphere.get_rho(T=self.fitting.MCMC_T_mean),
+            self.spec_mcmc = self.fitting.forwardmodel.model(rho=self.atmosphere.get_rho(T=self.fitting.MCMC_T_mean),
                                                 X=fitting.MCMC_X_mean,
                                                 temperature=self.fitting.MCMC_T_mean)
             self.spec_mcmc = np.interp(self.data.wavegrid, self.data.specgrid, self.spec_mcmc)
@@ -108,7 +108,7 @@ class output(base):
         if self.NEST:
             # separate solutions (modes) have different spectra. These are stored in self.spec_nest[i],
             # for the i-th solutions
-            self.spec_nest = [self.fitting.forwardmodel(rho=self.atmosphere.get_rho(T=self.fitting.NEST_T_mean[i]),
+            self.spec_nest = [self.fitting.forwardmodel.model(rho=self.atmosphere.get_rho(T=self.fitting.NEST_T_mean[i]),
                                                  X=fitting.NEST_X_mean[i],
                                                  temperature=self.fitting.NEST_T_mean[i]) \
                               for i in range(self.fitting.NEST_modes)]
@@ -117,7 +117,7 @@ class output(base):
                                         for i in range(self.fitting.NEST_modes)]
 
         if self.DOWN:
-            self.spec_down = self.fitting.forwardmodel(rho=self.atmosphere.get_rho(T=self.fitting.DOWNHILL_T_mean),
+            self.spec_down = self.fitting.forwardmodel.model(rho=self.atmosphere.get_rho(T=self.fitting.DOWNHILL_T_mean),
                                                 X=self.fitting.DOWNHILL_X_mean,
                                                 temperature=self.fitting.DOWNHILL_T_mean)
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)

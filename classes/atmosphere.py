@@ -150,6 +150,8 @@ class atmosphere(base):
 
         if not T:
             T = self.params.planet_temp
+        else:
+            T = T[0]
 
         self.planet_grav = self.data.get_surface_gravity(mass=self.params.planet_mass, radius=self.params.planet_radius)
         self.scaleheight = self.get_scaleheight(T,  self.planet_grav, self.params.planet_mu)
