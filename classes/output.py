@@ -254,9 +254,11 @@ class output(base):
             logging.info('Plot saved in %s' % filename)
 
 
-    def plot_manual(self,model,save2pdf=False,linewidth=2.0):
+    def plot_manual(self,model,fig=None,save2pdf=False,linewidth=2.0):
 
-        fig = py.figure()
+        if fig == None:
+            fig = py.figure() #allows manual passing of figure pointer
+            
         py.plot(model[:,0],model[:,1],color=[0.0,0.0,0.0],linewidth=linewidth,label='Model')
         py.legend()
         py.title(self.__MODEL_ID__+' Model')
