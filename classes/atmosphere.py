@@ -63,20 +63,24 @@ class atmosphere(base):
             self.X        = self.set_mixing_ratios() # mixing ratios are read from parameter file or set to 1e-4 if preselector = True
             self.pta      = self.setup_pta_grid()
 
+    
+        
 
-
+        #setting internal parameters
         self.P          = self.pta[:,0] # pressure array
         self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.T          = self.pta[:,1] # temperature array
         self.z          = self.pta[:,2] # altitude array
         self.rho        = self.get_rho(T=self.T, P=self.P)
         self.sigma_dict = self.data.sigma_dict
+        
+
+        #setting optional parameters
         if self.params.in_include_rad:
             self.rad        = self.data.rad
         if self.params.in_include_cia:
             self.cia        = self.data.cia
 
-        self.num_T_params = 3 #number of free temperature parameters @todo what is it ?
 
         if self.params.fit_emission or self.params.fit_transmission:
             self.bounds = self.get_prior_bounds()
@@ -86,59 +90,17 @@ class atmosphere(base):
 
         if self.params.fit_transmission:
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
+            self.TP_profile = self.set_TP_profile('isothermal')
+ 
 
-
-#
-#         self.fit_params[0] = 5e-6
-#         self.fit_params[1] = 2e-7
-#         self.fit_params[2] = 1400
-#         self.fit_params[3] = 1400
-#         self.fit_params[4] = 1200
-#         self.fit_params[5] = 1e5
-#         self.fit_params[6] = 100.0
-
-
-#         self.bounds = [(0.0, 0.01), (0.0, 0.01), (1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0), (50000.0, 500000.0), (50.0, 150.0)]
-#         self.Tpriors = [(1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0)]
-#         self.Ppriors = [(50000.0, 500000.0), (50.0, 150.0)]
-#         self.Xpriors = [(0.0, 0.01), (0.0, 0.01)]
-#         print self.bounds
-#
-#
-#         self.fit_params,self.fit_index, self.fit_count = self.setup_parameter_grid(fit_emission=True)
-#         print self.fit_params
-#         PARAMS2 = self.fit_params
-#         PARAMS2[2] = 1400
-#         PARAMS2[3] = 1400
-#         PARAMS2[4] = 1200
-# #
-# #         print PARAMS2
-# #
-#         self.T,self.P,self.X = self.TP_profile(PARAMS=PARAMS2)
-#         self.rho = self.get_rho(T=self.T,P=self.P)
-#
-#         pl.figure(104)
-#         pl.plot(T,np.log(P))
-#
-#         rho = self.get_rho(T=T, P=P)
-#         pl.figure(105)
-#         pl.plot(rho)
-#         pl.show()
-#         exit()
-#         pl.figure(200)
-#         pl.plot(T,P)
-#         pl.yscale('log')
-#         pl.gca().invert_yaxis()
-#         pl.show()
-#         exit()
 
     #class methods
-
     def get_scaleheight(self,T,g,mu):
+        #calculating the atmospheric scale height
         return (KBOLTZ*T)/(mu*g)
 
-    def setup_pta_grid(self, T=None):
 
+    def setup_pta_grid(self, T=None):
         #calculate pressure, temperature, altitude grid
 
         max_p    = self.params.tp_max_pres
@@ -146,9 +108,8 @@ class atmosphere(base):
         n_layers = self.nlayers
 
         # get new scale height if T is provided. Otherwise assume default (should be params.planet_temp)
-        #if T is not None:
 
-        if not T:
+        if T is None:
             T = self.params.planet_temp
         else:
             T = T[0]
@@ -161,15 +122,159 @@ class atmosphere(base):
         #generatinng altitude-pressure array
         pta_arr = np.zeros((n_layers,3))
         pta_arr[:,2] = np.linspace(0,max_z,num=n_layers) # altitude
-        pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight)
-#         if T is not None:
-#             PTA_arr[:,1] = T
-#         else:
-        pta_arr[:,1] = self.params.planet_temp
-
+        pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight) #pressure
+        pta_arr[:,1] = T #temperature
+        
         return pta_arr
 
+
+
     def get_prior_bounds(self):
+        #partially to be moved to parameter file i guess
+
+        self.X_priors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
+        self.TP_priors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
+
+
+
+        #setting up bounds for downhill algorithm
+        #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
+        bounds = []
+        for i in xrange(self.ngas):
+            bounds.append((self.X_priors[0],self.X_priors[1]))
+        if self.fit_transmission:
+            bounds.append((self.TP_priors[0],self.TP_priors[1]))
+        if self.fit_emission:
+            for i in xrange(self.num_T_params):
+                bounds.append((self.Tpriors[0],self.Tpriors[1]))
+            for i in xrange(self.num_T_params-1):
+                bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
+
+        return bounds
+
+
+    def setup_parameter_grid(self, transmission=False, emission=False):
+        #setting up the parameter grid (variable in length depending on TP-profile model selected)
+        
+        # fit_params    [abundances (ngas),TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for differnt models
+        # fit_count     [no. abundances, no. TP parameters]
+        # fit_index     index to fitparams for slicing
+
+        fit_params = []; fit_count = []; fit_index = []
+
+        # setting up mixing ratios for individual gases
+        Xmean = np.mean(self.X_priors)
+        cgas = 0 #count of gas parameters
+        for i in xrange(self.ngas):
+            fit_params.append(Xmean)
+            cgas += 1
+        fit_count.append(cgas)
+
+
+        #setting up temperature parameters
+        ctp = len(self.TP_priors) #count of TP parameters
+
+        if transmission:
+            fit_params.append(self.params.planet_temp) #setting temperature to planet equilibrium temperature 
+
+        if emission:
+            for i in xrange(ctp):
+                fit_params.append(np.mean(self.TP_priors[i])) #setting the mean value from bounds
+ 
+        #generating index list
+        cumidx = fit_count[0]
+        fit_index.append(cumidx)
+
+        for i in xrange(1,len(fit_count)):
+            cumidx += fit_count[i]
+            fit_index.append(cumidx)
+
+        return fit_params, fit_index, fit_count
+    
+
+    def set_TP_profile(self,TP_type):
+    #decorator supplying TP_profile with correct TP profile function   
+        if TP_type is 'isothermal':
+            profile = self._TP_isothermal
+            
+        def tpwrap(fit_params):
+            return self._TP_profile(profile,fit_params)
+        return tpwrap
+
+
+    def _TP_profile(self, TP_function, fit_params):
+    # TP profile decorator. Takes given TP profile function and fitting parameters 
+    # To generate T, P, X grids
+    # PARAMS and INDEX. INDEX = [Chi, TP]
+
+        fit_index = self.fit_index
+
+        X_params  = fit_params[:fit_index[0]] #splitting to gas parameters
+        TP_params = fit_params[fit_index[0]:] #splitting to TP profile parameters
+
+
+        #Setting up mixing ratio grid. Convert X into Nd arrays
+        self.X[:] = 0.0             #using already generated grid
+        for i in xrange(self.ngas):
+            self.X[i,:] += X_params[i]
+            
+        #generating TP profile given input TP_function
+        T,P = TP_function(TP_params)
+        
+        return T,P, self.X
+
+
+        
+    def _TP_isothermal(self,TP_params):
+        #TP profile for isothermal atmosphere 
+        self.pta = self.setup_pta_grid(T=TP_params)
+        P = self.pta[:,0]; T = self.pta[:,1]
+        
+        return T,P 
+        
+
+
+
+
+
+    def get_rho(self, T=None, P=None):
+        #calculate atmospheric densities for given temperature and pressure
+        if P is None:
+            P = self.P
+        if T is None:
+            T = self.T # used to be params.planet_temp!
+        return  (P)/(KBOLTZ*T)
+
+
+
+    def set_mixing_ratios(self):
+        # set up mixing ratio array from parameter file inputs
+
+        mixing = self.params.planet_mixing
+
+        X = np.zeros((self.ngas,self.nlayers))
+        if self.params.pre_run:
+            # if preselector is running
+            X += 1e-4
+        else:
+            #checking if number of mixing ratios = number of gasses
+            if len(mixing) is not self.ngas:
+                logging.error('Wrong  number of mixing ratios to molecules in parameter file')
+                exit()
+
+            # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
+            for i in range(self.ngas):
+                X[i,:] += float(mixing[i])
+        return X
+
+
+
+
+
+
+
+##########################
+    def get_prior_bounds_old(self):
         #partially to be moved to parameter file i guess
 
         self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
@@ -193,9 +298,7 @@ class atmosphere(base):
 
         return bounds
 
-
-
-    def setup_parameter_grid(self, transmission=False, emission=False):
+    def setup_parameter_grid_old(self, transmission=False, emission=False):
 
         # fit_params    [abundances (ngas), temperatures (num_T_params), pressures (num_T_params-1)]
         # fit_count     [no. abundances, no. temperatures, no. pressures]
@@ -245,7 +348,8 @@ class atmosphere(base):
         return fit_params, fit_index, fit_count
 
 
-    def TP_profile(self, fit_params, T=None, P=None):
+
+    def TP_profile_old(self, fit_params, T=None, P=None):
 
     # main function defining basic parameterised TP-profile from
     # PARAMS and INDEX. INDEX = [Chi, T, P]
@@ -286,48 +390,6 @@ class atmosphere(base):
         if fit_count[1] == 1:
             T = T_params
             return T, P, self.X
-
-    def get_rho(self, T=None, P=None):
-
-        #calculate atmospheric densities for given temperature and pressure
-        if P is None:
-            P = self.P
-        if T is None:
-            T = self.T # used to be params.planet_temp!
-        return  (P)/(KBOLTZ*T)
-
-
-
-    def set_mixing_ratios(self):
-
-        # set up mixing ratio array from parameter file inputs
-
-        mixing = self.params.planet_mixing
-
-        X = np.zeros((self.ngas,self.nlayers))
-        if self.params.pre_run:
-            # if preselector is running
-            X += 1e-4
-        else:
-            #checking if number of mixing ratios = number of gasses
-            if len(mixing) is not self.ngas:
-                logging.error('Wrong  number of mixing ratios to molecules in parameter file')
-                exit()
-
-            # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
-            for i in range(self.ngas):
-                X[i,:] += float(mixing[i])
-        return X
-
-
-
-
-
-
-
-
-
-
 
 
 
