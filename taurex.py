@@ -208,7 +208,7 @@ if params.nest_run and multinest_import:
     fittingob.multinest_fit() # Nested sampling fit
 
 #forcing slave processes to exit at this stage
-if MPI.COMM_WORLD.Get_rank() != 0:
+if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
     #MPI.MPI_Finalize()
     exit()
 

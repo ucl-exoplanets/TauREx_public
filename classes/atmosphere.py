@@ -212,7 +212,6 @@ class atmosphere(base):
         X_params  = fit_params[:fit_index[0]] #splitting to gas parameters
         TP_params = fit_params[fit_index[0]:] #splitting to TP profile parameters
 
-
         #Setting up mixing ratio grid. Convert X into Nd arrays
         self.X[:] = 0.0             #using already generated grid
         for i in xrange(self.ngas):
