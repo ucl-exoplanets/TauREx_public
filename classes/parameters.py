@@ -214,6 +214,15 @@ class parameters(base):
         except:
             pass
         
+        try:
+            self.clean_run             = self.getpar('Housekeeping','run','bool')
+            self.clean_script          = self.getpar('Housekeeping','script_name')
+            self.clean_save_used_params= self.getpar('Housekeeping','save_used_params','bool')
+        except:
+            self.clean_run             = False
+            pass
+        
+        
         #####################################################################
         #additional parser commands. Checking parameter compatibility and stuff 
         

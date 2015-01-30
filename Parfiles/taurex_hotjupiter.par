@@ -233,7 +233,7 @@ X_low = 0.0
 #defines parameters for minimisation
 
 #run minimisation routine on data
-run = False
+run = True
 
 #type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, 
 #L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
@@ -268,7 +268,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = True
+run = False
 
 #resume from previous run
 resume = True
@@ -301,9 +301,16 @@ const_eff = False
 imp_sampling = False
 
 
+[Housekeeping]
+#lets you run an external script (py or sh) in subshell at 
+#the end of TauREx. Usefull to automatically transfer data or 
+#delete tmp files
 
-[NeuralNet]
-#defines Neural Network specific parameters
+#run housekeeping
+run = False
 
+#Name of script in TauREx base dir
+script_name = transfer_data1.py
 
-
+#Save used parameter file to Output
+save_used_params = True

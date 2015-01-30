@@ -310,6 +310,17 @@ const_eff = False
 imp_sampling = False
 
 
+[Housekeeping]
+#lets you run an external script (py or sh) in subshell at 
+#the end of TauREx. Usefull to automatically transfer data or 
+#delete tmp files
 
-[NeuralNet]
-#defines Neural Network specific parameters
+#run housekeeping
+run = False
+
+#Name of script in TauREx base dir
+script_name = transfer2home.py
+
+#Save used parameter file to Output
+save_used_params = True
+

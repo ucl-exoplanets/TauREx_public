@@ -229,6 +229,18 @@ if params.verbose or params.out_save_plots:
 outputob.save_model()       #saving models to ascii
 
 
+#####################################################################
+#launches external housekeeping script. E.g. useful to transfer data 
+#from Scratch to home 
+if params.clean_run:
+    import subprocess
+    #copies used parameter file to ./Output 
+    if params.clean_save_used_params:
+        subprocess.call('cp '+options.param_filename+' Output/',shell=True)
+
+    subprocess.call('python '+params.clean_script,shell=True)
+
+
 #end of main code
 #####################################################################
 
@@ -272,5 +284,5 @@ outputob.save_model()       #saving models to ascii
 # # print s.getvalue()
 
 #last line. displays any diagrams generated. must be run after profiling
-#if params.verbose:
-#    show()
+# if params.verbose:
+#     show()
