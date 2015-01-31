@@ -19,6 +19,7 @@
 #loading libraries
 from base import base
 import numpy as np
+import scipy.special as spe
 import pylab as pl
 import logging
 
@@ -67,6 +68,7 @@ class atmosphere(base):
         
 
         #setting internal parameters
+        self.g          = data.planet_grav #surface gravity
         self.P          = self.pta[:,0] # pressure array
         self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.T          = self.pta[:,1] # temperature array
@@ -87,6 +89,7 @@ class atmosphere(base):
 
         if self.params.fit_emission:
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(emission=True)
+            self.TP_profile = self.set_TP_profile('guillot')
 
         if self.params.fit_transmission:
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
@@ -96,13 +99,16 @@ class atmosphere(base):
 
     #class methods
     def get_scaleheight(self,T,g,mu):
-        #calculating the atmospheric scale height
+        '''
+        Calculating the atmospheric scale height
+        '''
         return (KBOLTZ*T)/(mu*g)
 
 
     def setup_pta_grid(self, T=None):
-        #calculate pressure, temperature, altitude grid
-
+        '''
+        Calculate pressure, temperature, altitude grid
+        '''
         max_p    = self.params.tp_max_pres
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
         n_layers = self.nlayers
@@ -130,8 +136,9 @@ class atmosphere(base):
 
 
     def get_prior_bounds(self):
-        #partially to be moved to parameter file i guess
-
+        '''
+        Partially to be moved to parameter file i guess
+        '''
         self.X_priors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
         self.TP_priors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
 
@@ -154,12 +161,13 @@ class atmosphere(base):
 
 
     def setup_parameter_grid(self, transmission=False, emission=False):
-        #setting up the parameter grid (variable in length depending on TP-profile model selected)
+        '''
+        Setting up the parameter grid (variable in length depending on TP-profile model selected)
         
-        # fit_params    [abundances (ngas),TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for differnt models
-        # fit_count     [no. abundances, no. TP parameters]
-        # fit_index     index to fitparams for slicing
-
+        fit_params    [abundances (ngas),TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for differnt models
+        fit_count     [no. abundances, no. TP parameters]
+        fit_index     index to fitparams for slicing
+        '''
         fit_params = []; fit_count = []; fit_index = []
 
         # setting up mixing ratios for individual gases
@@ -190,12 +198,58 @@ class atmosphere(base):
             fit_index.append(cumidx)
 
         return fit_params, fit_index, fit_count
-    
+
+
+    def get_rho(self, T=None, P=None):
+        '''
+        Calculate atmospheric densities for given temperature and pressure
+        '''
+        if P is None:
+            P = self.P
+        if T is None:
+            T = self.T # used to be params.planet_temp!
+        return  (P)/(KBOLTZ*T)
+
+
+
+    def set_mixing_ratios(self):
+        '''
+        Set up mixing ratio array from parameter file inputs
+        '''
+        mixing = self.params.planet_mixing
+
+        X = np.zeros((self.ngas,self.nlayers))
+        if self.params.pre_run:
+            # if preselector is running
+            X += 1e-4
+        else:
+            #checking if number of mixing ratios = number of gasses
+            if len(mixing) is not self.ngas:
+                logging.error('Wrong  number of mixing ratios to molecules in parameter file')
+                exit()
+
+            # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
+            for i in range(self.ngas):
+                X[i,:] += float(mixing[i])
+        return X
+   
+
+#####################
+# Everything below is related to Temperature Pressure Profiles
+
 
     def set_TP_profile(self,TP_type):
-    #decorator supplying TP_profile with correct TP profile function   
+        '''
+        Decorator supplying TP_profile with correct TP profile function. 
+        Only the free parameters will be provided to the function after TP profile 
+        is set.   
+        '''
         if TP_type is 'isothermal':
             profile = self._TP_isothermal
+        elif TP_type is 'guillot':
+            profile = self._TP_guillot2010
+        elif TP_type is 'rodgers':
+            profile = self._TP_rodgers2000
             
         def tpwrap(fit_params):
             return self._TP_profile(profile,fit_params)
@@ -203,9 +257,13 @@ class atmosphere(base):
 
 
     def _TP_profile(self, TP_function, fit_params):
-    # TP profile decorator. Takes given TP profile function and fitting parameters 
-    # To generate T, P, X grids
-    # PARAMS and INDEX. INDEX = [Chi, TP]
+        '''
+        TP profile decorator. Takes given TP profile function and fitting parameters 
+        To generate Temperature, Pressure, Column Density (T, P, X) grids
+        
+        fit_params depend on TP_profile selected.
+        INDEX splits column densities from TP_profile parameters, INDEX = [Chi, TP]
+        '''
 
         fit_index = self.fit_index
 
@@ -225,46 +283,84 @@ class atmosphere(base):
 
         
     def _TP_isothermal(self,TP_params):
-        #TP profile for isothermal atmosphere 
+        '''
+        TP profile for isothermal atmosphere. Follows the old implementation. 
+        '''
         self.pta = self.setup_pta_grid(T=TP_params)
         P = self.pta[:,0]; T = self.pta[:,1]
         
         return T,P 
         
+        
+    def _TP_guillot2010(self,TP_params):
+        '''
+        TP profile from Guillot 2010, A&A, 520, A27 (equation 49)
+        Using modified 2stream approx. from Line et al. 2012, ApJ, 729,93 (equation 19)
+        
+        Free parameters required: 
+            - T_irr    = planet equilibrium temperature (Line fixes this but we keep as free parameter)
+            - kappa_ir = mean infra-red opacity
+            - kappa_v1 = mean optical opacity one
+            - kappa_v2 = mean optical opacity two
+            - alpha    = ratio between kappa_v1 and kappa_v2 downwards radiation stream
+            
+        Fixed parameters:
+            - T_int    = internal planetary heat flux (can be largely ignored. line puts it on 200K for hot jupiter)
+            - P        = Pressure grid, fixed to self.P
+            - g        = surface gravity, fixed to self.g
+        '''
+        
+        #assigning fitting parameters 
+        T_irr = TP_params[0], kappa_ir = TP_params[1], kappa_v1 = TP_params[2]; kappa_v2 = TP_params[3]; alpha = TP_params[4]
+        
+        gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir     
+        tau = kappa_ir * self.P / self.g
+        
+        T_int = 200 #@todo internal heat parameter looks suspicious... needs looking at. 
+        
+        def eta(gamma, tau):
+            part1 = 2.0/3.0 + 2.0 / (3.0*gamma) * (1.0 + (gamma*tau/2.0 - 1.0) * np.exp(-1.0 * gamma * tau))
+            part2 = 2.0 * gamma / 3.0 * (1.0 - tau**2/2.0) * spe.expn(2,(gamma*tau))
+            return part1 + part2
+            
+        
+        T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)
+        T = T4**(1/4)
+        return T, self.P
+    
+    
+    def _TP_rodgers2000(self,TP_params):
+        '''
+        Layer-by-layer temperature - pressure profile retrieval using dampening factor 
+        Introduced in Rodgers (2000): Inverse Methods for Atmospheric Sounding (equation 3.26)
+        Featured in NEMESIS code (Irwin et al., 2008, J. Quant. Spec., 109, 1136 (equation 19)
+        Used in all Barstow et al. papers. 
+        
+        Free parameters required: 
+            - T  = one temperature per layer of Pressure (P)
+            
+        Fixed parameters: 
+            - P  = Pressure grid, fixed to self.P
+            - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Lee et al sets this to 1.5
+                  may be left as free and Pressure dependent parameter later.
+        '''
+        
+        #assigning parameters 
+        T_init = TP_params
+        h      = 7.0
+        
+#         covmatrix = np.zeros((self.nlayers,self.nlayers))
+#         for i in range(self.nlayers):
+#             for j in range(self.nlayers):
+#                 covmatrix[i,j] = (T_init[i] * T_init[j])**(1/2) * np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[j]))/h)  
+        
+        T = np.zeros((self.nlayers,1))
+        for i in xrange(self.nlayers):
+            T[i] = np.sum((T_init[i] * T_init[:])**(1/2) * np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h))
+        
+        return T, self.P
 
 
-
-
-
-    def get_rho(self, T=None, P=None):
-        #calculate atmospheric densities for given temperature and pressure
-        if P is None:
-            P = self.P
-        if T is None:
-            T = self.T # used to be params.planet_temp!
-        return  (P)/(KBOLTZ*T)
-
-
-
-    def set_mixing_ratios(self):
-        # set up mixing ratio array from parameter file inputs
-
-        mixing = self.params.planet_mixing
-
-        X = np.zeros((self.ngas,self.nlayers))
-        if self.params.pre_run:
-            # if preselector is running
-            X += 1e-4
-        else:
-            #checking if number of mixing ratios = number of gasses
-            if len(mixing) is not self.ngas:
-                logging.error('Wrong  number of mixing ratios to molecules in parameter file')
-                exit()
-
-            # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
-            for i in range(self.ngas):
-                X[i,:] += float(mixing[i])
-        return X
 
 
 
