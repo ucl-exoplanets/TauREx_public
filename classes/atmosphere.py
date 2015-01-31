@@ -83,17 +83,22 @@ class atmosphere(base):
         if self.params.in_include_cia:
             self.cia        = self.data.cia
 
-
-        if self.params.fit_emission or self.params.fit_transmission:
-            self.bounds = self.get_prior_bounds()
-
-        if self.params.fit_emission:
+        if self.params.gen_type == 'emission':
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(emission=True)
-            self.TP_profile = self.set_TP_profile('guillot')
+            self.TP_type = 'guillot'
+            
 
-        if self.params.fit_transmission:
+        if self.params.gen_type == 'transmission':
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
-            self.TP_profile = self.set_TP_profile('isothermal')
+            self.TP_type = 'isothermal'
+        
+        #setting up TP profile 
+        self.TP_profile = self.set_TP_profile()
+            
+        #setting free parameter prior bounds
+        if self.params.fit_emission or self.params.fit_transmission:
+                self.bounds = self.get_prior_bounds()
+
  
 
 
@@ -135,27 +140,30 @@ class atmosphere(base):
 
 
 
-    def get_prior_bounds(self):
+    def get_prior_bounds(self): 
         '''
         Partially to be moved to parameter file i guess
         '''
         self.X_priors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
-        self.TP_priors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
-
+        self.T_priors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
 
 
         #setting up bounds for downhill algorithm
-        #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
         bounds = []
         for i in xrange(self.ngas):
             bounds.append((self.X_priors[0],self.X_priors[1]))
-        if self.fit_transmission:
-            bounds.append((self.TP_priors[0],self.TP_priors[1]))
-        if self.fit_emission:
-            for i in xrange(self.num_T_params):
-                bounds.append((self.Tpriors[0],self.Tpriors[1]))
-            for i in xrange(self.num_T_params-1):
-                bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
+            
+        if self.TP_type   == 'isothermal':
+            bounds.append((self.T_priors[0],self.T_priors[1])) #isothermal T 
+        elif self.TP_type == 'rodgers':
+            for i in xrange(self.nlayers):
+                bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
+        elif self.TP_type == 'guillot':
+            bounds.append((self.T_priors[0],self.T_priors[1]))  #T_irr prior
+            bounds.append((0.0,1.0))                            #kappa_irr prior
+            bounds.append((0.0,1.0))                            #kappa_v1 prior
+            bounds.append((0.0,1.0))                            #kappa_v2 prior
+            bounds.append((0.0,1.0))                            #alpha prior
 
         return bounds
 
@@ -234,21 +242,21 @@ class atmosphere(base):
         return X
    
 
-#####################
-# Everything below is related to Temperature Pressure Profiles
+    #####################
+    # Everything below is related to Temperature Pressure Profiles
 
 
-    def set_TP_profile(self,TP_type):
+    def set_TP_profile(self):
         '''
         Decorator supplying TP_profile with correct TP profile function. 
         Only the free parameters will be provided to the function after TP profile 
         is set.   
         '''
-        if TP_type is 'isothermal':
+        if self.TP_type is 'isothermal':
             profile = self._TP_isothermal
-        elif TP_type is 'guillot':
+        elif self.TP_type is 'guillot':
             profile = self._TP_guillot2010
-        elif TP_type is 'rodgers':
+        elif self.TP_type is 'rodgers':
             profile = self._TP_rodgers2000
             
         def tpwrap(fit_params):
@@ -341,7 +349,7 @@ class atmosphere(base):
             
         Fixed parameters: 
             - P  = Pressure grid, fixed to self.P
-            - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Lee et al sets this to 1.5
+            - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
                   may be left as free and Pressure dependent parameter later.
         '''
         
