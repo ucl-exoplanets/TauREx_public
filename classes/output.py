@@ -30,6 +30,7 @@ from library_plotting import *
 
 
 class output(base):
+
     def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None):
          
         logging.info('Initialise object output')
@@ -65,25 +66,33 @@ class output(base):
 
         self.fitting = fitting
 
-        #inheriting emission/transmission model from fitting object if loaded
-        # 'fit' can either be the fitting instance or the emission/transmission instances
-        # if fitting is not None:
-        #     if fitting.__ID__ == 'fitting':
-        #         self.fitting.model        = fitting.model #directly inheriting model instance from fitting instance
-        #         self.__MODEL_ID__ = fitting.__MODEL_ID__
-        # elif forwardmodel is not None:
-        #     self.set_model(forwardmodel) #abstracting emission/transmission model
-
         self.__MODEL_ID__ = type(self.forwardmodel).__name__
 
-        #dumping fitted paramter names to file and list. @todo This assumes only one temperature! Careful with emission
+        #dumping fitted paramter names to file and list
+
         self.parameters = []
         with open(os.path.join(self.params.out_path, 'parameters.dat'), 'w') as parfile:
+            if not self.params.fit_fix_temp:
+                parfile.write('Temperature \n')
+                self.parameters.append('Temperature')
+            if not self.params.fit_couple_mu:
+                if not self.params.fit_fix_mu:
+                    parfile.write('mu \n')
+                    self.parameters.append('mu')
+            if not self.params.fit_fix_radius:
+                parfile.write('Radius \n')
+                self.parameters.append('Radius')
+            if not self.params.fit_fix_P0:
+                parfile.write('P0 \n')
+                self.parameters.append('P0')
+
             for mol in self.params.planet_molec:
-                parfile.write(mol+' \n')
+                parfile.write('%s \n' % mol)
                 self.parameters.append(mol)
-            parfile.write('Temperature \n')
-            self.parameters.append('Temperature')
+
+            for mol in self.params.planet_inactive_gases:
+                parfile.write('%s \n' % mol)
+                self.parameters.append(mol)
 
         #determining which fits were performed
         if fitting is not None and fitting.__ID__ == 'fitting':
@@ -106,20 +115,22 @@ class output(base):
             self.spec_mcmc = np.interp(self.data.wavegrid, self.data.specgrid, self.spec_mcmc)
 
         if self.NEST:
-            # separate solutions (modes) have different spectra. These are stored in self.spec_nest[i],
-            # for the i-th solutions
-            self.spec_nest = [self.fitting.forwardmodel(rho=self.atmosphere.get_rho(T=self.fitting.NEST_T_mean[i]),
-                                                 X=fitting.NEST_X_mean[i],
-                                                 temperature=self.fitting.NEST_T_mean[i]) \
-                              for i in range(self.fitting.NEST_modes)]
 
+            # separate solutions (modes) have different spectra. These are stored in self.spec_nest[i],
+
+            self.spec_nest = []
+            for fit_params in self.fitting.multinest_result:
+                self.fitting.update_atmospheric_parameters(fit_params)
+                self.spec_nest.append(self.fitting.forwardmodel.model())
+
+            # interpolate
             self.spec_nest = [np.interp(self.data.wavegrid, self.data.specgrid, self.spec_nest[i]) \
                                         for i in range(self.fitting.NEST_modes)]
 
         if self.DOWN:
-            self.spec_down = self.fitting.forwardmodel(rho=self.atmosphere.get_rho(T=self.fitting.DOWNHILL_T_mean),
-                                                X=self.fitting.DOWNHILL_X_mean,
-                                                temperature=self.fitting.DOWNHILL_T_mean)
+            self.spec_down = self.fitting.forwardmodel.model(rho=self.atmosphere.get_rho(T=self.fitting.DOWNHILL_T_mean),
+                                                    X=self.fitting.DOWNHILL_X_mean,
+                                                    temperature=self.fitting.DOWNHILL_T_mean)
             self.spec_down = np.interp(self.data.wavegrid,self.data.specgrid,self.spec_down)
 
     #class methods
@@ -130,6 +141,7 @@ class output(base):
 
         self.plot_spectrum(save2pdf=save2pdf)
         self.plot_fit(save2pdf=save2pdf)
+
         if self.MCMC:
             self.plot_mcmc(save2pdf=save2pdf, param_names=self.parameters)
         if self.NEST:
@@ -159,8 +171,8 @@ class output(base):
         #plotting nested sampling distributions.
         # @todo this function is almost identical to plot_mcmc... Maybe merge?
 
-
         if self.NEST:
+
             if not param_names:
                 parameters = range(self.fitting.n_params)
             else:
@@ -171,7 +183,7 @@ class output(base):
                 logging.info('Plotting nested sampling distributions. Saving to %s' % self.params.out_path)
 
                 plot_multinest_results(self.fitting.dir_multinest,
-                                       parameters=parameters,
+                                       parameters=self.fitting.fit_params_names,
                                        save2pdf=save2pdf,
                                        out_path=self.params.out_path,
                                        plot_contour=self.params.out_plot_contour)
@@ -192,6 +204,7 @@ class output(base):
                     self.data.spectrum[:,2],
                     color=[0.7,0.7,0.7],
                     linewidth=linewidth)
+
         # @todo why again?
         py.plot(self.data.spectrum[:,0],
                 self.data.spectrum[:,1],
@@ -205,6 +218,7 @@ class output(base):
 
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$')
+
         elif self.__MODEL_ID__ == 'emission':
             py.ylabel('$F_p/F_s$')
 
@@ -259,6 +273,7 @@ class output(base):
         fig = py.figure()
         py.plot(model[:,0],model[:,1],color=[0.0,0.0,0.0],linewidth=linewidth,label='Model')
         py.legend()
+        py.xscale('log')
         py.title(self.__MODEL_ID__+' Model')
         py.xlabel('Wavelength ($\mu m$)')
 
@@ -277,8 +292,11 @@ class output(base):
 
         logging.info('Dumps all model fits to file')
 
-        out = np.zeros((len(self.data.spectrum[:,0]),2))
-        out[:,0] = self.data.spectrum[:,0]
+        if modelout == None:
+            out = np.zeros((len(self.data.spectrum[:,0]), 2))
+            out[:,0] = self.data.spectrum[:,0]
+        else:
+            out = modelout
 
         basename = os.path.join(self.params.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
 

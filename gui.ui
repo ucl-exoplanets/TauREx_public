@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>802</width>
-    <height>458</height>
+    <width>799</width>
+    <height>447</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,9 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::DefaultContextMenu</enum>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
@@ -88,7 +91,7 @@
       <rect>
        <x>10</x>
        <y>60</y>
-       <width>111</width>
+       <width>112</width>
        <height>162</height>
       </rect>
      </property>
@@ -124,28 +127,28 @@
       <item row="0" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_H2O">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_CH4">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="2" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_CO">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="3" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_CO2">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
@@ -159,7 +162,7 @@
       <item row="4" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_NH3">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
@@ -170,7 +173,7 @@
       <rect>
        <x>130</x>
        <y>60</y>
-       <width>111</width>
+       <width>114</width>
        <height>162</height>
       </rect>
      </property>
@@ -206,35 +209,35 @@
       <item row="1" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_SiO">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="2" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_VO">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="3" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_NO">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="4" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_HCN">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_TiO">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
         </property>
        </widget>
       </item>
@@ -360,7 +363,7 @@
       <rect>
        <x>10</x>
        <y>10</y>
-       <width>237</width>
+       <width>240</width>
        <height>201</height>
       </rect>
      </property>
@@ -378,7 +381,7 @@
       <item row="0" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_Rp_Rstar">
         <property name="decimals">
-         <number>4</number>
+         <number>6</number>
         </property>
         <property name="singleStep">
          <double>0.001000000000000</double>
@@ -432,6 +435,9 @@
         <property name="decimals">
          <number>3</number>
         </property>
+        <property name="maximum">
+         <double>1000.000000000000000</double>
+        </property>
        </widget>
       </item>
       <item row="5" column="0">
@@ -444,7 +450,10 @@
       <item row="5" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_surf_pressure">
         <property name="decimals">
-         <number>3</number>
+         <number>5</number>
+        </property>
+        <property name="maximum">
+         <double>1000.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>0.001000000000000</double>
@@ -454,7 +463,10 @@
       <item row="3" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_mass">
         <property name="decimals">
-         <number>3</number>
+         <number>4</number>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -583,7 +595,7 @@
     <property name="geometry">
      <rect>
       <x>270</x>
-      <y>240</y>
+      <y>230</y>
       <width>261</width>
       <height>121</height>
      </rect>
@@ -594,34 +606,49 @@
     <property name="frameShadow">
      <enum>QFrame::Raised</enum>
     </property>
-    <widget class="QWidget" name="formLayoutWidget_8">
+    <widget class="QWidget" name="horizontalLayoutWidget_3">
      <property name="geometry">
       <rect>
        <x>10</x>
        <y>10</y>
        <width>241</width>
-       <height>80</height>
+       <height>32</height>
       </rect>
      </property>
-     <layout class="QFormLayout" name="formLayout_8">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_21">
-        <property name="text">
-         <string>Add noise (ppm)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_31">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QPushButton" name="pushButton_add_observations">
         <property name="text">
          <string>Add observations</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QPushButton" name="pushButton_add_observations">
+      <item>
+       <widget class="QPushButton" name="pushButton_delete_observations">
         <property name="text">
-         <string>Select file</string>
+         <string>Delete</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QWidget" name="formLayoutWidget_6">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>241</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <layout class="QFormLayout" name="formLayout_6">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::FieldsStayAtSizeHint</enum>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_21">
+        <property name="text">
+         <string>Add noise (ppm)</string>
         </property>
        </widget>
       </item>
@@ -708,13 +735,20 @@
    <widget class="QWidget" name="horizontalLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>380</y>
-      <width>307</width>
+      <x>340</x>
+      <y>370</y>
+      <width>385</width>
       <height>32</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButton_load_par_file">
+       <property name="text">
+        <string>Load .par file</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QCheckBox" name="checkBox_plot_autorefresh">
        <property name="text">
@@ -732,37 +766,22 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_plot">
+       <property name="text">
+        <string>Plot</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
-   <widget class="QPushButton" name="pushButton_plot">
-    <property name="geometry">
-     <rect>
-      <x>650</x>
-      <y>380</y>
-      <width>93</width>
-      <height>32</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Plot</string>
-    </property>
-   </widget>
-   <zorder>frame</zorder>
-   <zorder>frame_2</zorder>
-   <zorder>lineEdit_planet_radius</zorder>
-   <zorder>frame_3</zorder>
-   <zorder>frame_4</zorder>
-   <zorder>frame_5</zorder>
-   <zorder>horizontalLayoutWidget</zorder>
-   <zorder>pushButton_overplot</zorder>
-   <zorder>pushButton_plot</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>802</width>
+     <width>799</width>
      <height>22</height>
     </rect>
    </property>

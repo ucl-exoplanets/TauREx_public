@@ -28,6 +28,7 @@ import library_general as libgen
 # some constants
 KBOLTZ = 1.380648813e-23
 G = 6.67384e-11
+AMU   = 1.660538921e-27 #atomic mass to kg
 
 class atmosphere(base):
 
@@ -46,14 +47,25 @@ class atmosphere(base):
         self.fit_emission     = self.params.fit_emission
 
 
-        # set atmosphere specific parameters. These parameters can be fitted
-        self.max_pressure = self.params.tp_max_pres
-        self.planet_temp = self.params.planet_temp          # single temperature
-        self.planet_radius_10mbar = self.params.planet_radius
+        # set mixing ratios
+        self.absorbing_gases = self.params.planet_molec
+        self.absorbing_gases_X = self.params.planet_mixing
+        self.inactive_gases = self.params.planet_inactive_gases
+        self.inactive_gases_X = self.params.planet_inactive_gases_X
+
+        # set other atmosphere specific parameters
+        self.planet_temp = self.params.planet_temp
+        self.planet_mass = self.params.planet_mass
+
+        if self.params.fit_couple_mu:
+            self.planet_mu = self.get_coupled_planet_mu()
+        else:
+            self.planet_mu = self.params.planet_mu
+
+        self.planet_radius = self.params.planet_radius
         self.planet_grav = self.get_surface_gravity()
-        self.planet_mu = self.params.planet_mu
         self.scaleheight = self.get_scaleheight()
-        self.planet_radius_P0 = self.get_surface_radius()
+        self.max_pressure = self.params.tp_max_pres
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
         if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
@@ -76,10 +88,7 @@ class atmosphere(base):
         self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.T          = self.pta[:,1] # temperature array
         self.z          = self.pta[:,2] # altitude array
-
         self.rho        = self.get_rho() # assume self.T, self.P
-
-        self.inactive_gases_X = self.params.planet_inactive_gases_X
 
         self.num_T_params = 3 #number of free temperature parameters @todo leave it here. used for emission
 
@@ -96,6 +105,20 @@ class atmosphere(base):
 
 
     #class methods
+
+    def get_coupled_planet_mu(self):
+
+        '''
+        Get the mean molecular weight (mu) from atmospheric composition
+        '''
+
+        mu = 0
+        for idx, gasname in enumerate(self.absorbing_gases):
+            mu += self.absorbing_gases_X[idx] * self.data.get_molecular_weight(gasname)
+        for idx, gasname in enumerate(self.inactive_gases):
+            mu += self.inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
+
+        return mu
 
     def get_scaleheight(self, T=None, g=None, mu=None):
 
@@ -115,9 +138,9 @@ class atmosphere(base):
         # todo the TP profile, which depends on scaleheight, which depends on surface gravity... it's a loop!
 
         if not mass:
-            mass = self.params.planet_mass
+            mass = self.planet_mass
         if not radius:
-            radius = self.planet_radius_10mbar
+            radius = self.planet_radius
 
         return (G * mass) / (radius**2)
 
@@ -131,8 +154,6 @@ class atmosphere(base):
 
         return  (P)/(KBOLTZ*T)
 
-    def get_surface_radius(self):
-        return self.planet_radius_10mbar - self.scaleheight * np.log(self.max_pressure/0.01)
 
     def setup_pta_grid(self):
 
@@ -148,6 +169,20 @@ class atmosphere(base):
         pta_arr[:,1] = self.planet_temp
 
         return pta_arr
+
+    def get_gas_fraction(self, gasname):
+
+        # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
+        if gasname in self.data.all_absorbing_gases:
+            if gasname in self.params.planet_molec:
+                index = self.params.planet_molec.index(gasname)
+                return self.X[index, 0]
+
+        elif gasname in self.data.all_inactive_gases:
+            if gasname in self.params.planet_inactive_gases:
+                index = self.params.planet_inactive_gases.index(gasname)
+                return self.inactive_gases_X[index]
+        return 0
 
     def get_prior_bounds(self):
 
@@ -278,13 +313,14 @@ class atmosphere(base):
 
         # set up mixing ratio array from parameter file inputs
 
-        mixing = self.params.planet_mixing
+        mixing = self.absorbing_gases_X
 
         X = np.zeros((self.ngas,self.nlayers))
-        if self.params.pre_run:
+        if self.params.pre_run: # @todo FIX POSITION
             # if preselector is running
             X += 1e-4
         else:
+
             #checking if number of mixing ratios = number of gasses
             if len(mixing) is not self.ngas:
                 logging.error('Wrong  number of mixing ratios to molecules in parameter file')

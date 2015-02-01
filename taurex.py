@@ -71,10 +71,10 @@ except:
 
 
 ####start of profiling code
-# import cProfile, pstats, StringIO
-# pr = cProfile.Profile()
-# pr.enable()
-# starttime = time.clock()
+import cProfile, pstats, StringIO
+pr = cProfile.Profile()
+pr.enable()
+starttime = time.clock()
 
 #end of profiling code
 
@@ -232,45 +232,45 @@ outputob.save_model()       #saving models to ascii
 #end of main code
 #####################################################################
 
-####profiling code
-# pr.disable()
-# 
-# PROFDIR = 'Profiling/'
-# if not os.path.isdir(PROFDIR):
-#         os.mkdir(PROFDIR)
-# 
-# # s = StringIO.StringIO()
-# sortby = 'cumulative'
-# # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-# 
-# #printing to terminal
-# # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
-# # globalstats.print_stats()
-# 
-# #redirecting output to files
-# sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
+###profiling code
+pr.disable()
+
+PROFDIR = 'Profiling/'
+if not os.path.isdir(PROFDIR):
+        os.mkdir(PROFDIR)
+
+# s = StringIO.StringIO()
+sortby = 'cumulative'
+# ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+
+#printing to terminal
 # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
 # globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
-# globalstats.print_stats()
-#
-# # ps.print_stats()
-# # print s.getvalue()
+
+#redirecting output to files
+sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
+globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
+globalstats.print_stats()
+
+sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
+globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
+globalstats.print_stats()
+
+sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
+globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
+globalstats.print_stats()
+
+sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
+globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
+globalstats.print_stats()
+
+sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
+globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
+globalstats.print_stats()
+
+# ps.print_stats()
+# print s.getvalue()
 
 #last line. displays any diagrams generated. must be run after profiling
-if params.verbose:
-    show()
+#if params.verbose:
+#    show()

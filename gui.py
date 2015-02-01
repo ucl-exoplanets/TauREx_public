@@ -5,6 +5,7 @@ import sys
 from PyQt4 import QtCore, QtGui, uic
 
 import matplotlib
+import numpy as np
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -14,10 +15,6 @@ matplotlib.use('Qt4Agg')
 sys.path.append('./classes')
 sys.path.append('./library')
 
-'''
-coap
-
-'''
 import parameters,emission,transmission,output,fitting,atmosphere,data,preselector
 from parameters import *
 from emission import *
@@ -65,11 +62,12 @@ class Qt4MplCanvas(FigureCanvas):
         FigureCanvas.updateGeometry(self)
 
 class PlotWindow(QtGui.QMainWindow, gui_class):
+
     def __init__(self):
         # initialization of Qt MainWindow widget
         QtGui.QMainWindow.__init__(self)
         # set window title
-        self.setWindowTitle("Matplotlib Figure in a Qt4 Window With NavigationToolbar")
+        self.setWindowTitle("Spectrum")
         # instantiate a widget, it will be the main one
         self.main_widget = QtGui.QWidget(self)
         # create a vertical box layout widget
@@ -87,7 +85,6 @@ class PlotWindow(QtGui.QMainWindow, gui_class):
         self.setCentralWidget(self.main_widget)
 
 
-
 class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
     def __init__(self, parent=None):
@@ -96,29 +93,40 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
         self.setupUi(self)
 
+
+        # initialise plot window
         self.aw = PlotWindow()
         self.aw.show()
+        self.observations = False
 
-        # initialise parameter, data and atmosphere objects
-        self.params = parameters()
-        self.params.planet_molec =  ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3', '28Si-16O', '48Ti-16O', '51V-16O']
-        self.params.planet_mixing = [1e-4     , 0           , 1e-4     , 1e-4      , 1e-4     ,  1e-4    , 0         , 0         , 0        ]
-        self.params.gen_spec_res = 500
-        self.params.gen_wavemin = 0.4
-        self.params.gen_wavemax = 20
-
-        self.params.gen_manual_waverange = True
+        # initialise parameter, data, atmosphere and forwardmodel objects
+        logging.info('Running TauREX GUI')
+        self.params = self.load_parameter_object()
 
         self.dataob = data(self.params)
         self.atmosphereob = atmosphere(self.dataob)
-
+        self.forwardmodel = transmission(self.atmosphereob)
         self.set_params_values()
+        self.plot_forwardmodel()
 
         # connect
+        self.connect_spinboxes()
+        self.pushButton_load_par_file.clicked.connect(self.load_par_file)
+        self.pushButton_add_observations.clicked.connect(self.add_observations)
+        self.pushButton_plot.clicked.connect(self.plot_forwardmodel)
+
+    def connect_spinboxes(self):
+
         self.doubleSpinBox_H2O.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_HCN.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_CH4.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_CO2.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_CO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_NH3.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_SiO.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_TiO.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_Rp_Rstar.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_planet_surf_pressure.valueChanged.connect(self.event_status_changed)
@@ -129,98 +137,160 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_N2.valueChanged.connect(self.event_status_changed)
         self.spinBox_star_T.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_star_radius.valueChanged.connect(self.event_status_changed)
+        self.checkBox_rayleigh.stateChanged.connect(self.event_status_changed)
 
-        self.pushButton_plot.clicked.connect(self.plot_forwardmodel)
+    def diconnect_spinboxes(self):
 
+        self.doubleSpinBox_H2O.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_HCN.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_CH4.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_CO2.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_CO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_NH3.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_SiO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_TiO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_Rp_Rstar.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_planet_surf_pressure.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_planet_mass.valueChanged.disconnect(self.event_status_changed)
+        self.spinBox_planet_T.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_H2.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_He.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_N2.valueChanged.disconnect(self.event_status_changed)
+        self.spinBox_star_T.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_star_radius.valueChanged.disconnect(self.event_status_changed)
+        self.checkBox_rayleigh.stateChanged.disconnect(self.event_status_changed)
 
+    def load_parameter_object(self, filename=None):
 
-    def set_params_values(self, params=None):
+        params = parameters(filename)
+        params.gen_run_gui = True
+        params.planet_molec =  params.all_absorbing_gases
+        params.planet_mixing = [0 for i in range(len(params.all_absorbing_gases))]
+        params.gen_spec_res = 500
+        params.gen_wavemin = 0.4
+        params.gen_wavemax = 20
+        params.gen_manual_waverange = True
 
-        if not params:
-            params = self.params
+        return params
 
-        self.doubleSpinBox_H2O.setValue(params.planet_mixing[0]*100.)
-        self.doubleSpinBox_HCN.setValue(params.planet_mixing[1]*100.)
-        self.doubleSpinBox_CH4.setValue(params.planet_mixing[2]*100.)
-        self.doubleSpinBox_CO2.setValue(params.planet_mixing[3]*100.)
-        self.doubleSpinBox_CO.setValue(params.planet_mixing[4]*100.)
-        self.doubleSpinBox_NH3.setValue(params.planet_mixing[5]*100.)
-        self.doubleSpinBox_SiO.setValue(params.planet_mixing[6]*100.)
-        self.doubleSpinBox_TiO.setValue(params.planet_mixing[7]*100.)
-        self.doubleSpinBox_VO.setValue(params.planet_mixing[8]*100.)
-        self.doubleSpinBox_H2.setValue(params.planet_H2_fraction*100.)
-        self.doubleSpinBox_He.setValue(params.planet_He_fraction*100.)
-        self.doubleSpinBox_N2.setValue(params.planet_N2_fraction*100.)
-        self.doubleSpinBox_planet_albedo.setValue(params.planet_albedo)
-        self.doubleSpinBox_planet_mu.setValue(params.planet_mu/AMU)
-        self.doubleSpinBox_Rp_Rstar.setValue(params.planet_radius/params.star_radius)
-        self.spinBox_planet_T.setValue(params.planet_temp)
+    def load_par_file(self):
 
-        self.doubleSpinBox_planet_mass.setValue(params.planet_mass/MJUP)
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select parameter file', 'Parfiles/')
+        if filename:
+            self.params = self.load_parameter_object(filename)
+            self.dataob = data(self.params)
+            self.atmosphereob = atmosphere(self.dataob)
+            self.forwardmodel = transmission(self.atmosphereob)
+            self.diconnect_spinboxes()
+            self.set_params_values()
+            self.connect_spinboxes()
+            self.plot_forwardmodel()
 
-        self.doubleSpinBox_planet_surf_pressure.setValue(params.tp_max_pres/1.e6)
-        self.doubleSpinBox_clouds_lower.setValue(params.in_cld_pressure[0])
-        self.doubleSpinBox_clouds_upper.setValue(params.in_cld_pressure[1])
-        self.doubleSpinBox_star_radius.setValue(params.star_radius/RSOL)
-        self.spinBox_star_T.setValue(params.star_temp)
-        self.doubleSpinBox_max_wav.setValue(self.params.gen_wavemin)
-        self.doubleSpinBox_min_wav.setValue(self.params.gen_wavemax)
+    def set_params_values(self):
+
+        self.doubleSpinBox_H2O.setValue(self.forwardmodel.params.planet_mixing[0]*100.)
+        self.doubleSpinBox_HCN.setValue(self.forwardmodel.params.planet_mixing[1]*100.)
+        self.doubleSpinBox_CH4.setValue(self.forwardmodel.params.planet_mixing[2]*100.)
+        self.doubleSpinBox_CO2.setValue(self.forwardmodel.params.planet_mixing[3]*100.)
+        self.doubleSpinBox_CO.setValue(self.forwardmodel.params.planet_mixing[4]*100.)
+        self.doubleSpinBox_NH3.setValue(self.forwardmodel.params.planet_mixing[5]*100.)
+        self.doubleSpinBox_SiO.setValue(self.forwardmodel.params.planet_mixing[6]*100.)
+        self.doubleSpinBox_TiO.setValue(self.forwardmodel.params.planet_mixing[7]*100.)
+        self.doubleSpinBox_VO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
+        self.doubleSpinBox_NO.setValue(self.forwardmodel.params.planet_mixing[9]*100.)
+        self.doubleSpinBox_He.setValue(self.forwardmodel.atmosphere.inactive_gases_X[0]*100.)
+        self.doubleSpinBox_H2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[1]*100.)
+        self.doubleSpinBox_N2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[2]*100.)
+        self.doubleSpinBox_planet_albedo.setValue(self.forwardmodel.params.planet_albedo)
+        self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.params.planet_mu/AMU)
+        self.doubleSpinBox_Rp_Rstar.setValue(self.forwardmodel.params.planet_radius/self.forwardmodel.params.star_radius)
+        self.spinBox_planet_T.setValue(self.forwardmodel.params.planet_temp)
+        self.doubleSpinBox_planet_mass.setValue(self.forwardmodel.params.planet_mass/MJUP)
+        self.doubleSpinBox_planet_surf_pressure.setValue(self.forwardmodel.params.tp_max_pres/1.e6)
+        self.doubleSpinBox_clouds_lower.setValue(self.forwardmodel.params.in_cld_pressure[0])
+        self.doubleSpinBox_clouds_upper.setValue(self.forwardmodel.params.in_cld_pressure[1])
+        self.doubleSpinBox_star_radius.setValue(self.forwardmodel.params.star_radius/RSOL)
+        self.spinBox_star_T.setValue(self.forwardmodel.params.star_temp)
+        self.doubleSpinBox_max_wav.setValue(self.params.gen_wavemax)
+        self.doubleSpinBox_min_wav.setValue(self.params.gen_wavemin)
         self.spinBox_resolution.setValue(self.params.gen_spec_res)
-        self.checkBox_rayleigh.setCheckState(1)
-        self.checkBox_induced_absorption.setCheckState(params.in_include_cia)
+
+        self.checkBox_induced_absorption.setCheckState(self.forwardmodel.params.in_include_cia)
 
     def event_status_changed(self):
-        self.params.planet_mixing[0] = self.doubleSpinBox_H2O.value() / 100.
-        self.params.planet_mixing[1] = self.doubleSpinBox_HCN.value() / 100.
-        self.params.planet_mixing[2] = self.doubleSpinBox_CH4.value() / 100.
-        self.params.planet_mixing[3] = self.doubleSpinBox_CO2.value() / 100.
-        self.params.planet_mixing[4] = self.doubleSpinBox_CO.value() / 100.
-        self.params.planet_mixing[5] = self.doubleSpinBox_NH3.value() / 100.
-        self.params.planet_mixing[6] = self.doubleSpinBox_SiO.value() / 100.
-        self.params.planet_mixing[7] = self.doubleSpinBox_TiO.value() / 100.
-        self.params.planet_mixing[8] = self.doubleSpinBox_VO.value() / 100.
 
-        self.params.planet_mu = self.doubleSpinBox_planet_mu.value() * AMU
-        self.params.planet_temp = self.spinBox_planet_T.value()
-        self.params.planet_radius = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL
-        self.params.tp_max_pres = self.doubleSpinBox_planet_surf_pressure.value() * 1.e6
+        self.forwardmodel.atmosphere.planet_temp = self.spinBox_planet_T.value()
+        self.forwardmodel.atmosphere.planet_mass = self.doubleSpinBox_planet_mass.value() * MJUP
+        self.forwardmodel.atmosphere.planet_mu = self.doubleSpinBox_planet_mu.value() * AMU
+        self.forwardmodel.atmosphere.planet_radius_10mbar = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL
+        self.forwardmodel.atmosphere.planet_grav = self.forwardmodel.atmosphere.get_surface_gravity()
+        self.forwardmodel.atmosphere.scaleheight = self.forwardmodel.atmosphere.get_scaleheight()
+        self.forwardmodel.atmosphere.max_pressure = self.doubleSpinBox_planet_surf_pressure.value() * 1.e6
+        self.forwardmodel.atmosphere.planet_radius_P0 = self.forwardmodel.atmosphere.planet_radius_10mbar #self.forwardmodel.atmosphere.get_surface_radius()
+        self.forwardmodel.atmosphere.pta = self.forwardmodel.atmosphere.setup_pta_grid()
+        self.forwardmodel.atmosphere.P = self.forwardmodel.atmosphere.pta[:,0] # pressure array
+        self.forwardmodel.atmosphere.P_bar = self.forwardmodel.atmosphere.P * 1.0e-5 #convert pressure from Pa to bar
+        self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.pta[:,1] # temperature array
+        self.forwardmodel.atmosphere.z = self.forwardmodel.atmosphere.pta[:,2] # altitude array
+        self.forwardmodel.atmosphere.rho = self.forwardmodel.atmosphere.get_rho()
+        self.forwardmodel.atmosphere.X[0,:] =  self.doubleSpinBox_H2O.value() / 100.
+        self.forwardmodel.atmosphere.X[1,:] = self.doubleSpinBox_HCN.value() / 100.
+        self.forwardmodel.atmosphere.X[2,:] = self.doubleSpinBox_CH4.value() / 100.
+        self.forwardmodel.atmosphere.X[3,:] = self.doubleSpinBox_CO2.value() / 100.
+        self.forwardmodel.atmosphere.X[4,:] = self.doubleSpinBox_CO.value() / 100.
+        self.forwardmodel.atmosphere.X[5,:] = self.doubleSpinBox_NH3.value() / 100.
+        self.forwardmodel.atmosphere.X[6,:] = self.doubleSpinBox_SiO.value() / 100.
+        self.forwardmodel.atmosphere.X[7,:] = self.doubleSpinBox_TiO.value() / 100.
+        self.forwardmodel.atmosphere.X[8,:] = self.doubleSpinBox_VO.value() / 100.
+        self.forwardmodel.atmosphere.X[9,:] = self.doubleSpinBox_NO.value() / 100.
+        self.forwardmodel.atmosphere.inactive_gases_X[0] = self.doubleSpinBox_He.value() / 100.
+        self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.
+        self.forwardmodel.atmosphere.inactive_gases_X[2] = self.doubleSpinBox_N2.value() / 100.
+        self.forwardmodel.atmosphere.rho = self.forwardmodel.atmosphere.get_rho()
+        self.forwardmodel.params.star_radius = self.doubleSpinBox_star_radius.value() * RSOL
+        self.forwardmodel.params.in_include_Rayleigh = self.checkBox_rayleigh.isChecked()
 
-        self.params.planet_H2_fraction = self.doubleSpinBox_H2.value()/100.
-        self.params.planet_He_fraction = self.doubleSpinBox_He.value()/100.
-        self.params.planet_N2_fraction = self.doubleSpinBox_N2.value()/100.
-
-        self.params.star_radius = self.doubleSpinBox_star_radius.value() * RSOL
-        self.params.planet_mass = self.doubleSpinBox_planet_mass.value() * MJUP
-
-        print self.doubleSpinBox_planet_mass.value() * MJUP
-
+        if self.checkBox_rayleigh.isChecked():
+            self.forwardmodel.Rsig = self.forwardmodel.get_Rsig()
+        else:
+            self.forwardmodel.Rsig = zeros((self.forwardmodel.nlambda))
 
         if self.checkBox_plot_autorefresh.isChecked():
-            self.plot_forwardmodel(self.params)
+            self.plot_forwardmodel()
 
-    def plot_forwardmodel(self, params=None):
+    def add_observations(self):
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select observations', 'Input/observations')
+        self.observations = np.loadtxt(open(filename, 'rb'))
+        self.plot_observations()
+        self.aw.qmc.draw()
 
-        if not params:
-            params = self.params
-
-        self.atmosphereob = atmosphere(self.dataob, params=self.params)
-        print 'Here the mass is ', self.params.planet_mass
-        if self.params.gen_type == 'transmission':
-            self.forwardmodelob = transmission(self.atmosphereob, params=self.params)
-
-        print 'Rayeigh water', self.forwardmodelob.scatterRayleigh(0.6, 'He')
+    def plot_forwardmodel(self):
 
         out = np.zeros((len(self.dataob.specgrid),2))
         out[:,0] = self.dataob.specgrid
-        out[:,1] = self.forwardmodelob.model()
+        out[:,1] = self.forwardmodel.model()
 
         if not self.checkBox_plot_overplot.isChecked():
             self.aw.qmc.axes.clear()
+
+        self.plot_observations()
         self.aw.qmc.axes.plot(out[:,0], out[:,1]*1.e6, lw=0.5)
         self.aw.qmc.axes.set_xscale('log')
-        self.aw.qmc.axes.set_xlim(np.min(out[:,0]), np.max(out[:,0]))
+        self.aw.qmc.axes.set_xlabel('Wavelength (micron)')
+        self.aw.qmc.axes.set_ylabel('Transit depth (ppm)')
+        self.aw.qmc.axes.set_xlim(np.min(self.doubleSpinBox_min_wav.value()), np.max(self.doubleSpinBox_max_wav.value()))
         self.aw.qmc.draw()
 
+    def plot_observations(self):
+
+        if isinstance(self.observations, (np.ndarray, np.generic)):
+            if np.shape(self.observations)[1] == 3:
+                self.aw.qmc.axes.errorbar(self.observations[:,0], self.observations[:,1]*1.e6, yerr=self.observations[:,2]*1.e6,)
+            elif np.shape(self.observations)[1] == 2:
+                self.aw.qmc.axes.plot(self.observations[:,0], self.observations[:,1]*1.e6,)
 
 #put the main window here
 def main():

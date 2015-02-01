@@ -35,6 +35,7 @@ from license import *
 # some constants
 KBOLTZ = 1.380648813e-23
 G = 6.67384e-11
+AMU   = 1.660538921e-27 #atomic mass to kg
 
 class data(base):
 
@@ -44,13 +45,20 @@ class data(base):
 
         #checking taurex license
         license_manager().run()
-        
+
+        # list of all molecules for which we have cross sections
+        self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
+                                    '28Si-16O', '48Ti-16O', '51V-16O', '14N-16O']
+
+        # list of all inactive gases we take care of
+        self.all_inactive_gases = ['He', 'H2', 'N2']
+
         self.params = params
 
         #converting absorption cross-sectinos from cm^-1 to microns
         if params.in_convert2microns:
             libgen.convert2microns(params.in_abs_path+'*')
-        
+
         #reading in spectrum data to be fitted
         if isinstance(spectrum, (np.ndarray, np.generic)):
             # read spectrum from argument
@@ -88,20 +96,31 @@ class data(base):
             self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)
             self.n_spec_bin_grid= len(self.spec_bin_grid)
 
-        #calculating atmospheric scale height
-        #self.scaleheight = self.get_scaleheight() # @todo needed? Check. Scaleheight is more specific to tp_profile class
-
         #reading in atmospheric profile file
-        #or generating it from parameter file values
-        #pta = pressure, temp, alt
-        #X = mixing ratios of molecules
         if self.params.in_use_ATMfile:
-            self.pta, self.X = self.readATMfile()
+            self.pta, self.X = self.readATMfile() # pta = pressure, temp, alt; X = mixing ratios of molecules
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
 
-        #reading in absorption coefficient data
-        self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
+        # Rayleigh scattering
+        if self.params.in_create_sigma_rayleigh:
+            # compute cross sections and save them to a file
+            self.build_rayleigh_sigma()
+        self.sigma_R = self.get_rayleigh_sigma() # load Rayleigh scattering cross sections from file
+
+        # Absorption cross sections
+        if self.params.gen_run_gui:
+            # if running in GUI mode, the dictionary is loaded from a file
+            # todo add a param to rebuild sigma_array even in GUI mode
+            import pickle
+            # self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
+            # sigma dict has been presaved with the input parameters (lambda = 0.4-20, resolution = 500)
+            logging.info('Loading sigma dictionary from file')
+            self.sigma_dict = pickle.load(open('Input/sigma_dict.pickle', 'rb'))
+            # pickle.dump(self.sigma_dict, open('Input/sigma_dict.pickle', 'wb'))
+        else: # not running in GUI mode
+            #reading in absorption coefficient data
+            self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
 
         # #reading in other files if specified in parameter file
         if params.in_include_rad:
@@ -111,20 +130,10 @@ class data(base):
         if params.in_include_cld:
             self.cld = self.readfile(self.params.in_cld_file, interpolate=True)
 
-
         #reading in Phoenix stellar model library (if emission is calculated only)
         if self.params.gen_type == 'emission' or self.params.fit_emission:
-            self.F_star = self.get_star_SED() #@todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment 
+            self.F_star = self.get_star_SED() #@todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment
 
-        # list of all molecules for which we have cross sections
-        self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
-                                    '28Si-16O', '48Ti-16O', '51V-16O']
-
-        # list of all inactive gases we take care of
-        self.all_inactive_gases = ['He', 'H2', 'N2']
-
-        # dictionary with parameters (e.g. mean molecular weight, refractive index, etc) for each gas (absorbers and inactive)
-        #self.all_gases_properties = get_gases_properties()
 
     #class functions
 
@@ -201,8 +210,6 @@ class data(base):
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#') #@todo bug here! not multiplied by size of star 4piRs^2 and units are wrong as well
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         return SED
-
-
 
     def readfile(self, name, interpolate=False):
 
@@ -374,55 +381,105 @@ class data(base):
 
         return out[:,0:3],np.transpose(out[:,3:])
 
-    def get_refractive_index(self, gasname, wl):
+    def build_rayleigh_sigma(self):
 
-        # returns the refractive index of a given gas gasname at a specific wavelength wl
+        # write rayleigh scattering cross sections to files
+
+        logging.info('Write rayleigh scattering cross sections to files')
+
+        gases = self.params.planet_molec + self.params.planet_inactive_gases
+
+        for gasname in gases:
+
+        # get the refractive index of a given gas gasname at a specific wavelength wl
         # Formulae taken from Allen Astrophysical Quantities if not otherwise specified
 
-        if gasname == 'He':
-            r = 1 + 3.48e-5 * (1. + 2.3e-3 / wl**2)
-        elif gasname == 'H2':
-            r = 1 + 13.58e-5 * (1. + 7.52e-3 / wl**2)
-        elif gasname == 'N2':
-            r = 1 + 29.06-5 * (1. + 7.7e-3 / wl**2)
-        elif gasname == 'O2':
-            r = 1 + 26.63-5 * (1. + 5.07e-3 / wl**2)
-        elif gasname == '12C-16O2':
-            r = 1 + 43.9e-5 * (1. + 6.4e-3 / wl**2)
-        elif gasname == '12C-1H4':
-            r = 1.000441,
-        elif gasname == '12C-16O':
-            r = 1 + 32.7e-5 * (1. + 8.1e-3 / wl**2)
-        elif gasname == '14N-1H3':
-            r = 1 + 37.0e-5 * (1. + 12.0e-3 / wl**2)
-        elif gasname == '1H2-16O':
-            # r = 0.85 r(air) (Edlen 1966)
-            # dispersion formula for air: P. E. Ciddor. Refractive index of air: new equations for the visible and near infrared, Appl. Optics 35, 1566-1573 (1996)
-            r = 0.85 * (1 + (0.05792105/(238.0185 - wl**-2) + 0.00167917/(57.362-wl**-2)))
-        else:
-            r = 1
+            n_formula = True # assume we have a formula for the refractive index of gasname
+            king = 1 # King correction factor
+            ns = 0   # refractive index
+            wl = np.linspace(0.3, 30, 1000) # wavelengths in micron
 
-        return r
+            if gasname == 'He':
+                ns = 1 + 0.01470091/(423.98-wl**-2) # C. R. Mansfield and E. R. Peck. Dispersion of helium, J. Opt. Soc. Am. 59, 199-203 (1969)
+                # king is one for He
+            elif gasname == 'H2':
+                ns = 1 + 13.58e-5 * (1. + 7.52e-3 / wl**2)
+                delta = 0.035 # from Morgan old code..
+                king = (6.+3.*delta)/(6.-7.*delta) # Bates (1984)
+            elif gasname == 'N2':
+                ns = 1. + (6498.2 + (307.43305e12)/(14.4e9 - (1/(wl*1.e-4))**2))/1.e8
+                #ns = 1 + 29.06e-5 * (1. + 7.7e-3 / wl**2)
+                king = 1.034  #  Bates (1984)
+            elif gasname == 'O2':
+                ns = 1 + 1.181494e-4 + 9.708931e-3/(75.4-wl**-2) #  J. Zhang, Z. H. Lu, and L. J. Wang. Appl. Opt. 47, 3143-3151 (2008)
+                king = 1.096
+            elif gasname == '12C-16O2':
+                #A. Bideau-Mehu, Y. Guern, R. Abjean and A. Johannin-Gilles. Interferometric determination of the refractive index of carbon dioxide in the ultraviolet region, Opt. Commun. 9, 432-434 (1973)
+                ns = 1 + 6.991e-2/(166.175-wl**-2)+1.44720e-3/(79.609-wl**-2)+6.42941e-5/(56.3064-wl**-2)+5.21306e-5/(46.0196-wl**-2)+1.46847e-6/(0.0584738-wl**-2)
+                king = 1.1364 #  Sneep & Ubachs 2005
+            elif gasname == '12C-1H4':
+                ns = 1 + 1.e-8*(46662. + 4.02*1.e-6*(1/(wl*1.e-4))**2)
+            elif gasname == '12C-16O':
+                ns = 1 + 32.7e-5 * (1. + 8.1e-3 / wl**2)
+                king = 1.016  #  Sneep & Ubachs 2005
+            elif gasname == '14N-1H3':
+                ns = 1 + 37.0e-5 * (1. + 12.0e-3 / wl**2)
+            elif gasname == '1H2-16O':
+                ns_air = (1 + (0.05792105/(238.0185 - wl**-2) + 0.00167917/(57.362-wl**-2))) # P. E. Ciddor. Appl. Optics 35, 1566-1573 (1996)
+                ns = 0.85 * (ns_air - 1.) + 1  # ns = 0.85 r(air) (Edlen 1966)
+                delta = 0.17 # Marshall & Smith 1990
+                king = (6.+3.*delta)/(6.-7.*delta)
+            else:
+                # this sets sigma_R to zero for all other gases
+                n_formula = False
+                logging.warning('There is no formula for the refractive index of %s. Cannot compute the cross section' % gasname)
+
+            if n_formula: # only if the refractive index was computed
+                Ns = 2.6867805e19 # in cm^-3
+                factor = 1.e16 * 24. * np.pi**3 / (Ns**2) # formula from e.g. Sneep & Ubachs 2005
+                sigma_R = factor * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / wl**4
+                filename = os.path.join('Input', 'rayleigh', '%s.rayleigh' % gasname)
+                logging.info('Saving cross section for %s to %s' % (gasname, filename))
+                np.savetxt(filename, np.vstack((wl, sigma_R)).transpose())
+
+    def get_rayleigh_sigma(self):
+
+        logging.info('Loading rayleigh scattering cross section from files')
+        gases = self.params.planet_molec + self.params.planet_inactive_gases
+        sigma_R = {}
+        for gasname in gases:
+            filename = os.path.join('Input', 'rayleigh', '%s.rayleigh' % gasname)
+            if os.path.isfile(filename):
+                data = np.loadtxt(os.path.join('Input', 'rayleigh', '%s.rayleigh' % gasname))
+                sigma = interp1d(data[:,0], data[:,1])
+                logging.info('Reading Rayleigh scattering cross section for gas %s' % gasname)
+                sigma_R[gasname] = sigma
+            else:
+                logging.warning('Cannot find Rayleigh scattering cross section for gas %s. Set to 0' % gasname)
+
+        return sigma_R
 
     def get_molecular_weight(self, gasname):
 
         if gasname == 'He':
-            mw = 4.
+            mu = 4.
         elif gasname == 'H2':
-            mw = 2.
+            mu = 2.
         elif gasname == 'N2':
-            mw = 14.
+            mu = 28.
         elif gasname == 'O2':
-            mw = 32.
+            mu = 32.
         elif gasname == '12C-16O2':
-            mw = 44.
+            mu = 44.
         elif gasname == '12C-1H4':
-            mw = 16.
+            mu = 16.
         elif gasname == '12C-16O':
-            mw = 28.
+            mu = 28.
         elif gasname == '14N-1H3':
-            mw = 17.
+            mu = 17.
         elif gasname == '1H2-16O':
-            mw = 18.
+            mu = 18.
+        else:
+            mu = 0
 
-        return mw
+        return mu * AMU

@@ -1,6 +1,6 @@
 [General]
 #verbose or not
-verbose = True
+verbose = False
 verbose_all_threads = False
 
 
@@ -18,10 +18,11 @@ wavemin = 0.5
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 1000
+spec_res = 300
 
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
+
 
 [Input]
 #Observed spectrum to be fitted
@@ -62,7 +63,8 @@ include_cia = False
 #file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
 
-
+# rebuild Rayleigh scattering cross sections
+create_sigma_rayleigh = False
 
 [Output]
 #path for output files
@@ -187,6 +189,9 @@ cld_pressure = 1.0e-3, 0.1
 #parameter not in use but placeholder for implementation if needed
 cld_file = Input/cloud1.cld
 
+# include Ryleigh scattering opacities
+include_Rayleigh = True
+
 [T-P profile]
 #let mixing ratios and T-P profile vary
 #True: free parameters allowed and lower/upper limits taken from .atm,
@@ -200,10 +205,10 @@ num_scaleheights = 20
 #If var_atm = False, atm_levels is taken from .atm file
 atm_levels = 40
 
-#set temperature as variables
+#set temperature as variables todo not used. Moved to Fitting : fix_temp
 var_temp = True
 
-#set pressure as variable
+#set pressure as variable todo not used. Moved to Fitting : fix_P0
 var_pres = True
 
 #set maximum pressure level (if set variable) (Pa)
@@ -214,8 +219,7 @@ var_mix = True
 
 
 [Fitting]
-#defines general fittings parameters
-#independent of method
+#defines general fittings parameters, independent of method
 
 #fit transmission model
 transmission = True
@@ -232,14 +236,29 @@ fix_temp = False
 fix_mu = False
 fix_P0 = False
 
+# if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
+# if False, mu is either fitted (if fix_mu = False) or kept fixed (see Planet > mu)
+couple_mu = True
+
 #Upper and lower bounds for temperature (equilibrium +- value)
 T_up  = 200
 T_low = 200
 
-#Upper and lower bounds for mixing ratios
-X_up  = 0.1
+#upper and lower bounds for mean molecular weight (in atomic mass units)
+mu_up = 40
+mu_low = 0
+
+#Upper and lower bounds for planet radius (radius +- value), in RJUP
+radius_up  = 0.2010
+radius_low = 0.2210
+
+#Upper and lower bounds for absorbers mixing ratios
+X_up  = 1.0
 X_low = 0.0
 
+#Upper and lower bounds for inactive gases mixing ratios
+X_inactive_up  = 1.0
+X_inactive_low = 0.0
 
 [Downhill]
 #defines parameters for minimisation
@@ -247,15 +266,12 @@ X_low = 0.0
 #run minimisation routine on data
 run = True
 
-#type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG,
-#L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
+#type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
 #see scipy.optimize.minimize documentation
 type = L-BFGS-B
 
 #Supply extra parameters using options parameter. See scipy docu
 options = {‘verbose’:False}
-
-
 
 [MCMC]
 #defines MCMC specific parameters
@@ -278,7 +294,7 @@ thin = 1
 
 verbose = False
 
-progressbar = True
+progressbar = False
 
 [MultiNest]
 #defines MultiNest specific parameters
@@ -299,7 +315,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 400
+n_live_points = 100
 
 #maximum no. of iterations (0=inf)
 max_iter = 0

@@ -70,7 +70,10 @@ class transmission(base):
         self.dz = self.get_dz()
 
         #calculating rayleigh scattering cross sections
-        self.Rsig = self.get_Rsig()
+        if self.params.in_include_Rayleigh:
+            self.Rsig = self.get_Rsig()
+        else:
+            self.Rsig = zeros((self.nlambda))
 
         #calculating collision induced absorption cross sections
         if self.params.in_include_cia:
@@ -100,7 +103,7 @@ class transmission(base):
 
         nlayers = self.atmosphere.nlayers
         z = self.atmosphere.z
-        Rp = self.atmosphere.planet_radius_P0
+        Rp = self.atmosphere.planet_radius
 
         dlarray = []
         jl = []
@@ -124,28 +127,24 @@ class transmission(base):
     
     def get_dz(self):
 
-        #calculate area of circles of atmosphere
-
+        # calculate area of circles of atmosphere
         dz = zeros((self.atmosphere.nlayers))
         for j in range(self.atmosphere.nlayers-1):
             dz[j] = self.atmosphere.z[j+1] - self.atmosphere.z[j]
-
         return dz
     
     def get_Rsig(self):
 
-        #calculating rayleigh scattering cross-sections
-
+        # calculating rayleigh scattering cross-sections
         Rsig = zeros((self.nlambda))
         count = 0
         for wl in self.lambdagrid: # loop through wavelentghs
 
             # loop through all gases (absorbing + inactive)
             for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
-                Rsig[count] += 0#  self.get_gas_fraction(gasname) * self.scatterRayleigh(wl, gasname)
-
+                if gasname in self.data.sigma_R:
+                    Rsig[count] += self.atmosphere.get_gas_fraction(gasname) * self.data.sigma_R[gasname](wl)
             count += 1
-        
         return Rsig
 
     def get_Csig(self):
@@ -169,57 +168,6 @@ class transmission(base):
         # getting sigma array from sigma_dic for given temperature
 
         return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
-
-    def get_gas_fraction(self, gasname):
-
-        # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
-        if gasname in self.data.all_absorbing_gases:
-            index = self.params.planet_molec.index(gasname)
-            return self.atmosphere.X[index, 0]
-
-        elif gasname in self.data.all_inactive_gases:
-            index = self.params.planet_inactive_gases.index(gasname)
-            return self.atmosphere.inactive_gases_X[index]
-
-
-    def scatterRayleigh(self, wl, molecule):
-        '''
-         Formula from Liou 2002, 'An Introduction to Atmospheric Radiation', pp.92-93. Also uses 'minimum volume' approximation pg.97, 
-            N_dens = 1 / V_particle .
-        Optical depth given by tau = sigma * L * c ; sigma = abs cross-section (m^2), L = path length (m), c = concentration (m^-3)
-        NB This is for bulk atmos scattering ONLY (assumptions: particles much smaller than wavelength, gas sufficiently dense), 
-        cloud Rayleigh + Mie included in scatterMie function. 
-        IN: Wavelength (in um), path length (in m)
-        OUT: Rayleigh scattering opacity cross-section per particle (in m^2)
-        '''
-        #sigma_R=0.0 # Rayleigh absorption coefficient (from Liou, An Introduction to Atmospheric Radiation)
-
-        # if molecule == 'H2':
-        #     radius = 2.e-9
-        #     refractive_index = 1.0001384
-        #     delta = 0.035
-        #
-        # elif molecule == 'He':
-        #     radius = 1.e-9
-        #     refractive_index = 1.0000350
-        #     delta = 0.0     # no asymmetry for He
-        #
-        # wl *= 1.0e-6  #convert wavelengths to m
-        # r_sq = refractive_index**2
-        # r_red = (r_sq-1.) / (r_sq+2.);
-        # f_delta = (6.+(3.*delta)) / (6.-(7.*delta));   #King correction factor
-        #
-        # #f_delta = 1.
-        #
-        # # Find cross-section
-        # sigma_R = (128./3.) * (pow(pi,5) * pow(radius,6) / pow(wl,4)) * r_red * r_red * f_delta # gives sigma_R in m^2
-        #
-        # #sigma_R = 4.577e-49 * f_delta * pow(r_red, 2) / pow(wl,4)
-        #
-        # return sigma_R
-        return 0
-
-
 
     def scatterCIA(self,coeff,amount):
         '''
@@ -245,7 +193,6 @@ class transmission(base):
         nlayers = self.atmosphere.nlayers
         P_bar = self.atmosphere.P_bar
 
-        self.X = X
 
         #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
@@ -294,8 +241,8 @@ class transmission(base):
 
                 exptau[j]= exp(-tau[j])
 
-            integral = 2.0* sum(((self.atmosphere.planet_radius_P0+self.atmosphere.z)*(1.0-exptau)*self.dz))
-            absorption[wl] = (self.atmosphere.planet_radius_P0**2 + integral) / (self.params.star_radius**2)
+            integral = 2.0* sum(((self.atmosphere.planet_radius+self.atmosphere.z)*(1.0-exptau)*self.dz))
+            absorption[wl] = (self.atmosphere.planet_radius**2 + integral) / (self.params.star_radius**2)
 
         return absorption
 
@@ -308,7 +255,7 @@ class transmission(base):
         if temperature is None:
             temperature = self.atmosphere.planet_temp
 
-        #selecting correct sigma_array for temperature
+         #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
 
         #casting changing arrays to c++ pointers
@@ -327,8 +274,7 @@ class transmission(base):
         cdz = cast2cpp(self.dz)
         cRsig = cast2cpp(self.Rsig)
         cCsig = cast2cpp(self.Csig)
-        #cRp = C.c_double(self.atmosphere.planet_radius_P0)
-        cRp = C.c_double(self.atmosphere.planet_radius_10mbar)
+        cRp = C.c_double(self.atmosphere.planet_radius)
         cRs = C.c_double(self.params.star_radius)
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.atmosphere.nlayers)

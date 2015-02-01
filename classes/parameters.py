@@ -38,7 +38,7 @@ AMU   = 1.660538921e-27 #atomic mass to kg
 
 class parameters(base):
 #instantiation
-    def __init__(self, parfile=None):
+    def __init__(self, parfile='Parfiles/default.par'):
         '''
         a parameter file is parsed and initial parameter values are set.  
         to add a new parameter edit this file and the input .par file.
@@ -46,33 +46,39 @@ class parameters(base):
         '''
 
         #config file parser
-        self.parser = SafeConfigParser()
-
         if parfile:
-            self.parser.read(parfile)
+            self.parser = SafeConfigParser()
+            self.parser.readfp(open(parfile, 'rb'))
 
         self.default_parser = SafeConfigParser()
         self.default_parser.read('Parfiles/default.par')
-
+        self.default_parser.sections()
         self.verbose = self.getpar('General', 'verbose', 'bool')
         self.verbose_all_threads = self.getpar('General', 'verbose_all_threads', 'bool')
 
-        # configure logging instance
-        logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
-                            level=logging.DEBUG)
+        if len(logging.getLogger().handlers) == 0: # be sure to load only one logging handler
+            # configure logging instance
+            logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
+                                level=logging.DEBUG)
 
-        if (MPIrank == 0 and not self.verbose_all_threads) or self.verbose_all_threads:
+            if (MPIrank == 0 and not self.verbose_all_threads) or self.verbose_all_threads:
 
-            # define a Handler which writes INFO messages or higher to the sys.stderr
-            self.console = logging.StreamHandler()
-            self.console.setLevel(logging.DEBUG)
-            formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
-            self.console.setFormatter(formatter)
-            logging.getLogger('').addHandler(self.console)
-            logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
+                # define a Handler which writes INFO messages or higher to the sys.stderr
+                self.console = logging.StreamHandler()
+                self.console.setLevel(logging.DEBUG)
+                formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
+                self.console.setFormatter(formatter)
+                logging.getLogger().addHandler(self.console)
+                logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
 
         logging.info('Initialise parameters object')
 
+        # list of all molecules for which we have cross sections
+        self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
+                                    '28Si-16O', '48Ti-16O', '51V-16O', '14N-16O']
+
+        # list of all inactive gases we take care of
+        self.all_inactive_gases = ['He', 'H2', 'N2']
 
         self.trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
         
@@ -81,6 +87,7 @@ class parameters(base):
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')
         self.gen_spec_res          = self.getpar('General','spec_res', 'float')
         self.gen_type              = self.getpar('General','type')
+        self.gen_run_gui           = False
 
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
         if self.in_spectrum_file == 'False':
@@ -92,13 +99,12 @@ class parameters(base):
         self.in_abs_files          = self.getpar('Input','__legacy__abs_files')
         
         self.in_tempres            = self.getpar('Input','tempres', 'float')
-
         self.in_star_path          = self.getpar('Input','star_path')
-        
         self.in_include_rad        = self.getpar('Input','include_rad', 'bool')
         self.in_rad_file           = self.getpar('Input','rad_file')
         self.in_include_cia        = self.getpar('Input','include_cia', 'bool')
         self.in_cia_file           = self.getpar('Input','cia_file')
+        self.in_create_sigma_rayleigh = self.getpar('Input','create_sigma_rayleigh', 'bool')
 
         self.out_path              = self.getpar('Output','path')
         self.out_file_prefix       = self.getpar('Output','file_prefix')
@@ -121,7 +127,7 @@ class parameters(base):
         self.planet_mixing         = self.getpar('Planet','mixing_ratios', 'list-float') #genfromtxt(StringIO(self.getpar('Planet','mixing_ratios')),delimiter = ',',dtype='str',autostrip=True)
         self.planet_inactive_gases     = self.getpar('Planet', 'inactive_gases', 'list-str')
         self.planet_inactive_gases_X   = self.getpar('Planet', 'inactive_gases_X', 'list-float')
-
+        self.in_include_Rayleigh       = self.getpar('Planet','include_Rayleigh', 'bool')
         try:
             self.in_include_cld        = self.getpar('Planet','include_cld', 'bool')
             self.in_cld_params         = self.getpar('Planet','cld_params', 'list-float') #genfromtxt(StringIO(self.getpar('Planet','cld_params')),delimiter = ',',dtype='str',autostrip=True)
@@ -132,7 +138,10 @@ class parameters(base):
         except:
             self.in_include_cld        = False
             pass
-        
+
+
+
+
         self.tp_var_atm            = self.getpar('T-P profile','var_atm', 'bool')
         self.tp_num_scale          = self.getpar('T-P profile', 'num_scaleheights', 'int')
         self.tp_atm_levels         = self.getpar('T-P profile', 'atm_levels', 'int')
@@ -169,11 +178,19 @@ class parameters(base):
             self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
             self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
             self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
-
+            self.fit_couple_mu         = self.getpar('Fitting', 'couple_mu', 'bool')
             self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
             self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
+            self.fit_radius_up         = self.getpar('Fitting','radius_up', 'float')  # in RJUP
+            self.fit_radius_low        = self.getpar('Fitting','radius_low', 'float') # in RJUP
+            self.fit_P0_up             = self.getpar('Fitting','P0_up', 'float')  # in Pascal
+            self.fit_P0_low            = self.getpar('Fitting','P0_low', 'float') # in Pascal
+            self.fit_mu_up             = self.getpar('Fitting','mu_up', 'float') # in AMU
+            self.fit_mu_low            = self.getpar('Fitting','mu_low', 'float') # in AMU
             self.fit_X_up              = self.getpar('Fitting','X_up', 'float')
             self.fit_X_low             = self.getpar('Fitting','X_low', 'float')
+            self.fit_X_inactive_up     = self.getpar('Fitting','X_inactive_up', 'float')
+            self.fit_X_inactive_low    = self.getpar('Fitting','X_inactive_low', 'float')
         except:
             self.fit_transmission      = False
             self.fit_emission          = False
@@ -219,7 +236,7 @@ class parameters(base):
             self.grid_snr              = self.getpar('Grid','snr', 'list-float')
         except:
             pass
-        
+
         #####################################################################
         #additional parser commands. Checking parameter compatibility and stuff 
         
@@ -245,8 +262,9 @@ class parameters(base):
             elif type == 'float':
                 try:
                     return self.parser.getfloat(sec, par)
-                except:
+                except Exception,e:
                     return self.default_parser.getfloat(sec, par)
+
             elif type == 'bool':
                 try:
                     return self.parser.getboolean(sec, par)
