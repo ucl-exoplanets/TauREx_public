@@ -64,8 +64,6 @@ class atmosphere(base):
             self.X        = self.set_mixing_ratios() # mixing ratios are read from parameter file or set to 1e-4 if preselector = True
             self.pta      = self.setup_pta_grid()
 
-    
-        
 
         #setting internal parameters
         self.g          = data.planet_grav #surface gravity
@@ -83,23 +81,33 @@ class atmosphere(base):
         if self.params.in_include_cia:
             self.cia        = self.data.cia
 
+        #selecting TP profile to use
         if self.params.gen_type == 'emission':
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(emission=True)
             self.TP_type = 'guillot'
-            
-
+#             self.TP_type = 'rodgers'         
         if self.params.gen_type == 'transmission':
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
             self.TP_type = 'isothermal'
         
         #setting up TP profile 
         self.TP_profile = self.set_TP_profile()
             
-        #setting free parameter prior bounds
+        #setting free parameter prior bounds and parameter grid
         if self.params.fit_emission or self.params.fit_transmission:
-                self.bounds = self.get_prior_bounds()
+            self.bounds = self.get_prior_bounds()
+            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid()
+        
 
- 
+        T,P,X = self.TP_profile([0.05,0.05,1400, 0.1,0.1,0.9,0.01])
+        
+        pl.figure(1)
+        pl.plot(T,P)
+        pl.yscale('log')
+        pl.xlabel('Temperature')
+        pl.ylabel('Pressure (Pa)')
+        pl.gca().invert_yaxis()
+        pl.show()
+        
+        exit()
 
 
     #class methods
@@ -130,7 +138,7 @@ class atmosphere(base):
 
         max_z = n_scale * self.scaleheight
 
-        #generatinng altitude-pressure array
+        #generating altitude-pressure array
         pta_arr = np.zeros((n_layers,3))
         pta_arr[:,2] = np.linspace(0,max_z,num=n_layers) # altitude
         pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight) #pressure
@@ -146,7 +154,6 @@ class atmosphere(base):
         '''
         self.X_priors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
         self.T_priors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
-
 
         #setting up bounds for downhill algorithm
         bounds = []
@@ -168,7 +175,7 @@ class atmosphere(base):
         return bounds
 
 
-    def setup_parameter_grid(self, transmission=False, emission=False):
+    def setup_parameter_grid(self):
         '''
         Setting up the parameter grid (variable in length depending on TP-profile model selected)
         
@@ -176,35 +183,22 @@ class atmosphere(base):
         fit_count     [no. abundances, no. TP parameters]
         fit_index     index to fitparams for slicing
         '''
-        fit_params = []; fit_count = []; fit_index = []
+        fit_params = []; fit_index = []
 
-        # setting up mixing ratios for individual gases
-        Xmean = np.mean(self.X_priors)
-        cgas = 0 #count of gas parameters
-        for i in xrange(self.ngas):
-            fit_params.append(Xmean)
-            cgas += 1
-        fit_count.append(cgas)
-
-
-        #setting up temperature parameters
-        ctp = len(self.TP_priors) #count of TP parameters
-
-        if transmission:
-            fit_params.append(self.params.planet_temp) #setting temperature to planet equilibrium temperature 
-
-        if emission:
-            for i in xrange(ctp):
-                fit_params.append(np.mean(self.TP_priors[i])) #setting the mean value from bounds
- 
+        # setting up indices for parameter grid
+        cpar = len(self.bounds)
+        cgas = self.ngas
+        ctp  = cpar - cgas
+        fit_count = [cgas,ctp]
+        
         #generating index list
-        cumidx = fit_count[0]
-        fit_index.append(cumidx)
-
-        for i in xrange(1,len(fit_count)):
-            cumidx += fit_count[i]
-            fit_index.append(cumidx)
-
+        fit_index = [cgas,cpar]
+        
+        #setting all initial guesses to the mean of the parameter bounds
+        #this can be modified later should it prove to be too awful
+        for par in self.bounds:
+            fit_params.append(np.mean(par))
+        
         return fit_params, fit_index, fit_count
 
 
@@ -237,7 +231,7 @@ class atmosphere(base):
                 exit()
 
             # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
-            for i in range(self.ngas):
+            for i in xrange(self.ngas):
                 X[i,:] += float(mixing[i])
         return X
    
@@ -273,10 +267,8 @@ class atmosphere(base):
         INDEX splits column densities from TP_profile parameters, INDEX = [Chi, TP]
         '''
 
-        fit_index = self.fit_index
-
-        X_params  = fit_params[:fit_index[0]] #splitting to gas parameters
-        TP_params = fit_params[fit_index[0]:] #splitting to TP profile parameters
+        X_params  = fit_params[:self.fit_index[0]] #splitting to gas parameters        
+        TP_params = fit_params[self.fit_index[0]:] #splitting to TP profile parameters
 
         #Setting up mixing ratio grid. Convert X into Nd arrays
         self.X[:] = 0.0             #using already generated grid
@@ -319,7 +311,7 @@ class atmosphere(base):
         '''
         
         #assigning fitting parameters 
-        T_irr = TP_params[0], kappa_ir = TP_params[1], kappa_v1 = TP_params[2]; kappa_v2 = TP_params[3]; alpha = TP_params[4]
+        T_irr = TP_params[0]; kappa_ir = TP_params[1]; kappa_v1 = TP_params[2]; kappa_v2 = TP_params[3]; alpha = TP_params[4]
         
         gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir     
         tau = kappa_ir * self.P / self.g
