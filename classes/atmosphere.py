@@ -97,17 +97,16 @@ class atmosphere(base):
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid()
         
 
-        T,P,X = self.TP_profile([0.05,0.05,1400, 0.1,0.1,0.9,0.01])
-        
-        pl.figure(1)
-        pl.plot(T,P)
-        pl.yscale('log')
-        pl.xlabel('Temperature')
-        pl.ylabel('Pressure (Pa)')
-        pl.gca().invert_yaxis()
-        pl.show()
-        
-        exit()
+#         #test-parameters from Line et al. 2012
+#         T,P,X = self.TP_profile([0.05,0.05,1223, 1e-2,4e-3,4e-3,0.5])
+#         pl.figure(1)
+#         pl.plot(T,self.P_bar)
+#         pl.yscale('log')
+#         pl.xlabel('Temperature')
+#         pl.ylabel('Pressure (Pa)')
+#         pl.gca().invert_yaxis()
+#         pl.show()
+#         exit()
 
 
     #class methods
@@ -315,6 +314,7 @@ class atmosphere(base):
         
         gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir     
         tau = kappa_ir * self.P / self.g
+             
         
         T_int = 200 #@todo internal heat parameter looks suspicious... needs looking at. 
         
@@ -322,10 +322,10 @@ class atmosphere(base):
             part1 = 2.0/3.0 + 2.0 / (3.0*gamma) * (1.0 + (gamma*tau/2.0 - 1.0) * np.exp(-1.0 * gamma * tau))
             part2 = 2.0 * gamma / 3.0 * (1.0 - tau**2/2.0) * spe.expn(2,(gamma*tau))
             return part1 + part2
-            
         
-        T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)
-        T = T4**(1/4)
+        T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)        
+        T = T4**0.25
+        
         return T, self.P
     
     
