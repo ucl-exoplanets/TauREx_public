@@ -83,8 +83,8 @@ class atmosphere(base):
 
         #selecting TP profile to use
         if self.params.gen_type == 'emission':
-            self.TP_type = 'guillot'
-#             self.TP_type = 'rodgers'         
+#             self.TP_type = 'guillot'
+            self.TP_type = 'rodgers'         
         if self.params.gen_type == 'transmission':
             self.TP_type = 'isothermal'
         
@@ -96,9 +96,15 @@ class atmosphere(base):
             self.bounds = self.get_prior_bounds()
             self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid()
         
+        
+        #testing rodgers TP profile
+#         testpar = self.fit_params
+#         testpar[-50:] = 1000.0 
+#         T,P,X = self.TP_profile(testpar)
+     
+        #testing guillot TP profile
+#         T,P,X = self.TP_profile([0.05,0.05,1223, 1e-2,4e-3,4e-3,0.5])#test-parameters from Line et al. 2012
 
-#         #test-parameters from Line et al. 2012
-#         T,P,X = self.TP_profile([0.05,0.05,1223, 1e-2,4e-3,4e-3,0.5])
 #         pl.figure(1)
 #         pl.plot(T,self.P_bar)
 #         pl.yscale('log')
@@ -198,7 +204,7 @@ class atmosphere(base):
         for par in self.bounds:
             fit_params.append(np.mean(par))
         
-        return fit_params, fit_index, fit_count
+        return np.asarray(fit_params), fit_index, fit_count
 
 
     def get_rho(self, T=None, P=None):
@@ -347,144 +353,22 @@ class atmosphere(base):
         
         #assigning parameters 
         T_init = TP_params
-        h      = 7.0
+        h      = 1.5
         
 #         covmatrix = np.zeros((self.nlayers,self.nlayers))
-#         for i in range(self.nlayers):
-#             for j in range(self.nlayers):
-#                 covmatrix[i,j] = (T_init[i] * T_init[j])**(1/2) * np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[j]))/h)  
-        
+#         for i in xrange(self.nlayers):
+#                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)  
+               
         T = np.zeros((self.nlayers,1))
         for i in xrange(self.nlayers):
-            T[i] = np.sum((T_init[i] * T_init[:])**(1/2) * np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h))
-        
+            covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+            weights = covmat / np.sum(covmat)
+            T[i]    = np.sum(weights*T_init)
+            
+#         pl.figure(3)
+#         pl.imshow(covmatrix,origin='lower')
+#         pl.colorbar()
+#         pl.show()
+         
         return T, self.P
-
-
-
-
-
-
-
-
-
-##########################
-    def get_prior_bounds_old(self):
-        #partially to be moved to parameter file i guess
-
-        self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
-        self.Tpriors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
-
-        #BE REALLY CAREFUL WITH THIS PARAMETER. THIS NEEDS SANITY CHECKING
-        self.Ppriors = [[5e4,5e5],[50.0,150.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
-
-        #setting up bounds for downhill algorithm
-        #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
-        bounds = []
-        for i in xrange(self.ngas):
-            bounds.append((self.Xpriors[0],self.Xpriors[1]))
-        if self.fit_transmission:
-            bounds.append((self.Tpriors[0],self.Tpriors[1]))
-        if self.fit_emission:
-            for i in xrange(self.num_T_params):
-                bounds.append((self.Tpriors[0],self.Tpriors[1]))
-            for i in xrange(self.num_T_params-1):
-                bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
-
-        return bounds
-
-    def setup_parameter_grid_old(self, transmission=False, emission=False):
-
-        # fit_params    [abundances (ngas), temperatures (num_T_params), pressures (num_T_params-1)]
-        # fit_count     [no. abundances, no. temperatures, no. pressures]
-        # fit_index     index to fitparams for slicing
-
-        fit_params = []
-        fit_count = []
-        fit_index = []
-
-        # setting up mixing ratios for individual gases
-        Xmean = np.mean(self.Xpriors)
-        cgas = 0
-        for i in xrange(self.ngas):
-            fit_params.append(Xmean)
-            cgas += 1
-
-        fit_count.append(cgas)
-
-        #setting up temperature parameters
-        T_mean = np.mean(self.Tpriors)
-        num_T_params = self.num_T_params
-
-        ctemp = 0; cpres = 0
-
-        if transmission:
-            ctemp +=1
-            fit_params.append(self.params.planet_temp)
-
-        if emission:
-            for i in xrange(num_T_params):
-                fit_params.append(T_mean)
-                ctemp += 1
-            for i in xrange(num_T_params-1):
-                fit_params.append(np.mean(self.Ppriors[i]))
-                cpres += 1
-
-        fit_count.append(ctemp)
-        fit_count.append(cpres)
-
-        cumidx = fit_count[0]
-        fit_index.append(cumidx)
-
-        for i in xrange(1,len(fit_count)):
-            cumidx += fit_count[i]
-            fit_index.append(cumidx)
-
-        return fit_params, fit_index, fit_count
-
-
-
-    def TP_profile_old(self, fit_params, T=None, P=None):
-
-    # main function defining basic parameterised TP-profile from
-    # PARAMS and INDEX. INDEX = [Chi, T, P]
-
-        fit_index = self.fit_index
-        fit_count = self.fit_count
-
-        X_params = fit_params[:fit_index[0]]
-        T_params = fit_params[fit_index[0]:fit_index[1]]
-        P_params = fit_params[fit_index[1]:]
-
-        #convert X into 2d arrays (previously done in fitting module but seems more appropriate here)
-#         X   = np.zeros((self.ngas,self.nlayers))
-        self.X[:] = 0.0
-        for i in xrange(self.ngas):
-            self.X[i,:] += X_params[i]
-
-        # Recalculate PTA profile, based on new Temperature.
-        if len(T_params) > 0:
-            self.pta = self.setup_pta_grid(T_params)
-            P = self.pta[:,0]
-        elif P is None:
-            P = self.P
-
-        # probably not needed?
-        if T is not None:
-            return T, P, self.X
-
-        # if we have more than 1 temperature in fit_params
-        if fit_count[1] > 1:
-            P_params =  [self.params.tp_max_pres] + list(P_params) + [np.min(P)]
-            T_params = list(T_params) + [T_params[-1]]
-
-            #creating linear T-P profile
-            T = np.interp(np.log(P[::-1]), np.log(P_params[::-1]), T_params[::-1])
-            return T[::-1], P, self.X
-
-        if fit_count[1] == 1:
-            T = T_params
-            return T, P, self.X
-
-
 
