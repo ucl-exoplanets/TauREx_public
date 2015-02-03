@@ -435,9 +435,8 @@ class data(base):
                 logging.warning('There is no formula for the refractive index of %s. Cannot compute the cross section' % gasname)
 
             if n_formula: # only if the refractive index was computed
-                Ns = 2.6867805e19 # in cm^-3
-                factor = 1.e16 * 24. * np.pi**3 / (Ns**2) # formula from e.g. Sneep & Ubachs 2005
-                sigma_R = factor * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / wl**4
+                Ns = 2.6867805e25 # in m^-3
+                sigma_R =  ( 24.*np.pi**3/ (Ns**2) ) * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / (wl * 1.e-6)**4
                 filename = os.path.join('Input', 'rayleigh', '%s.rayleigh' % gasname)
                 logging.info('Saving cross section for %s to %s' % (gasname, filename))
                 np.savetxt(filename, np.vstack((wl, sigma_R)).transpose())
