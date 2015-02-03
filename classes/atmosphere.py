@@ -122,6 +122,17 @@ class atmosphere(base):
         '''
         return (KBOLTZ*T)/(mu*g)
 
+    def get_rho(self, T=None, P=None):
+        '''
+        Calculate atmospheric densities for given temperature and pressure
+        '''
+        if P is None:
+            P = self.P
+        if T is None:
+            T = self.T
+            
+        return  (P)/(KBOLTZ*T) 
+    
 
     def setup_pta_grid(self, T=None):
         '''
@@ -207,18 +218,6 @@ class atmosphere(base):
         return np.asarray(fit_params), fit_index, fit_count
 
 
-    def get_rho(self, T=None, P=None):
-        '''
-        Calculate atmospheric densities for given temperature and pressure
-        '''
-        if P is None:
-            P = self.P
-        if T is None:
-            T = self.T # used to be params.planet_temp!
-        return  (P)/(KBOLTZ*T)
-
-
-
     def set_mixing_ratios(self):
         '''
         Set up mixing ratio array from parameter file inputs
@@ -239,7 +238,7 @@ class atmosphere(base):
             for i in xrange(self.ngas):
                 X[i,:] += float(mixing[i])
         return X
-   
+  
 
     #####################
     # Everything below is related to Temperature Pressure Profiles
@@ -332,7 +331,7 @@ class atmosphere(base):
         T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)        
         T = T4**0.25
         
-        return T, self.P
+        return np.asarray(T), self.P
     
     
     def _TP_rodgers2000(self,TP_params):
@@ -359,7 +358,7 @@ class atmosphere(base):
 #         for i in xrange(self.nlayers):
 #                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)  
                
-        T = np.zeros((self.nlayers,1))
+        T = np.zeros((self.nlayers))
         for i in xrange(self.nlayers):
             covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
             weights = covmat / np.sum(covmat)
