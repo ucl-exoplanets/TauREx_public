@@ -195,33 +195,33 @@ class fitting(base):
         # reparametrize the mixing ratios of absorbers and inactive gases using the centered-log-ratio transformation
 
         # get the geometrical mean
-        sumlog = 0
-        n = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
-        for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-            sumlog +=  np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx])
+        # sumlog = 0
+        # n = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
+        # for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
+        #     sumlog +=  np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx])
+        #
+        # for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
+        #     sumlog += np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx])
+        # mean = np.exp((1./n)*sumlog)
+        #
+        # # create array of clr(X + inactive_X)
+        # clr = []
+        # for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
+        #     clr.append(np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx]/mean))
+        # for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
+        #     clr.append(np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx]/mean))
 
-        for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-            sumlog += np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx])
-        mean = np.exp((1./n)*sumlog)
-
-        # create array of clr(X + inactive_X)
-        clr = []
-        for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-            clr.append(np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx]/mean))
-        for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-            clr.append(np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx]/mean))
-
-        # append clr(X) to the fitting value list
-        self.fit_params += clr
-
-        for val in clr:
-            self.fit_bounds.append((-100, 100))
-
+        # append all mixing ratios, minus one (as we're using the centered-log-ratio transformation)
+        ngases = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
+        for i in range(ngases - 1):
+            self.fit_params.append(0)
+            self.fit_bounds.append((-200, 200)) # actually, there are no bounds...
+            self.fit_params_names.append('CLR_X_%i' % i)
         # append molecule names to fit_params_names
-        for gasname in self.forwardmodel.atmosphere.absorbing_gases:
-            self.fit_params_names.append(gasname)
-        for gasname in self.forwardmodel.atmosphere.inactive_gases:
-            self.fit_params_names.append(gasname)
+        # for gasname in self.forwardmodel.atmosphere.absorbing_gases:
+        #     self.fit_params_names.append(gasname)
+        # for gasname in self.forwardmodel.atmosphere.inactive_gases:
+        #     self.fit_params_names.append(gasname)
 
         self.fit_nparams = len(self.fit_params)
 
@@ -273,11 +273,18 @@ class fitting(base):
 
         # fitting for mixing ratios. Need to convert clr(X) to X (centerd-log-ratio inverse transformation)
 
-        # get the geometric mean of all mixing ratios
+        # build centered log ratio array
         ngases = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
+        clr = []
+        for i in range(ngases - 1):
+            clr.append(fit_params[count+i])
+        # append last clr. Note that sum(clr) = 0!
+        clr.append(-np.sum(clr))
+
+        # transform back to simplex space
         clr_inv = []
         for i in range(ngases):
-            clr_inv.append(np.exp(fit_params[count+i]))
+            clr_inv.append(np.exp(clr[i]))
         clr_inv = np.asarray(clr_inv)/np.sum(clr_inv)
 
         count2 = 0
@@ -312,11 +319,11 @@ class fitting(base):
         #binning internal model
         model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
         #
-        # clf()
-        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1], yerr=self.data.spectrum[:,2])
-        # plot(self.data.spectrum[:,0], model_binned)
-        # draw()
-        # pause(0.00001)
+        clf()
+        errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1], yerr=self.data.spectrum[:,2])
+        plot(self.data.spectrum[:,0], model_binned)
+        draw()
+        pause(0.00001)
 
         res = (data - model_binned) / datastd
 

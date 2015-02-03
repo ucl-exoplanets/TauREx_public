@@ -1,0 +1,81 @@
+[General]
+verbose = True
+manual_waverange = False
+wavemin = 0.5
+wavemax = 14.0
+spec_res = 300
+type = transmission
+
+[Input]
+spectrum_file = Input/observations/superearth_10ppm_R300.dat
+
+[Output]
+path = Output/
+file_prefix = test_
+dump_internal = True
+internal_name = transmissionspec.dat
+save_plots = True
+
+[Star]
+radius = 0.2110
+temp   = 3030
+
+[Planet]
+radius = 0.239
+mass = 0.0204
+sma = 0.01433
+albedo = 0.2
+temp = 500
+mu = 19
+molecules = 1H2-16O,12C-16O2,12C-1H4
+mixing_ratios = 0.001, 0.01, 0.035
+include_cld = False
+inactive_gases = H2, N2
+inactive_gases_X = 0.00001, 0.954
+
+[T-P profile]
+var_atm = True
+num_scaleheights = 20
+atm_levels = 100
+atm_max_pressure = 1e5
+
+[Fitting]
+transmission = True
+emission     = False
+fix_radius = False
+fix_temp = False
+fix_mu = False
+fix_P0 = False
+couple_mu = True
+T_up  = 200
+T_low = 200
+mu_up = 40
+mu_low = 0
+radius_up  = 0.02
+radius_low = 0.02
+P0_up = 1e6
+P0_low = 1e3
+X_up  = 1.0
+X_low = 0.0
+X_inactive_up  = 1.0
+X_inactive_low = 0.0
+
+[Downhill]
+run = True
+
+[MCMC]
+run = False
+iter = 10000
+
+[MultiNest]
+run = False
+resume = True
+verbose = True
+nest_path = chains/
+sampling_eff = parameter
+n_live_points = 2000
+max_iter = 0
+multimodes = True
+max_modes = 100
+const_eff = False
+imp_sampling = False
