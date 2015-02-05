@@ -122,6 +122,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.connect_spinboxes()
         self.pushButton_load_par_file.clicked.connect(self.load_par_file)
         self.pushButton_save_plot.clicked.connect(self.save_plot)
+        self.pushButton_save_ascii.clicked.connect(self.save_ascii)
         self.pushButton_add_observations.clicked.connect(self.add_observations)
         self.pushButton_plot.clicked.connect(self.plot_forwardmodel)
 
@@ -188,6 +189,17 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
     def save_plot(self):
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Save plot', 'Output/')
+        self.aw.qmc.fig.savefig(str(filename), dpi=80,  bbox_inches='tight')
+
+    def save_ascii(self):
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Save to ascii', 'Output/')
+
+        out = np.zeros((len(self.dataob.specgrid),2))
+        out[:,0] = self.dataob.specgrid
+        out[:,1] = self.forwardmodel.model()
+        np.savetxt(str(filename), out)
+
+
         self.aw.qmc.fig.savefig(str(filename), dpi=80,  bbox_inches='tight')
 
     def load_parameter_object(self, filename=None):
@@ -331,7 +343,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.aw.qmc.axes.get_xaxis().set_minor_formatter(FuncFormatter(tick_formatter))
         self.aw.qmc.axes.set_xlim(np.min(self.doubleSpinBox_min_wav.value()), np.max(self.doubleSpinBox_max_wav.value()))
         #self.aw.qmc.axes.set_ylim(np.min(out[:,1]*1.e6)-100, np.max(out[:,1]*1.e6)+100)
-        self.aw.qmc.axes.set_ylim(self.spinBox_min_y.value(), self.spinBox_max_y.value())
+        #self.aw.qmc.axes.set_ylim(self.spinBox_min_y.value(), self.spinBox_max_y.value())
 
         set_backgroundcolor(self.aw.qmc.axes, 'white')
         self.aw.qmc.draw()

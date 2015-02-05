@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>811</width>
-    <height>639</height>
+    <height>527</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -812,6 +812,13 @@
       <widget class="QPushButton" name="pushButton_save_plot">
        <property name="text">
         <string>Save plot</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_save_ascii">
+       <property name="text">
+        <string>Save to ascii</string>
        </property>
       </widget>
      </item>
