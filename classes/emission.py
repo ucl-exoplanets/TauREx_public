@@ -97,7 +97,6 @@ class emission(base):
             self.sigma_array_c, self.sig_tempgrid = self.get_sigma_array_c()
 
 
-
         # set forward model function
         self.model = self.path_integral
 
@@ -108,11 +107,10 @@ class emission(base):
         self.lambdagrid = GRID
         self.nlambda = len(GRID)
 
-
     def get_sigma_array(self,temperature):
     #getting sigma array from sigma_dic for given temperature
-    #         print temperature
         return self.sigma_dict[gen.find_nearest(self.sigma_dict['tempgrid'],temperature)[0]]
+
 
     def get_sigma_array_c(self):
     #generating 3D sigma_array from sigma_dict for c++ path integral
@@ -146,7 +144,7 @@ class emission(base):
             rho = self.rho
         if temperature is None:
             temperature = self.T#self.planet_temp
-
+                    
         BB_star = self.F_star
 
         #constants 

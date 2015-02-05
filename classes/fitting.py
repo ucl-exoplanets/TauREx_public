@@ -115,7 +115,7 @@ class fitting(base):
 
         # calculating densities
         rho = self.atmosphere.get_rho(T=T, P=P)
-
+        
         #the temperature parameter should work out of the box but check for transmission again
         model = self.forwardmodel.model(rho=rho, X=X, temperature=T)
 
@@ -154,10 +154,11 @@ class fitting(base):
         Tout_mean, Pout_mean, Xout_mean = self.collate_downhill_results(fit_output['x'])
 
         self.DOWNHILL = True
-        self.DOWNHILL_T_mean = Tout_mean
-        self.DOWNHILL_P_mean = Pout_mean
-        self.DOWNHILL_X_mean = Xout_mean
-        self.DOWNHILL_fit_output = fit_output['x']
+        self.DOWNHILL_T_mean     = Tout_mean
+        self.DOWNHILL_P_mean     = Pout_mean
+        self.DOWNHILL_X_mean     = Xout_mean
+        self.DOWNHILL_FIT_mean   = fit_output['x']
+#         self.DOWNHILL_fit_output = fit_output['x']
         
         print self.DOWNHILL_fit_output
 
@@ -273,27 +274,33 @@ class fitting(base):
                  verbose=verbose)
 
         #coallating results into arrays
-        Tout_mean, Tout_std, Xout_mean, Xout_std = self.collate_mcmc_result(R)
+        Xout_mean, Xout_std,Tout_mean, Pout_mean, FITout_mean, FITout_std = self.collate_mcmc_result(R)
 
         #saving arrays to object. This should really be divided by rank, see below
         self.MCMC = True
-        self.MCMC_T_mean = Tout_mean
-        self.MCMC_T_std = Tout_std
-        self.MCMC_X_mean = Xout_mean
-        self.MCMC_X_std = Xout_std
-        self.MCMC_STATS = R.stats()
-        self.MCMC_FITDATA= R
+        self.MCMC_X_mean   = Xout_mean
+        self.MCMC_X_std    = Xout_std
+        self.MCMC_T_mean   = Tout_mean
+        self.MCMC_P_mean   = Pout_mean
+        self.MCMC_FIT_mean = FITout_mean
+        self.MCMC_FIT_std  = FITout_std
+        self.MCMC_STATS    = R.stats()
+        self.MCMC_FITDATA  = R
 
         # each MCMC chain is run on a separate thread. Save all outputs
         logging.info('Store the MCMC results')
         self.MCMC_OUT = {}
         self.MCMC_OUT[self.MPIrank] = {}
-        self.MCMC_OUT[self.MPIrank]['FITDATA'] = R
-        self.MCMC_OUT[self.MPIrank]['STATS'] = R.stats()
-        self.MCMC_OUT[self.MPIrank]['T_mean'] = Tout_mean
-        self.MCMC_OUT[self.MPIrank]['T_std'] = Tout_std
-        self.MCMC_OUT[self.MPIrank]['X_mean'] = Xout_mean
-        self.MCMC_OUT[self.MPIrank]['X_std'] = Xout_std
+        self.MCMC_OUT[self.MPIrank]['FITDATA']  = R
+        self.MCMC_OUT[self.MPIrank]['STATS']    = R.stats()
+        
+        self.MCMC_OUT[self.MPIrank]['X_mean']   = Xout_mean
+        self.MCMC_OUT[self.MPIrank]['X_std']    = Xout_std
+        self.MCMC_OUT[self.MPIrank]['T_mean']   = Tout_mean
+        self.MCMC_OUT[self.MPIrank]['P_mean']   = Pout_mean
+        self.MCMC_OUT[self.MPIrank]['FIT_mean'] = FITout_mean
+        self.MCMC_OUT[self.MPIrank]['FIT_std']  = FITout_std
+        
 
     def collate_mcmc_result(self, MCMCout):
 
@@ -309,10 +316,10 @@ class fitting(base):
 
         T,P,X = self.atmosphere.TP_profile(fit_params=fit_params_out)
 
-        T_std = fit_params_out_std[self.fit_index[0]:self.fit_index[1]]
+#         T_std = fit_params_out_std[self.fit_index[0]:self.fit_index[1]]
         X_std = fit_params_out_std[:self.fit_index[0]]
 
-        return np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)
+        return np.asarray(X), np.asarray(X_std), np.asarray(T), np.asarray(P), np.asarray(fit_params_out), np.asarray(fit_params_out_std)
 
 
 ############################################################################### 
@@ -404,11 +411,14 @@ class fitting(base):
 
             #saving arrays to object
             self.NEST = True
-            self.NEST_modes = len(multinest_result) # number of modes detected
-            self.NEST_T_mean = [solution[0] for solution in multinest_result]
-            self.NEST_T_std = [solution[1] for solution in multinest_result]
-            self.NEST_X_mean = [solution[2] for solution in multinest_result]
-            self.NEST_X_std = [solution[3] for solution in multinest_result]
+            self.NEST_modes    = len(multinest_result) # number of modes detected
+            self.NEST_X_mean   = [solution[0] for solution in multinest_result]
+            self.NEST_X_std    = [solution[1] for solution in multinest_result]
+            self.NEST_T_mean   = [solution[2] for solution in multinest_result]
+            self.NEST_P_mean   = [solution[3] for solution in multinest_result]
+            self.NEST_FIT_mean = [solution[4] for solution in multinest_result]
+            self.NEST_FIT_std  = [solution[5] for solution in multinest_result]
+            
             self.NEST_stats = NESTout.get_stats()
             self.NEST_FITDATA = NESTout
 
@@ -436,9 +446,9 @@ class fitting(base):
                         fit_params_out_std.append(NESTstats['modes'][n]['sigma'][i])
 
                     T, P, X = self.atmosphere.TP_profile(fit_params=fit_params_out)
-                    T_std = fit_params_out_std[self.fit_index[0]:self.fit_index[1]]
+#                     T_std = fit_params_out_std[self.fit_index[0]:self.fit_index[1]]
                     X_std = fit_params_out_std[:self.fit_index[0]]
-                    out_list.append((np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std)))
+                    out_list.append((np.asarray(X), np.asarray(X_std),np.asarray(T), np.asarray(P),np.asarray(fit_params_out), np.asarray(fit_params_out_std)))
 
                 return out_list
 
@@ -450,8 +460,8 @@ class fitting(base):
             fit_params_out_std.append(NESTstats['marginals'][i]['sigma'])
 
         T,P,X = self.atmosphere.TP_profile(fit_params=fit_params_out)
-        T_std = fit_params_out_std[self.fit_index[0]:self.fit_index[1]]
+#         T_std = fit_params_out_std[self.fit_index[0]:self.fit_index[1]]
         X_std = fit_params_out_std[:self.fit_index[0]]
 
-        return [(np.asarray(T), np.asarray(T_std), np.asarray(X), np.asarray(X_std))]
+        return [(np.asarray(X), np.asarray(X_std),np.asarray(T), np.asarray(P),np.asarray(fit_params_out), np.asarray(fit_params_out_std))]
 

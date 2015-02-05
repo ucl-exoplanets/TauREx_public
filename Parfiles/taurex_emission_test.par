@@ -191,7 +191,7 @@ num_scaleheights = 20
 
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
-atm_levels = 80
+atm_levels = 40
 
 #set temperature as variables
 var_temp = True
@@ -224,7 +224,7 @@ T_up  = 400
 T_low = 400
 
 #Upper and lower bounds for mixing ratios 
-X_up  = 1e-2
+X_up  = 1e-1
 X_low = 0.0
 
 
@@ -237,7 +237,7 @@ run = False
 #type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, 
 #L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
 #see scipy.optimize.minimize documentation
-type = Powell
+type = L-BFGS-B
 
 #Supply extra parameters using options parameter. See scipy docu. 
 #currently not working 
