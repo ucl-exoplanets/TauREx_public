@@ -30,8 +30,8 @@ mu = 19
 molecules = 1H2-16O,12C-16O2,12C-1H4
 mixing_ratios = 0.001, 0.01, 0.035
 include_cld = False
-inactive_gases = H2, N2
-inactive_gases_X = 0.00001, 0.954
+inactive_gases = He, H2, N2
+inactive_gases_X = 0., 0.00001, 0.954
 
 [T-P profile]
 var_atm = True

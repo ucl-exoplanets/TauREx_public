@@ -3,13 +3,19 @@
 import sys
 
 from PyQt4 import QtCore, QtGui, uic
+import numpy as np
 
 import matplotlib
-import numpy as np
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import matplotlib as mpl
+from matplotlib import rc
 matplotlib.use('Qt4Agg')
+mpl.rcParams['axes.linewidth'] = 2 #set the value globally
+mpl.rcParams['text.antialiased'] = True
+rc('text', usetex=True) # use tex in plots
+rc('font', **{'family':'serif','serif':['Palatino'],'size'   : 14})
 
 #loading classes
 sys.path.append('./classes')
@@ -43,11 +49,12 @@ AU    = 1.49e11         #semi-major axis (AU) to m
 AMU   = 1.660538921e-27 #atomic mass to kg
 
 
+
 class Qt4MplCanvas(FigureCanvas):
 
     def __init__(self, parent):
         # plot definition
-        self.fig = Figure()
+        self.fig = Figure(facecolor='white')
         self.axes = self.fig.add_subplot(111)
 
         # initialization of the canvas
@@ -84,7 +91,6 @@ class PlotWindow(QtGui.QMainWindow, gui_class):
         # set the central widget of MainWindow to main_widget
         self.setCentralWidget(self.main_widget)
 
-
 class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
     def __init__(self, parent=None):
@@ -97,6 +103,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         # initialise plot window
         self.aw = PlotWindow()
         self.aw.show()
+
         self.observations = False
 
         # initialise parameter, data, atmosphere and forwardmodel objects
@@ -107,11 +114,14 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.atmosphereob = atmosphere(self.dataob)
         self.forwardmodel = transmission(self.atmosphereob)
         self.set_params_values()
+        self.nplot = 1
+        self.cm = plt.get_cmap('Accent')
         self.plot_forwardmodel()
 
         # connect
         self.connect_spinboxes()
         self.pushButton_load_par_file.clicked.connect(self.load_par_file)
+        self.pushButton_save_plot.clicked.connect(self.save_plot)
         self.pushButton_add_observations.clicked.connect(self.add_observations)
         self.pushButton_plot.clicked.connect(self.plot_forwardmodel)
 
@@ -163,19 +173,6 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_star_radius.valueChanged.disconnect(self.event_status_changed)
         self.checkBox_rayleigh.stateChanged.disconnect(self.event_status_changed)
 
-    def load_parameter_object(self, filename=None):
-
-        params = parameters(filename)
-        params.gen_run_gui = True
-        params.planet_molec =  params.all_absorbing_gases
-        params.planet_mixing = [0 for i in range(len(params.all_absorbing_gases))]
-        params.gen_spec_res = 500
-        params.gen_wavemin = 0.4
-        params.gen_wavemax = 20
-        params.gen_manual_waverange = True
-
-        return params
-
     def load_par_file(self):
 
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select parameter file', 'Parfiles/')
@@ -188,6 +185,51 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
             self.set_params_values()
             self.connect_spinboxes()
             self.plot_forwardmodel()
+
+    def save_plot(self):
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Save plot', 'Output/')
+        self.aw.qmc.fig.savefig(str(filename), dpi=80,  bbox_inches='tight')
+
+    def load_parameter_object(self, filename=None):
+
+        params = parameters(filename)
+        params.gen_run_gui = True
+
+        # absorbing gases
+
+        # All molecules are pre-loaded. Set mixing ratio if specified in the .par file being loaded
+        # otherwise assume 0
+        planet_mixing_tmp = []
+        for idx, gasname in enumerate(params.all_absorbing_gases): # list all avaialble molecules
+            try:
+                # the molecule appears in the .par file, load the mixing ratio
+                idx_from_params = params.planet_molec.index(gasname)
+                planet_mixing_tmp.append(params.planet_mixing[idx_from_params])
+            except:
+                # the molecule doesn't appear in the .par file, assume X = 0
+                planet_mixing_tmp.append(0)
+        params.planet_mixing = planet_mixing_tmp
+        params.planet_molec =  params.all_absorbing_gases
+
+        # do the same for inactive gases
+        planet_inactive_gases_X_tmp = []
+        for idx, gasname in enumerate(params.all_inactive_gases): # list all avaialble molecules
+            try:
+                # the molecule appears in the .par file, load the mixing ratio
+                idx_from_params = params.planet_inactive_gases.index(gasname)
+                planet_inactive_gases_X_tmp.append(params.planet_inactive_gases_X[idx_from_params])
+            except:
+                # the molecule doesn't appear in the .par file, assume X = 0
+                planet_mixing_tmp.append(0)
+        params.planet_inactive_gases_X = planet_inactive_gases_X_tmp
+        params.planet_inactive_gases =  params.all_inactive_gases
+
+        params.gen_spec_res = 500
+        params.gen_wavemin = 0.4
+        params.gen_wavemax = 20
+        params.gen_manual_waverange = True
+
+        return params
 
     def set_params_values(self):
 
@@ -273,16 +315,27 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         out[:,0] = self.dataob.specgrid
         out[:,1] = self.forwardmodel.model()
 
+
         if not self.checkBox_plot_overplot.isChecked():
             self.aw.qmc.axes.clear()
+            self.nplot = 1
+
+        color = str(self.lineEdit_color.text())
 
         self.plot_observations()
-        self.aw.qmc.axes.plot(out[:,0], out[:,1]*1.e6, lw=0.5)
+        self.aw.qmc.axes.plot(out[:,0], out[:,1]*1.e6, lw=2, color=str(self.lineEdit_color.text()))
         self.aw.qmc.axes.set_xscale('log')
         self.aw.qmc.axes.set_xlabel('Wavelength (micron)')
         self.aw.qmc.axes.set_ylabel('Transit depth (ppm)')
+        self.aw.qmc.axes.get_xaxis().set_major_formatter(FuncFormatter(tick_formatter))
+        self.aw.qmc.axes.get_xaxis().set_minor_formatter(FuncFormatter(tick_formatter))
         self.aw.qmc.axes.set_xlim(np.min(self.doubleSpinBox_min_wav.value()), np.max(self.doubleSpinBox_max_wav.value()))
+        #self.aw.qmc.axes.set_ylim(np.min(out[:,1]*1.e6)-100, np.max(out[:,1]*1.e6)+100)
+        self.aw.qmc.axes.set_ylim(self.spinBox_min_y.value(), self.spinBox_max_y.value())
+
+        set_backgroundcolor(self.aw.qmc.axes, 'white')
         self.aw.qmc.draw()
+        self.nplot += 1
 
     def plot_observations(self):
 
@@ -291,6 +344,57 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
                 self.aw.qmc.axes.errorbar(self.observations[:,0], self.observations[:,1]*1.e6, yerr=self.observations[:,2]*1.e6,)
             elif np.shape(self.observations)[1] == 2:
                 self.aw.qmc.axes.plot(self.observations[:,0], self.observations[:,1]*1.e6,)
+
+def tick_formatter(x, p):
+
+    if x < 1.0:
+        return "%.1f" % x
+    if x >= 1.0:
+        return "%i" % x
+
+# two useful functions to set background and foreground colours
+
+def set_foregroundcolor(ax, color):
+     '''For the specified axes, sets the color of the frame, major ticks,
+         tick labels, axis labels, title and legend
+     '''
+     for tl in ax.get_xticklines() + ax.get_yticklines():
+         tl.set_color(color)
+     for spine in ax.spines:
+         ax.spines[spine].set_edgecolor(color)
+     for tick in ax.xaxis.get_major_ticks():
+         tick.label1.set_color(color)
+     for tick in ax.yaxis.get_major_ticks():
+         tick.label1.set_color(color)
+     ax.axes.xaxis.label.set_color(color)
+     ax.axes.yaxis.label.set_color(color)
+     ax.axes.xaxis.get_offset_text().set_color(color)
+     ax.axes.yaxis.get_offset_text().set_color(color)
+     ax.axes.title.set_color(color)
+     lh = ax.get_legend()
+     if lh != None:
+         lh.get_title().set_color(color)
+         lh.legendPatch.set_edgecolor('none')
+         labels = lh.get_texts()
+         for lab in labels:
+             lab.set_color(color)
+     for tl in ax.get_xticklabels():
+         tl.set_color(color)
+     for tl in ax.get_yticklabels():
+         tl.set_color(color)
+
+
+def set_backgroundcolor(ax, color):
+     '''Sets the background color of the current axes (and legend).
+         Use 'None' (with quotes) for transparent. To get transparent
+         background on saved figures, use:
+         pp.savefig("fig1.svg", transparent=True)
+     '''
+     ax.patch.set_facecolor(color)
+     lh = ax.get_legend()
+     if lh != None:
+         lh.legendPatch.set_facecolor(color)
+
 
 #put the main window here
 def main():
