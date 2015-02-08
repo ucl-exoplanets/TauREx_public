@@ -21,13 +21,15 @@
 
 
 import numpy as np
-import datetime,getpass,json,base64, socket, random
+import datetime,getpass,json,base64, socket, random,logging
 
 
 
 
 class license_manager(object):
     def __init__(self):
+        
+        logging.info('Loading License manager')
         
         self.local_user   = getpass.getuser()
         self.local_host   = socket.getfqdn()
@@ -47,17 +49,15 @@ class license_manager(object):
     
     def print_error(self):
         #print error message
-        print 'Error: Invalid or expired license file.'
-        print 'To obtain a new license please contact'
-        print 'Ingo Waldmann (ingo@star.ucl.ac.uk)'
-        print '--------'
-        print 'Good bye'
+        logging.error('Invalid or expired license file.')
+        logging.info('To obtain a new license please contact Ingo Waldmann (ingo@star.ucl.ac.uk)')
+
         
         
     
     def verify(self):
         #checking if license is valid or not
-        
+                
         valid    = False #final tag
         validmin = False #minimal usage
         validuser= False
@@ -76,7 +76,7 @@ class license_manager(object):
                     validtime = True 
                     diff = (license_date - self.current_time).days
                     if int(diff) < 10:
-                        print 'Warning: License expires in '+str(diff)+' day(s)'
+                        logging.warn('Warning: License expires in '+str(diff)+' day(s)')
                 else:
                     validtime = False        
             else:
@@ -107,8 +107,7 @@ class license_manager(object):
         
         #end program if valid = False
         if valid:
-#             print 'Valid TauREx License found'
-            pass
+            logging.info('Valid TauREx license found')
         else:
             self.print_error()
             exit()
@@ -122,7 +121,7 @@ class license_manager(object):
             with open(PATH+'license.dat','r') as infile:
                 content = infile.readlines()
         except IOError:
-            print 'Error: No license.dat file found in base directory.'
+            logging.error('No license.dat file found in base directory.')
             exit()
             
         #decoding
@@ -160,8 +159,7 @@ class license_manager(object):
             if (USER is False) and (DATE is False): 
                 print 'Error: Either User or Date requirement needed if FULLACCESS = False' 
                 exit()
-                
-        
+                        
         #generating dictionary
         taurex_license = {}
         taurex_license['TAUREX_LICENSE_VERSION'] = '1.0'
@@ -205,6 +203,7 @@ class license_manager(object):
             outfile.write(header)
             outfile.write(encoded+'\n')
             outfile.write(footer)
+            
             
        
         
