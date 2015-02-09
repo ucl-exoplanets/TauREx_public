@@ -83,7 +83,8 @@ class atmosphere(base):
 
         #selecting TP profile to use
         if self.params.gen_type == 'emission':
-            self.TP_type = 'guillot'
+            self.TP_type = '3point'
+#             self.TP_type = 'guillot'
 #             self.TP_type = 'rodgers'         
         if self.params.gen_type == 'transmission':
             self.TP_type = 'isothermal'
@@ -104,7 +105,9 @@ class atmosphere(base):
      
         #testing guillot TP profile
 #         T,P,X = self.TP_profile([0.05,0.05,1223, 1e-2,4e-3,4e-3,0.5])#test-parameters from Line et al. 2012
-#  
+        
+#         T,P,X = self.TP_profile([0.05,0.05,1400,200,1e4])
+# 
 #         pl.figure(1)
 #         pl.plot(T,self.P_bar)
 #         pl.yscale('log')
@@ -187,6 +190,16 @@ class atmosphere(base):
             bounds.append((0.0,1.0))                            #kappa_v1 prior
             bounds.append((0.0,1.0))                            #kappa_v2 prior
             bounds.append((0.0,1.0))                            #alpha prior
+        elif self.TP_type == '2point':
+            bounds.append((self.T_priors[0],self.T_priors[1])) #surface layer T
+            bounds.append((0.0,1000.0))                        #troposphere layer T difference (T_surface- Tdiff) = T_trop
+            bounds.append((1.0,1e5))                           #troposphere pressure (Pa) #@todo careful with this needs to move somewhere else
+        elif self.TP_type == '3point':
+            bounds.append((self.T_priors[0],self.T_priors[1])) #surface layer T
+            bounds.append((0.0,500.0))                        #point1 T difference (T_surface- Tdiff) = T_point1
+            bounds.append((0.0,500.0))                        #point2 T difference (T_point1- Tdiff) = T_point2
+            bounds.append((1.0,1e5))                           #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
+            bounds.append((1.0,1e5))                           #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
 
         return bounds
 
@@ -256,6 +269,12 @@ class atmosphere(base):
             profile = self._TP_guillot2010
         elif self.TP_type is 'rodgers':
             profile = self._TP_rodgers2000
+        elif self.TP_type is '2point':
+            profile = self._TP_2point
+        elif self.TP_type is '3point':
+            profile = self._TP_3point
+        else:
+            logging.error('Invalid TP profile name')
             
         def tpwrap(fit_params):
             return self._TP_profile(profile,fit_params)
@@ -281,7 +300,7 @@ class atmosphere(base):
             
         #generating TP profile given input TP_function
         T,P = TP_function(TP_params)
-        
+      
         return T,P, self.X
 
 
@@ -379,16 +398,54 @@ class atmosphere(base):
         
         Free parameters required:
             - T1 = surface temperature (at 10bar)
-            - T2 = temperature at tropopause 
+            - T2 = temperature at tropopause (given as difference from T1)
             - P1 = pressure at tropopause
             
         Fixed parameters:
             - Pressure grid (self.P)
         '''
         
-        pass
+        maxP = np.max(self.P)
+        minP = np.min(self.P)
+        
+        T_trop = TP_params[0] - TP_params[1]
+        
+        P_params = [maxP,TP_params[-1],minP]
+        T_params = [TP_params[0],T_trop,T_trop]
+
+        #creating linear T-P profile
+        T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        return T[::-1], self.P
         
         
+    def _TP_3point(self,TP_params):
+        '''
+        Same as 2point TP profile but adds one extra point between surface and troposphere
+        
+        Free parameters required:
+            - T1 = surface temperature (at 10bar)
+            - T2 = point 1 temperature (given as difference from T1)
+            - P1 = point 1 pressure
+            - T3 = point 2 temperature (given as difference from T1)
+            - P2 = point 2 pressure 
+            
+        Fixed parameters
+            - Pressure grid (self.P)
+        '''
+        
+        maxP = np.max(self.P)
+        minP = np.min(self.P)
+        
+        T_point1 = TP_params[0] - TP_params[1]
+        T_point2 = T_point1 - TP_params[2]
+    
+        
+        P_params = [maxP,TP_params[-2],TP_params[-1],minP]
+        T_params = [TP_params[0],T_point1,T_point2, T_point2]
+
+        #creating linear T-P profile
+        T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        return T[::-1], self.P
         
         
         

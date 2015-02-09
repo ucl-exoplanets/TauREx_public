@@ -355,7 +355,6 @@ def plot_1Dposterior(axis,data,varname,confidence):
             axis.axvline(x=mean1,linestyle='--',color='red')
     return axis
 
-#@todo the plot label bug must be somewhere around here
 def exp_formatter_fun(x, p):
 
     global scale_pow

@@ -31,11 +31,11 @@ N_LAYERS = 80 #number of atmospheric layers
 N_SCALE  = 20.0   #number of scale heights 
 MAX_P    = 1e6 #maximum pressure (Pa)
 
-MOL_NUM  = 4   #number of molecules 
+MOL_NUM  = 2   #number of molecules 
 
 smooth_window = 5 #smoothing window size as percent of total data
 
-T_surf = 2200.0  #surface temperature (K)
+T_surf = 1400.0  #surface temperature (K)
 mu     = 2.3   #mean molecular weight (atomic units)
 g      = 7.1  #surface gravity (m/s^2)
         
@@ -69,7 +69,7 @@ print 'max_z ',max_z, 'end z ', PTA_arr[-1,2]
 # Pnodes = [MAX_P,1000.0, 0.0]
 Pnodes = [MAX_P,1e5, 100.0,MIN_P]
 # Tnodes = [T_surf,1200.0,1200.0]
-Tnodes = [T_surf,T_surf,2000.0,2000.0]
+Tnodes = [T_surf,T_surf,1200.0,1200.0]
 # Tnodes = [T_surf,T_surf,T_surf, T_surf]
 
 print 'Pnodes ',Pnodes
@@ -98,7 +98,7 @@ PTA_arr[:,1] = TP[::-1]
 #adding mixing ratios for molecules 
 # X = [6.0e-5,1.0e-5,5.0e-6]
 # X = [1.0e-7,1.0e-7,1.0e-7]
-X = [5e-6,2e-7]
+X = [5e-5,2e-5]
 
 for i in range(len(X)):
     PTA_arr[:,2+i+1] = X[i]
