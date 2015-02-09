@@ -279,11 +279,10 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.planet_temp = self.spinBox_planet_T.value()
         self.forwardmodel.atmosphere.planet_mass = self.doubleSpinBox_planet_mass.value() * MJUP
         self.forwardmodel.atmosphere.planet_mu = self.doubleSpinBox_planet_mu.value() * AMU
-        self.forwardmodel.atmosphere.planet_radius_10mbar = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL
+        self.forwardmodel.atmosphere.planet_radius = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL
         self.forwardmodel.atmosphere.planet_grav = self.forwardmodel.atmosphere.get_surface_gravity()
         self.forwardmodel.atmosphere.scaleheight = self.forwardmodel.atmosphere.get_scaleheight()
         self.forwardmodel.atmosphere.max_pressure = self.doubleSpinBox_planet_surf_pressure.value() * 1.e6
-        self.forwardmodel.atmosphere.planet_radius_P0 = self.forwardmodel.atmosphere.planet_radius_10mbar #self.forwardmodel.atmosphere.get_surface_radius()
         self.forwardmodel.atmosphere.pta = self.forwardmodel.atmosphere.setup_pta_grid()
         self.forwardmodel.atmosphere.P = self.forwardmodel.atmosphere.pta[:,0] # pressure array
         self.forwardmodel.atmosphere.P_bar = self.forwardmodel.atmosphere.P * 1.0e-5 #convert pressure from Pa to bar
@@ -307,10 +306,16 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.params.star_radius = self.doubleSpinBox_star_radius.value() * RSOL
         self.forwardmodel.params.in_include_Rayleigh = self.checkBox_rayleigh.isChecked()
 
+        # calculate optical path lengths
+        self.forwardmodel.dlarray, self.forwardmodel.iteridx = self.forwardmodel.get_path_length()
+        self.forwardmodel.dz = self.forwardmodel.get_dz()
+
+
         if self.checkBox_rayleigh.isChecked():
             self.forwardmodel.Rsig = self.forwardmodel.get_Rsig()
         else:
             self.forwardmodel.Rsig = zeros((self.forwardmodel.nlambda))
+
 
         if self.checkBox_plot_autorefresh.isChecked():
             self.plot_forwardmodel()
