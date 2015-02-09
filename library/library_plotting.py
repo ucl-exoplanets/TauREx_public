@@ -3,7 +3,7 @@
 #
 ###############################
 
-import  os, sys,string, glob
+import  os, sys,string, glob, itertools
 import pylab as pl
 import numpy as np
 from numpy import array
@@ -383,4 +383,48 @@ def ellipse(ra,rb,ang,x0,y0,Nb=100):
     X=radm*np.cos(the)*co-si*radn*np.sin(the)+xpos
     Y=radm*np.cos(the)*si+co*radn*np.sin(the)+ypos
     return X,Y
+
+
+
+def iterate_TP_profile(fit_params, fit_params_std, fit_idx, TP_function):
+    '''
+    function iterating through all lower and upper bounds of parameters
+    to determine which combination gives the lowest/highest attainable 
+    TP profile. Returns mean TP profile with errorbars on each pressure level
+    ''' 
+    
+    TP_params     = fit_params[fit_idx:]
+    TP_params_std = fit_params_std[fit_idx:]
+    
+    
+    Tmean,P,X = TP_function(fit_params)
+    
+    bounds = [] #list of lower and upper parameter bounds 
+    for i in xrange(len(TP_params)):
+        bounds.append((TP_params[i]-TP_params_std,TP_params[i]+TP_params_std))
+        
+        
+    iterlist = list(itertools.product(*bounds))
+    iter_num = np.shape(iterlist)[0] #number of possible combinations
+    
+    T_iter   = np.zeros((len(Tmean),iter_num))
+    T_minmax = np.zeros((len(Tmean),2))
+    
+    for i in range(iter_num):
+        T,P, X = TP_function(iterlist[i])
+        T_iter[:,i] = T
+    
+    T_minmax[:,0] = np.min(T_iter)
+    T_minmax[:,1] = np.max(T_iter)
+    
+    return Tmean, T_minmax, P
+    
+    
+    
+    
+    
+    
+
+
+
 

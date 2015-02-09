@@ -83,8 +83,8 @@ class atmosphere(base):
 
         #selecting TP profile to use
         if self.params.gen_type == 'emission':
-#             self.TP_type = 'guillot'
-            self.TP_type = 'rodgers'         
+            self.TP_type = 'guillot'
+#             self.TP_type = 'rodgers'         
         if self.params.gen_type == 'transmission':
             self.TP_type = 'isothermal'
         
@@ -104,7 +104,7 @@ class atmosphere(base):
      
         #testing guillot TP profile
 #         T,P,X = self.TP_profile([0.05,0.05,1223, 1e-2,4e-3,4e-3,0.5])#test-parameters from Line et al. 2012
-
+#  
 #         pl.figure(1)
 #         pl.plot(T,self.P_bar)
 #         pl.yscale('log')
@@ -370,4 +370,38 @@ class atmosphere(base):
 #         pl.show()
          
         return T, self.P
+    
+    def _TP_2point(self,TP_params):
+        ''' 
+        Two point TP profile. Simplest possible profile only fitting for the surface temperature and tropopause temp. 
+        and pressure. Atmosphere above tropopause is isothermal. Temperature is linearly interpolated in log space.
+        No inversion possible here. 
+        
+        Free parameters required:
+            - T1 = surface temperature (at 10bar)
+            - T2 = temperature at tropopause 
+            - P1 = pressure at tropopause
+            
+        Fixed parameters:
+            - Pressure grid (self.P)
+        '''
+        
+        pass
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 

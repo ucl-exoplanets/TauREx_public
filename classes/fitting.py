@@ -128,6 +128,15 @@ class fitting(base):
 #         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
 #         plot(self.data.spectrum[:,0], model_binned)
 #         draw()
+#         
+#         figure(2)
+#         clf()
+#         plot(T,P)
+#         yscale('log')
+#         xlabel('Temperature')
+#         ylabel('Pressure (Pa)')
+#         gca().invert_yaxis()
+#         draw()
 
         res = (data - model_binned) / datastd
 

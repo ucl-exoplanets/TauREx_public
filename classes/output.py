@@ -96,7 +96,7 @@ class output(base):
             self.DOWN = False
 
         #calculating final absorption/emission spectrum (currently only absorption)
-        # @todo Why reinterpolation to observed wavelengths?? We should probably bin to obs spectrum rather than interpolate?
+        # @todo Why reinterpolation to observed wavelengths?? We should probably bin to obs spectrum rather than interpolate? - IPW: yes but was lazy
 
         if self.MCMC:
             # @todo This is only for thread 0. Maybe output results of all chains, stored in fitting.MCMC_OUT[MPIRank]
@@ -157,8 +157,6 @@ class output(base):
 
     def plot_multinest(self, param_names=False, save2pdf=False):
         #plotting nested sampling distributions.
-        # @todo this function is almost identical to plot_mcmc... Maybe merge?
-
 
         if self.NEST:
             if not param_names:
@@ -212,6 +210,18 @@ class output(base):
             filename = os.path.join(self.params.out_path, 'spectrum_data.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
+
+
+    def plot_TP_profile(self,save2pdf=False,linewidth=2.0):
+        '''
+        function translating parameter upper and lower bounds to TP profile
+        This is done analytically for rodgers and isothermal and numerically
+        for other profiles. 
+        '''
+        
+        pass
+        
+        
 
     def plot_fit(self,save2pdf=False,linewidth=2.0):
 
