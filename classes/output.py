@@ -82,8 +82,10 @@ class output(base):
             for mol in self.params.planet_molec:
                 parfile.write(mol+' \n')
                 self.parameters.append(mol)
-            parfile.write('Temperature \n')
-            self.parameters.append('Temperature')
+            
+            for TPpar in self.atmosphere.TP_params_ascii:#getting TP profile parameter list
+                parfile.write(TPpar+' \n')
+                self.parameters.append(TPpar)
 
         #determining which fits were performed
         if fitting is not None and fitting.__ID__ == 'fitting':
@@ -218,6 +220,9 @@ class output(base):
         This is done analytically for rodgers and isothermal and numerically
         for other profiles. 
         '''
+        
+        
+        
         
         pass
         

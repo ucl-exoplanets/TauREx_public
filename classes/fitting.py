@@ -110,7 +110,6 @@ class fitting(base):
     def chisq_trans(self, fit_params, data, datastd):
 
         #chisquare minimisation bit
-
         T, P, X = self.atmosphere.TP_profile(fit_params=fit_params)  # calculating TP profile
 
         # calculating densities
@@ -128,7 +127,7 @@ class fitting(base):
 #         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
 #         plot(self.data.spectrum[:,0], model_binned)
 #         draw()
-#         
+#          
 #         figure(2)
 #         clf()
 #         plot(T,P)
@@ -169,7 +168,7 @@ class fitting(base):
         self.DOWNHILL_FIT_mean   = fit_output['x']
 #         self.DOWNHILL_fit_output = fit_output['x']
         
-        print self.DOWNHILL_fit_output
+        print self.DOWNHILL_FIT_mean
 
     def collate_downhill_results(self, fit_params):
 

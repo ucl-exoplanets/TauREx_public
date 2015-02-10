@@ -83,8 +83,8 @@ class atmosphere(base):
 
         #selecting TP profile to use
         if self.params.gen_type == 'emission':
-            self.TP_type = '3point'
-#             self.TP_type = 'guillot'
+#             self.TP_type = '3point'
+            self.TP_type = 'guillot'
 #             self.TP_type = 'rodgers'         
         if self.params.gen_type == 'transmission':
             self.TP_type = 'isothermal'
@@ -186,9 +186,9 @@ class atmosphere(base):
                 bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
         elif self.TP_type == 'guillot':
             bounds.append((self.T_priors[0],self.T_priors[1]))  #T_irr prior
-            bounds.append((0.0,1.0))                            #kappa_irr prior
-            bounds.append((0.0,1.0))                            #kappa_v1 prior
-            bounds.append((0.0,1.0))                            #kappa_v2 prior
+            bounds.append((0.0,1e-2))                            #kappa_irr prior
+            bounds.append((0.0,1e-2))                           #kappa_v1 prior
+            bounds.append((0.0,1e-2))                           #kappa_v2 prior
             bounds.append((0.0,1.0))                            #alpha prior
         elif self.TP_type == '2point':
             bounds.append((self.T_priors[0],self.T_priors[1])) #surface layer T
@@ -312,6 +312,9 @@ class atmosphere(base):
         self.pta = self.setup_pta_grid(T=TP_params)
         P = self.pta[:,0]; T = self.pta[:,1]
         
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['Temperature']
+        
         return T,P 
         
         
@@ -350,6 +353,9 @@ class atmosphere(base):
         T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)        
         T = T4**0.25
         
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['T_ir', 'kappa_ir', 'kappa_v1', 'kappa_v2','alpha']
+        
         return np.asarray(T), self.P
     
     
@@ -387,8 +393,16 @@ class atmosphere(base):
 #         pl.imshow(covmatrix,origin='lower')
 #         pl.colorbar()
 #         pl.show()
+
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = []
+        for i in xrange(self.nlayers):
+            self.TP_params_ascii.append('T_{0}'.format(str(i)))
          
         return T, self.P
+    
+    
+    
     
     def _TP_2point(self,TP_params):
         ''' 
@@ -415,6 +429,10 @@ class atmosphere(base):
 
         #creating linear T-P profile
         T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['T_1','T_2','P_1']
+        
         return T[::-1], self.P
         
         
@@ -445,6 +463,10 @@ class atmosphere(base):
 
         #creating linear T-P profile
         T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['T_1','T_2','P_1','T_3','P_2']
+        
         return T[::-1], self.P
         
         
