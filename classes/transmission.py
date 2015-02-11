@@ -172,7 +172,7 @@ class transmission(base):
 
         # getting sigma array from sigma_dic for given temperature
 
-        return self.atmosphere.sigma_dict[find_nearest(self.atmosphere.sigma_dict['tempgrid'], temperature)[0]]
+        return self.atmosphere.sigma_dict[find_nearest(self.atmosphere.sigma_dict['tempgrid'], temperature[0])[0]]
 
     def scatterRayleigh(self, wl, molecule):
         '''

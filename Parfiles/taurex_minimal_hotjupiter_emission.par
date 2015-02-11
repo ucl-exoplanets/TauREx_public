@@ -147,7 +147,7 @@ num_scaleheights = 20
 
 #number of atmospheric levels. 
 #If var_atm = False, atm_levels is taken from .atm file
-atm_levels = 40
+atm_levels = 80
 
 #set temperature as variables
 var_temp = True

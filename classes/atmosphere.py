@@ -19,6 +19,7 @@
 #loading libraries
 from base import base
 import numpy as np
+import scipy.special as spe
 import pylab as pl
 import logging
 
@@ -64,91 +65,89 @@ class atmosphere(base):
             self.pta      = self.setup_pta_grid()
 
 
-
+        #setting internal parameters
+        self.g          = data.planet_grav #surface gravity
         self.P          = self.pta[:,0] # pressure array
         self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.T          = self.pta[:,1] # temperature array
         self.z          = self.pta[:,2] # altitude array
         self.rho        = self.get_rho(T=self.T, P=self.P)
         self.sigma_dict = self.data.sigma_dict
+        
+
+        #setting optional parameters
         if self.params.in_include_rad:
             self.rad        = self.data.rad
         if self.params.in_include_cia:
             self.cia        = self.data.cia
 
-        self.num_T_params = 3 #number of free temperature parameters @todo what is it ?
-
+        #selecting TP profile to use
+        if self.params.gen_type == 'emission':
+#             self.TP_type = '3point'
+            self.TP_type = 'guillot'
+#             self.TP_type = 'rodgers'         
+        if self.params.gen_type == 'transmission':
+            self.TP_type = 'isothermal'
+        
+        #setting up TP profile 
+        self.TP_profile = self.set_TP_profile()
+            
+        #setting free parameter prior bounds and parameter grid
         if self.params.fit_emission or self.params.fit_transmission:
             self.bounds = self.get_prior_bounds()
-
-        if self.params.fit_emission:
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(emission=True)
-
-        if self.params.fit_transmission:
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid(transmission=True)
-
-
-#
-#         self.fit_params[0] = 5e-6
-#         self.fit_params[1] = 2e-7
-#         self.fit_params[2] = 1400
-#         self.fit_params[3] = 1400
-#         self.fit_params[4] = 1200
-#         self.fit_params[5] = 1e5
-#         self.fit_params[6] = 100.0
-
-
-#         self.bounds = [(0.0, 0.01), (0.0, 0.01), (1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0), (50000.0, 500000.0), (50.0, 150.0)]
-#         self.Tpriors = [(1000.0, 1800.0), (1000.0, 1800.0), (1000.0, 1800.0)]
-#         self.Ppriors = [(50000.0, 500000.0), (50.0, 150.0)]
-#         self.Xpriors = [(0.0, 0.01), (0.0, 0.01)]
-#         print self.bounds
-#
-#
-#         self.fit_params,self.fit_index, self.fit_count = self.setup_parameter_grid(fit_emission=True)
-#         print self.fit_params
-#         PARAMS2 = self.fit_params
-#         PARAMS2[2] = 1400
-#         PARAMS2[3] = 1400
-#         PARAMS2[4] = 1200
-# #
-# #         print PARAMS2
-# #
-#         self.T,self.P,self.X = self.TP_profile(PARAMS=PARAMS2)
-#         self.rho = self.get_rho(T=self.T,P=self.P)
-#
-#         pl.figure(104)
-#         pl.plot(T,np.log(P))
-#
-#         rho = self.get_rho(T=T, P=P)
-#         pl.figure(105)
-#         pl.plot(rho)
-#         pl.show()
-#         exit()
-#         pl.figure(200)
-#         pl.plot(T,P)
+            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid()
+        
+        
+        #testing rodgers TP profile
+#         testpar = self.fit_params
+#         testpar[-50:] = 1000.0 
+#         T,P,X = self.TP_profile(testpar)
+     
+        #testing guillot TP profile
+#         T,P,X = self.TP_profile([0.05,0.05,1223, 1e-2,4e-3,4e-3,0.5])#test-parameters from Line et al. 2012
+        
+#         T,P,X = self.TP_profile([0.05,0.05,1400,200,1e4])
+# 
+#         pl.figure(1)
+#         pl.plot(T,self.P_bar)
 #         pl.yscale('log')
+#         pl.xlabel('Temperature')
+#         pl.ylabel('Pressure (Pa)')
 #         pl.gca().invert_yaxis()
 #         pl.show()
 #         exit()
 
-    #class methods
 
+    #class methods
     def get_scaleheight(self,T,g,mu):
+        '''
+        Calculating the atmospheric scale height
+        '''
         return (KBOLTZ*T)/(mu*g)
 
+    def get_rho(self, T=None, P=None):
+        '''
+        Calculate atmospheric densities for given temperature and pressure
+        '''
+        if P is None:
+            P = self.P
+        if T is None:
+            T = self.T
+            
+        return  (P)/(KBOLTZ*T) 
+    
+
     def setup_pta_grid(self, T=None):
-
-        #calculate pressure, temperature, altitude grid
-
+        '''
+        Calculate pressure, temperature, altitude grid
+        '''
         max_p    = self.params.tp_max_pres
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
         n_layers = self.nlayers
 
         # get new scale height if T is provided. Otherwise assume default (should be params.planet_temp)
-        #if T is not None:
 
-        if not T:
+        if T is None:
             T = self.params.planet_temp
         else:
             T = T[0]
@@ -158,150 +157,84 @@ class atmosphere(base):
 
         max_z = n_scale * self.scaleheight
 
-        #generatinng altitude-pressure array
+        #generating altitude-pressure array
         pta_arr = np.zeros((n_layers,3))
         pta_arr[:,2] = np.linspace(0,max_z,num=n_layers) # altitude
-        pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight)
-#         if T is not None:
-#             PTA_arr[:,1] = T
-#         else:
-        pta_arr[:,1] = self.params.planet_temp
-
+        pta_arr[:,0] = max_p * np.exp(-pta_arr[:,2]/self.scaleheight) #pressure
+        pta_arr[:,1] = T #temperature
+        
         return pta_arr
 
-    def get_prior_bounds(self):
-        #partially to be moved to parameter file i guess
 
-        self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
-        self.Tpriors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
 
-        #BE REALLY CAREFUL WITH THIS PARAMETER. THIS NEEDS SANITY CHECKING
-        self.Ppriors = [[5e4,5e5],[50.0,150.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
+    def get_prior_bounds(self): 
+        '''
+        Partially to be moved to parameter file i guess
+        '''
+        self.X_priors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
+        self.T_priors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
 
         #setting up bounds for downhill algorithm
-        #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
         bounds = []
         for i in xrange(self.ngas):
-            bounds.append((self.Xpriors[0],self.Xpriors[1]))
-        if self.fit_transmission:
-            bounds.append((self.Tpriors[0],self.Tpriors[1]))
-        if self.fit_emission:
-            for i in xrange(self.num_T_params):
-                bounds.append((self.Tpriors[0],self.Tpriors[1]))
-            for i in xrange(self.num_T_params-1):
-                bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
+            bounds.append((self.X_priors[0],self.X_priors[1]))
+            
+        if self.TP_type   == 'isothermal':
+            bounds.append((self.T_priors[0],self.T_priors[1])) #isothermal T 
+        elif self.TP_type == 'rodgers':
+            for i in xrange(self.nlayers):
+                bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
+        elif self.TP_type == 'guillot':
+            bounds.append((self.T_priors[0],self.T_priors[1]))  #T_irr prior
+            bounds.append((0.0,1e-2))                            #kappa_irr prior
+            bounds.append((0.0,1e-2))                           #kappa_v1 prior
+            bounds.append((0.0,1e-2))                           #kappa_v2 prior
+            bounds.append((0.0,1.0))                            #alpha prior
+        elif self.TP_type == '2point':
+            bounds.append((self.T_priors[0],self.T_priors[1])) #surface layer T
+            bounds.append((0.0,1000.0))                        #troposphere layer T difference (T_surface- Tdiff) = T_trop
+            bounds.append((1.0,1e5))                           #troposphere pressure (Pa) #@todo careful with this needs to move somewhere else
+        elif self.TP_type == '3point':
+            bounds.append((self.T_priors[0],self.T_priors[1])) #surface layer T
+            bounds.append((0.0,500.0))                        #point1 T difference (T_surface- Tdiff) = T_point1
+            bounds.append((0.0,500.0))                        #point2 T difference (T_point1- Tdiff) = T_point2
+            bounds.append((1.0,1e5))                           #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
+            bounds.append((1.0,1e5))                           #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
 
         return bounds
 
 
+    def setup_parameter_grid(self):
+        '''
+        Setting up the parameter grid (variable in length depending on TP-profile model selected)
+        
+        fit_params    [abundances (ngas),TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for differnt models
+        fit_count     [no. abundances, no. TP parameters]
+        fit_index     index to fitparams for slicing
+        '''
+        fit_params = []; fit_index = []
 
-    def setup_parameter_grid(self, transmission=False, emission=False):
-
-        # fit_params    [abundances (ngas), temperatures (num_T_params), pressures (num_T_params-1)]
-        # fit_count     [no. abundances, no. temperatures, no. pressures]
-        # fit_index     index to fitparams for slicing
-
-        fit_params = []
-        fit_count = []
-        fit_index = []
-
-        # setting up mixing ratios for individual gases
-        Xmean = np.mean(self.Xpriors)
-        cgas = 0
-        for i in xrange(self.ngas):
-            fit_params.append(Xmean)
-            cgas += 1
-
-        fit_count.append(cgas)
-
-        #setting up temperature parameters
-        T_mean = np.mean(self.Tpriors)
-        num_T_params = self.num_T_params
-
-        ctemp = 0; cpres = 0
-
-        if transmission:
-            ctemp +=1
-            fit_params.append(self.params.planet_temp)
-
-        if emission:
-            for i in xrange(num_T_params):
-                fit_params.append(T_mean)
-                ctemp += 1
-            for i in xrange(num_T_params-1):
-                fit_params.append(np.mean(self.Ppriors[i]))
-                cpres += 1
-
-        fit_count.append(ctemp)
-        fit_count.append(cpres)
-
-        cumidx = fit_count[0]
-        fit_index.append(cumidx)
-
-        for i in xrange(1,len(fit_count)):
-            cumidx += fit_count[i]
-            fit_index.append(cumidx)
-
-        return fit_params, fit_index, fit_count
-
-
-    def TP_profile(self, fit_params, T=None, P=None):
-
-    # main function defining basic parameterised TP-profile from
-    # PARAMS and INDEX. INDEX = [Chi, T, P]
-
-        fit_index = self.fit_index
-        fit_count = self.fit_count
-
-        X_params = fit_params[:fit_index[0]]
-        T_params = fit_params[fit_index[0]:fit_index[1]]
-        P_params = fit_params[fit_index[1]:]
-
-        #convert X into 2d arrays (previously done in fitting module but seems more appropriate here)
-#         X   = np.zeros((self.ngas,self.nlayers))
-        self.X[:] = 0.0
-        for i in xrange(self.ngas):
-            self.X[i,:] += X_params[i]
-
-        # Recalculate PTA profile, based on new Temperature.
-        if len(T_params) > 0:
-            self.pta = self.setup_pta_grid(T_params)
-            P = self.pta[:,0]
-        elif P is None:
-            P = self.P
-
-        # probably not needed?
-        if T is not None:
-            return T, P, self.X
-
-        # if we have more than 1 temperature in fit_params
-        if fit_count[1] > 1:
-            P_params =  [self.params.tp_max_pres] + list(P_params) + [np.min(P)]
-            T_params = list(T_params) + [T_params[-1]]
-
-            #creating linear T-P profile
-            T = np.interp(np.log(P[::-1]), np.log(P_params[::-1]), T_params[::-1])
-            return T[::-1], P, self.X
-
-        if fit_count[1] == 1:
-            T = T_params
-            return T, P, self.X
-
-    def get_rho(self, T=None, P=None):
-
-        #calculate atmospheric densities for given temperature and pressure
-        if P is None:
-            P = self.P
-        if T is None:
-            T = self.T # used to be params.planet_temp!
-        return  (P)/(KBOLTZ*T)
-
+        # setting up indices for parameter grid
+        cpar = len(self.bounds)
+        cgas = self.ngas
+        ctp  = cpar - cgas
+        fit_count = [cgas,ctp]
+        
+        #generating index list
+        fit_index = [cgas,cpar]
+        
+        #setting all initial guesses to the mean of the parameter bounds
+        #this can be modified later should it prove to be too awful
+        for par in self.bounds:
+            fit_params.append(np.mean(par))
+        
+        return np.asarray(fit_params), fit_index, fit_count
 
 
     def set_mixing_ratios(self):
-
-        # set up mixing ratio array from parameter file inputs
-
+        '''
+        Set up mixing ratio array from parameter file inputs
+        '''
         mixing = self.params.planet_mixing
 
         X = np.zeros((self.ngas,self.nlayers))
@@ -315,19 +248,239 @@ class atmosphere(base):
                 exit()
 
             # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
-            for i in range(self.ngas):
+            for i in xrange(self.ngas):
                 X[i,:] += float(mixing[i])
         return X
+  
+
+    #####################
+    # Everything below is related to Temperature Pressure Profiles
 
 
+    def set_TP_profile(self):
+        '''
+        Decorator supplying TP_profile with correct TP profile function. 
+        Only the free parameters will be provided to the function after TP profile 
+        is set.   
+        '''
+        if self.TP_type is 'isothermal':
+            profile = self._TP_isothermal
+        elif self.TP_type is 'guillot':
+            profile = self._TP_guillot2010
+        elif self.TP_type is 'rodgers':
+            profile = self._TP_rodgers2000
+        elif self.TP_type is '2point':
+            profile = self._TP_2point
+        elif self.TP_type is '3point':
+            profile = self._TP_3point
+        else:
+            logging.error('Invalid TP profile name')
+            
+        def tpwrap(fit_params):
+            return self._TP_profile(profile,fit_params)
+        return tpwrap
 
 
+    def _TP_profile(self, TP_function, fit_params):
+        '''
+        TP profile decorator. Takes given TP profile function and fitting parameters 
+        To generate Temperature, Pressure, Column Density (T, P, X) grids
+        
+        fit_params depend on TP_profile selected.
+        INDEX splits column densities from TP_profile parameters, INDEX = [Chi, TP]
+        '''
+
+        X_params  = fit_params[:self.fit_index[0]] #splitting to gas parameters        
+        TP_params = fit_params[self.fit_index[0]:] #splitting to TP profile parameters
+        
+        #Setting up mixing ratio grid. Convert X into Nd arrays
+        self.X[:] = 0.0             #using already generated grid
+        for i in xrange(self.ngas):
+            self.X[i,:] += X_params[i]
+            
+        #generating TP profile given input TP_function
+        T,P = TP_function(TP_params)
+      
+        return T,P, self.X
 
 
+        
+    def _TP_isothermal(self,TP_params):
+        '''
+        TP profile for isothermal atmosphere. Follows the old implementation. 
+        '''
+        self.pta = self.setup_pta_grid(T=TP_params)
+        P = self.pta[:,0]; T = self.pta[:,1]
+        
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['Temperature']
+        
+        return T,P 
+        
+        
+    def _TP_guillot2010(self,TP_params):
+        '''
+        TP profile from Guillot 2010, A&A, 520, A27 (equation 49)
+        Using modified 2stream approx. from Line et al. 2012, ApJ, 729,93 (equation 19)
+        
+        Free parameters required: 
+            - T_irr    = planet equilibrium temperature (Line fixes this but we keep as free parameter)
+            - kappa_ir = mean infra-red opacity
+            - kappa_v1 = mean optical opacity one
+            - kappa_v2 = mean optical opacity two
+            - alpha    = ratio between kappa_v1 and kappa_v2 downwards radiation stream
+            
+        Fixed parameters:
+            - T_int    = internal planetary heat flux (can be largely ignored. line puts it on 200K for hot jupiter)
+            - P        = Pressure grid, fixed to self.P
+            - g        = surface gravity, fixed to self.g
+        '''
+        
+        #assigning fitting parameters 
+        T_irr = TP_params[0]; kappa_ir = TP_params[1]; kappa_v1 = TP_params[2]; kappa_v2 = TP_params[3]; alpha = TP_params[4]
+        
+        gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir     
+        tau = kappa_ir * self.P / self.g
+             
+        
+        T_int = 200 #@todo internal heat parameter looks suspicious... needs looking at. 
+        
+        def eta(gamma, tau):
+            part1 = 2.0/3.0 + 2.0 / (3.0*gamma) * (1.0 + (gamma*tau/2.0 - 1.0) * np.exp(-1.0 * gamma * tau))
+            part2 = 2.0 * gamma / 3.0 * (1.0 - tau**2/2.0) * spe.expn(2,(gamma*tau))
+            return part1 + part2
+        
+        T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)        
+        T = T4**0.25
+        
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['T_ir', 'kappa_ir', 'kappa_v1', 'kappa_v2','alpha']
+        
+        return np.asarray(T), self.P
+    
+    
+    def _TP_rodgers2000(self,TP_params):
+        '''
+        Layer-by-layer temperature - pressure profile retrieval using dampening factor 
+        Introduced in Rodgers (2000): Inverse Methods for Atmospheric Sounding (equation 3.26)
+        Featured in NEMESIS code (Irwin et al., 2008, J. Quant. Spec., 109, 1136 (equation 19)
+        Used in all Barstow et al. papers. 
+        
+        Free parameters required: 
+            - T  = one temperature per layer of Pressure (P)
+            
+        Fixed parameters: 
+            - P  = Pressure grid, fixed to self.P
+            - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
+                  may be left as free and Pressure dependent parameter later.
+        '''
+        
+        #assigning parameters 
+        T_init = TP_params
+        h      = 1.5
+        
+#         covmatrix = np.zeros((self.nlayers,self.nlayers))
+#         for i in xrange(self.nlayers):
+#                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)  
+               
+        T = np.zeros((self.nlayers))
+        for i in xrange(self.nlayers):
+            covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+            weights = covmat / np.sum(covmat)
+            T[i]    = np.sum(weights*T_init)
+            
+#         pl.figure(3)
+#         pl.imshow(covmatrix,origin='lower')
+#         pl.colorbar()
+#         pl.show()
 
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = []
+        for i in xrange(self.nlayers):
+            self.TP_params_ascii.append('T_{0}'.format(str(i)))
+         
+        return T, self.P
+    
+    
+    
+    
+    def _TP_2point(self,TP_params):
+        ''' 
+        Two point TP profile. Simplest possible profile only fitting for the surface temperature and tropopause temp. 
+        and pressure. Atmosphere above tropopause is isothermal. Temperature is linearly interpolated in log space.
+        No inversion possible here. 
+        
+        Free parameters required:
+            - T1 = surface temperature (at 10bar)
+            - T2 = temperature at tropopause (given as difference from T1)
+            - P1 = pressure at tropopause
+            
+        Fixed parameters:
+            - Pressure grid (self.P)
+        '''
+        
+        maxP = np.max(self.P)
+        minP = np.min(self.P)
+        
+        T_trop = TP_params[0] - TP_params[1]
+        
+        P_params = [maxP,TP_params[-1],minP]
+        T_params = [TP_params[0],T_trop,T_trop]
 
+        #creating linear T-P profile
+        T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['T_1','T_2','P_1']
+        
+        return T[::-1], self.P
+        
+        
+    def _TP_3point(self,TP_params):
+        '''
+        Same as 2point TP profile but adds one extra point between surface and troposphere
+        
+        Free parameters required:
+            - T1 = surface temperature (at 10bar)
+            - T2 = point 1 temperature (given as difference from T1)
+            - P1 = point 1 pressure
+            - T3 = point 2 temperature (given as difference from T1)
+            - P2 = point 2 pressure 
+            
+        Fixed parameters
+            - Pressure grid (self.P)
+        '''
+        
+        maxP = np.max(self.P)
+        minP = np.min(self.P)
+        
+        T_point1 = TP_params[0] - TP_params[1]
+        T_point2 = T_point1 - TP_params[2]
+    
+        
+        P_params = [maxP,TP_params[-2],TP_params[-1],minP]
+        T_params = [TP_params[0],T_point1,T_point2, T_point2]
 
-
-
-
+        #creating linear T-P profile
+        T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
+        self.TP_params_ascii = ['T_1','T_2','P_1','T_3','P_2']
+        
+        return T[::-1], self.P
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
