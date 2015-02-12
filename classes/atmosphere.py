@@ -32,6 +32,7 @@ AMU   = 1.660538921e-27 #atomic mass to kg
 
 class atmosphere(base):
 
+    #@profile
     def __init__(self, data, params=None):
 
         logging.info('Initialising atmosphere object')
@@ -94,8 +95,9 @@ class atmosphere(base):
 
         if self.params.in_include_rad:
             self.rad        = self.data.rad
-        if self.params.in_include_cia:
-            self.cia        = self.data.cia
+
+        # if self.params.in_include_cia:
+        #     self.cia        = self.data.cia
 
         # get prior bounds. Only valid for emission.
         if self.params.fit_emission:
@@ -106,6 +108,7 @@ class atmosphere(base):
 
     #class methods
 
+    #@profile
     def get_coupled_planet_mu(self):
 
         '''
@@ -120,6 +123,7 @@ class atmosphere(base):
 
         return mu
 
+    #@profile
     def get_scaleheight(self, T=None, g=None, mu=None):
 
         if not T:
@@ -131,6 +135,7 @@ class atmosphere(base):
 
         return (KBOLTZ*T)/(mu*g)
 
+    #@profile
     def get_surface_gravity(self, mass=None, radius=None):
 
         #calculate surface gravity of planet using Rp and Mp
@@ -144,6 +149,7 @@ class atmosphere(base):
 
         return (G * mass) / (radius**2)
 
+    #@profile
     def get_rho(self, T=None, P=None):
 
         #calculate atmospheric densities for given temperature and pressure
@@ -155,6 +161,7 @@ class atmosphere(base):
         return  (P)/(KBOLTZ*T)
 
 
+    #@profile
     def setup_pta_grid(self):
 
         #calculate pressure, temperature, altitude grid
@@ -170,6 +177,7 @@ class atmosphere(base):
 
         return pta_arr
 
+    #@profile
     def get_gas_fraction(self, gasname):
 
         # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
@@ -184,6 +192,7 @@ class atmosphere(base):
                 return self.inactive_gases_X[index]
         return 0
 
+    #@profile
     def get_prior_bounds(self):
 
         # this is only used in emission now...
@@ -214,6 +223,7 @@ class atmosphere(base):
 
 
 
+    #@profile
     def setup_parameter_grid(self, transmission=False, emission=False):
 
         # old parameter grid. works for emission though...
@@ -266,6 +276,7 @@ class atmosphere(base):
         return fit_params, fit_index, fit_count
 
 
+    #@profile
     def TP_profile(self, fit_params, T=None, P=None):
 
     # main function defining basic parameterised TP-profile from
@@ -308,7 +319,7 @@ class atmosphere(base):
             T = T_params
             return T, P, self.X
 
-
+    #@profile
     def set_mixing_ratios(self):
 
         # set up mixing ratio array from parameter file inputs

@@ -8,6 +8,12 @@
 #include <vector>
 
 #include <stdlib.h>
+#include <iostream>
+#include <string>
+#include <sstream>
+
+
+
 
 using namespace std;
 
@@ -21,43 +27,67 @@ double interpolateValue(double *bounds, double sig1, double sig2)
     const double y_high = *(bounds+1);
     const double new_y = *(bounds+2);
     //cout<< "Interpolating between "<< *(bounds) << " and " << *(bounds+1) << "....." <<endl;
-    
+
     /* ...and define a useful value */
     const double factor = (new_y - y_low) / (y_high - y_low);
-    
-    
+
+
     /* Calculate new values */
     double new_val = sig1 + ((sig2-sig1) * factor);
 	//interpolation formula
-    
+
     return(new_val);
 }
 #endif
 
-
-
 extern "C" {
-void cpath_int(const double ** sigma_array,const double * dlarray, const double * z,
+
+void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
+
+    double * dlarray = (double *) dlarrayv;
+
+    int count;
+    double p;
+
+    count = 0;
+    for (int j=0; j<(nlayers); j++) {	// loop through atmosphere layers, z[0] to z[nlayers]
+        for (int k=1; k < (nlayers - j); k++) {
+            p = pow((zRp[j]),2);
+            dlarray[count] = 2.0 * (sqrt(pow((zRp[k+j]),2) - p) - sqrt(pow((zRp[k-1+j]),2) - p));
+            count += 1;
+        }
+    }
+}
+
+void cpath_int(const double ** sigma_array, const double * dlarray, const double * z,
     const double * dz, const double * Rsig, const double * Csig, const double ** X, const double * rho,
     double Rp, double Rs, int linecount, int nlayers, int n_gas, int include_cld, const double cld_lowbound,
     const double cld_upbound, const double * p_bar, const double * cld_sig, void * absorptionv) {
 
-
-
-//    cout<< "C1" <<endl;
     //output array to be passed back to python
     double * absorption = (double *) absorptionv;
-//   cout<< "C2" <<endl;
-   
+
    // setting up arrays and variables
     double tau[nlayers], exptau[nlayers];
+    //double  dlarray[nlayers*nlayers];
+    //double p
     double Rtau, Ctau, cld_tau;
     int count;
 
     // initialise cloud quantities
 	double bounds[3]={0.0}, cld_log_rho=0.0;
-    
-//    cout<< "C3" <<endl;
+
+//    count = 0;
+//    for (int j=0; j<(nlayers); j++) {	// loop through atmosphere layers, z[0] to z[nlayers]
+//        for (int k=2; k < (nlayers-j); k++) {
+//           // if ((k > 0) && (k < (nlayers-j))) {
+//                p = pow((Rp + z[j]),2);
+// 		        dlarray[count] = 2.0 * (sqrt(pow((Rp + z[k+j]),2) - p) - sqrt(pow((Rp + z[k-1+j]),2) - p));
+//                count += 1;
+//            //}
+//        }
+//    }
+//
 
     //beginning calculations
     for (int wl=0;wl < linecount; wl++)		// loop through wavelengths
@@ -65,8 +95,6 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 //		/* Calculate scattering cross-sections (wavelength dependence) */
 //		Csig = 0.0;			// CIA cross-section
 //		Csig += scatterCIA(cia_coeffs[wl],atmos.fraction[0]);
-
-//        cout<< "C4" <<endl;
 
         count = 0;
 		/* Calculating optical depth */
@@ -81,10 +109,20 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
 			for (int k=1; k < (nlayers-j); k++) // loop through each layer to sum up path length
 			{
 			 /* Sum up taus for all gases for this path */
-				for(int l=0;l<n_gas;l++) tau[j] += (sigma_array[l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
+				for(int l=0;l<n_gas;l++) {
+    			    tau[j] += (sigma_array[l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
+	                //cout << sigma_array[l][wl] << endl;
+	                //cout << tau[j] << " sigma " << sigma_array[l][wl] << " X " << X[l][k+j] << "  rho "  << rho[k+j] <<  "  dlarray "  << dlarray[count] << endl;
+				}
+
+
+
+
+
 				Rtau += Rsig[wl] * rho[j+k] * dlarray[count]; // calculating Rayleigh scattering optical depth
 				Ctau += Csig[wl] * rho[j+k] * rho[j+k] * dlarray[count]; // calculating CIA optical depth
-                
+
+                //cout << dlarray[count] << endl;
                 
 //              Calculating cloud opacities if requested
                 if(include_cld==1){
@@ -100,35 +138,42 @@ void cpath_int(const double ** sigma_array,const double * dlarray, const double 
                         cld_tau += ( cld_sig[wl] * (dlarray[count]*1.0e2) * (exp(cld_log_rho)*1.0e-6) );	// convert path lenth from m to cm, and density from g m^-3 to g cm^-3
                     }
                 }
-                
 				count += 1;
-
-
 			}
 			tau[j] += Rtau;	//adding Rayleigh scattering tau to gas tau
 			tau[j] += Ctau; //adding CIA tau to gas tau
             tau[j] += cld_tau; //adding cloud tau to gas tau
 
-			exptau[j]= exp(-tau[j]);
+//            if (tau[j] < 1.0e-07) {
+//                exptau[j] = 0.0;
+//            } else {
+            exptau[j]= exp(-tau[j]);
+//            }
+             //exptau[j] = exp(-tau[j]);
+
+			//cout << " dlarray " << dlarray[count] << " exptau " << exptau[j] << "  tau "  << -tau[j] << endl;
+
 		}
 //		cout<< "C7" <<endl;
-		
+
 		double integral = 0.0;
 		for(int j=0; j<nlayers; j++){
 		  //HOTFIX TO EQUAL TAU.CPP. TAU.CPP does not calculate the upper layer correctly
 //		  if (j == nlayers-1) exptau[j] = 0.0;
 		  // END OF HOTFIX
 		   integral += ((Rp+z[j])*(1.0-exptau[j])*dz[j]);
-//		   cout << j << ' '<< dz[j] << ' ' << z[j] << ' ' << exptau[j] << endl;
+		   //cout << "int" << integral << " j " << j << " dz " << dz[j] << " z " << z[j] << " exptau "  << exptau[j] << endl;
 		}
 //		cout<< "C8" <<endl;
 		integral*=2.0;
 
 		absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
 
-//		free(absorptionv);
+//        cout << integral << " Rp " << Rp*Rp << "  Rs "  << (Rs*Rs) << endl;
 
     }
+
+
 }
 
 }

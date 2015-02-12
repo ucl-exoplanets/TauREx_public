@@ -18,7 +18,7 @@ wavemin = 0.5
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 300
+spec_res = 500
 
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
@@ -292,9 +292,9 @@ burn = 10
 #MCMC thinning factor
 thin = 1
 
-verbose = False
+verbose = True
 
-progressbar = False
+progressbar = True
 
 [MultiNest]
 #defines MultiNest specific parameters

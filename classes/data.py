@@ -137,6 +137,7 @@ class data(base):
 
     #class functions
 
+    #@profile
     def get_specgrid(self, R=5000, lambda_min=0.1, lambda_max=20.0):
         #generating wavelength grid with uniform binning in log(lambda)
         #lambda min and max are in microns, R is the spectral resolution
@@ -158,6 +159,7 @@ class data(base):
 
         return np.asarray(specgrid),np.asarray(delta_lambda)
     
+    #@profile
     def get_specbingrid(self,wavegrid):
         #function calculating the bin boundaries for the data 
         #this is used to bin the internal spectrum to the data in fitting module
@@ -175,6 +177,7 @@ class data(base):
 
 
 
+    #@profile
     def get_star_SED(self):
 
         #reading in phoenix spectra from folder specified in parameter file
@@ -211,6 +214,7 @@ class data(base):
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         return SED
 
+    #@profile
     def readfile(self, name, interpolate=False):
 
         #reads in data file with columns wavelength and data
@@ -232,6 +236,7 @@ class data(base):
 
         return out
 
+    #@profile
     def build_sigma_dic(self,tempstep=50):
 
         #building temperature dependent sigma_array
@@ -294,6 +299,7 @@ class data(base):
 
         return sigma_dict
 
+    #@profile
     def readABSfiles(self,extfilelist=None, extpath= None,interpolate2grid=True,outputwavegrid=False):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
     #
@@ -331,6 +337,7 @@ class data(base):
             return out
 
 
+    #@profile
     def __readABSfiles_sub(self, path, filelist, interpolate2grid,num):
         if interpolate2grid:
             out = np.zeros((num,self.nspecgrid))
@@ -347,7 +354,7 @@ class data(base):
 
         return out, wave
 
-
+    #@profile
     def set_ABSfile(self,path=None,filelist=None,interpolate = False,temperature=None):
         # @todo This should appear in the Preselector! CHECK!
 
@@ -369,6 +376,7 @@ class data(base):
         self.data.nspecgrid = len(self.specgrid)
         
         
+    #@profile
     def readATMfile(self):
     #reads in .atm file
         try:
@@ -381,6 +389,7 @@ class data(base):
 
         return out[:,0:3],np.transpose(out[:,3:])
 
+    #@profile
     def build_rayleigh_sigma(self):
 
         # write rayleigh scattering cross sections to files
@@ -441,6 +450,7 @@ class data(base):
                 logging.info('Saving cross section for %s to %s' % (gasname, filename))
                 np.savetxt(filename, np.vstack((wl, sigma_R)).transpose())
 
+    #@profile
     def get_rayleigh_sigma(self):
 
         logging.info('Loading rayleigh scattering cross section from files')
@@ -458,6 +468,7 @@ class data(base):
 
         return sigma_R
 
+    #@profile
     def get_molecular_weight(self, gasname):
 
         if gasname == 'He':

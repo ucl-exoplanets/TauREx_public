@@ -2,12 +2,12 @@
 verbose = True
 manual_waverange = False
 wavemin = 0.5
-wavemax = 14.0
-spec_res = 300
+wavemax = 5.0
+spec_res = 150
 type = transmission
 
 [Input]
-spectrum_file = Input/observations/superearth_10ppm_R300.dat
+spectrum_file = Input/observations/superearth_r150_10ppm.dat
 
 [Output]
 path = Output/
@@ -27,16 +27,18 @@ sma = 0.01433
 albedo = 0.2
 temp = 500
 mu = 19
+#
 molecules = 1H2-16O,12C-16O2,12C-1H4
 mixing_ratios = 0.001, 0.01, 0.035
 include_cld = False
 inactive_gases = He, H2, N2
 inactive_gases_X = 0., 0.00001, 0.954
+include_Rayleigh = True
 
 [T-P profile]
 var_atm = True
 num_scaleheights = 20
-atm_levels = 100
+atm_levels = 50
 atm_max_pressure = 1e5
 
 [Fitting]
@@ -53,27 +55,27 @@ mu_up = 40
 mu_low = 0
 radius_up  = 0.02
 radius_low = 0.02
-P0_up = 1e6
-P0_low = 1e3
+P0_up = 1.e8
+P0_low = 1.e2
 X_up  = 1.0
 X_low = 0.0
 X_inactive_up  = 1.0
 X_inactive_low = 0.0
 
 [Downhill]
-run = True
+run = False
 
 [MCMC]
 run = False
-iter = 10000
+iter = 1000
 
 [MultiNest]
-run = False
+run = True
 resume = True
 verbose = True
 nest_path = chains/
 sampling_eff = parameter
-n_live_points = 2000
+n_live_points = 4000
 max_iter = 0
 multimodes = True
 max_modes = 100

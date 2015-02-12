@@ -52,6 +52,7 @@ AMU   = 1.660538921e-27 #atomic mass to kg
 
 class fitting(base):
 
+    #@profile
     def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None):
 
         # note that forwardmodel can be either the transmission or the emission object
@@ -106,7 +107,7 @@ class fitting(base):
 
 
         # set priors, starting values, and fitting parameters
-        self.set_fitting_data()
+        self.build_fit_params()
 
         #initialising output tags
         self.DOWNHILL = False
@@ -116,50 +117,7 @@ class fitting(base):
         #DEBUG COUNTER
         self.db_count = 0
 
-    def set_fitting_data(self):
-
-        # todo this entire function can be removed. Feed priors and starting values directly in build_fit_params
-
-        # set priors
-        self.fit_priors = {
-            'temp': (self.forwardmodel.atmosphere.planet_temp - self.params.fit_T_low,
-                     self.forwardmodel.atmosphere.planet_temp + self.params.fit_T_up),
-            # in AMU
-            'mu': (self.params.fit_mu_low, self.params.fit_mu_up),
-            # in RJUP
-            'radius': (self.forwardmodel.atmosphere.planet_radius/RJUP - self.params.fit_radius_low,
-                       self.forwardmodel.atmosphere.planet_radius/RJUP + self.params.fit_radius_up),
-            # in Pascal
-            'P0': (self.params.fit_P0_low, self.params.fit_P0_up),
-            # 'X_absorbing': [], # todo maybe useless
-            # 'X_inactive': [], # todo maybe useless
-        }
-
-        # # todo maybe useless
-        # for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-        #     self.fit_priors['X_absorbing'].append((-np.inf,np.inf)) # working with centered-log-ratio transormation
-        # for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-        #     self.fit_priors['X_inactive'].append((-np.inf,np.inf)) # working with centered-log-ratio transormation
-
-        # set fitting parameters starting values
-        self.fit_values = {
-            'temp': self.forwardmodel.atmosphere.planet_temp,
-            'mu': self.forwardmodel.atmosphere.planet_mu/AMU,
-            'radius': self.forwardmodel.atmosphere.planet_radius/RJUP,
-            'P0': np.mean(self.fit_priors['P0']),
-            # 'X_absorbing': [], # todo maybe useless
-            # 'X_inactive': [], # todo maybe useless
-        }
-
-        # todo maybe useless :
-        # for idx, gasname in enumerate(self.inactive_gases):
-        #     self.fit_values['X_absorbing'].append(0)
-        # for n in range(len(self.inactive_gases)):
-        #     self.fit_values['X_inactive'].append(0)
-
-        # set fit_params list (input to fitting routines)
-        self.build_fit_params()
-
+    #@profile
     def build_fit_params(self):
 
         # build the fit_param list, input to all the fitting routines.
@@ -170,28 +128,28 @@ class fitting(base):
 
         # include T, P0, r, mu only if we want to fit for them. Otherwise self.fit_values are assumed
         if not self.params.fit_fix_temp:
-            self.fit_params.append(self.fit_values['temp'])
             self.fit_params_names.append('Temperature')
-            self.fit_bounds.append(self.fit_priors['temp'])
+            self.fit_params.append(self.forwardmodel.atmosphere.planet_temp)
+            self.fit_bounds.append((self.forwardmodel.atmosphere.planet_temp - self.params.fit_T_low,
+                                    self.forwardmodel.atmosphere.planet_temp + self.params.fit_T_up))
 
         if not self.params.fit_couple_mu:
             if not self.params.fit_fix_mu:
-                self.fit_params.append(self.fit_values['mu'])
                 self.fit_params_names.append('mu')
-                self.fit_bounds.append(self.fit_priors['mu'])
+                self.fit_params.append(self.forwardmodel.atmosphere.planet_mu/AMU) #in AMU
+                self.fit_bounds.append((self.params.fit_mu_low, self.params.fit_mu_up)) #in AMU
 
         if not self.params.fit_fix_radius:
-            self.fit_params.append(self.fit_values['radius'])
             self.fit_params_names.append('Radius')
-            self.fit_bounds.append(self.fit_priors['radius'])
+            self.fit_params.append(self.forwardmodel.atmosphere.planet_radius/RJUP)
+            self.fit_bounds.append((self.forwardmodel.atmosphere.planet_radius/RJUP - self.params.fit_radius_low,
+                                    self.forwardmodel.atmosphere.planet_radius/RJUP + self.params.fit_radius_up))
 
         if not self.params.fit_fix_P0:
-            self.fit_params.append(np.log(self.fit_values['P0']))
             self.fit_params_names.append('P0')
-            self.fit_bounds.append(tuple(np.log(self.fit_priors['P0'])))
+            self.fit_params.append(np.mean((np.log(self.params.fit_P0_low), np.log(self.params.fit_P0_up))))
+            self.fit_bounds.append((np.log(self.params.fit_P0_low), np.log(self.params.fit_P0_up)))
 
-        # todo actually, we should set clr(x) = 0 for all ratios
-        #
         # reparametrize the mixing ratios of absorbers and inactive gases using the centered-log-ratio transformation
 
         # get the geometrical mean
@@ -215,17 +173,12 @@ class fitting(base):
         ngases = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
         for i in range(ngases - 1):
             self.fit_params.append(0)
-            self.fit_bounds.append((-100, 100)) # actually, there are no bounds...
+            self.fit_bounds.append((-1000, 1000)) # actually, there are no bounds...
             self.fit_params_names.append('CLR_X_%i' % i)
-        # append molecule names to fit_params_names
-        # for gasname in self.forwardmodel.atmosphere.absorbing_gases:
-        #     self.fit_params_names.append(gasname)
-        # for gasname in self.forwardmodel.atmosphere.inactive_gases:
-        #     self.fit_params_names.append(gasname)
 
         self.fit_nparams = len(self.fit_params)
 
-
+    #@profile
     def update_atmospheric_parameters(self, fit_params):
 
         # update atmospheric parameters with new values from fit_params
@@ -278,10 +231,16 @@ class fitting(base):
         clr.append(-np.sum(clr))
 
         # transform back to simplex space
-        clr_inv = []
+        clr_inv_tmp = []
         for i in range(ngases):
-            clr_inv.append(np.exp(clr[i]))
-        clr_inv = np.asarray(clr_inv)/np.sum(clr_inv)
+            clr_inv_tmp.append(np.exp(clr[i]))
+        clr_inv_tmp = np.asarray(clr_inv_tmp)/np.sum(clr_inv_tmp)
+
+        clr_inv = []
+        for val in clr_inv_tmp:
+            if val < 1.0e-8:
+                val = 0
+            clr_inv.append(val)
 
         count2 = 0
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
@@ -299,17 +258,13 @@ class fitting(base):
             # planet_mu is a derived output, we're not directly fitting for mu...
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
 
-        # recalculate optical path lengths
-        self.forwardmodel.dlarray, self.forwardmodel.iteridx = self.forwardmodel.get_path_length()
-        self.forwardmodel.dz = self.forwardmodel.get_dz()
-
         # recalculate Rayleigh scattering
         if self.params.in_include_Rayleigh:
             self.forwardmodel.Rsig = self.forwardmodel.get_Rsig()
         else:
             self.forwardmodel.Rsig = zeros((self.forwardmodel.nlambda))
 
-
+    #@profile
     def chisq_trans(self, fit_params, data, datastd):
 
         # chisquare minimisation bit
@@ -318,32 +273,30 @@ class fitting(base):
         # update atmospheric parameters with fit_params values
         self.update_atmospheric_parameters(fit_params)
 
+
+
         # get forward model
         model = self.forwardmodel.model()
 
         #binning internal model
         model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
 
-        # clf()
-        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1], yerr=self.data.spectrum[:,2])
-        # plot(self.data.spectrum[:,0], model_binned)
-        # draw()
-        # pause(0.00001)
-
         res = (data - model_binned) / datastd
+        res = sum(res*res)
+        #
+        # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
+        #     self.forwardmodel.atmosphere.planet_mu/AMU, \
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
+        #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
+        #     self.forwardmodel.atmosphere.absorbing_gases_X, \
+        #     self.forwardmodel.atmosphere.inactive_gases_X
 
-        print '%i | T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (sqrt(sum(res**2)), self.forwardmodel.atmosphere.planet_temp, \
-            self.forwardmodel.atmosphere.planet_mu/AMU, \
-            self.forwardmodel.atmosphere.planet_radius/RJUP, \
-            self.forwardmodel.atmosphere.max_pressure/1.e5), \
-            self.forwardmodel.atmosphere.absorbing_gases_X, \
-            self.forwardmodel.atmosphere.inactive_gases_X
-
-        return sum(res**2)
+        return res
 
 ###############################################################################
 #simplex downhill algorithm
 
+    #@profile
     def downhill_fit(self):
 
         ion()
@@ -381,7 +334,7 @@ class fitting(base):
 
 
     # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
-    # @profile #line-by-line profiling decorator
+    # #@profile #line-by-line profiling decorator
     def mcmc_fit(self):
     # adaptive Markov Chain Monte Carlo
 
@@ -674,10 +627,11 @@ class fitting(base):
         logging.info('Surface pressure: %.4f bar (Fix: %s)' % (self.forwardmodel.atmosphere.max_pressure*1.e-5, self.params.fit_fix_P0))
 
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-            logging.info('Mixing ratio %s: %.2e (%.4f %)' % (self.forwardmodel.atmosphere.absorbing_gases[idx],
+            logging.info('Mixing ratio %s: %.2e (%.4f per cent)' % (self.forwardmodel.atmosphere.absorbing_gases[idx],
                                                              self.forwardmodel.atmosphere.absorbing_gases_X[idx],
-                                                             self.forwardmodel.atmosphere.absorbing_gases_X[idx]/100.))
+                                                             self.forwardmodel.atmosphere.absorbing_gases_X[idx]*100.))
+
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-           logging.info('Mixing ratio %s: %.2e (%.4f %)' % (self.forwardmodel.atmosphere.inactive_gases[idx],
+           logging.info('Mixing ratio %s: %.2e (%.4f per cent)' % (self.forwardmodel.atmosphere.inactive_gases[idx],
                                                              self.forwardmodel.atmosphere.inactive_gases_X[idx],
-                                                             self.forwardmodel.atmosphere.inactive_gases_X[idx]/100.))
+                                                             self.forwardmodel.atmosphere.inactive_gases_X[idx]*100.))

@@ -33,6 +33,7 @@ import logging
 
 class transmission(base):
 
+    ##@profile
     def __init__(self, atmosphere, data=None, params=None, usedatagrid=False):
 
         logging.info('Initialise object transmission')
@@ -65,187 +66,94 @@ class transmission(base):
             self.lambdagrid = self.data.specgrid
         self.nlambda = len(self.lambdagrid)
 
-        #calculating optical path lengths
-        self.dlarray, self.iteridx = self.get_path_length()
-        self.dz = self.get_dz()
-
-        #calculating rayleigh scattering cross sections
-        if self.params.in_include_Rayleigh:
-            self.Rsig = self.get_Rsig()
-        else:
-            self.Rsig = zeros((self.nlambda))
+        # preload Rayleigh for all gases and the given wavelengths (lambdagrid)
+        self.sigma_R_dict = {}
+        for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
+            if gasname in self.data.sigma_R:
+                self.sigma_R_dict[gasname] =  self.data.sigma_R[gasname](self.lambdagrid)
 
         #calculating collision induced absorption cross sections
         if self.params.in_include_cia:
-            self.cia = self.atmosphere.cia
-            self.Csig = self.get_Csig()
+            self.cia       = self.data.cia
+            self.Csig      = self.get_Csig()
         else:
-            self.Csig = zeros((self.nlambda))
+            self.Csig      = zeros((self.nlambda))
             
         #calculating cloud cross sections
         if self.params.in_include_cld:
             self.Cld_sig = self.get_cloud_sig()
         else:
            self.Cld_sig = zeros((self.nlambda)) # unused but needed to cast to cpp code
-        
+
         #loading c++ pathintegral library for faster computation
         if self.params.trans_cpp:
             self.cpathlib = C.CDLL('./library/pathintegral.so', mode=C.RTLD_GLOBAL)
 
+
         # set forward model function
         self.model = self.cpath_integral
 
+
     #class methods
 
-    def get_path_length(self):
-
-        #calculates the layerlength
-
-        nlayers = self.atmosphere.nlayers
-        z = self.atmosphere.z
-        Rp = self.atmosphere.planet_radius
-
-        dlarray = []
-        jl = []
-        kl = []
-        cl = []
-        count = 0
-        for j in range(nlayers): # loop through atmosphere layers
-            for k in range(1,nlayers-j): # loop through each layer to sum up path length
-                dl = 2.0 * (sqrt(pow((Rp + z[k+j]),2) - pow((Rp + z[j]),2)) -
-                            sqrt(pow((Rp + z[k-1+j]),2) - pow((Rp + z[j]),2)))
-                dlarray.append(dl)
-                jl.append(j)
-                kl.append(k)
-                cl.append(count)
-                count += 1
-
-        iteridx = zip(cl,jl,kl)
-        dlarray = asarray(dlarray)      
-
-        return dlarray, iteridx
-    
     def get_dz(self):
 
         # calculate area of circles of atmosphere
-        dz = zeros((self.atmosphere.nlayers))
-        for j in range(self.atmosphere.nlayers-1):
-            dz[j] = self.atmosphere.z[j+1] - self.atmosphere.z[j]
-        return dz
-    
+        dz = np.diff(self.atmosphere.z)
+        return np.append(dz, dz[-1])
+
+    ##@profile
     def get_Rsig(self):
 
         # calculating rayleigh scattering cross-sections
         Rsig = zeros((self.nlambda))
-        count = 0
-        for wl in self.lambdagrid: # loop through wavelentghs
 
-            # loop through all gases (absorbing + inactive)
-            for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
-                if gasname in self.data.sigma_R:
-                    Rsig[count] += self.atmosphere.get_gas_fraction(gasname) * self.data.sigma_R[gasname](wl)
-            count += 1
+        # loop through all gases (absorbing + inactive)
+        for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
+            if gasname in self.data.sigma_R:
+                Rsig += self.atmosphere.get_gas_fraction(gasname) * self.sigma_R_dict[gasname]
         return Rsig
 
-    def get_Csig(self):
-
-        #calculating collisional induced absorption
-
-        return self.scatterCIA(self.cia[:,1],self.params.planet_H2_fraction)
-    
     def get_cloud_sig(self):
 
         #calculating could cross sections
-
         a = (128.0* pi**5 * self.cld_a**6)
         b = (3.0 * self.lambdagrid**4)
         c = ((self.cld_m**2 -1.0)/(self.cld_m**2 +2.0))**2
-
         return a / b * c
 
+    #@profile
     def get_sigma_array(self, temperature):
-
         # getting sigma array from sigma_dic for given temperature
-
         return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
 
-    def scatterCIA(self,coeff,amount):
+    def get_Csig(self):
         '''
+
+        calculating collisional induced absorption
+
         Optical depth given by tau = alpha * L * c_1 * c_2 ; alpha = abs coeff (cm^5 mol^-2), L = path length (cm), c_i = concentration of collider i (mol cm^-3)
         IN: CIA coeffs in (cm^-1 amagat^-2), grid wavelength (in um), path length (in m) and total number density dz (in m^-3)
         OUT: H2-H2 collision-induced absorption coefficient (in m^5 mol^-2)
         '''
-        AMA=2.68676e+25 #Amagat (molecules m^-3)
-        conv_factor = 1.0 / pow((AMA*1.0e-6),2) #converting from (cm^-1 amagat^-2) to (cm^5 mol^-2)...
-        alpha = coeff * conv_factor
-        alpha *= (amount**2) * 1.0e-10 #e.g. composition 85% H2, and convert from cm^5 to m^5
-        return alpha
+    #     AMA=2.68676e+25 #Amagat (molecules m^-3)
+    #     conv_factor = 1.0 / pow((AMA*1.0e-6),2) #converting from (cm^-1 amagat^-2) to (cm^5 mol^-2)...
+    #     alpha = coeff * conv_factor
+    #     alpha *= (amount**2) * 1.0e-10 #e.g. composition 85% H2, and convert from cm^5 to m^5
 
-    def path_integral(self, X=None, rho=None, temperature=None):
+        sigma = self.cia[:,1] * (self.atmosphere.get_gas_fraction('H2')**2) * 1.385294e-49
+        return sigma
 
-        if X is None:
-            X = self.atmosphere.X
-        if rho is None:
-            rho = self.atmosphere.rho
-        if temperature is None:
-            temperature = self.params.planet_temp
+    def cget_path_length(self):
 
         nlayers = self.atmosphere.nlayers
-        P_bar = self.atmosphere.P_bar
+        czRp = cast2cpp(self.atmosphere.z + self.atmosphere.planet_radius)
+        dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
+        cpath_length = self.cpathlib.cpath_length
+        cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
+        return dlarray.reshape(nlayers, nlayers)
 
-
-        #selecting correct sigma_array for temperature
-        sigma_array = self.get_sigma_array(temperature)
-
-        #setting up arrays
-        absorption = zeros((self.nlambda))
-        tau = zeros((nlayers))
-        Rtau = zeros((nlayers))
-        Ctau = zeros((nlayers))
-        cld_tau = zeros((nlayers))
-        exptau = zeros((nlayers))
-
-        molnum = len(X[:,0])
-
-        for wl in range(self.nlambda): # loop through wavelenghts
-
-            tau[:] = 0.0
-            exptau[:] = 0.0
-            Rtau[:] = 0.0
-            cld_tau[:] = 0.0
-
-            for c, j, k in self.iteridx:
-
-                # optical depth due to gasses
-                for i in range(molnum):
-                    tau[j] += (sigma_array[i,wl] * X[i,j+k] * rho[j+k] * self.dlarray[c])
-
-                #optical depth due to Rayleigh scattering
-                Rtau[j] = self.Rsig[wl] * rho[j+k] * self.dlarray[c]
-
-                # calculating CIA optical depth
-                Ctau[j] = self.Csig[wl] * (rho[j+k] **2) * self.dlarray[c]
-
-                #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
-                if self.params.in_include_cld:
-                    if P_bar[k+j] < self.cld_upbound and P_bar[k+j] > self.cld_lowbound:
-                        # = log(cloud density), assuming linear decrease with decreasing log pressure
-                        # following Ackerman & Marley (2001), Fig. 6
-                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0)
-                        cld_tau[j] += ( self.Cld_sig[wl] * (self.dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
-
-                #adding all taus together
-                tau[j] += Rtau[j]
-                tau[j] += Ctau[j]
-                tau[j] += cld_tau[j]
-
-                exptau[j]= exp(-tau[j])
-
-            integral = 2.0* sum(((self.atmosphere.planet_radius+self.atmosphere.z)*(1.0-exptau)*self.dz))
-            absorption[wl] = (self.atmosphere.planet_radius**2 + integral) / (self.params.star_radius**2)
-
-        return absorption
-
+    #@profile
     def cpath_integral(self, X=None, rho=None, temperature=None):
 
         if X is None:
@@ -254,6 +162,16 @@ class transmission(base):
             rho = self.atmosphere.rho
         if temperature is None:
             temperature = self.atmosphere.planet_temp
+
+        # calculating rayleigh scattering cross sections
+        if self.params.in_include_Rayleigh:
+            self.Rsig = self.get_Rsig()
+        else:
+            self.Rsig = zeros((self.nlambda))
+
+        # todo maybe move to cpp...
+        dz = self.get_dz()
+        dlarray = self.cget_path_length()
 
          #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
@@ -267,11 +185,11 @@ class transmission(base):
 
         #casting fixed arrays and variables to c++ pointers
         csigma_array = cast2cpp(sigma_array)
-        cdlarray = cast2cpp(self.dlarray)
+        cdlarray = cast2cpp(dlarray)
         znew = zeros((len(self.atmosphere.z)))
         znew[:] = self.atmosphere.z
         cz = cast2cpp(znew)
-        cdz = cast2cpp(self.dz)
+        cdz = cast2cpp(dz)
         cRsig = cast2cpp(self.Rsig)
         cCsig = cast2cpp(self.Csig)
         cRp = C.c_double(self.atmosphere.planet_radius)
@@ -303,71 +221,115 @@ class transmission(base):
                   clinecount,cnlayers,cn_gas,cInclude_cld,cCld_lowbound,\
                   cCld_upbound,cP_bar,cCld_sig,C.c_void_p(absorption.ctypes.data))
 
-        # del(cX); del(crho); del(csigma_array); del(cz); del(cRsig); del(cCsig); del(cRp); del(cRs);
-        # del(clinecount); del(cnlayers); del(cn_gas); del(cpath_int)
-
         out = zeros((self.nlambda))
         out[:] = absorption
+
+
         del(absorption)
 
         return out
 
-###################################
-#old code sniplets do not delete
 
-#             nlayers = self.atmosphere.nlayers
-#             z = self.atmosphere.z
-#             for j in range(nlayers-1):
-#                 for k in range(1,nlayers-j):
-#                     # Calculate half-path length, and double (from system geometry) to get full path distance
-# #                     dl = 2.0 * (sqrt(pow((self.params.planet_radius + z[k+j]),2) - pow((self.params.planet_radius + z[j]),2)) - sqrt(pow((self.params.planet_radius + z[k-1+j]),2) - pow((self.params.planet_radius + z[j]),2)))
-#                      
-# #                     print dl , self.dlarray[k+j]
-# #                     for l in range(self.data.ngas):
-#  
-#  
-#                     tau[j] += (self.sigma_array[:,wl] * transpose(self.atmosphere.X[k+j,:]) * self.atmosphere.rho[k+j] * self.dlarray[cidx])
-#                     cidx += 1
-#                 exptau[j]= exp(-tau[j])
-        
-            #calculate area of circles of atmos
-#             dz = zeros((nlayers))
-#             for j in range(nlayers-1):
-#                 dz[j] = z[j+1] - z[j]
-#             dz[-1] = dz[-2]
+    # deprecated functions
 
-#             integral = 0.0
-#             for j in range(nlayers):
-#                 integral += ((self.params.planet_radius+z[j])*(1.0-exptau[j])*self.dz[j])
-#             integral *= 2.0
-            
-            
-            
-#         for wl in range(self.nwave):     
-#             tau[:] = 0.0 
-#             exptau[:] = 0.0
-# 
-#             for c,j,k in self.iteridx:
-#                 tau[j] += (self.sigma_array[:,wl] * transpose(self.atmosphere.X[j+k,:]) * self.atmosphere.rho[j+k] * self.dlarray[c])
-#                 exptau[j]= exp(-tau[j])
-# 
-#             integral = 2.0* sum(((self.params.planet_radius+z)*(1.0-exptau)*self.dz))
-#             absorption[wl] = (self.params.planet_radius**2 + integral) / (self.params.star_radius**2)
+    def _get_path_length(self):
+
+        nlayers = self.atmosphere.nlayers
+        z = self.atmosphere.z
+        Rp = self.atmosphere.planet_radius
+
+        dlarray = []
+        jl = []
+        kl = []
+        cl = []
+        count = 0
+        for j in range(nlayers): # loop through atmosphere layers
+            for k in range(1,nlayers-j): # loop through each layer to sum up path length
+                dl = 2.0 * (sqrt(pow((Rp + z[k+j]),2) - pow((Rp + z[j]),2)) -
+                            sqrt(pow((Rp + z[k-1+j]),2) - pow((Rp + z[j]),2)))
+                dlarray.append(dl)
+                jl.append(j)
+                kl.append(k)
+                cl.append(count)
+                count += 1
+
+        iteridx = zip(cl,jl,kl)
+        dlarray = asarray(dlarray, dtype=np.float)
+        return dlarray, iteridx
+
+    def _path_integral(self, X=None, rho=None, temperature=None):
+
+        if X is None:
+            X = self.atmosphere.X
+        if rho is None:
+            rho = self.atmosphere.rho
+        if temperature is None:
+            temperature = self.params.planet_temp
+
+        nlayers = self.atmosphere.nlayers
+        P_bar = self.atmosphere.P_bar
+        dlarray, iteridx = self._get_path_length()
+        dz = self.get_dz()
 
 
-#         count = 0
-#         for wl,idx in itertools.product(range(self.nwave),self.iteridx):
-#             c,j,k = idx
-#             if count < wl:
-#                 tau[:] = 0.0 
-#                 exptau[:] = 0.0
-#                 count += 1    
-#             tau[j] += (self.sigma_array[:,wl] * self.atmosphere.X[:,j+k] * self.atmosphere.rho[j+k] * self.dlarray[c])
-#             tau[j] += self.Rsig[wl] * rho[j+k] * self.dlarray[c]
-#             exptau[j]= exp(-tau[j])
-#             integral = 2.0* sum(((self.params.planet_radius+z)*(1.0-exptau)*self.dz))
-#             absorption[wl] = (self.params.planet_radius**2 + integral) / (self.params.star_radius**2)
-            
-#         endtime = time.clock()
-#         print 'time ',endtime-starttime
+        #selecting correct sigma_array for temperature
+        sigma_array = self.get_sigma_array(temperature)
 
+        #setting up arrays
+        absorption = zeros((self.nlambda))
+        tau = zeros((nlayers))
+        Rtau = zeros((nlayers))
+        Ctau = zeros((nlayers))
+        cld_tau = zeros((nlayers))
+        exptau = zeros((nlayers))
+
+        molnum = len(X[:,0])
+
+        for wl in range(self.nlambda): # loop through wavelenghts
+
+            tau[:] = 0.0
+            exptau[:] = 0.0
+            Rtau[:] = 0.0
+            cld_tau[:] = 0.0
+
+            for c, j, k in iteridx:
+
+                # optical depth due to gasses
+                for i in range(molnum):
+                    tau[j] += (sigma_array[i,wl] * X[i,j+k] * rho[j+k] * dlarray[c])
+
+                #optical depth due to Rayleigh scattering
+                Rtau[j] = self.Rsig[wl] * rho[j+k] * dlarray[c]
+
+                # calculating CIA optical depth
+                Ctau[j] = self.Csig[wl] * (rho[j+k] **2) * dlarray[c]
+
+                #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
+                if self.params.in_include_cld:
+                    if P_bar[k+j] < self.cld_upbound and P_bar[k+j] > self.cld_lowbound:
+                        # = log(cloud density), assuming linear decrease with decreasing log pressure
+                        # following Ackerman & Marley (2001), Fig. 6
+                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0)
+                        cld_tau[j] += ( self.Cld_sig[wl] * (dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
+
+                #adding all taus together
+                tau[j] += Rtau[j]
+                tau[j] += Ctau[j]
+                tau[j] += cld_tau[j]
+
+                exptau[j]= exp(-tau[j])
+
+            integral = 2.0* sum(((self.atmosphere.planet_radius+self.atmosphere.z)*(1.0-exptau)*dz))
+            absorption[wl] = (self.atmosphere.planet_radius**2 + integral) / (self.params.star_radius**2)
+
+        return absorption
+
+    def cget_path_length(self):
+
+        nlayers = self.atmosphere.nlayers
+        czRp = cast2cpp(self.atmosphere.z + self.atmosphere.planet_radius)
+        dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
+        cpath_length = self.cpathlib.cpath_length
+        cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
+
+        return dlarray

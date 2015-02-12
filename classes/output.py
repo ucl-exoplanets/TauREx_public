@@ -256,7 +256,8 @@ class output(base):
         py.legend()
         py.title('Data and Model')
         py.xlabel('Wavelength ($\mu m$)')
-
+        py.xscale('log')
+        py.xlim((np.min(self.data.spectrum[:,0]), np.max(self.data.spectrum[:,0])))
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$')
         elif self.__MODEL_ID__ == 'emission':
