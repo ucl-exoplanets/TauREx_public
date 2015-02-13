@@ -31,7 +31,7 @@ from library.library_emission import iterate_TP_profile
 
 
 class output(base):
-    def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None):
+    def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None, plot_path=None):
          
         logging.info('Initialise object output')
 
@@ -77,9 +77,16 @@ class output(base):
 
         self.__MODEL_ID__ = type(self.forwardmodel).__name__
 
+        #setting plotting path (useful for multi-stage stuff)
+        if plot_path is None: 
+            self.plot_path = self.params.out_path
+        else:
+            self.plot_path = plot_path
+
+
         #dumping fitted paramter names to file and list. 
         self.parameters = []
-        with open(os.path.join(self.params.out_path, 'parameters.dat'), 'w') as parfile:
+        with open(os.path.join(self.plot_path, 'parameters.dat'), 'w') as parfile:
             for mol in self.params.planet_molec:
                 parfile.write(mol+' \n')
                 self.parameters.append(mol)
@@ -146,7 +153,7 @@ class output(base):
 
     def plot_mcmc(self, param_names=False, save2pdf=False):
 
-        logging.info('Plotting nested sampling distributions. Saving to %s' % self.params.out_path)
+        logging.info('Plotting nested sampling distributions. Saving to %s' % self.plot_path)
 
         if self.MCMC:
 
@@ -159,7 +166,7 @@ class output(base):
                 plot_mcmc_results(self.fitting.dir_mcmc,
                                   parameters=parameters,
                                   save2pdf=save2pdf,
-                                  out_path=self.params.out_path,
+                                  out_path=self.plot_path,
                                   plot_contour=self.params.out_plot_contour)
             
             #plotting TP profile @todo plot TP for different chains?
@@ -179,12 +186,12 @@ class output(base):
 
             if self.params.nest_multimodes:
 
-                logging.info('Plotting nested sampling distributions. Saving to %s' % self.params.out_path)
+                logging.info('Plotting nested sampling distributions. Saving to %s' % self.plot_path)
 
                 plot_multinest_results(self.fitting.dir_multinest,
                                        parameters=parameters,
                                        save2pdf=save2pdf,
-                                       out_path=self.params.out_path,
+                                       out_path=self.plot_path,
                                        plot_contour=self.params.out_plot_contour)
                 
                 #plotting TP profile for multimodes
@@ -233,7 +240,7 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.params.out_path, 'spectrum_data.pdf')
+            filename = os.path.join(self.plot_path, 'spectrum_data.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
@@ -267,9 +274,9 @@ class output(base):
         
         if save2pdf:
             if name is not None:
-                filename = os.path.join(self.params.out_path, 'tp_profile_'+name+'.pdf')
+                filename = os.path.join(self.plot_path, 'tp_profile_'+name+'.pdf')
             else:
-                filename = os.path.join(self.params.out_path, 'tp_profile.pdf')
+                filename = os.path.join(self.plot_path, 'tp_profile.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)    
         
@@ -313,7 +320,7 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.params.out_path, 'model_fit.pdf')
+            filename = os.path.join(self.plot_path, 'model_fit.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
@@ -334,7 +341,7 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.params.out_path, 'spectrum.pdf')
+            filename = os.path.join(self.plot_path, 'spectrum.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
@@ -346,7 +353,7 @@ class output(base):
         out = np.zeros((len(self.data.spectrum[:,0]),2))
         out[:,0] = self.data.spectrum[:,0]
 
-        basename = os.path.join(self.params.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
+        basename = os.path.join(self.plot_path, self.params.out_file_prefix + self.__MODEL_ID__)
 
         if self.MCMC and ascii:
                 out[:,1] = np.transpose(self.spec_mcmc)
@@ -370,7 +377,7 @@ class output(base):
                 np.savetxt(filename, out)
 
         if modelout is not None: # ???
-            np.savetxt(self.params.out_path+modelsaveas,modelout)
+            np.savetxt(self.plot_path+modelsaveas,modelout)
 
 
 

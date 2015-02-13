@@ -232,7 +232,7 @@ X_low = 0.0
 #defines parameters for minimisation
 
 #run minimisation routine on data
-run = True
+run = False
 
 #type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, 
 #L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
@@ -268,7 +268,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = False
+run = True
 
 #resume from previous run
 resume = True

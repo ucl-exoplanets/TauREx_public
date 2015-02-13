@@ -32,7 +32,7 @@ G = 6.67384e-11
 
 class atmosphere(base):
 
-    def __init__(self, data, params=None):
+    def __init__(self, data, params=None, tp_profile_type=None):
 
         logging.info('Initialising atmosphere object')
 
@@ -83,19 +83,24 @@ class atmosphere(base):
 
         #selecting TP profile to use
         if self.params.gen_type == 'emission':
-#             self.TP_type = '3point'
-            self.TP_type = 'guillot'
-#             self.TP_type = 'rodgers'         
-        if self.params.gen_type == 'transmission':
-            self.TP_type = 'isothermal'
+            if tp_profile_type is None:
+                self.TP_type = self.params.tp_type
+            else:
+                self.TP_type = tp_profile_type
         
+        if self.params.gen_type == 'transmission':
+            if tp_profile_type is None:
+                self.TP_type = 'isothermal'
+            else:
+                self.TP_type = tp_profile_type
+                
         #setting up TP profile 
         self.set_TP_profile()
             
         #setting free parameter prior bounds and parameter grid
         if self.params.fit_emission or self.params.fit_transmission:
-            self.bounds = self.get_prior_bounds()
-            self.fit_params, self.fit_index, self.fit_count = self.setup_parameter_grid()
+            self.set_prior_bounds()
+            self.setup_parameter_grid()
         
         
         #testing rodgers TP profile
@@ -167,7 +172,7 @@ class atmosphere(base):
 
 
 
-    def get_prior_bounds(self): 
+    def set_prior_bounds(self): 
         '''
         Partially to be moved to parameter file i guess
         '''
@@ -205,7 +210,8 @@ class atmosphere(base):
             bounds.append((1.0,1e5))                           #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
             bounds.append((1.0,1e5))                           #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
 
-        return bounds
+        self.bounds = bounds
+#         return bounds
 
 
     def setup_parameter_grid(self):
@@ -232,7 +238,12 @@ class atmosphere(base):
         for par in self.bounds:
             fit_params.append(np.mean(par))
         
-        return np.asarray(fit_params), fit_index, fit_count
+        
+        self.fit_params = np.asarray(fit_params) 
+        self.fit_index  = fit_index
+        self.fit_count  = fit_count
+        
+#         return np.asarray(fit_params), fit_index, fit_count
 
 
     def set_mixing_ratios(self):
@@ -269,16 +280,18 @@ class atmosphere(base):
         '''
         if profile is not None: #implicit or explicit TP_type setting
             self.TP_type = profile
-            
-        if self.TP_type is 'isothermal':
+     
+        if self.TP_type == 'isothermal':
             _profile = self._TP_isothermal
-        elif self.TP_type is 'guillot':
+        elif self.TP_type == 'guillot':
             _profile = self._TP_guillot2010
-        elif self.TP_type is 'rodgers':
+        elif self.TP_type == 'rodgers':
             _profile = self._TP_rodgers2000
-        elif self.TP_type is '2point':
+        elif self.TP_type == 'hybrid':
+            _profile = self._TP_hybrid
+        elif self.TP_type == '2point':
             _profile = self._TP_2point
-        elif self.TP_type is '3point':
+        elif self.TP_type == '3point':
             _profile = self._TP_3point
         else:
             logging.error('Invalid TP profile name')
@@ -298,7 +311,7 @@ class atmosphere(base):
         fit_params depend on TP_profile selected.
         INDEX splits column densities from TP_profile parameters, INDEX = [Chi, TP]
         '''
-
+       
         X_params  = fit_params[:self.fit_index[0]] #splitting to gas parameters        
         TP_params = fit_params[self.fit_index[0]:] #splitting to TP profile parameters
         
@@ -447,12 +460,14 @@ class atmosphere(base):
         alpha  = TP_params[0]
         T_init = TP_params[1:]
         
+        if covmatrix is None:
+            covmatrix = self.hybrid_covmat
+        
         if self.TP_setup: #run only once and save
             self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
             for i in xrange(self.nlayers):
                 self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
         
-    
         T = np.zeros((self.nlayers)) #temperature array    
         cov_hybrid = (1.0-alpha) * self.rodgers_covmat + alpha * covmatrix
         
@@ -470,6 +485,11 @@ class atmosphere(base):
         
         return T, self.P
         
+    def set_TP_hybrid_covmat(self,covariance):
+        '''
+        Setting external covariance for _TP_hybrid
+        '''
+        self.hybrid_covmat = covariance
     
     
     def _TP_2point(self,TP_params):
