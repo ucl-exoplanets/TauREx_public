@@ -211,6 +211,133 @@ if params.nest_run and multinest_import:
 if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
     #MPI.MPI_Finalize()
     exit()
+    
+    
+#test area for cross correlation
+T_mean, T_minmax, P = iterate_TP_profile(fittingob.NEST_FIT_mean[0], fittingob.NEST_FIT_std[0], atmosphereob.fit_index,atmosphereob.TP_profile)
+
+T_sigma = T_minmax[:,1] - T_minmax[:,0]
+Tmin = np.min(T_mean)
+Tmax = np.max(T_mean)
+nlayers = atmosphereob.nlayers
+
+Trange = np.int(Tmax-Tmin + 100)
+# print Trange
+
+Tarray = np.linspace(Tmin-10,Tmax+10,Trange)
+# Tarray = np.linspace(0,20,1000)
+
+def gaussian(x, mu, sig):
+    return np.exp(-np.power(x - mu, 2.) / 2 * np.power(sig, 2.))
+
+
+TPg_arr = np.zeros((nlayers,len(Tarray)))
+Ent_arr = np.zeros((nlayers,nlayers))
+Sig_arr = np.zeros((nlayers,nlayers))
+
+
+# figure(100)
+# 
+# for i in range(nlayers):
+#     meanoffset = T_mean[i] - Tmin + 100
+#     TPg_arr[i,:] = gaussian(Tarray,T_mean[i],T_sigma[i])
+# #     TPg_arr[i,:] = gaussian(Tarray,Tarray[500],T_sigma[i])
+#     plot(Tarray,TPg_arr[i,:])
+    
+
+
+for i in range(nlayers):
+    for j in range(nlayers):
+#         Ent_arr[i,j] =  scipy.stats.entropy(pk=TPg_arr[i,:],qk=TPg_arr[j+i,:]) - scipy.stats.entropy(pk=TPg_arr[i,:])
+#         Ent_arr[i,j] = - scipy.stats.entropy(pk=TPg_arr[i,:])
+#         Ent_arr[i,j] = np.correlate(TPg_arr[i,:],TPg_arr[j,:])
+#         Ent_arr[i,j] = np.abs(T_mean[i]/T_sigma[i]-T_mean[j]/T_sigma[j])
+        Ent_arr[i,j] = np.abs(T_mean[i]-T_mean[j])
+        Sig_arr[i,j] = np.sqrt(T_sigma[i]**2+T_sigma[j]**2)
+#         Ent_arr[i,j] = T_sigma[i]/T_sigma[j+i]
+    
+    
+covmatrix = np.zeros((nlayers,nlayers))
+h=5.0
+for i in xrange(nlayers):
+    covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(P[i]/P[:]))/h)      
+
+Diff_arr = Ent_arr-Sig_arr
+
+# figure(100)
+# imshow(Diff_arr,origin='lower')
+# colorbar()
+# contour(Sig_arr,linewidths=2.0)
+# 
+# figure(101)
+# imshow(Ent_arr,origin='lower')
+# colorbar()
+# contour(Sig_arr,linewidths=2.0)
+# 
+Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Ent_arr))
+figure(102)
+imshow(1.0-Diff_norm,origin='lower')
+colorbar()
+ 
+figure(103)
+imshow(covmatrix,origin='lower')
+colorbar()
+contour(1.0-Diff_norm,linewidths=2.0)
+
+figure(104)
+
+subplot(141)
+alpha = 1.0
+imshow((1-alpha)*covmatrix+alpha*(1.0-Diff_norm),origin='lower')
+contour(1.0-Diff_norm,linewidths=2.0)
+title('alpha = 1.0')
+
+subplot(142)
+alpha = 0.7
+imshow((1-alpha)*covmatrix+alpha*(1.0-Diff_norm),origin='lower')
+contour(1.0-Diff_norm,linewidths=2.0)
+title('alpha = 0.7')
+
+subplot(143)
+alpha = 0.4
+imshow((1-alpha)*covmatrix+alpha*(1.0-Diff_norm),origin='lower')
+contour(1.0-Diff_norm,linewidths=2.0)
+title('alpha = 0.4')
+
+subplot(144)
+alpha = 0
+imshow((1-alpha)*covmatrix+alpha*(1.0-Diff_norm),origin='lower')
+# colorbar()
+contour(1.0-Diff_norm,linewidths=2.0)
+title('alpha = 0.0')
+
+
+atmosphereob.set_TP_profile(profile='rodgers')
+
+parble = [0.5,0.5]
+for i in range(nlayers):
+    parble.append(1.0)
+
+# Th, Ph, ble = atmosphereob.TP_profile(parble,h=5.0)
+# Tc,Pc,ble = atmosphereob.TP_profile(parble,covmatrix=(1.0-Diff_norm))
+# 
+# figure(103)
+# plot(Th,Ph)
+# plot(Tc,Pc,'k')
+# yscale('log')
+# xlabel('Temperature')
+# ylabel('Pressure (Pa)')
+# gca().invert_yaxis()
+ 
+# figure(104)
+# plot(T_sigma)
+
+# print T_mean
+# print T_sigma
+show()
+exit()
+    
+    
 
 #initiating output instance with fitted data from fitting class
 outputob = output(fittingob)

@@ -90,7 +90,7 @@ class atmosphere(base):
             self.TP_type = 'isothermal'
         
         #setting up TP profile 
-        self.TP_profile = self.set_TP_profile()
+        self.set_TP_profile()
             
         #setting free parameter prior bounds and parameter grid
         if self.params.fit_emission or self.params.fit_transmission:
@@ -184,9 +184,13 @@ class atmosphere(base):
         elif self.TP_type == 'rodgers':
             for i in xrange(self.nlayers):
                 bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
+        elif self.TP_type == 'hybrid':
+            bounds.append((0.0,1.0)) #alpha parameter
+            for i in xrange(self.nlayers):
+                bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
         elif self.TP_type == 'guillot':
             bounds.append((self.T_priors[0],self.T_priors[1]))  #T_irr prior
-            bounds.append((0.0,1e-2))                            #kappa_irr prior
+            bounds.append((0.0,1e-2))                           #kappa_irr prior
             bounds.append((0.0,1e-2))                           #kappa_v1 prior
             bounds.append((0.0,1e-2))                           #kappa_v2 prior
             bounds.append((0.0,1.0))                            #alpha prior
@@ -196,8 +200,8 @@ class atmosphere(base):
             bounds.append((1.0,1e5))                           #troposphere pressure (Pa) #@todo careful with this needs to move somewhere else
         elif self.TP_type == '3point':
             bounds.append((self.T_priors[0],self.T_priors[1])) #surface layer T
-            bounds.append((0.0,500.0))                        #point1 T difference (T_surface- Tdiff) = T_point1
-            bounds.append((0.0,500.0))                        #point2 T difference (T_point1- Tdiff) = T_point2
+            bounds.append((0.0,500.0))                         #point1 T difference (T_surface- Tdiff) = T_point1
+            bounds.append((0.0,500.0))                         #point2 T difference (T_point1- Tdiff) = T_point2
             bounds.append((1.0,1e5))                           #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
             bounds.append((1.0,1e5))                           #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
 
@@ -257,31 +261,36 @@ class atmosphere(base):
     # Everything below is related to Temperature Pressure Profiles
 
 
-    def set_TP_profile(self):
+    def set_TP_profile(self,profile=None):
         '''
         Decorator supplying TP_profile with correct TP profile function. 
         Only the free parameters will be provided to the function after TP profile 
         is set.   
         '''
+        if profile is not None: #implicit or explicit TP_type setting
+            self.TP_type = profile
+            
         if self.TP_type is 'isothermal':
-            profile = self._TP_isothermal
+            _profile = self._TP_isothermal
         elif self.TP_type is 'guillot':
-            profile = self._TP_guillot2010
+            _profile = self._TP_guillot2010
         elif self.TP_type is 'rodgers':
-            profile = self._TP_rodgers2000
+            _profile = self._TP_rodgers2000
         elif self.TP_type is '2point':
-            profile = self._TP_2point
+            _profile = self._TP_2point
         elif self.TP_type is '3point':
-            profile = self._TP_3point
+            _profile = self._TP_3point
         else:
             logging.error('Invalid TP profile name')
             
-        def tpwrap(fit_params):
-            return self._TP_profile(profile,fit_params)
-        return tpwrap
+        def tpwrap(fit_params,**kwargs):
+            return self._TP_profile(_profile,fit_params,**kwargs)
+        
+        self.TP_profile = tpwrap  #setting TP_profile
+        self.TP_setup = True #flag that allows TP profile internal things to be run once only. Sets to False after execution
 
 
-    def _TP_profile(self, TP_function, fit_params):
+    def _TP_profile(self, TP_function, fit_params,**kwargs):
         '''
         TP profile decorator. Takes given TP profile function and fitting parameters 
         To generate Temperature, Pressure, Column Density (T, P, X) grids
@@ -299,8 +308,9 @@ class atmosphere(base):
             self.X[i,:] += X_params[i]
             
         #generating TP profile given input TP_function
-        T,P = TP_function(TP_params)
-      
+        T,P = TP_function(TP_params,**kwargs)
+        
+        self.TP_setup = False #running profile setup only on first call
         return T,P, self.X
 
 
@@ -313,7 +323,8 @@ class atmosphere(base):
         P = self.pta[:,0]; T = self.pta[:,1]
         
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat
-        self.TP_params_ascii = ['Temperature']
+        if self.TP_setup:
+            self.TP_params_ascii = ['Temperature']
         
         return T,P 
         
@@ -354,12 +365,13 @@ class atmosphere(base):
         T = T4**0.25
         
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat
-        self.TP_params_ascii = ['T_ir', 'kappa_ir', 'kappa_v1', 'kappa_v2','alpha']
+        if self.TP_setup:
+            self.TP_params_ascii = ['T_ir', 'kappa_ir', 'kappa_v1', 'kappa_v2','alpha']
         
         return np.asarray(T), self.P
     
     
-    def _TP_rodgers2000(self,TP_params):
+    def _TP_rodgers2000(self,TP_params, h=1.5, covmatrix=None):
         '''
         Layer-by-layer temperature - pressure profile retrieval using dampening factor 
         Introduced in Rodgers (2000): Inverse Methods for Atmospheric Sounding (equation 3.26)
@@ -374,34 +386,90 @@ class atmosphere(base):
             - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
                   may be left as free and Pressure dependent parameter later.
         '''
-        
+                
         #assigning parameters 
         T_init = TP_params
-        h      = 1.5
         
 #         covmatrix = np.zeros((self.nlayers,self.nlayers))
 #         for i in xrange(self.nlayers):
 #                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)  
                
-        T = np.zeros((self.nlayers))
-        for i in xrange(self.nlayers):
-            covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
-            weights = covmat / np.sum(covmat)
-            T[i]    = np.sum(weights*T_init)
+        if covmatrix is None: #if covariance not provided, generate
+            if self.TP_setup: #run only once and save
+                self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
+                for i in xrange(self.nlayers):
+                    self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+        else:
+            self.rodgers_covmat = covmatrix
             
-#         pl.figure(3)
-#         pl.imshow(covmatrix,origin='lower')
-#         pl.colorbar()
+                     
+        T = np.zeros((self.nlayers)) #temperature array
+        
+        #correlating temperature grid with covariance matrix 
+        for i in xrange(self.nlayers):
+#             covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+            weights = self.rodgers_covmat / np.sum(self.rodgers_covmat[i,:])
+            T[i]    = np.sum(weights*T_init)    
+            
+        pl.figure(3)
+        pl.imshow(self.rodgers_covmat,origin='lower')
+        pl.colorbar()
 #         pl.show()
 
-        #sets list of ascii parameter names. This is used in output module to compile parameters.dat
-        self.TP_params_ascii = []
-        for i in xrange(self.nlayers):
-            self.TP_params_ascii.append('T_{0}'.format(str(i)))
-         
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat       
+        if self.TP_setup:
+            self.TP_params_ascii = []
+            for i in xrange(self.nlayers):
+                self.TP_params_ascii.append('T_{0}'.format(str(i)))
+        
         return T, self.P
     
     
+    
+    def _TP_hybrid(self,TP_params,h=5.0,covmatrix=None):
+        '''
+        Layer-by-layer temperature pressure profile. It is a hybrid between the _TP_rodgers2000 profile and 
+        a second (externally calculated) covariance matrix. The external covariance can be calculated 
+        using a maximum likelihood retrieval of the TP profile before (or similar). 
+        The hybrid covariance is given by Cov_hyb = (1-alpha) * Cov_TP_rodgers200 + alpha * Cov_external
+        
+        Free parameters required:
+            - alpha  = weighting parameter between covariance 1 and 2
+            - T      = one temperature per layer of Pressure (P)
+            
+        Fixed parameters:
+            - P  = Pressure grid, fixed to self.P
+            - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
+                  may be left as free and Pressure dependent parameter later.
+        '''
+        
+        #assigning parameters 
+        alpha  = TP_params[0]
+        T_init = TP_params[1:]
+        
+        if self.TP_setup: #run only once and save
+            self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
+            for i in xrange(self.nlayers):
+                self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+        
+    
+        T = np.zeros((self.nlayers)) #temperature array    
+        cov_hybrid = (1.0-alpha) * self.rodgers_covmat + alpha * covmatrix
+        
+        #correlating temperature grid with covariance matrix 
+        for i in xrange(self.nlayers):
+            weights = cov_hybrid / np.sum(cov_hybrid[i,:])
+            T[i]    = np.sum(weights*T_init)
+        
+       
+        #sets list of ascii parameter names. This is used in output module to compile parameters.dat       
+        if self.TP_setup:
+            self.TP_params_ascii = ['alpha']
+            for i in xrange(self.nlayers):
+                self.TP_params_ascii.append('T_{0}'.format(str(i)))
+        
+        return T, self.P
+        
     
     
     def _TP_2point(self,TP_params):
@@ -431,7 +499,8 @@ class atmosphere(base):
         T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
         
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat
-        self.TP_params_ascii = ['T_1','T_2','P_1']
+        if self.TP_setup:
+            self.TP_params_ascii = ['T_1','T_2','P_1']
         
         return T[::-1], self.P
         
@@ -465,7 +534,8 @@ class atmosphere(base):
         T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
         
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat
-        self.TP_params_ascii = ['T_1','T_2','P_1','T_3','P_2']
+        if self.TP_setup:
+            self.TP_params_ascii = ['T_1','T_2','P_1','T_3','P_2']
         
         return T[::-1], self.P
         

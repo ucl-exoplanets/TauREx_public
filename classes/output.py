@@ -27,7 +27,7 @@ from emission import *
 from transmission import *
 from atmosphere import *
 from library_plotting import *
-from library.library_plotting import iterate_TP_profile
+from library.library_emission import iterate_TP_profile
 
 
 class output(base):
@@ -275,9 +275,7 @@ class output(base):
         
         return fig
         
-        
-        
-        
+
 
     def plot_fit(self,save2pdf=False,linewidth=2.0):
 
