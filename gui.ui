@@ -187,6 +187,9 @@
       </item>
       <item row="2" column="0">
        <widget class="QLabel" name="label_32">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>VO</string>
         </property>
@@ -215,6 +218,9 @@
       </item>
       <item row="2" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_VO">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="decimals">
          <number>4</number>
         </property>

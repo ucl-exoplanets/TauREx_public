@@ -1,6 +1,6 @@
 [General]
 #verbose or not
-verbose = False
+verbose = True
 verbose_all_threads = False
 
 
@@ -277,7 +277,7 @@ options = {‘verbose’:False}
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = False
+run = True
 
 #update data standard deviation from dynamic fit.
 update_std = True

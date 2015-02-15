@@ -107,6 +107,9 @@ class fitting(base):
 
 
         # set priors, starting values, and fitting parameters
+        self.fit_params_names = []
+        self.fit_params = []
+        self.fit_bounds = []
         self.build_fit_params()
 
         #initialising output tags
@@ -120,11 +123,9 @@ class fitting(base):
     #@profile
     def build_fit_params(self):
 
-        # build the fit_param list, input to all the fitting routines.
-        # build the fit_bounds list, input to scipy.minimize and ?
-        self.fit_params = []
-        self.fit_params_names = []
-        self.fit_bounds = []
+        # build the fit_params list, input parameters to all the fitting routines.
+        # build the fit_params_names, names of params in fit_params
+        # build the fit_bounds list, boundary conditions for fit_params
 
         # include T, P0, r, mu only if we want to fit for them. Otherwise self.fit_values are assumed
         if not self.params.fit_fix_temp:
@@ -157,7 +158,6 @@ class fitting(base):
         n = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
             sumlog +=  np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx])
-
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
             sumlog += np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx])
         mean = np.exp((1./n)*sumlog)
@@ -173,7 +173,7 @@ class fitting(base):
         ngases = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
         for i in range(ngases - 1):
             self.fit_params.append(0)
-            self.fit_bounds.append((-1000, 1000)) # actually, there are no bounds...
+            self.fit_bounds.append((-10, 10)) # actually, there are no bounds...
             self.fit_params_names.append('CLR_X_%i' % i)
 
         self.fit_nparams = len(self.fit_params)
@@ -185,7 +185,7 @@ class fitting(base):
 
         count = 0
 
-        # fitting for temperature
+        # fitting for temperature -> single temperature. Problem?
         if not self.params.fit_fix_temp:
             self.forwardmodel.atmosphere.planet_temp = fit_params[count]
             count += 1
@@ -201,7 +201,7 @@ class fitting(base):
             self.forwardmodel.atmosphere.planet_radius = fit_params[count]*RJUP
             count += 1
 
-        # we need to update surface gravity and scale height if temp, mu, or radius have changed
+        # update surface gravity and scale height
         self.forwardmodel.atmosphere.planet_grav = self.forwardmodel.atmosphere.get_surface_gravity()
         self.forwardmodel.atmosphere.scaleheight = self.forwardmodel.atmosphere.get_scaleheight()
 
@@ -218,34 +218,29 @@ class fitting(base):
         self.forwardmodel.atmosphere.z = self.forwardmodel.atmosphere.pta[:,2] # altitude array
         self.forwardmodel.atmosphere.rho = self.forwardmodel.atmosphere.get_rho() # update density
 
-        # @todo mixing ratios are always fitted. Maybe allow to fix, either absorbing and/or inactive gases
+        # fitting for mixing ratios. Convert clr(X) to X (centerd-log-ratio inverse transformation)
 
-        # fitting for mixing ratios. Need to convert clr(X) to X (centerd-log-ratio inverse transformation)
-
-        # build centered log ratio array
-        ngases = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
+        # build clr array
+        ngases = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases) # todo move to init
         clr = []
         for i in range(ngases - 1):
             clr.append(fit_params[count+i])
-        # append last clr. Note that sum(clr) = 0!
-        clr.append(-np.sum(clr))
+        clr.append(-np.sum(clr)) # append last clr. Note that sum(clr) = 0!
 
         # transform back to simplex space
-        clr_inv_tmp = []
-        for i in range(ngases):
-            clr_inv_tmp.append(np.exp(clr[i]))
-        clr_inv_tmp = np.asarray(clr_inv_tmp)/np.sum(clr_inv_tmp)
-
         clr_inv = []
-        for val in clr_inv_tmp:
-            if val < 1.0e-8:
-                val = 0
-            clr_inv.append(val)
+        for i in range(ngases):
+            clr_inv.append(np.exp(clr[i]))
+        clr_inv = np.asarray(clr_inv)/np.sum(clr_inv) # closure
+
+
 
         count2 = 0
+        # first the absorbing gases
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
             self.forwardmodel.atmosphere.absorbing_gases_X[idx] = clr_inv[count2]
             count2 += 1
+        # then the inactive gases
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
             self.forwardmodel.atmosphere.inactive_gases_X[idx] = clr_inv[count2]
             count2 += 1
@@ -255,7 +250,7 @@ class fitting(base):
 
         if self.params.fit_couple_mu:
             # coupling mu to atmospheric composition
-            # planet_mu is a derived output, we're not directly fitting for mu...
+            # planet_mu is a derived output
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
 
         # recalculate Rayleigh scattering
@@ -273,8 +268,6 @@ class fitting(base):
         # update atmospheric parameters with fit_params values
         self.update_atmospheric_parameters(fit_params)
 
-
-
         # get forward model
         model = self.forwardmodel.model()
 
@@ -284,6 +277,12 @@ class fitting(base):
         res = (data - model_binned) / datastd
         res = sum(res*res)
         #
+        # clf()
+        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1], yerr=self.data.spectrum[:,2])
+        # plot(self.data.spectrum[:,0], model_binned)
+        # draw()
+        # pause(0.01)
+        # # #
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
         #     self.forwardmodel.atmosphere.planet_mu/AMU, \
         #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
@@ -331,7 +330,6 @@ class fitting(base):
 
 ###############################################################################    
 #Markov Chain Monte Carlo algorithm
-
 
     # noinspection PyNoneFunctionAssignment,PyNoneFunctionAssignment
     # #@profile #line-by-line profiling decorator

@@ -113,11 +113,16 @@ class data(base):
             # if running in GUI mode, the dictionary is loaded from a file
             # todo add a param to rebuild sigma_array even in GUI mode
             import pickle
-            # self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
-            # sigma dict has been presaved with the input parameters (lambda = 0.4-20, resolution = 500)
-            logging.info('Loading sigma dictionary from file')
-            self.sigma_dict = pickle.load(open('Input/sigma_dict.pickle', 'rb'))
-            # pickle.dump(self.sigma_dict, open('Input/sigma_dict.pickle', 'wb'))
+            filename = 'Input/sigma_dict.pickle'
+            if os.path.isfile(filename):
+                # sigma dict has been presaved with the input parameters (lambda = 0.4-20, resolution = 500)
+                logging.info('Loading sigma dictionary from file')
+                self.sigma_dict = pickle.load(open(filename, 'rb'))
+            else:
+                logging.info('Creating sigma file')
+                self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
+                pickle.dump(self.sigma_dict, open(filename, 'wb'))
+
         else: # not running in GUI mode
             #reading in absorption coefficient data
             self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
@@ -237,7 +242,7 @@ class data(base):
         return out
 
     #@profile
-    def build_sigma_dic(self,tempstep=50):
+    def build_sigma_dic(self, tempstep=50):
 
         #building temperature dependent sigma_array
 
@@ -321,8 +326,8 @@ class data(base):
 
             #checking if number of gasses in parameters file is consistent with gass columns in atm file
             if self.params.in_use_ATMfile and len(abslist) != self.ngas:
-                print len(abslist)
-                print self.ngas
+                # print len(abslist)
+                # print self.ngas
                 raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
                 exit()
 

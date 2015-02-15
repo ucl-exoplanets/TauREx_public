@@ -111,8 +111,6 @@ void cpath_int(const double ** sigma_array, const double * dlarray, const double
 			 /* Sum up taus for all gases for this path */
 				for(int l=0;l<n_gas;l++) {
     			    tau[j] += (sigma_array[l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
-	                //cout << sigma_array[l][wl] << endl;
-	                //cout << tau[j] << " sigma " << sigma_array[l][wl] << " X " << X[l][k+j] << "  rho "  << rho[k+j] <<  "  dlarray "  << dlarray[count] << endl;
 				}
 
 
@@ -144,17 +142,9 @@ void cpath_int(const double ** sigma_array, const double * dlarray, const double
 			tau[j] += Ctau; //adding CIA tau to gas tau
             tau[j] += cld_tau; //adding cloud tau to gas tau
 
-//            if (tau[j] < 1.0e-07) {
-//                exptau[j] = 0.0;
-//            } else {
             exptau[j]= exp(-tau[j]);
-//            }
-             //exptau[j] = exp(-tau[j]);
-
-			//cout << " dlarray " << dlarray[count] << " exptau " << exptau[j] << "  tau "  << -tau[j] << endl;
 
 		}
-//		cout<< "C7" <<endl;
 
 		double integral = 0.0;
 		for(int j=0; j<nlayers; j++){
@@ -164,12 +154,9 @@ void cpath_int(const double ** sigma_array, const double * dlarray, const double
 		   integral += ((Rp+z[j])*(1.0-exptau[j])*dz[j]);
 		   //cout << "int" << integral << " j " << j << " dz " << dz[j] << " z " << z[j] << " exptau "  << exptau[j] << endl;
 		}
-//		cout<< "C8" <<endl;
 		integral*=2.0;
 
 		absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
-
-//        cout << integral << " Rp " << Rp*Rp << "  Rs "  << (Rs*Rs) << endl;
 
     }
 

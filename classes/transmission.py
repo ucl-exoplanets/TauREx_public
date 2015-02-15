@@ -78,7 +78,13 @@ class transmission(base):
             self.Csig      = self.get_Csig()
         else:
             self.Csig      = zeros((self.nlambda))
-            
+
+
+        if self.params.in_include_Rayleigh:
+            self.Rsig = self.get_Rsig()
+        else:
+            self.Rsig = zeros((self.nlambda))
+
         #calculating cloud cross sections
         if self.params.in_include_cld:
             self.Cld_sig = self.get_cloud_sig()
@@ -92,6 +98,7 @@ class transmission(base):
 
         # set forward model function
         self.model = self.cpath_integral
+        #self.model = self._path_integral
 
 
     #class methods
@@ -163,18 +170,13 @@ class transmission(base):
         if temperature is None:
             temperature = self.atmosphere.planet_temp
 
-        # calculating rayleigh scattering cross sections
-        if self.params.in_include_Rayleigh:
-            self.Rsig = self.get_Rsig()
-        else:
-            self.Rsig = zeros((self.nlambda))
 
-        # todo maybe move to cpp...
         dz = self.get_dz()
         dlarray = self.cget_path_length()
 
          #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
+
 
         #casting changing arrays to c++ pointers
         Xs1, Xs2 = shape(X)
@@ -224,7 +226,6 @@ class transmission(base):
         out = zeros((self.nlambda))
         out[:] = absorption
 
-
         del(absorption)
 
         return out
@@ -270,6 +271,15 @@ class transmission(base):
         P_bar = self.atmosphere.P_bar
         dlarray, iteridx = self._get_path_length()
         dz = self.get_dz()
+
+        # calculating rayleigh scattering cross sections
+        if self.params.in_include_Rayleigh:
+            self.Rsig = self.get_Rsig()
+        else:
+            self.Rsig = zeros((self.nlambda))
+
+
+
 
 
         #selecting correct sigma_array for temperature
