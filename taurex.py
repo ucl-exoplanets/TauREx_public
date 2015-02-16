@@ -236,22 +236,65 @@ def generate_stage1_covariance(fitob):
             Sig_arr[i,:] = np.sqrt(T_sigma[i]**2+T_sigma[:]**2)
 
     Diff_arr = Ent_arr-Sig_arr
-    Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Ent_arr))
+    Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Diff_arr-np.min(Diff_arr)))
     Cov_array = 1.0 - Diff_norm
     
     return Cov_array
     
 
-  
-    
+      
 Cov_array = generate_stage1_covariance(fittingob)
 
-atmosphereob1 = atmosphere(dataob,tp_profile_type='hybrid')
-atmosphereob1.set_TP_hybrid_covmat(Cov_array)
-forwardmodelob1 = emission(atmosphereob)
+#saving covariance 
+np.savetxt(os.path.join(fittingob.dir_stage,'tp_covariance.dat'),Cov_array)
+
+# #forcing slave processes to exit at this stage
+# if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
+#     #MPI.MPI_Finalize()
+#     exit()
+
+# Pindex = []
+# pidx=0
+# for i in range(dataob.nlayers-1):
+#     if np.abs(Cov_array[0,i] - Cov_array[0,pidx]) >= 0.02:
+#         Pindex.append(i)
+#         pidx = i
+# 
+# Pindex.append(dataob.nlayers-1)
+# 
+
+#         
+# print Pindex
+# exit()
+
+# dataob.params.nest_nlive = 1000
+atmosphereob1 = atmosphere(dataob,tp_profile_type='hybrid',covariance=Cov_array)
+# atmosphereob1.set_TP_hybrid_covmat(Cov_array)
+
+
+# figure(10)
+# # plot(Cov_array[0,:])
+# # plot(atmosphereob1.Pindex,Cov_array[0,:][Pindex],'ro')   
+# plot(atmosphereob1.P)
+# plot(atmosphereob1.P_index,atmosphereob1.P_sample,'ro')
+# show()     
+
+
+# testpar = atmosphereob1.fit_params
+# testpar[2] = 1.0
+# testpar[3:] = 15.0
+# testpar[-30:] = 2.0
+#  
+# T,P,X = atmosphereob1.TP_profile(fit_params=testpar)
+#  
+# exit()
+
+
+forwardmodelob1 = emission(atmosphereob1)
 fittingob1 = fitting(forwardmodelob1,stage=1)
 fittingob1.multinest_fit() # Nested sampling fit   
-MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+# fittingob1.downhill_fit()
+# MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
    
 
 

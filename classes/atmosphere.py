@@ -32,7 +32,7 @@ G = 6.67384e-11
 
 class atmosphere(base):
 
-    def __init__(self, data, params=None, tp_profile_type=None):
+    def __init__(self, data, params=None, tp_profile_type=None,covariance=None):
 
         logging.info('Initialising atmosphere object')
 
@@ -96,6 +96,12 @@ class atmosphere(base):
                 
         #setting up TP profile 
         self.set_TP_profile()
+        
+        #set non-linear sampling grid for hybrid model
+        if tp_profile_type == 'hybrid':
+            self.hybrid_covmat = covariance
+            self.get_TP_sample_grid(covariance,delta=0.05)
+            
             
         #setting free parameter prior bounds and parameter grid
         if self.params.fit_emission or self.params.fit_transmission:
@@ -141,7 +147,25 @@ class atmosphere(base):
             
         return  (P)/(KBOLTZ*T) 
     
-
+    
+    def get_TP_sample_grid(self,covmat,delta=0.02):
+        '''
+        Calculates non-linear sampling grid for TP profile from provided covariance
+        '''
+        
+        Pindex = [0]
+        for i in range(self.nlayers-1):
+            if np.abs(covmat[0,i] - covmat[0,Pindex[-1]]) >= delta:
+                Pindex.append(i)
+            elif (i - Pindex[-1]) >= 10:
+                Pindex.append(i)
+        Pindex.append(self.nlayers-1) 
+        
+        self.P_index = Pindex
+        self.P_sample   = self.P[Pindex]
+        
+        
+    
     def setup_pta_grid(self, T=None):
         '''
         Calculate pressure, temperature, altitude grid
@@ -191,8 +215,9 @@ class atmosphere(base):
                 bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
         elif self.TP_type == 'hybrid':
             bounds.append((0.0,1.0)) #alpha parameter
-            for i in xrange(self.nlayers):
+            for i in xrange(len(self.P_index)):
                 bounds.append((self.T_priors[0],self.T_priors[1])) #layer by layer T
+#                 bounds.append((0.0,30.0)) #layer by layer T
         elif self.TP_type == 'guillot':
             bounds.append((self.T_priors[0],self.T_priors[1]))  #T_irr prior
             bounds.append((0.0,1e-2))                           #kappa_irr prior
@@ -421,12 +446,12 @@ class atmosphere(base):
         #correlating temperature grid with covariance matrix 
         for i in xrange(self.nlayers):
 #             covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
-            weights = self.rodgers_covmat / np.sum(self.rodgers_covmat[i,:])
+            weights = self.rodgers_covmat[i,:] / np.sum(self.rodgers_covmat[i,:])
             T[i]    = np.sum(weights*T_init)    
             
-        pl.figure(3)
-        pl.imshow(self.rodgers_covmat,origin='lower')
-        pl.colorbar()
+#         pl.figure(3)
+#         pl.imshow(self.rodgers_covmat,origin='lower')
+#         pl.colorbar()
 #         pl.show()
 
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat       
@@ -439,7 +464,7 @@ class atmosphere(base):
     
     
     
-    def _TP_hybrid(self,TP_params,h=5.0,covmatrix=None):
+    def _TP_hybrid(self,TP_params,h=5.0):
         '''
         Layer-by-layer temperature pressure profile. It is a hybrid between the _TP_rodgers2000 profile and 
         a second (externally calculated) covariance matrix. The external covariance can be calculated 
@@ -456,34 +481,77 @@ class atmosphere(base):
                   may be left as free and Pressure dependent parameter later.
         '''
         
+        if self.TP_setup:
+            self.T = np.zeros((self.nlayers)) #temperature array    
+        
         #assigning parameters 
         alpha  = TP_params[0]
+#         alpha = 0.5
+#         print 'alpha ',alpha
+#         print 'tparams ', TP_params[:10]
         T_init = TP_params[1:]
+        covmatrix = self.hybrid_covmat
         
-        if covmatrix is None:
-            covmatrix = self.hybrid_covmat
+        #interpolating fitting temperatures to full grid
+        T_interp = np.interp(np.log(self.P[::-1]),np.log(self.P_sample[::-1]),T_init[::-1])[::-1]
+        
+#         print T_init
+        
+        
         
         if self.TP_setup: #run only once and save
             self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
             for i in xrange(self.nlayers):
                 self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
         
-        T = np.zeros((self.nlayers)) #temperature array    
+        self.T[:] = 0.0 #temperature array    
         cov_hybrid = (1.0-alpha) * self.rodgers_covmat + alpha * covmatrix
         
+#         pl.figure(3)
         #correlating temperature grid with covariance matrix 
         for i in xrange(self.nlayers):
-            weights = cov_hybrid / np.sum(cov_hybrid[i,:])
-            T[i]    = np.sum(weights*T_init)
+            weights = cov_hybrid[i,:] / np.sum(cov_hybrid[i,:])
+            self.T[i]    = np.sum(weights*T_interp)
+#             pl.plot(cov_hybrid[i,:])
         
+#         pl.ion()
+#         pl.figure(2)
+#         pl.clf()
+# #         pl.plot(self.T,self.P,'blue')
+# #         pl.plot(T_interp,self.P,'k')
+#         pl.plot(T_init,self.P_sample,'ro')
+#         pl.yscale('log')
+# #         xlabel('Temperature')
+# #         ylabel('Pressure (Pa)')
+#         pl.gca().invert_yaxis()
+#         pl.draw()
+#         
+#         pl.ion()
+#         pl.figure(3)
+#         pl.clf()
+#         pl.plot(self.T,self.P,'blue')
+# #         pl.plot(T_interp,self.P,'k')
+# #         pl.plot(T_init,self.P_sample,'ro')
+#         pl.yscale('log')
+# #         xlabel('Temperature')
+# #         ylabel('Pressure (Pa)')
+#         pl.gca().invert_yaxis()
+#         pl.draw()
+        
+        
+        
+#         pl.figure(3)
+#         pl.plot(weights)
+#         pl.show()
+#         exit()
        
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat       
         if self.TP_setup:
             self.TP_params_ascii = ['alpha']
-            for i in xrange(self.nlayers):
+            for i in xrange(len(T_init)):
                 self.TP_params_ascii.append('T_{0}'.format(str(i)))
         
-        return T, self.P
+        return self.T, self.P
         
     def set_TP_hybrid_covmat(self,covariance):
         '''

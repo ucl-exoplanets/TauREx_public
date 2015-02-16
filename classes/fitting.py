@@ -129,7 +129,9 @@ class fitting(base):
 #         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
 #         plot(self.data.spectrum[:,0], model_binned)
 #         draw()
-#          
+# #          
+#         print fit_params
+ 
 #         figure(2)
 #         clf()
 #         plot(T,P)
@@ -140,6 +142,8 @@ class fitting(base):
 #         draw()
 
         res = (data - model_binned) / datastd
+        
+#         print sum(res**2)
 
         return sum(res**2)
 
