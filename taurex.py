@@ -113,9 +113,9 @@ else:
 if params.gen_type == 'transmission' or params.fit_transmission:
     from taurex_transmission import run
 elif params.gen_type == 'emission' or params.fit_emission:
-    from taurex_transmission import run
+    from taurex_emission import run
 else:
-    logging.error('Forward model selected is disambiguous')
+    logging.error('Forward model selected is ambiguous')
     logging.info('Check \'type\' and \'fit_emission\', \'fit_transmission\' parameters')
     logging.info('PS: you suck at this... ')
     exit()
