@@ -160,45 +160,15 @@ dataob = data(params)
 #initialising TP profile instance
 atmosphereob = atmosphere(dataob)
 
-#initiating and running preselector instance
-if params.pre_run:
-
-    if params.fit_transmission:
-        model_object = transmission(atmosphereob)
-        preob = preselector(model_object)
-
-    elif params.fit_emission:
-        model_object = emission(atmosphereob)
-        preob = preselector(model_object)
-
-    preob.run()
-    logging.info('Molecule pre-selected using Marple module: %s' % preob.molselected)
-    logging.info('Updating parameters object values')
-    updated_params = preob.update_params()
-
-    logging.info('Reinitialising data and atmosphereob objects')
-    dataob = data(updated_params)
-    #adding bulk composition to the atmosphere @todo move to better place
-#     dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-#     dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
-    
-    atmosphereob = atmosphere(dataob)
-
-
-#initialising transmission radiative transfer code instance
-if params.fit_transmission:
-    forwardmodelob = transmission(atmosphereob)
-
 #initialising emission radiative transfer code instance
-if params.fit_emission:
-    forwardmodelob = emission(atmosphereob)
+forwardmodelob = emission(atmosphereob)
 
-#initialising fitting object  @todo here we should actually have the transmission or emission objects as input. Then get rid of self.set_model()
+#initialising fitting object 
 fittingob = fitting(forwardmodelob)
 
-#fit data
+
+#fit data for stage 1
 if params.downhill_run:
-    # @todo should we run the downhill fit only on the first thread? Or maybe use different starting points
     fittingob.downhill_fit()    #simplex downhill fit
 
 if params.mcmc_run and pymc_import:
@@ -209,41 +179,9 @@ if params.nest_run and multinest_import:
     fittingob.multinest_fit() # Nested sampling fit   
     MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
    
-   
-#test area for cross correlation
 
-def generate_stage1_covariance(fitob):
-    '''
-    Function generating TP_profile covariance matrix from previous best fit. 
-    This can be used by _TP_rodgers200 or _TP_hybrid TP profiles in a second stage fit.
-    '''
-    
-    #translating fitting parameters to mean temperature and lower/upper bounds
-    T_mean, T_minmax, P = emlib.iterate_TP_profile(fitob.NEST_FIT_mean[0], fitob.NEST_FIT_std[0], 
-                                             fitob.atmosphere.fit_index,fitob.atmosphere.TP_profile)
-    
-    #getting temperature error
-    T_sigma = T_minmax[:,1] - T_minmax[:,0]
-    nlayers = fitob.atmosphere.nlayers
-    
-    #setting up arrays
-    Ent_arr = np.zeros((nlayers,nlayers))
-    Sig_arr = np.zeros((nlayers,nlayers))
-    
-    #populating arrays
-    for i in range(nlayers):
-            Ent_arr[i,:] = np.abs(T_mean[i]-T_mean[:])
-            Sig_arr[i,:] = np.sqrt(T_sigma[i]**2+T_sigma[:]**2)
-
-    Diff_arr = Ent_arr-Sig_arr
-    Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Diff_arr-np.min(Diff_arr)))
-    Cov_array = 1.0 - Diff_norm
-    
-    return Cov_array
-    
-
-      
-Cov_array = generate_stage1_covariance(fittingob)
+#generating TP profile covariance from previous fit
+Cov_array = emlib.generate_tp_covariance(fittingob)
 
 #saving covariance 
 np.savetxt(os.path.join(fittingob.dir_stage,'tp_covariance.dat'),Cov_array)
@@ -266,6 +204,9 @@ np.savetxt(os.path.join(fittingob.dir_stage,'tp_covariance.dat'),Cov_array)
 #         
 # print Pindex
 # exit()
+
+
+#setting up objects for stage 2 fitting
 
 # dataob.params.nest_nlive = 1000
 atmosphereob1 = atmosphere(dataob,tp_profile_type='hybrid',covariance=Cov_array)
@@ -292,14 +233,17 @@ atmosphereob1 = atmosphere(dataob,tp_profile_type='hybrid',covariance=Cov_array)
 
 forwardmodelob1 = emission(atmosphereob1)
 fittingob1 = fitting(forwardmodelob1,stage=1)
-fittingob1.multinest_fit() # Nested sampling fit   
-# fittingob1.downhill_fit()
-# MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+if params.downhill_run:
+    fittingob1.downhill_fit()    #simplex downhill fit
+
+if params.mcmc_run and pymc_import:
+    fittingob1.mcmc_fit() # MCMC fit
+    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+
+if params.nest_run and multinest_import:
+    fittingob1.multinest_fit() # Nested sampling fit   
+    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
    
-
-
-
-
 
 # nlayers =atmosphereob.nlayers
 # P = atmosphereob.P

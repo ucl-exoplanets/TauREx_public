@@ -67,3 +67,33 @@ def iterate_TP_profile(fit_params, fit_params_std, fit_idx, TP_function):
     #She acts just like a nurse... with all the other guys. 
     
     return Tmean, T_minmax, P
+
+
+def generate_tp_covariance(fitob):
+    '''
+    Function generating TP_profile covariance matrix from previous best fit. 
+    This can be used by _TP_rodgers200 or _TP_hybrid TP profiles in a second stage fit.
+    '''
+    
+    #translating fitting parameters to mean temperature and lower/upper bounds
+    T_mean, T_minmax, P = emlib.iterate_TP_profile(fitob.NEST_FIT_mean[0], fitob.NEST_FIT_std[0], 
+                                             fitob.atmosphere.fit_index,fitob.atmosphere.TP_profile)
+    
+    #getting temperature error
+    T_sigma = T_minmax[:,1] - T_minmax[:,0]
+    nlayers = fitob.atmosphere.nlayers
+    
+    #setting up arrays
+    Ent_arr = np.zeros((nlayers,nlayers))
+    Sig_arr = np.zeros((nlayers,nlayers))
+    
+    #populating arrays
+    for i in range(nlayers):
+            Ent_arr[i,:] = np.abs(T_mean[i]-T_mean[:])
+            Sig_arr[i,:] = np.sqrt(T_sigma[i]**2+T_sigma[:]**2)
+
+    Diff_arr = Ent_arr-Sig_arr
+    Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Diff_arr-np.min(Diff_arr)))
+    Cov_array = 1.0 - Diff_norm
+    
+    return Cov_array

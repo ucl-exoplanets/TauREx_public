@@ -61,7 +61,7 @@ class emission(base):
         self.X             = self.atmosphere.X.astype(self.DTYPE)
         self.F_star        = self.data.F_star.astype(self.DTYPE)
         
-        print self.F_star
+#         print self.F_star
 
         self.nlayers       = self.atmosphere.nlayers
         self.z             = self.atmosphere.z.astype(self.DTYPE)
