@@ -1,7 +1,7 @@
 from numpy import *
 from numpy.ctypeslib import as_ctypes
 # from library.library_preselector import *
-import scipy, sys, glob, os, time,string
+import scipy, sys, glob, os, time,string, subprocess
 from scipy.special import wofz
 import ctypes as C
 # from pylab import *
@@ -11,6 +11,15 @@ import ctypes as C
 # import math
 
 # def linear_abs_temp_interpolator(TEMPLIST, ):
+
+def house_keeping(params,options):
+    #does some housekeeping for the final fitting results
+    
+    #copies used parameter file to ./Output 
+    if params.clean_save_used_params:
+        subprocess.call('cp '+options.param_filename+' Output/',shell=True)
+ 
+    subprocess.call('python '+params.clean_script,shell=True)
 
 
 def convert2microns(PATH, upcut=25):

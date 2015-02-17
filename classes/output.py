@@ -148,7 +148,7 @@ class output(base):
         if self.NEST:
             self.plot_multinest(save2pdf=save2pdf, param_names=self.parameters)
         if self.DOWN:
-            self.plot_TP_profile(self.fitting.DOWNHILL_FIT_mean, self.DOWNHILL.NEST_FIT_std,save2pdf=save2pdf,name='downhill')
+            self.plot_TP_profile(self.fitting.DOWNHILL_FIT_mean,save2pdf=save2pdf,name='downhill')
             
 
     def plot_mcmc(self, param_names=False, save2pdf=False):
@@ -245,16 +245,16 @@ class output(base):
             logging.info('Plot saved in %s' % filename)
 
 
-    def plot_TP_profile(self,FIT_params, FIT_params_std, fig=None, name=None, color='blue', save2pdf=False,linewidth=2.0):
+    def plot_TP_profile(self,FIT_params, FIT_params_std=None, fig=None, name=None, color='blue', save2pdf=False,linewidth=2.0):
         '''
         function translating parameter upper and lower bounds to TP profile
         This is done analytically for rodgers and isothermal and numerically
         for other profiles. 
         '''
         
-        if self.DOWN:  #downhill doesnt have formal error bars so just mean taken
-            T_mean = self.DOWNHILL_T_mean
-            P      = self.DOWNHILL_P_mean
+        if name=='downhill':  #downhill doesnt have formal error bars so just mean taken
+            T_mean   = self.fitting.DOWNHILL_T_mean
+            P        = self.fitting.DOWNHILL_P_mean
         else:
             #iterate through all upper/lower bounds of parameters to find function minimum and maximum
             T_mean, T_minmax, P = iterate_TP_profile(FIT_params,FIT_params_std,self.atmosphere.fit_index,self.atmosphere.TP_profile)
@@ -262,11 +262,11 @@ class output(base):
         if fig is None: #accepting externally passed figure references
             fig = py.figure()
             
-        
-        pl.fill_betweenx(P*1e-5, T_minmax[:,0],T_minmax[:,1],alpha=0.3,color=color)
+        if name != 'downhill':
+            pl.fill_betweenx(P*1e-5, T_minmax[:,0],T_minmax[:,1],alpha=0.3,color=color)
+            pl.plot(T_minmax[:,0],P*1e-5,'--',linewidth=linewidth,alpha=0.5,color=color)
+            pl.plot(T_minmax[:,1],P*1e-5,'--',linewidth=linewidth,alpha=0.5,color=color)
         pl.plot(T_mean,P*1e-5,linewidth=linewidth,color=color)
-        pl.plot(T_minmax[:,0],P*1e-5,'--',linewidth=linewidth,alpha=0.5,color=color)
-        pl.plot(T_minmax[:,1],P*1e-5,'--',linewidth=linewidth,alpha=0.5,color=color)
         pl.yscale('log')
         pl.xlabel('Temperature')
         pl.ylabel('Pressure (bar)')
