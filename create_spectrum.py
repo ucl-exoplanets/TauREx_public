@@ -71,6 +71,10 @@ parser.add_option('-p', '--parfile',
                   dest="param_filename",
                   default="exonest.par",
 )
+parser.add_option('-r', '--res',
+                  dest="resolution",
+                  default=1000,
+)
 parser.add_option('-v', '--verbose',
                   dest="verbose",
                   default=True,
@@ -82,6 +86,9 @@ options, remainder = parser.parse_args()
 
 #initialising parameters object
 params = parameters(options.param_filename)
+
+# set model resolution to 1000
+params.gen_spec_res = 1000
 
 #initialising data object
 dataob = data(params)
@@ -95,14 +102,19 @@ if params.gen_type == 'transmission':
 elif params.gen_type == 'emission':
     forwardmodelob = emission(atmosphereob)
 
-out = np.zeros((len(dataob.specgrid),3))
-out[:,0] = dataob.specgrid
-out[:,1] = forwardmodelob.model()
+# bin down internal model to given resolution (default = 1000)
+wavegrid, dlamb_grid = dataob.get_specgrid(R=int(options.resolution),lambda_min=params.gen_wavemin,lambda_max=params.gen_wavemax)
+spec_bin_grid, spec_bin_grid_idx = dataob.get_specbingrid(wavegrid, dataob.specgrid)
+model = forwardmodelob.model()
+model_binned = [model[spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
+
+out = np.zeros((len(wavegrid),3))
+out[:,0] = wavegrid
+out[:,1] = model_binned
 out[:,2] += 1e-5 #adding errorbars. can be commented
 
 #initiating output object with fitted data from fitting class
 outputob = output(forwardmodel=forwardmodelob)
-
 
 #plotting fits and data
 outputob.plot_manual(out, save2pdf=params.out_save_plots)
@@ -158,6 +170,6 @@ globalstats.print_stats()
 
 
 #last line. displays any diagrams generated. must be run after profiling
-if params.verbose:
-
-    show()
+# if params.verbose:
+#
+#     show()

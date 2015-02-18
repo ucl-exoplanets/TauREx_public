@@ -191,6 +191,7 @@ class parameters(base):
             self.fit_X_low             = self.getpar('Fitting','X_low', 'float')
             self.fit_X_inactive_up     = self.getpar('Fitting','X_inactive_up', 'float')
             self.fit_X_inactive_low    = self.getpar('Fitting','X_inactive_low', 'float')
+            self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
         except:
             self.fit_transmission      = False
             self.fit_emission          = False

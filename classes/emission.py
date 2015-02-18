@@ -96,8 +96,6 @@ class emission(base):
             self.cpathlib = C.CDLL('./library/pathintegral_emission.so',mode=C.RTLD_GLOBAL)
             self.sigma_array_c, self.sig_tempgrid = self.get_sigma_array_c()
 
-
-
         # set forward model function
         self.model = self.path_integral
 

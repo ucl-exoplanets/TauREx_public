@@ -138,7 +138,10 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_TiO.valueChanged.connect(self.event_status_changed)
         #self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
-        #self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
+
+        if not self.params.fit_couple_mu:
+            self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
+
         self.doubleSpinBox_Rp_Rstar.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_planet_surf_pressure.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_planet_mass.valueChanged.connect(self.event_status_changed)
@@ -162,7 +165,9 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_TiO.valueChanged.disconnect(self.event_status_changed)
         #self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
-        #self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
+        if not self.params.fit_couple_mu:
+            self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
+
         self.doubleSpinBox_Rp_Rstar.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_planet_surf_pressure.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_planet_mass.valueChanged.disconnect(self.event_status_changed)
@@ -238,7 +243,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         params.planet_inactive_gases =  params.all_inactive_gases
 
         params.gen_spec_res = 500
-        params.gen_wavemin = 0.5
+        params.gen_wavemin = 0.4
         params.gen_wavemax = 20.0
         params.gen_manual_waverange = True
 
@@ -260,7 +265,9 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_H2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[1]*100.)
         self.doubleSpinBox_N2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[2]*100.)
         self.doubleSpinBox_planet_albedo.setValue(self.forwardmodel.params.planet_albedo)
-        #self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.params.planet_mu/AMU)
+
+        if not self.params.fit_couple_mu:
+            self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.params.planet_mu/AMU)
 
         self.doubleSpinBox_Rp_Rstar.setValue(self.forwardmodel.params.planet_radius/self.forwardmodel.params.star_radius)
         self.spinBox_planet_T.setValue(self.forwardmodel.params.planet_temp)
@@ -280,7 +287,6 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
         self.forwardmodel.atmosphere.planet_temp = self.spinBox_planet_T.value()
         self.forwardmodel.atmosphere.planet_mass = self.doubleSpinBox_planet_mass.value() * MJUP
-        #self.forwardmodel.atmosphere.planet_mu = self.doubleSpinBox_planet_mu.value() * AMU
 
         self.forwardmodel.atmosphere.planet_radius = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL
         self.forwardmodel.atmosphere.planet_grav = self.forwardmodel.atmosphere.get_surface_gravity()
@@ -319,9 +325,14 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.
         self.forwardmodel.atmosphere.inactive_gases_X[2] = self.doubleSpinBox_N2.value() / 100.
 
-        # get couple mu
-        self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
-        self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.atmosphere.planet_mu/AMU)
+
+        if self.params.fit_couple_mu:
+            # get couple mu
+            self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
+            self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.atmosphere.planet_mu/AMU)
+        else:
+            self.forwardmodel.atmosphere.planet_mu = self.doubleSpinBox_planet_mu.value() * AMU
+
 
         self.forwardmodel.atmosphere.rho = self.forwardmodel.atmosphere.get_rho()
         self.forwardmodel.params.star_radius = self.doubleSpinBox_star_radius.value() * RSOL
@@ -344,9 +355,23 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
     def plot_forwardmodel(self):
 
-        out = np.zeros((len(self.dataob.specgrid),2))
-        out[:,0] = self.dataob.specgrid
-        out[:,1] = self.forwardmodel.model()
+
+        R = self.spinBox_resolution.value()
+
+        # bin down internal model to given resolution (default = 1000)
+        wavegrid, dlamb_grid = self.dataob.get_specgrid(R=int(R),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
+        spec_bin_grid, spec_bin_grid_idx = self.dataob.get_specbingrid(wavegrid, self.dataob.specgrid)
+        model = self.forwardmodel.model()
+        model_binned = [model[spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
+
+        out = np.zeros((len(wavegrid),3))
+        out[:,0] = wavegrid
+        out[:,1] = model_binned
+        #out[:,2] += 1e-5 #adding errorbars. can be commented
+
+        # out = np.zeros((len(self.dataob.specgrid),2))
+        # out[:,0] = self.dataob.specgrid
+        # out[:,1] = self.forwardmodel.model()
 
 
         if not self.checkBox_plot_overplot.isChecked():

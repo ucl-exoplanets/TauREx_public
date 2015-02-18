@@ -12,7 +12,7 @@ trans_cpp = True
 manual_waverange = False
 
 #short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.5
+wavemin = 0.4
 
 #long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 20.0
@@ -236,6 +236,7 @@ fix_temp = False
 fix_mu = False
 fix_P0 = False
 
+
 # if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
 # if False, mu is either fitted (if fix_mu = False) or kept fixed (see Planet > mu)
 couple_mu = True
@@ -259,6 +260,10 @@ X_low = 0.0
 #Upper and lower bounds for inactive gases mixing ratios
 X_inactive_up  = 1.0
 X_inactive_low = 0.0
+
+# clr transformation
+clr_trans = False
+
 
 [Downhill]
 #defines parameters for minimisation

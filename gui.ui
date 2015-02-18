@@ -438,6 +438,9 @@
       </item>
       <item row="4" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_mu">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="decimals">
          <number>3</number>
         </property>

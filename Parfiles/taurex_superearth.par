@@ -3,7 +3,7 @@ verbose = True
 manual_waverange = False
 wavemin = 0.5
 wavemax = 5.0
-spec_res = 100
+spec_res = 1000
 type = transmission
 
 [Input]
@@ -25,13 +25,14 @@ radius = 0.239
 mass = 0.0204
 sma = 0.01433
 albedo = 0.2
-temp = 500
-mu = 23.62
-molecules = 1H2-16O,12C-1H4,12C-16O2
-mixing_ratios = 0.35,0.1,0.02
+temp = 800
+mu = 3.6
+#12C-1H4
+molecules = 1H2-16O
+mixing_ratios = 0.1
 include_cld = False
-inactive_gases = N2
-inactive_gases_X = 0.53
+inactive_gases = H2
+inactive_gases_X = 0.9
 include_Rayleigh = True
 
 [T-P profile]
@@ -45,28 +46,29 @@ transmission = True
 emission     = False
 fix_radius = True
 fix_temp = True
-fix_mu = False
+fix_mu = True
 fix_P0 = True
 couple_mu = True
 T_up  = 200
 T_low = 200
 mu_up = 40
 mu_low = 0
-radius_up  = 0.02
-radius_low = 0.02
+radius_up  = 0.05
+radius_low = 0.05
 P0_up = 1.e8
 P0_low = 1.e2
 X_up  = 1.0
 X_low = 0.0
 X_inactive_up  = 1.0
 X_inactive_low = 0.0
+clr_trans = True
 
 [Downhill]
 run = False
 
 [MCMC]
 run = False
-iter = 200
+iter = 10000
 verbose = True
 progressbar = True
 

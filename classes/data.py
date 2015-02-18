@@ -93,7 +93,7 @@ class data(base):
 
         if isinstance(self.spectrum, (np.ndarray, np.generic)):
             #calculating spectral binning grid, only if observed spectrum is provided
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid)
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid, self.specgrid)
             self.n_spec_bin_grid= len(self.spec_bin_grid)
 
         #reading in atmospheric profile file
@@ -165,7 +165,7 @@ class data(base):
         return np.asarray(specgrid),np.asarray(delta_lambda)
     
     #@profile
-    def get_specbingrid(self,wavegrid):
+    def get_specbingrid(self,wavegrid, specgrid):
         #function calculating the bin boundaries for the data 
         #this is used to bin the internal spectrum to the data in fitting module
         
@@ -175,7 +175,7 @@ class data(base):
             bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
         bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
         
-        bingrid_idx = numpy.digitize(self.specgrid,bingrid) #getting the specgrid indexes for bins
+        bingrid_idx = numpy.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
         
 
         return bingrid, bingrid_idx 
@@ -236,7 +236,7 @@ class data(base):
 
         #interpolating to specgrid
         if interpolate:
-            interpflux = interp(self.specgrid, out[:,0], out[:,1])
+            interpflux = interp(self.specgrid, out[:,0], out[:,1], left=0, right=0)
             out = transpose(vstack((self.specgrid, interpflux)))
 
         return out
