@@ -13,10 +13,10 @@ manual_waverange = True
 wavemin = 0.5
 
 #long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 20
+wavemax = 10.0
 
 #resolution of internal model runs (R)
-spec_res = 500
+spec_res = 300
 
 #specturm type (emission/transmission), for create_spectrum.py
 type = emission 

@@ -91,9 +91,12 @@ class output(base):
                 parfile.write(mol+' \n')
                 self.parameters.append(mol)
             
-            for TPpar in self.atmosphere.TP_params_ascii:#getting TP profile parameter list
-                parfile.write(TPpar+' \n')
-                self.parameters.append(TPpar)
+            try:
+                for TPpar in self.atmosphere.TP_params_ascii:#getting TP profile parameter list
+                    parfile.write(TPpar+' \n')
+                    self.parameters.append(TPpar)
+            except AttributeError:
+                pass
 
         #determining which fits were performed
         if fitting is not None and fitting.__ID__ == 'fitting':

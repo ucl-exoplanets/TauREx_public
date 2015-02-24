@@ -13,10 +13,8 @@
 # Outputs: 
 #
 # To Run: 
-# ./exonest.py [-p exonest.par] 
-#
-# Modification History:
-#   - v1.0 : first definition, Ingo Waldmann, Apr 2013       
+# ./taurex.py [-p taurex.par] 
+#      
 #       
 ###########################################################
 

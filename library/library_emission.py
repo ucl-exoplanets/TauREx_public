@@ -1,4 +1,4 @@
-import scipy,itertools,sys,os,time
+import scipy,itertools,sys,os,time,logging
 import scipy.constants as con
 import numpy as np
 import ctypes as C
@@ -29,6 +29,15 @@ def iterate_TP_profile(fit_params, fit_params_std, fit_idx, TP_function):
     to determine which combination gives the lowest/highest attainable 
     TP profile. Returns mean TP profile with errorbars on each pressure level
     ''' 
+    
+#     fit_idx = np.asarray(fit_idx)
+#     fit_params = np.asarray(fit_params)
+#     fit_params_std = np.asarray(fit_params_std)
+    
+    print type(fit_idx),fit_idx
+    print type(fit_params),fit_params
+    print fit_idx[0]
+    print fit_params[fit_idx[0]:]
     
     TP_params     = fit_params[fit_idx[0]:]
     TP_params_std = fit_params_std[fit_idx[0]:]
@@ -76,8 +85,19 @@ def generate_tp_covariance(fitob):
     '''
     
     #translating fitting parameters to mean temperature and lower/upper bounds
-    T_mean, T_minmax, P = emlib.iterate_TP_profile(fitob.NEST_FIT_mean[0], fitob.NEST_FIT_std[0], 
-                                             fitob.atmosphere.fit_index,fitob.atmosphere.TP_profile)
+    if fitob.NEST:
+        T_mean, T_minmax, P = iterate_TP_profile(fitob.NEST_FIT_mean[0], fitob.NEST_FIT_std[0], 
+                                                 fitob.atmosphere.fit_index,fitob.atmosphere.TP_profile)
+    elif fitob.MCMC:
+        T_mean, T_minmax, P = iterate_TP_profile(fitob.MCMC_FIT_mean, fitob.MCMC_FIT_std, 
+                                                 fitob.atmosphere.fit_index,fitob.atmosphere.TP_profile)
+    elif fitob.DOWNHILL:
+        FIT_std = np.zeros_like(fitob.DOWNHILL_FIT_mean)
+        T_mean, T_minmax, P = iterate_TP_profile(fitob.DOWNHILL_FIT_mean, FIT_std, 
+                                                 fitob.atmosphere.fit_index,fitob.atmosphere.TP_profile)
+    else:
+        logging.error('Cannot compute TP-covariance. No Stage 0 fit (NS/MCMC/MLE) can be found.')
+        exit()
     
     #getting temperature error
     T_sigma = T_minmax[:,1] - T_minmax[:,0]
@@ -85,14 +105,13 @@ def generate_tp_covariance(fitob):
     
     #setting up arrays
     Ent_arr = np.zeros((nlayers,nlayers))
-    Sig_arr = np.zeros((nlayers,nlayers))
+#     Sig_arr = np.zeros((nlayers,nlayers))
     
     #populating arrays
     for i in range(nlayers):
-            Ent_arr[i,:] = np.abs(T_mean[i]-T_mean[:])
-            Sig_arr[i,:] = np.sqrt(T_sigma[i]**2+T_sigma[:]**2)
+        Ent_arr[i,:] = np.abs((T_mean[i]-T_sigma[i]-T_mean[:]-T_sigma[:]))
 
-    Diff_arr = Ent_arr-Sig_arr
+    Diff_arr = np.abs(Ent_arr)
     Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Diff_arr-np.min(Diff_arr)))
     Cov_array = 1.0 - Diff_norm
     

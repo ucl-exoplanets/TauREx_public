@@ -129,7 +129,7 @@ class fitting(base):
 #         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
 #         plot(self.data.spectrum[:,0], model_binned)
 #         draw()
-# #          
+# # #          
 #         print fit_params
  
 #         figure(2)
@@ -166,12 +166,13 @@ class fitting(base):
                               bounds=(self.bounds))
 
         Tout_mean, Pout_mean, Xout_mean = self.collate_downhill_results(fit_output['x'])
-
+  
+        
         self.DOWNHILL = True
         self.DOWNHILL_T_mean     = Tout_mean
         self.DOWNHILL_P_mean     = Pout_mean
         self.DOWNHILL_X_mean     = Xout_mean
-        self.DOWNHILL_FIT_mean   = fit_output['x']
+        self.DOWNHILL_FIT_mean   = np.asarray(fit_output['x'])
 #         self.DOWNHILL_fit_output = fit_output['x']
         
 #         print self.DOWNHILL_FIT_mean

@@ -39,20 +39,27 @@ def run(params):
         
         
     #fit data for stage 1
-    if params.downhill_run:
-        fittingob.downhill_fit()    #simplex downhill fit
+#     if params.downhill_run:
+#         fittingob.downhill_fit()    #simplex downhill fit
+    fittingob.downhill_fit()    #simplex downhill fit
         
-    if params.mcmc_run and pymc_import:
-        fittingob.mcmc_fit() # MCMC fit
-        MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
-        
-    if params.nest_run and multinest_import:
-        fittingob.multinest_fit() # Nested sampling fit   
-        MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+#     if params.mcmc_run and pymc_import:
+#         fittingob.mcmc_fit() # MCMC fit
+#         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+#         
+#     if params.nest_run and multinest_import:
+#         fittingob.multinest_fit() # Nested sampling fit   
+#         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
            
-        
+    
     #generating TP profile covariance from previous fit
     Cov_array = emlib.generate_tp_covariance(fittingob)
+    
+    
+#     pl.figure()
+#     pl.imshow(Cov_array,origin='lower')
+#     pl.show()
+    
         
     #saving covariance 
     np.savetxt(os.path.join(fittingob.dir_stage,'tp_covariance.dat'),Cov_array)
