@@ -212,21 +212,15 @@ if MPI.COMM_WORLD.Get_rank() != 0:
     #MPI.MPI_Finalize()
     exit()
 
+
 #initiating output instance with fitted data from fitting class
 outputob = output(fittingob)
 
 #plotting fits and data
 logging.info('Plotting and saving results')
-
 if params.verbose or params.out_save_plots:
     outputob.plot_all(save2pdf=params.out_save_plots)
-
-# outputob.plot_spectrum()   #plotting data only
-# outputob.plot_multinest()  #plotting multinest posteriors
-# outputob.plot_mcmc()       #plotting mcmc posterios
-# outputob.plot_fit()        #plotting model fits
-#
-outputob.save_model()       #saving models to ascii
+outputob.save_ascii_spectra()   #saving models to ascii
 
 
 #end of main code

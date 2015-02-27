@@ -235,6 +235,7 @@ fix_radius = False
 fix_temp = False
 fix_mu = False
 fix_P0 = False
+fix_inactive = False
 
 
 # if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
@@ -253,9 +254,9 @@ mu_low = 0
 radius_up  = 0.2010
 radius_low = 0.2210
 
-#Upper and lower bounds for absorbers mixing ratios
+#Upper and lower bounds for absorbers mixing ratios. IMPORTANT: never set X_low to zero, as  take logs
 X_up  = 1.0
-X_low = 0.0
+X_low = 1.0e-8
 
 #Upper and lower bounds for inactive gases mixing ratios
 X_inactive_up  = 1.0
@@ -269,7 +270,7 @@ clr_trans = False
 #defines parameters for minimisation
 
 #run minimisation routine on data
-run = True
+run = False
 
 #type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
 #see scipy.optimize.minimize documentation
@@ -282,7 +283,7 @@ options = {‘verbose’:False}
 #defines MCMC specific parameters
 
 #run MCMC analysis on data
-run = True
+run = False
 
 #update data standard deviation from dynamic fit.
 update_std = True

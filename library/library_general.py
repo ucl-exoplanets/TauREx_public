@@ -13,6 +13,8 @@ import ctypes as C
 # def linear_abs_temp_interpolator(TEMPLIST, ):
 
 
+
+
 def convert2microns(PATH, upcut=25):
 #Function converting ExoMol cross section files in dir:PATH from wavenumbers to microns and sorting
 #with ascending wavelength
@@ -145,9 +147,6 @@ def cast2cpp(ARRAY):
         return PARR
    
 
-        
-        
-    
 def redirect_stderr_stdout(stderr=sys.stderr, stdout=sys.stdout):
     #function decorator to re-direct standard output
     #use as: @redirect_stderr_stdout(some_logging_stream, the_console)
@@ -217,8 +216,12 @@ def funcGauss(p, x):
     # Gaussian function
     mu = p[0]
     sigma = p[1]
+
     return 1.0/(sigma * sqrt(2.0 * pi)) * exp(-(x-mu)**2/(2.0*sigma**2))
 
+def gauss(x, *p):
+    A, mu, sigma = p
+    return A*exp(-(x-mu)**2/(2.*sigma**2))
 
 
 

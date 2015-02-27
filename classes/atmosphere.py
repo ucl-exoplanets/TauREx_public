@@ -53,6 +53,7 @@ class atmosphere(base):
         self.absorbing_gases_X = self.params.planet_mixing
         self.inactive_gases = self.params.planet_inactive_gases
         self.inactive_gases_X = self.params.planet_inactive_gases_X
+        self.nallgases = len(self.absorbing_gases) + len(self.inactive_gases)
 
         # set other atmosphere specific parameters
         self.planet_temp = self.params.planet_temp
@@ -109,17 +110,22 @@ class atmosphere(base):
     #class methods
 
     #@profile
-    def get_coupled_planet_mu(self):
+    def get_coupled_planet_mu(self, absorbing_gases_X='', inactive_gases_X=''):
 
         '''
         Get the mean molecular weight (mu) from atmospheric composition
         '''
 
+        if absorbing_gases_X == '':
+            absorbing_gases_X = self.absorbing_gases_X
+        if inactive_gases_X == '':
+            inactive_gases_X = self.inactive_gases_X
+
         mu = 0
         for idx, gasname in enumerate(self.absorbing_gases):
-            mu += self.absorbing_gases_X[idx] * self.data.get_molecular_weight(gasname)
+            mu += absorbing_gases_X[idx] * self.data.get_molecular_weight(gasname)
         for idx, gasname in enumerate(self.inactive_gases):
-            mu += self.inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
+            mu += inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
 
         return mu
 
@@ -219,8 +225,6 @@ class atmosphere(base):
                 bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
 
         return bounds
-
-
 
 
     #@profile
@@ -343,6 +347,16 @@ class atmosphere(base):
         return X
 
 
+    def update_atmosphere(self):
 
+        # update surface gravity and scale height
+        self.planet_grav = self.get_surface_gravity()
+        self.scaleheight = self.get_scaleheight()
 
-
+        # update TP profile
+        self.pta = self.setup_pta_grid()
+        self.P = self.pta[:,0] # pressure array
+        self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
+        self.T = self.pta[:,1] # temperature array
+        self.z = self.pta[:,2] # altitude array
+        self.rho = self.get_rho() # update density

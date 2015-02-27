@@ -23,3 +23,6 @@ def interp_value(value, low_bound, up_bound, sig1, sig2):
     new_value = sig1 + ((sig2-sig1)*factor)
     
     return new_value
+
+
+

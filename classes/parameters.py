@@ -178,6 +178,7 @@ class parameters(base):
             self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
             self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
             self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
+            self.fit_fix_inactive      = self.getpar('Fitting', 'fix_inactive', 'bool')
             self.fit_couple_mu         = self.getpar('Fitting', 'couple_mu', 'bool')
             self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
             self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
