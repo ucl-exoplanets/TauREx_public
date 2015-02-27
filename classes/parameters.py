@@ -140,6 +140,7 @@ class parameters(base):
         self.tp_var_pres           = self.getpar('T-P profile', 'var_pres', 'bool')
         self.tp_max_pres           = self.getpar('T-P profile', 'atm_max_pressure', 'float')
         self.tp_var_mix            = self.getpar('T-P profile', 'var_mix', 'bool')
+        self.tp_type               = self.getpar('T-P profile', 'profile_type')
 
 
         try:

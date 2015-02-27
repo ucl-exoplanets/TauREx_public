@@ -24,7 +24,7 @@ type = emission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/emission_test.dat
+spectrum_file = Input/observations/emission_test10micron.dat
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -232,12 +232,12 @@ X_low = 0.0
 #defines parameters for minimisation
 
 #run minimisation routine on data
-run = True
+run = False
 
 #type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, 
 #L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
 #see scipy.optimize.minimize documentation
-type = L-BFGS-B
+type = Nelder-Mead
 
 #Supply extra parameters using options parameter. See scipy docu. 
 #currently not working 
@@ -268,7 +268,7 @@ thin = 1
 #defines MultiNest specific parameters
 
 #run Nested Sampling analysis on data
-run = False
+run = True
 
 #resume from previous run
 resume = True
@@ -283,7 +283,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 400
+n_live_points = 1000
 
 #maximum no. of iterations (0=inf)
 max_iter = 0

@@ -13,19 +13,27 @@
 # Outputs: 
 #
 # To Run: 
-# ./exonest.py [-p exonest.par] 
-#
-# Modification History:
-#   - v1.0 : first definition, Ingo Waldmann, Apr 2013       
+# ./taurex.py [-p taurex.par] 
+#      
 #       
 ###########################################################
 
 #loading libraries     
-import numpy, pylab, sys, os, optparse, time
-from numpy import * #nummerical array library 
-from pylab import * #science and plotting library for python
+import  sys, os, optparse, time
+# from numpy import * #nummerical array library 
+# from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
 import logging
+
+
+####start of profiling code
+# import cProfile, pstats, StringIO
+# pr = cProfile.Profile()
+# pr.enable()
+# starttime = time.clock()
+
+#setting some parameters to global
+global MPIimport,MPIverbose,MPImaster,multinest_import,pymc_import
 
 #trying to initiate MPI parallelisation
 try:
@@ -61,7 +69,6 @@ except:
 
 
 #checking for pymc library
-global pymc_import
 try: 
     import pymc
     pymc_import = True
@@ -70,58 +77,13 @@ except:
     pymc_import = False
 
 
-####start of profiling code
-# import cProfile, pstats, StringIO
-# pr = cProfile.Profile()
-# pr.enable()
-# starttime = time.clock()
-
-#end of profiling code
-
-##check for MPI support
-# comm = MPI.COMM_WORLD
-# rank=comm.Get_rank()
-# size=comm.Get_size()
-# print "my rank is %d"%rank, ' ',MPIverbose
-# 
-# 
-# exit()
-# 
-# comm = MPI.COMM_WORLD
-# rank=comm.Get_rank()
-# # size=comm.size
-# print("my rank is %d"%rank)
-
-# print 'MyRank ', MPIrank
-# if MPImaster:
-#     print 'MasterRank ', MPIrank
-# exit()
-# MPI.Init()
-
-#loading classes
+# #loading classes
 sys.path.append('./classes')
 sys.path.append('./library')
-
-import parameters, emission, transmission, output, fitting, atmosphere, data, preselector
-
-
-
+# 
+import parameters
 from parameters import *
-from emission import *
-from transmission import *
-from output import *
-from fitting import *
-from atmosphere import *
-from data import *
-from preselector import *
-
-#loading libraries
-import library_emission, library_transmission, library_general, library_plotting
-from library_emission import *
-from library_transmission import *
-from library_general import *
-from library_plotting import *
-
+from library_general import house_keeping
 
 #loading parameter file parser
 parser = optparse.OptionParser()
@@ -139,112 +101,37 @@ options, remainder = parser.parse_args()
 #Initialise parameters instance
 params = parameters(options.param_filename)
 
-
-#####################################################################
-#beginning of main code
-
 #MPI related message
 if MPIimport:
     logging.info('MPI enabled. Running on %i cores' % MPIsize)
 else:
     logging.info('MPI disabled')
 
-# initialising data object
-dataob = data(params)
 
-#adding bulk composition to the atmosphere @todo move to better place
-#dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-#dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
-
-#initialising TP profile instance
-atmosphereob = atmosphere(dataob)
-
-#initiating and running preselector instance
-if params.pre_run:
-
-    if params.fit_transmission:
-        model_object = transmission(atmosphereob)
-        preob = preselector(model_object)
-
-    elif params.fit_emission:
-        model_object = emission(atmosphereob)
-        preob = preselector(model_object)
-
-    preob.run()
-    logging.info('Molecule pre-selected using Marple module: %s' % preob.molselected)
-    logging.info('Updating parameters object values')
-    updated_params = preob.update_params()
-
-    logging.info('Reinitialising data and atmosphereob objects')
-    dataob = data(updated_params)
-    #adding bulk composition to the atmosphere @todo move to better place
-#     dataob.add_molecule('H2', 2.0, 2.0e-9, 1.0001384, 0.85)
-#     dataob.add_molecule('He', 4.0, 1.0e-9, 1.0000350, 0.15)
-    
-    atmosphereob = atmosphere(dataob)
-
-
-#initialising transmission radiative transfer code instance
-if params.fit_transmission:
-    forwardmodelob = transmission(atmosphereob)
-
-#initialising emission radiative transfer code instance
-if params.fit_emission:
-    forwardmodelob = emission(atmosphereob)
-
-#initialising fitting object  @todo here we should actually have the transmission or emission objects as input. Then get rid of self.set_model()
-fittingob = fitting(forwardmodelob)
-
-#fit data
-if params.downhill_run:
-    # @todo should we run the downhill fit only on the first thread? Or maybe use different starting points
-    fittingob.downhill_fit()    #simplex downhill fit
-
-if params.mcmc_run and pymc_import:
-    fittingob.mcmc_fit() # MCMC fit
-    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
-
-if params.nest_run and multinest_import:
-    fittingob.multinest_fit() # Nested sampling fit
-
-#forcing slave processes to exit at this stage
-if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
-    #MPI.MPI_Finalize()
+if params.gen_type == 'transmission' or params.fit_transmission:
+    from taurex_transmission import run
+elif params.gen_type == 'emission' or params.fit_emission:
+    from taurex_emission import run
+else:
+    logging.error('Forward model selected is ambiguous')
+    logging.info('Check \'type\' and \'fit_emission\', \'fit_transmission\' parameters')
+    logging.info('PS: you suck at this... ')
     exit()
 
-#initiating output instance with fitted data from fitting class
-outputob = output(fittingob)
 
-#plotting fits and data
-logging.info('Plotting and saving results')
-
-if params.verbose or params.out_save_plots:
-    outputob.plot_all(save2pdf=params.out_save_plots)
-
-# outputob.plot_spectrum()   #plotting data only
-# outputob.plot_multinest()  #plotting multinest posteriors
-# outputob.plot_mcmc()       #plotting mcmc posterios
-# outputob.plot_fit()        #plotting model fits
-#
-outputob.save_model()       #saving models to ascii
+#running Tau-REx
+run(params)
 
 
 #####################################################################
 #launches external housekeeping script. E.g. useful to transfer data 
 #from Scratch to home 
+    
 if params.clean_run:
-    import subprocess
-    #copies used parameter file to ./Output 
-    if params.clean_save_used_params:
-        subprocess.call('cp '+options.param_filename+' Output/',shell=True)
+    house_keeping(params,options)
 
-    subprocess.call('python '+params.clean_script,shell=True)
-
-
-#end of main code
 #####################################################################
-
-####profiling code
+#### end of profiling code
 # pr.disable()
 # 
 # PROFDIR = 'Profiling/'

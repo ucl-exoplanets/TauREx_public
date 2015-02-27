@@ -211,6 +211,9 @@ atm_max_pressure = 1e6
 #set mixing ratios as variables
 var_mix = True
 
+#TP profile type to be selected (only sets for emission, tranmission = isothermal)
+profile_type = guillot
+
 
 [Fitting]
 #defines general fittings parameters

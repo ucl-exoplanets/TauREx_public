@@ -333,8 +333,8 @@ class data(base):
 
             #checking if number of gasses in parameters file is consistent with gass columns in atm file
             if self.params.in_use_ATMfile and len(abslist) != self.ngas:
-                print len(abslist)
-                print self.ngas
+#                 print len(abslist)
+#                 print self.ngas
                 raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
                 exit()
 

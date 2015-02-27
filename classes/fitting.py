@@ -43,7 +43,7 @@ except ImportError:
 
 class fitting(base):
 
-    def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None):
+    def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None, stage=0):
 
         # note that forwardmodel can be either the transmission or the emission object
 
@@ -80,12 +80,14 @@ class fitting(base):
             self.MPIsize     = 0
 
         # set some folder names
-        self.dir_mcmc = os.path.join(self.params.out_path, 'MCMC')
-        self.dir_multinest = os.path.join(self.params.out_path, 'multinest')
+        self.dir_fit       = os.path.join(self.params.out_path, 'Fitting')
+        self.dir_stage     = os.path.join(self.dir_fit, 'Stage_'+str(stage))
+        self.dir_mcmc = os.path.join(self.dir_stage, 'MCMC')
+        self.dir_multinest = os.path.join(self.dir_stage, 'multinest')
 
         # create some folders.
         if self.MPIrank == 0:
-            folders = [self.params.out_path, self.dir_mcmc, self.dir_multinest]
+            folders = [self.params.out_path, self.dir_fit, self.dir_stage,self.dir_mcmc, self.dir_multinest]
             for f in folders:
                 if not os.path.isdir(f):
                     logging.info('Create folder %s' % f)
@@ -127,7 +129,9 @@ class fitting(base):
 #         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
 #         plot(self.data.spectrum[:,0], model_binned)
 #         draw()
-#          
+# # #          
+#         print fit_params
+ 
 #         figure(2)
 #         clf()
 #         plot(T,P)
@@ -138,6 +142,8 @@ class fitting(base):
 #         draw()
 
         res = (data - model_binned) / datastd
+        
+#         print sum(res**2)
 
         return sum(res**2)
 
@@ -160,15 +166,16 @@ class fitting(base):
                               bounds=(self.bounds))
 
         Tout_mean, Pout_mean, Xout_mean = self.collate_downhill_results(fit_output['x'])
-
+  
+        
         self.DOWNHILL = True
         self.DOWNHILL_T_mean     = Tout_mean
         self.DOWNHILL_P_mean     = Pout_mean
         self.DOWNHILL_X_mean     = Xout_mean
-        self.DOWNHILL_FIT_mean   = fit_output['x']
+        self.DOWNHILL_FIT_mean   = np.asarray(fit_output['x'])
 #         self.DOWNHILL_fit_output = fit_output['x']
         
-        print self.DOWNHILL_FIT_mean
+#         print self.DOWNHILL_FIT_mean
 
     def collate_downhill_results(self, fit_params):
 
@@ -406,29 +413,29 @@ class fitting(base):
         # wait for all threads to synchronise
         MPI.COMM_WORLD.Barrier()
 
-        if MPI.COMM_WORLD.Get_rank() == 0:
+#         if MPI.COMM_WORLD.Get_rank() == 0: @todo if only rank 0 does it then we need to broadcast the result to the others if we want to work on the results
 
-            #coallating results into arrays (only for the main thread)
+        #coallating results into arrays (only for the main thread)
 
-            logging.info('Store the MULTINEST results')
-            NESTout = pymultinest.Analyzer(n_params=self.fit_nparams,
+        logging.info('Store the MULTINEST results')
+        NESTout = pymultinest.Analyzer(n_params=self.fit_nparams,
                                        outputfiles_basename=os.path.join(self.dir_multinest, '1-'))
 
-            # this returns a list of solutions: [(T1, T_std1, X1, X_std1), (T2 T_std2, X2, X_std2), ... ]
-            multinest_result = self.collate_multinest_result(NESTout)
+        # this returns a list of solutions: [(T1, T_std1, X1, X_std1), (T2 T_std2, X2, X_std2), ... ]
+        multinest_result = self.collate_multinest_result(NESTout)
 
-            #saving arrays to object
-            self.NEST = True
-            self.NEST_modes    = len(multinest_result) # number of modes detected
-            self.NEST_X_mean   = [solution[0] for solution in multinest_result]
-            self.NEST_X_std    = [solution[1] for solution in multinest_result]
-            self.NEST_T_mean   = [solution[2] for solution in multinest_result]
-            self.NEST_P_mean   = [solution[3] for solution in multinest_result]
-            self.NEST_FIT_mean = [solution[4] for solution in multinest_result]
-            self.NEST_FIT_std  = [solution[5] for solution in multinest_result]
+        #saving arrays to object
+        self.NEST = True
+        self.NEST_modes    = len(multinest_result) # number of modes detected
+        self.NEST_X_mean   = [solution[0] for solution in multinest_result]
+        self.NEST_X_std    = [solution[1] for solution in multinest_result]
+        self.NEST_T_mean   = [solution[2] for solution in multinest_result]
+        self.NEST_P_mean   = [solution[3] for solution in multinest_result]
+        self.NEST_FIT_mean = [solution[4] for solution in multinest_result]
+        self.NEST_FIT_std  = [solution[5] for solution in multinest_result]
             
-            self.NEST_stats = NESTout.get_stats()
-            self.NEST_FITDATA = NESTout
+        self.NEST_stats = NESTout.get_stats()
+        self.NEST_FITDATA = NESTout
 
     def collate_multinest_result(self, NESTout):
 
