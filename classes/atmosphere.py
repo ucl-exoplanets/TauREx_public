@@ -19,6 +19,7 @@
 #loading libraries
 from base import base
 import numpy as np
+import scipy.special as spe
 import pylab as pl
 import logging
 
@@ -320,7 +321,7 @@ class atmosphere(base):
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
         max_z = n_scale * self.scaleheight
         self.z = np.linspace(0, max_z, num=self.nlayers) # altitude
-        self.P = self.max_pressure * np.exp(-pta_arr[:,2]/self.scaleheight)
+        self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.rho = self.get_rho() # update density
 
@@ -361,7 +362,7 @@ class atmosphere(base):
         else:
             logging.error('Invalid TP profile name')
 
-        def tpwrap(fit_params,**kwargs):
+        def tpwrap(fit_params, **kwargs):
             return self._TP_profile(_profile, fit_params, **kwargs)
 
         self.TP_profile = tpwrap  #setting TP_profile
@@ -416,14 +417,14 @@ class atmosphere(base):
         Fixed parameters:
             - T_int    = internal planetary heat flux (can be largely ignored. line puts it on 200K for hot jupiter)
             - P        = Pressure grid, fixed to self.P
-            - g        = surface gravity, fixed to self.g
+            - g        = surface gravity, fixed to self.planet_grav
         '''
 
         #assigning fitting parameters
         T_irr = TP_params[0]; kappa_ir = TP_params[1]; kappa_v1 = TP_params[2]; kappa_v2 = TP_params[3]; alpha = TP_params[4]
 
         gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir
-        tau = kappa_ir * self.P / self.g
+        tau = kappa_ir * self.P / self.planet_grav
 
         T_int = 200 #@todo internal heat parameter looks suspicious... needs looking at.
 
@@ -434,6 +435,8 @@ class atmosphere(base):
 
         T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)
         T = T4**0.25
+
+        print T
 
         return np.asarray(T)
 
@@ -492,7 +495,7 @@ class atmosphere(base):
 
 
 
-    def _TP_hybrid(self,TP_params,h=5.0):
+    def _TP_hybrid(self, TP_params, h=5.0):
         '''
         Layer-by-layer temperature pressure profile. It is a hybrid between the _TP_rodgers2000 profile and
         a second (externally calculated) covariance matrix. The external covariance can be calculated
@@ -509,8 +512,8 @@ class atmosphere(base):
                   may be left as free and Pressure dependent parameter later.
         '''
 
-        if self.TP_setup:
-            T = np.zeros((self.nlayers)) #temperature array
+        #if self.TP_setup:
+        T = np.zeros((self.nlayers)) #temperature array
 
         #assigning parameters
         alpha  = TP_params[0]

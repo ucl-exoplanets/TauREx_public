@@ -79,9 +79,9 @@ class emission(base):
 
         if usedatagrid:
         #use wavelengthgrid of data or internal specgrid defined in data class
-            self.set_lambdagrid(self.data['wavegrid'])
+            self.set_lambdagrid(self.data.wavegrid)
         else:
-            self.set_lambdagrid(self.data['specgrid'])
+            self.set_lambdagrid(self.data.specgrid)
 
 
         #setting up static arrays for path_integral
@@ -139,11 +139,11 @@ class emission(base):
     def path_integral(self, X=None, rho=None,temperature=None):
         
         if X is None:
-            X = self.X
+            X = self.atmosphere.X
         if rho is None:
-            rho = self.rho
+            rho = self.atmosphere.rho
         if temperature is None:
-            temperature = self.T#self.planet_temp
+            temperature = self.atmosphere.T#self.planet_temp
 
         BB_star = self.F_star
 

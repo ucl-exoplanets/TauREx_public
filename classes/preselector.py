@@ -49,7 +49,6 @@ class preselector(base):
         else:
             self.data = model_object.data
 
-
         self.model_object = model_object
 
         #setting emission/transmission model

@@ -31,6 +31,8 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
     ''' 
 
     Tmean = TP_function(TP_params)
+
+    print 'Tmean', Tmean
     
     bounds = [] #list of lower and upper parameter bounds 
     for i in xrange(len(TP_params)):
@@ -57,7 +59,8 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
     #She's got everything I need: pharmacy keys.
     #She's fallen hard for me. I can see it in her eyes
     #She acts just like a nurse... with all the other guys. 
-    
+    print 'Tmean, Tminmax', Tmean, T_minmax
+
     return Tmean, T_minmax
 
 
@@ -68,15 +71,18 @@ def generate_tp_covariance(outob):
     '''
     
     #translating fitting parameters to mean temperature and lower/upper bounds
-    if fitob.NEST:
-        T_mean, T_minmax = iterate_TP_profile(outob.NEST_params_values, outob.NEST_params_std,
+    if outob.NEST:
+        T_mean, T_minmax = iterate_TP_profile(outob.NEST_TP_params_values, outob.NEST_TP_params_std,
                                               outob.fitting.atmosphere.TP_profile)
-    elif fitob.MCMC:
-        T_mean, T_minmax = iterate_TP_profile(outob.MCMC_params_values, outob.MCMC_params_std,
+    elif outob.MCMC:
+        T_mean, T_minmax = iterate_TP_profile(outob.MCMC_TP_params_values, outob.MCMC_TP_params_std,
                                               outob.fitting.atmosphere.TP_profile)
-    elif fitob.DOWNHILL:
-        FIT_std = np.zeros_like(outob.DOWN_params_values)
-        T_mean, T_minmax  = iterate_TP_profile(outob.DOWN_params_values, FIT_std,
+    elif outob.DOWN:
+        FIT_std = np.zeros_like(outob.DOWN_TP_params_values)
+
+        print 'iterating', outob.DOWN_TP_params_values
+
+        T_mean, T_minmax  = iterate_TP_profile(outob.DOWN_TP_params_values, FIT_std,
                                                outob.fitting.atmosphere.TP_profile)
     else:
         logging.error('Cannot compute TP-covariance. No Stage 0 fit (NS/MCMC/MLE) can be found.')
@@ -87,7 +93,7 @@ def generate_tp_covariance(outob):
     nlayers = outob.fitting.atmosphere.nlayers
     
     #setting up arrays
-    Ent_arr = np.zeros((nlayers,nlayers))
+    Ent_arr = np.zeros((nlayers, nlayers))
 #     Sig_arr = np.zeros((nlayers,nlayers))
     
     #populating arrays

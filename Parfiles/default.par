@@ -217,6 +217,9 @@ atm_max_pressure = 1e6
 #set mixing ratios as variables
 var_mix = True
 
+#TP profile type to be selected (only sets for emission, tranmission = isothermal)
+profile_type = guillot
+
 
 [Fitting]
 #defines general fittings parameters, independent of method
@@ -235,7 +238,7 @@ fix_radius = False
 fix_temp = False
 fix_mu = False
 fix_P0 = False
-fix_inactive = False
+fix_inactive = True
 
 
 # if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
@@ -253,6 +256,10 @@ mu_low = 0
 #Upper and lower bounds for planet radius (radius +- value), in RJUP
 radius_up  = 0.2010
 radius_low = 0.2210
+
+#Upper and lower bounds for surface pressure
+P0_up = 1.e8
+P0_low = 1.e2
 
 #Upper and lower bounds for absorbers mixing ratios. IMPORTANT: never set X_low to zero, as  take logs
 X_up  = 1.0
@@ -339,6 +346,17 @@ const_eff = False
 imp_sampling = False
 
 
+[Housekeeping]
+#lets you run an external script (py or sh) in subshell at
+#the end of TauREx. Usefull to automatically transfer data or
+#delete tmp files
 
-[NeuralNet]
-#defines Neural Network specific parameters
+#run housekeeping
+run = False
+
+#Name of script in TauREx base dir
+script_name = transfer2home.py
+
+#Save used parameter file to Output
+save_used_params = True
+

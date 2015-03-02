@@ -168,7 +168,7 @@ class transmission(base):
         if rho is None:
             rho = self.atmosphere.rho
         if temperature is None:
-            temperature = self.atmosphere.planet_temp
+            temperature = self.atmosphere.T
 
 
         dz = self.get_dz()

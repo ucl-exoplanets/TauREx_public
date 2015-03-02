@@ -23,6 +23,7 @@ from base import base
 import numpy, pylab, os, sys, math, pymc, warnings, threading, subprocess, gzip, pickle, shutil, logging
 from pylab import *
 from numpy import *
+import numpy as np
 from StringIO import StringIO
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
@@ -93,6 +94,7 @@ class fitting(base):
 
         self.dir_mcmc = os.path.join(self.params.out_path, 'MCMC')
         self.dir_multinest = os.path.join(self.params.out_path, 'multinest')
+
         if self.MPIrank == 0:
             folders = [self.params.out_path, self.dir_mcmc, self.dir_multinest]
             for f in folders:
@@ -124,6 +126,7 @@ class fitting(base):
         ##########################################################################
         # Mixing ratios of absorbing and inactive gases either in log space or in centered-log-ratio space
 
+        count_X = 0
         if self.params.fit_clr_trans:
 
             # reparametrize the mixing ratios of absorbing and inactive gases using the centered-log-ratio transformation
@@ -135,9 +138,10 @@ class fitting(base):
                 self.fit_params.append(clr[i])
                 self.fit_bounds.append((-10, 10)) # @todo bounds seem ok, what's the minimum X we can get with this?
                 self.fit_params_names.append('CLR_X_%i' % i)
+                count_X += 1
         else:
 
-            # mixing ratios are not reparametrized in log ratio space. Use log10(gasratio). No sum constraint
+            # mixing ratios are not reparametrized in log ratio space. Use np.log10(gasratio). No sum constraint
             # bounds defined in parameter file
 
             # always fit for absorbing gases
@@ -145,19 +149,20 @@ class fitting(base):
                 self.fit_params.append(np.log10(self.forwardmodel.atmosphere.absorbing_gases_X[idx]))
                 self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
                 self.fit_params_names.append(gasname)
-
+                count_X += 1
             if not self.params.fit_fix_inactive: # inactive gases can be fixed
                 for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
                     self.fit_params.append(np.log10(self.forwardmodel.atmosphere.inactive_gases_X[idx]))
                     self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
                     self.fit_params_names.append(gasname)
+                    count_X += 1
 
-        self.fit_X_nparams = count # set the number of fitted mixing ratios
+        self.fit_X_nparams = count_X # set the number of fitted mixing ratios
 
         ##########################################################################
         # TP profile parameters
 
-        T_bounds = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
+        T_bounds = (self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up) #lower and upper bounds for temperature
         T_mean = np.mean(T_bounds)
 
         if self.atmosphere.TP_type   == 'isothermal':
@@ -183,11 +188,11 @@ class fitting(base):
 
             self.fit_TP_nparams = len(self.atmosphere.P_index) + 1
 
-            self.fit_params_names.append('alpha' %i)
+            self.fit_params_names.append('alpha')
             self.fit_bounds.append((0.0,1.0)) #alpha parameter
             self.fit_params.append(T_mean)
             for i in xrange(len(self.atmosphere.P_index)):
-                self.fit_params_names.append('T_%i' %i)
+                self.fit_params_names.append('T_%i' % i)
                 self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                 self.fit_params.append(T_mean)
 
@@ -201,19 +206,19 @@ class fitting(base):
 
             self.fit_params_names.append('kappa_irr')
             self.fit_bounds.append((0.0,1e-2))
-            self.fit_params.append(np.mean(0.0,1e-2))
+            self.fit_params.append(np.mean((0.0,1e-2)))
 
             self.fit_params_names.append('kappa_v1')
             self.fit_bounds.append((0.0,1e-2))
-            self.fit_params.append(np.mean(0.0,1e-2))
+            self.fit_params.append(np.mean((0.0,1e-2)))
 
             self.fit_params_names.append('kappa_v2')
             self.fit_bounds.append((0.0,1e-2))
-            self.fit_params.append(np.mean(0.0,1e-2))
+            self.fit_params.append(np.mean((0.0,1e-2)))
 
             self.fit_params_names.append('alpha')
             self.fit_bounds.append((0.0,1.0))
-            self.fit_params.append(np.mean(0.0,1.0))
+            self.fit_params.append(np.mean((0.0,1.0)))
 
         elif self.atmosphere.TP_type == '2point':
 
@@ -275,7 +280,13 @@ class fitting(base):
         if not self.params.fit_fix_P0:
             self.fit_params_names.append('P0')
             self.fit_params.append(np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up))))
-            self.fit_bounds.append((np.log(self.params.fit_P0_low), np.log(self.params.fit_P0_up)))
+            self.fit_bounds.append((log(self.params.fit_P0_low), log(self.params.fit_P0_up)))
+            print 'pressure start', np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up)))
+
+        print self.fit_params_names
+        print self.fit_params
+        print self.fit_bounds
+
 
         # define total number of parameters to be fitted
         self.fit_nparams = len(self.fit_params)
@@ -295,7 +306,7 @@ class fitting(base):
         # -----------------------------------------------------------------------------
         # mixing ratios absorbing gases             len(self.forwardmodel.atmosphere.absorbing_gases)
         # mixing ratio inactive gases (fixed?)      0/len(self.forwardmodel.atmosphere.inactive_gases)
-        # TP profile params                         self.atmosphere.fit_TP_nparams
+        # TP profile params                         self.fit_TP_nparams
         # mean molecular weight (fixed?)            0/1
         # radius (fixed?)                           0/1
         # surface pressure (fixed?)                 0/1
@@ -313,7 +324,7 @@ class fitting(base):
 
             # build list of log-ratios
             clr = fit_params[:self.atmosphere.nallgases-1]
-            clr.append(-np.sum(clr)) # append last log-ratio. This is not fitted, but derived as sum(log-ratios) = 0
+            clr.append(-sum(clr)) # append last log-ratio. This is not fitted, but derived as sum(log-ratios) = 0
 
             # convert log-ratios to simplex
             clr_inv = self.get_mixing_ratio_inv_clr(clr) # @todo could be improved
@@ -335,11 +346,11 @@ class fitting(base):
 
             # set mixing ratios of absorbing and inactive gases
             for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-                self.forwardmodel.atmosphere.absorbing_gases_X[idx] = np.power(10, fit_params[count])
+                self.forwardmodel.atmosphere.absorbing_gases_X[idx] = power(10, fit_params[count])
                 count += 1
             if not self.params.fit_fix_inactive:
                 for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-                    self.forwardmodel.atmosphere.inactive_gases_X[idx] = np.power(10, fit_params[count])
+                    self.forwardmodel.atmosphere.inactive_gases_X[idx] = power(10, fit_params[count])
                     count += 1
 
         # @todo careful, next line won't work if preselector is running. Fix preselector!
@@ -351,10 +362,10 @@ class fitting(base):
         #####################################################
         # Pressure profile
 
-        # get TP profile fitted parameters. Number of parameter is profile dependent, and defined by self.atmosphere.fit_TP_nparams
-        if self.atmosphere.fit_TP_nparams > 0:
-            TP_params = fit_params[count:count+self.atmosphere.fit_TP_nparams]
-            self.forwardmodel.atmosphere.T = self.atmosphere.TP_profile(TP_params=TP_params)
+        # get TP profile fitted parameters. Number of parameter is profile dependent, and defined by self.fit_TP_nparams
+        if self.fit_TP_nparams > 0:
+            TP_params = fit_params[count:count+self.fit_TP_nparams]
+            self.forwardmodel.atmosphere.T = self.atmosphere.TP_profile(fit_params=TP_params)
 
         #####################################################
         # Mean molecular weight.
@@ -380,7 +391,8 @@ class fitting(base):
         # Surface pressure
 
         if not self.params.fit_fix_P0:
-            self.forwardmodel.atmosphere.max_pressure = np.power(10, fit_params[count])
+            self.forwardmodel.atmosphere.max_pressure = power(10, fit_params[count])
+            print 'set surface pressure to ', power(10, fit_params[count])
             count += 1
 
         # Update surface gravity, scale height, density bla bla
@@ -406,10 +418,26 @@ class fitting(base):
         # get residuals
         res = (data - model_binned) / datastd
         res = sum(res*res)
+
         #
+        # figure(1)
         # clf()
-        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1], yerr=self.data.spectrum[:,2])
+        # plot(self.atmosphere.T, self.atmosphere.P)
+        # gca().invert_yaxis()
+        # xlabel('Temperature')
+        # ylabel('Pressure (Pa)')
+        # yscale('log')
+        # draw()
+        # pause(0.0001)
+        #
+        # figure(2)
+        # clf()
+        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
         # plot(self.data.spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
         # draw()
         # pause(0.0001)
         #
@@ -503,12 +531,12 @@ class fitting(base):
         def mcmc_loglikelihood(value, fit_params, datastd, data):
             # log-likelihood function. Needs to be initialised directly since CYTHON does not like PYMC decorators
             # @todo need to cq ast from numpy object array to float array. Slow but hstack is  slower.
-            fit_params_container = np.zeros((self.fit_nparams))
+            fit_params_container = zeros((self.fit_nparams))
             for i in range(self.fit_nparams):
                 fit_params_container[i] = fit_params[i]
             # @todo params_container should be equal to PFIT? I think so... Maybe not if we fix some values
             chi_t = self.chisq_trans(fit_params_container, data, datastd) #calculate chisq
-            llterms =   (-len(data)/2.0)*np.log(pi) - np.log(np.mean(datastd)) - 0.5* chi_t
+            llterms =   (-len(data)/2.0)*log(pi) - log(mean(datastd)) - 0.5* chi_t
             return llterms
 
         mcmc_logp = pymc.Stochastic(logp = mcmc_loglikelihood,
@@ -594,7 +622,7 @@ class fitting(base):
             # log-likelihood function called by multinest
             fit_params_container = asarray([cube[i] for i in xrange(len(self.fit_params))])
             chi_t = self.chisq_trans(fit_params_container, data, datastd)
-            llterms = (-ndim/2.0)*np.log(2.*pi*datastd_mean**2) - 0.5*chi_t
+            llterms = (-ndim/2.0)*log(2.*pi*datastd_mean**2) - 0.5*chi_t
             return llterms
     
         def multinest_uniform_prior(cube, ndim, nparams):
@@ -641,17 +669,17 @@ class fitting(base):
         sumlog = 0
         n = len(self.forwardmodel.atmosphere.absorbing_gases) + len(self.forwardmodel.atmosphere.inactive_gases)
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-            sumlog +=  np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx])
+            sumlog +=  log(self.forwardmodel.atmosphere.absorbing_gases_X[idx])
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-            sumlog += np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx])
-        mean = np.exp((1./n)*sumlog)
+            sumlog += log(self.forwardmodel.atmosphere.inactive_gases_X[idx])
+        mean = exp((1./n)*sumlog)
 
         # create array of clr(absorbing_X + inactive_X)
         clr = []
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-            clr.append(np.log(self.forwardmodel.atmosphere.absorbing_gases_X[idx]/mean))
+            clr.append(log(self.forwardmodel.atmosphere.absorbing_gases_X[idx]/mean))
         for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-            clr.append(np.log(self.forwardmodel.atmosphere.inactive_gases_X[idx]/mean))
+            clr.append(log(self.forwardmodel.atmosphere.inactive_gases_X[idx]/mean))
 
         return clr
 
@@ -662,8 +690,8 @@ class fitting(base):
         # transform back to simplex space
         clr_inv_tmp = []
         for i in range(self.atmosphere.nallgases):
-            clr_inv_tmp.append(np.exp(clr[i]))
-        clr_inv_tmp = np.asarray(clr_inv_tmp)/np.sum(clr_inv_tmp) # closure
+            clr_inv_tmp.append(exp(clr[i]))
+        clr_inv_tmp = asarray(clr_inv_tmp)/sum(clr_inv_tmp) # closure
 
         # set very low abundances to zero todo needed?
         clr_inv = []

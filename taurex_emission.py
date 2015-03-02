@@ -16,6 +16,8 @@ from atmosphere import *
 from data import *
 from preselector import *
 
+import pickle
+
 #loading libraries
 sys.path.append('./library')
 import library_emission as emlib 
@@ -24,57 +26,75 @@ import library_emission as emlib
 
 def run(params):
 
-    # set output directory of stage 1
-    params.out_path = os.path.join(params.out_path, 'stage_1')
+    out_path_orig = params.out_path
 
-    # initialising data object
-    dataob = data(params)
-        
-    #initialising TP profile instance
-    atmosphereob = atmosphere(dataob)
-        
-    #initialising emission radiative transfer code instance
-    forwardmodelob = emission(atmosphereob)
-        
-    #initialising fitting object 
-    fittingob = fitting(forwardmodelob)
+    ###############################
+    # STAGE 1
+    ###############################
 
-    #fit data for stage 1
-#     if params.downhill_run:
-#         fittingob.downhill_fit()    #simplex downhill fit
-    fittingob.downhill_fit()    #simplex downhill fit
-
-    outputob = output(fittingob)
-
-#     if params.mcmc_run and pymc_import:
-#         fittingob.mcmc_fit() # MCMC fit
-#         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
-
-#     if params.nest_run and multinest_import:
-#         fittingob.multinest_fit() # Nested sampling fit   
-#         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
-
-    #generating TP profile covariance from previous fit
-    Cov_array = emlib.generate_tp_covariance(outputob)
-
-#     pl.figure()
-#     pl.imshow(Cov_array,origin='lower')
-#     pl.show()
+#     # set output directory of stage 1
+    params.out_path = os.path.join(out_path_orig, 'stage_1')
+#
+#     # initialising data object
+#     dataob = data(params)
+#
+#     #initialising TP profile instance
+#     atmosphereob = atmosphere(dataob)
+#
+#     #initialising emission radiative transfer code instance
+#     forwardmodelob = emission(atmosphereob)
+#
+#     #initialising fitting object
+#     fittingob = fitting(forwardmodelob)
+#
+#     #fit data for stage 1
+# #     if params.downhill_run:
+# #         fittingob.downhill_fit()    #simplex downhill fit
+#     fittingob.downhill_fit()    #simplex downhill fit
+#
+#     outputob = output(fittingob)
+#
+# #     if params.mcmc_run and pymc_import:
+# #         fittingob.mcmc_fit() # MCMC fit
+# #         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+#
+# #     if params.nest_run and multinest_import:
+# #         fittingob.multinest_fit() # Nested sampling fit
+# #         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+#
+#     #generating TP profile covariance from previous fit
+#     Cov_array = emlib.generate_tp_covariance(outputob)
+#
+# #     pl.figure()
+# #     pl.imshow(Cov_array,origin='lower')
+# #     pl.show()
 
     #saving covariance 
-    np.savetxt(os.path.join(fittingob.dir_stage,'tp_covariance.dat'),Cov_array)
+    #np.savetxt(os.path.join(params.out_path, 'tp_covariance.dat'), Cov_array)
+
+    Cov_array = np.loadtxt(os.path.join(params.out_path, 'tp_covariance.dat'))
+
+    ###############################
+    # STAGE 2
+    ###############################
+
+    # set output directory of stage 2
+    params.out_path = os.path.join(out_path_orig, 'stage_2')
 
     #setting up objects for stage 2 fitting
-        
-    # dataob.params.nest_nlive = 1000
-    atmosphereob1 = atmosphere(dataob,tp_profile_type='hybrid',covariance=Cov_array)
+    dataob2 = data(params)
+
+    dataob2.params.nest_nlive = 1005
+    atmosphereob1 = atmosphere(dataob2, tp_profile_type='hybrid', covariance=Cov_array)
+
     # atmosphereob1.set_TP_hybrid_covmat(Cov_array)
-    
+
     #setting stage 2 forward model 
     forwardmodelob1 = emission(atmosphereob1)
         
     #setting stage 2 fitting object
-    fittingob1 = fitting(forwardmodelob1,stage=1)
+    fittingob1 = fitting(forwardmodelob1)
+
     #running stage 2 fit
     if params.downhill_run:
         fittingob1.downhill_fit()    #simplex downhill fit
@@ -94,14 +114,14 @@ def run(params):
         exit()
         
     #initiating output instance with fitted data from fitting class
-    outputob = output(fittingob,plot_path=fittingob.dir_stage)
-    outputob1 = output(fittingob1,plot_path=fittingob1.dir_stage)
+    #outputob = output(fittingob)
+    outputob1 = output(fittingob1)
         
     #plotting fits and data
     logging.info('Plotting and saving results')
         
     if params.verbose or params.out_save_plots:
-        outputob.plot_all(save2pdf=params.out_save_plots)
+        #outputob.plot_all(save2pdf=params.out_save_plots)
         outputob1.plot_all(save2pdf=params.out_save_plots)
         
     # outputob.plot_spectrum()   #plotting data only
@@ -109,7 +129,5 @@ def run(params):
     # outputob.plot_mcmc()       #plotting mcmc posterios
     # outputob.plot_fit()        #plotting model fits
     #
-    outputob.save_model()       #saving models to ascii
+    #outputob.save_model()       #saving models to ascii
     outputob1.save_model()       #saving models to ascii
-        
-

@@ -123,7 +123,11 @@ class output(base):
 
         self.DOWN_out = self.add_spectra_from_solutions(DOWN_out)
         self.DOWN_params_values = self.fitting.DOWN_fit_output
-        self.DOWN_TP_params_values = self.DOWN_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
+
+        self.DOWN_TP_params_values = self.DOWN_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+        print 'DOWN_params_values', self.fitting.fit_params_names
+        print 'DOWN_params_values', self.DOWN_params_values
+        print 'DOWN_TP_params_values'  , self.DOWN_TP_params_values
 
         self.params_names = self.fitting.fit_params_names
 
@@ -148,8 +152,8 @@ class output(base):
         self.MCMC_params_std = [self.MCMC_out[0]['fit_params'][param]['std'] for param in self.params_names]
         self.MCMC_X_params_values = self.MCMC_params_values[:self.fitting.fit_X_nparams]
         self.MCMC_X_params_std = self.MCMC_params_std[:self.fitting.fit_X_nparams]
-        self.MCMC_TP_params_values = self.MCMC_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
-        self.MCMC_TP_params_std = self.MCMC_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
+        self.MCMC_TP_params_values = self.MCMC_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+        self.MCMC_TP_params_std = self.MCMC_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
 
     def store_nest_solutions(self):
 
@@ -176,8 +180,8 @@ class output(base):
         self.NEST_params_std = [self.NEST_out[0]['fit_params'][param]['std'] for param in self.params_names]
         self.NEST_X_params_values = self.NEST_params_values[:self.fitting.fit_X_nparams]
         self.NEST_X_params_std = self.NEST_params_std[:self.fitting.fit_X_nparams]
-        self.NEST_TP_params_values = self.NEST_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
-        self.NEST_TP_params_std = self.NEST_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
+        self.NEST_TP_params_values = self.NEST_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+        self.NEST_TP_params_std = self.NEST_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
 
     def analyse_traces(self, tracedata, clr_inv=False, multimode=False):
 
@@ -570,6 +574,10 @@ class output(base):
 
         filename = os.path.join(self.params.out_path, 'observed_%s_spectrum.dat' % (self.__MODEL_ID__))
         np.savetxt(filename, self.data.spectrum)
+
+    def save_spectrum_to_file(self, spectrum, saveas):
+        logging.info('Spectrum saved to %s ' % saveas)
+        np.savetxt(saveas, spectrum)
 
 
     # the mixing ratio are not sampled in the log-ratio space, hence we can use the different
