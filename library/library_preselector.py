@@ -4,14 +4,11 @@ import sklearn.decomposition as sk
 import glob,string,gzip,os, logging
 import cPickle as pickle
 
-import transmission, emission,tp_profile,data
+import transmission, emission,atmosphere,data
 from transmission import *
 from emission import *
-from tp_profile import *
+from atmosphere import *
 from data import *
-
-
-
 
 def generate_spectra_lib(PARAMS,PATH,OUTPATH,MODEL,MIXING=[1e-6,1e-5,1e-4,1e-3,1e-2]):
     #Generates transmission spectra from cross section files for given mixing ratios

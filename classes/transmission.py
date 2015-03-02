@@ -177,7 +177,6 @@ class transmission(base):
          #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
 
-
         #casting changing arrays to c++ pointers
         Xs1, Xs2 = shape(X)
         Xnew = zeros((Xs1+1, Xs2))

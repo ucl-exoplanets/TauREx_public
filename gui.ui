@@ -29,7 +29,7 @@
       <x>10</x>
       <y>10</y>
       <width>251</width>
-      <height>401</height>
+      <height>421</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -49,22 +49,6 @@
      </property>
      <property name="text">
       <string>Absorbers</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_10">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>230</y>
-       <width>221</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Spectrally inactive gases</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -92,7 +76,7 @@
        <x>10</x>
        <y>60</y>
        <width>112</width>
-       <height>162</height>
+       <height>211</height>
       </rect>
      </property>
      <layout class="QFormLayout" name="formLayout_10">
@@ -166,6 +150,20 @@
         </property>
        </widget>
       </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_38">
+        <property name="text">
+         <string>H2S</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_H2S">
+        <property name="decimals">
+         <number>4</number>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
     <widget class="QWidget" name="formLayoutWidget">
@@ -174,7 +172,7 @@
        <x>130</x>
        <y>60</y>
        <width>114</width>
-       <height>162</height>
+       <height>211</height>
       </rect>
      </property>
      <layout class="QFormLayout" name="formLayout">
@@ -260,7 +258,7 @@
      <property name="geometry">
       <rect>
        <x>130</x>
-       <y>260</y>
+       <y>280</y>
        <width>111</width>
        <height>71</height>
       </rect>
@@ -286,7 +284,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>340</y>
+       <y>360</y>
        <width>211</width>
        <height>51</height>
       </rect>
@@ -312,7 +310,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>260</y>
+       <y>280</y>
        <width>111</width>
        <height>71</height>
       </rect>

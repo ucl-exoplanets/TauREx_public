@@ -12,6 +12,14 @@ import ctypes as C
 
 # def linear_abs_temp_interpolator(TEMPLIST, ):
 
+def house_keeping(params,options):
+    #does some housekeeping for the final fitting results
+
+    #copies used parameter file to ./Output
+    if params.clean_save_used_params:
+        subprocess.call('cp '+options.param_filename+' Output/',shell=True)
+
+    subprocess.call('python '+params.clean_script,shell=True)
 
 
 
@@ -218,12 +226,3 @@ def funcGauss(p, x):
     sigma = p[1]
 
     return 1.0/(sigma * sqrt(2.0 * pi)) * exp(-(x-mu)**2/(2.0*sigma**2))
-
-def gauss(x, *p):
-    A, mu, sigma = p
-    return A*exp(-(x-mu)**2/(2.*sigma**2))
-
-
-
-
-        

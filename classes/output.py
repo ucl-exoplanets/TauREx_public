@@ -113,7 +113,6 @@ class output(base):
             dict['Temperature'] = {'value': self.fitting.forwardmodel.atmosphere.planet_temp }
         if 'Radius' in self.fitting.fit_params_names:
             dict['Radius'] = {'value': self.fitting.forwardmodel.atmosphere.planet_radius/RJUP } # pressure in log space
-
         for idx_gas, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
             dict[gasname] = {'value': self.fitting.forwardmodel.atmosphere.absorbing_gases_X[idx_gas] }
         if not self.params.fit_fix_inactive:
@@ -121,10 +120,12 @@ class output(base):
                 dict[gasname] = {'value': self.fitting.forwardmodel.atmosphere.inactive_gases_X[idx_gas] }
 
         DOWN_out = [{'fit_params': dict}]
-        self.DOWN_out = self.add_spectra_from_solutions(DOWN_out)
-        self.params_names = self.fitting.fit_params_names
 
-        return DOWN_out
+        self.DOWN_out = self.add_spectra_from_solutions(DOWN_out)
+        self.DOWN_params_values = self.fitting.DOWN_fit_output
+        self.DOWN_TP_params_values = self.DOWN_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
+
+        self.params_names = self.fitting.fit_params_names
 
     def store_mcmc_solutions(self):
 
@@ -142,6 +143,13 @@ class output(base):
             self.MCMC_tracedata = tracedata
         else:
             self.MCMC_out, self.MCMC_tracedata, self.MCMC_labels = self.analyse_traces(tracedata, multimode=False)
+
+        self.MCMC_params_values = [self.MCMC_out[0]['fit_params'][param]['value'] for param in self.params_names]
+        self.MCMC_params_std = [self.MCMC_out[0]['fit_params'][param]['std'] for param in self.params_names]
+        self.MCMC_X_params_values = self.MCMC_params_values[:self.fitting.fit_X_nparams]
+        self.MCMC_X_params_std = self.MCMC_params_std[:self.fitting.fit_X_nparams]
+        self.MCMC_TP_params_values = self.MCMC_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
+        self.MCMC_TP_params_std = self.MCMC_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
 
     def store_nest_solutions(self):
 
@@ -163,6 +171,13 @@ class output(base):
 
         else:
             self.NEST_out, self.NEST_tracedata, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata, multimode=True)
+
+        self.NEST_params_values = [self.NEST_out[0]['fit_params'][param]['value'] for param in self.params_names]
+        self.NEST_params_std = [self.NEST_out[0]['fit_params'][param]['std'] for param in self.params_names]
+        self.NEST_X_params_values = self.NEST_params_values[:self.fitting.fit_X_nparams]
+        self.NEST_X_params_std = self.NEST_params_std[:self.fitting.fit_X_nparams]
+        self.NEST_TP_params_values = self.NEST_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
+        self.NEST_TP_params_std = self.NEST_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fit_TP_nparams]
 
     def analyse_traces(self, tracedata, clr_inv=False, multimode=False):
 

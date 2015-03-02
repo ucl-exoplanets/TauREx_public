@@ -121,18 +121,19 @@ class fitting(base):
         # build the fit_params_names, names of params in fit_params
         # build the fit_bounds list, boundary conditions for fit_params
 
-        # 1) Mixing ratios
+        ##########################################################################
+        # Mixing ratios of absorbing and inactive gases either in log space or in centered-log-ratio space
 
         if self.params.fit_clr_trans:
 
-            # reparametrize the mixing ratios of absorbers and inactive gases using the centered-log-ratio transformation
+            # reparametrize the mixing ratios of absorbing and inactive gases using the centered-log-ratio transformation
+            # in this case, all mixing ratios of absorbing and inactive gases are always fitted
             clr = self.get_mixing_ratio_clr()
 
             # append all mixing ratios, minus one (as we're using the centered-log-ratio transformation)
-            # @todo check bounds
             for i in range(self.atmosphere.nallgases - 1):
                 self.fit_params.append(clr[i])
-                self.fit_bounds.append((-10, 10))
+                self.fit_bounds.append((-10, 10)) # @todo bounds seem ok, what's the minimum X we can get with this?
                 self.fit_params_names.append('CLR_X_%i' % i)
         else:
 
@@ -145,17 +146,116 @@ class fitting(base):
                 self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
                 self.fit_params_names.append(gasname)
 
-            # inactive gases can be fixed
-            if not self.params.fit_fix_inactive:
+            if not self.params.fit_fix_inactive: # inactive gases can be fixed
                 for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
                     self.fit_params.append(np.log10(self.forwardmodel.atmosphere.inactive_gases_X[idx]))
                     self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
                     self.fit_params_names.append(gasname)
 
-        # 2) Temperature, Pressure, Radius, Mean molecular weight
-        #    Each parameter can be either fitted or fixed (see parameters file).
-        #    If fixed it won't be loaded in the fit_params list
+        self.fit_X_nparams = count # set the number of fitted mixing ratios
 
+        ##########################################################################
+        # TP profile parameters
+
+        T_bounds = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
+        T_mean = np.mean(T_bounds)
+
+        if self.atmosphere.TP_type   == 'isothermal':
+
+            if self.params.fit_fix_T: # in the isothermal case, we can fix the temperature...
+                self.fit_TP_nparams = 0
+            else:
+                self.fit_TP_nparams = self.atmosphere.nlayers
+
+                self.fit_params_names.append('T')
+                self.fit_bounds.append((T_bounds[0],T_bounds[1])) #isothermal T
+                self.fit_params.append(T_mean)
+
+        elif self.atmosphere.TP_type == 'rodgers':
+
+            self.fit_TP_nparams = self.atmosphere.nlayers
+
+            for i in xrange(self.atmosphere.nlayers):
+                self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
+                self.fit_params.append(T_mean)
+
+        elif self.atmosphere.TP_type == 'hybrid':
+
+            self.fit_TP_nparams = len(self.atmosphere.P_index) + 1
+
+            self.fit_params_names.append('alpha' %i)
+            self.fit_bounds.append((0.0,1.0)) #alpha parameter
+            self.fit_params.append(T_mean)
+            for i in xrange(len(self.atmosphere.P_index)):
+                self.fit_params_names.append('T_%i' %i)
+                self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
+                self.fit_params.append(T_mean)
+
+        elif self.atmosphere.TP_type == 'guillot':
+
+            self.fit_TP_nparams = 5
+
+            self.fit_params_names.append('T_irr')
+            self.fit_bounds.append((T_bounds[0],T_bounds[1]))
+            self.fit_params.append(T_mean)
+
+            self.fit_params_names.append('kappa_irr')
+            self.fit_bounds.append((0.0,1e-2))
+            self.fit_params.append(np.mean(0.0,1e-2))
+
+            self.fit_params_names.append('kappa_v1')
+            self.fit_bounds.append((0.0,1e-2))
+            self.fit_params.append(np.mean(0.0,1e-2))
+
+            self.fit_params_names.append('kappa_v2')
+            self.fit_bounds.append((0.0,1e-2))
+            self.fit_params.append(np.mean(0.0,1e-2))
+
+            self.fit_params_names.append('alpha')
+            self.fit_bounds.append((0.0,1.0))
+            self.fit_params.append(np.mean(0.0,1.0))
+
+        elif self.atmosphere.TP_type == '2point':
+
+            self.fit_TP_nparams = 3
+
+            self.fit_params_names.append('T_surf') #surface layer T
+            self.fit_bounds.append((T_bounds[0],T_bounds[1]))
+            self.fit_params.append(T_mean)
+
+            self.fit_params_names.append('T_trop') #troposphere layer T difference (T_surface- Tdiff) = T_trop
+            self.fit_bounds.append((0.0,1000.0))
+            self.fit_params.append(np.mean((0.0,1000.0)))
+
+            self.fit_params_names.append('P_trop') #troposphere pressure (Pa) #@todo careful with this needs to move somewhere else
+            self.fit_bounds.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
+
+        elif self.atmosphere.sTP_type == '3point':
+
+            self.fit_TP_nparams = 5
+
+            self.fit_params_names.append('T_surf')
+            self.fit_bounds.append((T_bounds[0],T_bounds[1])) #surface layer T
+            self.fit_params.append(T_mean)
+
+            self.fit_params_names.append('T_point1') #point1 T difference (T_surface- Tdiff) = T_point1
+            self.fit_bounds.append((0.0,500.0))
+            self.fit_params.append((0.0,500.0))
+
+            self.fit_params_names.append('T_point2') #point2 T difference (T_point1- Tdiff) = T_point2
+            self.fit_bounds.append((0.0,500.0))
+            self.fit_params.append((0.0,500.0))
+
+            self.fit_params_names.append('P_point1')  #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
+            self.fit_bounds.append((1.0,1e5))
+            self.fit_params.append((1.0,1e5))
+
+            self.fit_params_names.append('P_point2') #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
+            self.fit_bounds.append((1.0,1e5))
+            self.fit_params.append((1.0,1e5))
+
+        ##########################################################################
         # mean molecular weight. Only if we are not coupling mu to the mixing ratios
         if not self.params.fit_couple_mu:
             if not self.params.fit_fix_mu:
@@ -163,28 +263,19 @@ class fitting(base):
                 self.fit_params.append(self.forwardmodel.atmosphere.planet_mu/AMU) #in AMU
                 self.fit_bounds.append((self.params.fit_mu_low, self.params.fit_mu_up)) #in AMU
 
-        # temperature
-        if not self.params.fit_fix_temp:
-            self.fit_params_names.append('Temperature')
-            self.fit_params.append(self.forwardmodel.atmosphere.planet_temp)
-            self.fit_bounds.append((self.forwardmodel.atmosphere.planet_temp - self.params.fit_T_low,
-                                    self.forwardmodel.atmosphere.planet_temp + self.params.fit_T_up))
+        ##########################################################################
         # radius
         if not self.params.fit_fix_radius:
             self.fit_params_names.append('Radius')
             self.fit_params.append(self.forwardmodel.atmosphere.planet_radius/RJUP)
             self.fit_bounds.append((self.forwardmodel.atmosphere.planet_radius/RJUP - self.params.fit_radius_low,
                                     self.forwardmodel.atmosphere.planet_radius/RJUP + self.params.fit_radius_up))
+        ##########################################################################
         # surface pressure
         if not self.params.fit_fix_P0:
             self.fit_params_names.append('P0')
             self.fit_params.append(np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up))))
             self.fit_bounds.append((np.log(self.params.fit_P0_low), np.log(self.params.fit_P0_up)))
-
-
-        print self.fit_params_names
-        print self.fit_params
-        print self.fit_bounds
 
         # define total number of parameters to be fitted
         self.fit_nparams = len(self.fit_params)
@@ -192,50 +283,57 @@ class fitting(base):
     #@profile
     def update_atmospheric_parameters(self, fit_params):
 
-        # update atmospheric parameters with new values from fit_params
-        # fit_params contains list of parameters as defined in build_fit_params
-        # the order in which parameters are read from fit_params must be the same as how these were
-        # defined in build_fit_params
+        ''' update atmospheric parameters with new values from fit_params
+        fit_params contains list of parameters as defined in build_fit_params
+        the order in which parameters are read from fit_params must be the same as how these were
+        defined in build_fit_params '''
 
+        ###############################################
         # Parameters are stored in this order:
         #
         # Param name                                Number of parameters
         # -----------------------------------------------------------------------------
         # mixing ratios absorbing gases             len(self.forwardmodel.atmosphere.absorbing_gases)
-        # mixing ratio inactive gases (fixed?)      len(self.forwardmodel.atmosphere.inactive_gases)
-        # mean molecular weight (fixed?)            1
-        # temperature (fixed?)                      1
-        # radius (fixed?)                           1
-        # surface pressure (fixed?)                 1
+        # mixing ratio inactive gases (fixed?)      0/len(self.forwardmodel.atmosphere.inactive_gases)
+        # TP profile params                         self.atmosphere.fit_TP_nparams
+        # mean molecular weight (fixed?)            0/1
+        # radius (fixed?)                           0/1
+        # surface pressure (fixed?)                 0/1
         #
-        # If the parameter is fixed, it will be ignored.
         # Note: mixing ratio of inactive gases can only be fixed if clr transform is off
 
-        count = 0
+        count = 0 # used to iterate over fit_params[count]
 
-        # 1) mixing ratios of absorbing and inactive gases
+        #####################################################
+        # Mixing ratios of absorbing and inactive gases
 
         if self.params.fit_clr_trans:
 
-            # build clr array
-            clr = []
-            for i in range(self.atmosphere.nallgases - 1):
-                clr.append(fit_params[count])
-                count += 1
-            clr.append(-np.sum(clr)) # append last clr. Note that sum(clr) = 0!
+            # convert centered-log-ratio mixing ratios back to simplex
+
+            # build list of log-ratios
+            clr = fit_params[:self.atmosphere.nallgases-1]
+            clr.append(-np.sum(clr)) # append last log-ratio. This is not fitted, but derived as sum(log-ratios) = 0
 
             # convert log-ratios to simplex
-            clr_inv = self.get_mixing_ratio_inv_clr(clr)
-            count2 = 0
+            clr_inv = self.get_mixing_ratio_inv_clr(clr) # @todo could be improved
+
+            # set mixing ratios of absorbing and inactive gases
+            j = 0
             for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-                self.forwardmodel.atmosphere.absorbing_gases_X[idx] = clr_inv[count2]
-                count2 += 1
+                self.forwardmodel.atmosphere.absorbing_gases_X[idx] = clr_inv[j]
+                j += 1
             for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-                self.forwardmodel.atmosphere.inactive_gases_X[idx] = clr_inv[count2]
-                count2 += 1
+                self.forwardmodel.atmosphere.inactive_gases_X[idx] = clr_inv[j]
+                j += 1
+
+            count = self.atmosphere.nallgases - 1
 
         else:
-            # no clr transformation. take exponent?
+
+            # mixing ratios are expressed in log space. No centered-log-ratio transformation applied
+
+            # set mixing ratios of absorbing and inactive gases
             for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
                 self.forwardmodel.atmosphere.absorbing_gases_X[idx] = np.power(10, fit_params[count])
                 count += 1
@@ -245,11 +343,25 @@ class fitting(base):
                     count += 1
 
         # @todo careful, next line won't work if preselector is running. Fix preselector!
+        # @todo as this may be removed in favour of atmosphere.absorbing_gases_X (which always assumes a constant mixing ratio vs pressure
+        # @todo in the future we might want to change it and allow for varying absorbing_gases_X and inactive_gases_X with pressure
         # set mixing ratio profiles. This assumes constant ratios vs Pressure
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
 
-        # 2) Mean molecular weight. If coupling, then we just derive mu from the mixing ratios.
+        #####################################################
+        # Pressure profile
+
+        # get TP profile fitted parameters. Number of parameter is profile dependent, and defined by self.atmosphere.fit_TP_nparams
+        if self.atmosphere.fit_TP_nparams > 0:
+            TP_params = fit_params[count:count+self.atmosphere.fit_TP_nparams]
+            self.forwardmodel.atmosphere.T = self.atmosphere.TP_profile(TP_params=TP_params)
+
+        #####################################################
+        # Mean molecular weight.
+        #
+        #    If coupling, then we just derive mu from the mixing ratios.
         #    If we're fitting, get it from fit_params
+
         if self.params.fit_couple_mu:
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
         if not self.params.fit_couple_mu:
@@ -257,22 +369,21 @@ class fitting(base):
                 self.forwardmodel.atmosphere.planet_mu = fit_params[count]*AMU
                 count += 1
 
-        # 3) Temperature -> Note we have a single temperature!
-        if not self.params.fit_fix_temp:
-            self.forwardmodel.atmosphere.planet_temp = fit_params[count]
-            count += 1
+        #####################################################
+        # Radius
 
-        # 4) Radius
         if not self.params.fit_fix_radius:
             self.forwardmodel.atmosphere.planet_radius = fit_params[count]*RJUP
             count += 1
 
-        # 5) Surface pressure
+        #####################################################
+        # Surface pressure
+
         if not self.params.fit_fix_P0:
             self.forwardmodel.atmosphere.max_pressure = np.power(10, fit_params[count])
             count += 1
 
-        # Update surface gravity, scale height, PTA profile, density
+        # Update surface gravity, scale height, density bla bla
         self.forwardmodel.atmosphere.update_atmosphere()
 
         # recalculate Rayleigh scattering: @ todo Why here? Shouldn't we move it to atmosphere????
