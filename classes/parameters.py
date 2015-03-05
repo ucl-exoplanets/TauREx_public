@@ -172,6 +172,7 @@ class parameters(base):
         try:
             self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
             self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
+            self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
             self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
             self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
             self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)

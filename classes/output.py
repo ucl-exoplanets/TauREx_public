@@ -20,7 +20,7 @@
 #loading libraries
 from base import base
 import numpy as np
-import os
+import os,glob, pickle
 import pylab as py
 import emission, transmission, atmosphere, library_plotting, library_emission
 from emission import *
@@ -29,7 +29,6 @@ from atmosphere import *
 from library_plotting import *
 from library_emission import *
 from scipy.optimize import curve_fit
-import pickle
 
 #conversion constants
 RSOL  = 6.955e8         #stellar radius to m
@@ -200,7 +199,7 @@ class output(base):
             for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
                     self.fitting.forwardmodel.atmosphere.inactive_gases):
                 self.params_names.append(gasname)
-            # todo careful about adding coupled_mu, it might interefer with fit-params?
+            # todo careful about adding coupled_mu, it might interfere with fit-params?
             self.params_names.append('coupled_mu')
             for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                 self.params_names.append(self.fitting.fit_params_names[i])
@@ -210,7 +209,7 @@ class output(base):
             tracedata_analyse = tracedata # set the trace to analyse and get solutions from
 
 
-        # todo: if cluster_analysis is False, but multinest is in multimode, then we should get solutions from multinest output. See end of file with commented code.
+        # @todo: if cluster_analysis is False, but multinest is in multimode, then we should get solutions from multinest output. See end of file with commented code.
         if cluster_analysis == True:
 
             # clustering analysis on traces. Split up the traces into individual clusters
@@ -271,7 +270,7 @@ class output(base):
                     for idx, param in enumerate(self.params_names):
 
                         try:
-                            cluster = tracedata[labels == k, idx] # get cluster of points correposning to cluster k, and param idx
+                            cluster = tracedata[labels == k, idx] # get cluster of points corresponding to cluster k, and param idx
 
                             # get errors
                             hist, bin_edges = np.histogram(cluster, bins=100, density=True)
@@ -329,7 +328,7 @@ class output(base):
         ncol = len(clr_tracedata[0,:])
 
         mixing_ratios_tracedata = exp(np.c_[clr_tracedata, -sum(clr_tracedata, axis=1)]) # add log-ratio (= -sum(other log ratios)
-        mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*(ncol+1)).transpose()) # clousure operation
+        mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*(ncol+1)).transpose()) # closure operation
 
         # calculate couple mean molecular weight trace as a byproduct
         coupled_mu_trace = np.zeros(ntraces)

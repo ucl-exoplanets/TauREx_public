@@ -124,7 +124,7 @@ class fitting(base):
         # build the fit_bounds list, boundary conditions for fit_params
 
         ##########################################################################
-        # Mixing ratios of absorbing and inactive gases either in log space or in centered-log-ratio space
+        # Mixing ratios of absorbing and inactive gases either in log space or in centred-log-ratio space
 
         count_X = 0
         if self.params.fit_clr_trans:
@@ -356,6 +356,7 @@ class fitting(base):
         # @todo careful, next line won't work if preselector is running. Fix preselector!
         # @todo as this may be removed in favour of atmosphere.absorbing_gases_X (which always assumes a constant mixing ratio vs pressure
         # @todo in the future we might want to change it and allow for varying absorbing_gases_X and inactive_gases_X with pressure
+        # @todo this may be made implicit not explicit and just reassigned in atmosphere internally
         # set mixing ratio profiles. This assumes constant ratios vs Pressure
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
 
@@ -366,7 +367,7 @@ class fitting(base):
         if self.fit_TP_nparams > 0:
 
             TP_params = fit_params[count:count+self.fit_TP_nparams]
-            self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params)
+            self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params) #@todo same as above, may be implicit not explicit in future
             count += self.fit_TP_nparams
 
         #####################################################
@@ -374,7 +375,8 @@ class fitting(base):
         #
         #    If coupling, then we just derive mu from the mixing ratios.
         #    If we're fitting, get it from fit_params
-
+        
+        #@todo same as above, may be implicit not explicit in future
         if self.params.fit_couple_mu:
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
         if not self.params.fit_couple_mu:
@@ -400,6 +402,7 @@ class fitting(base):
         self.forwardmodel.atmosphere.update_atmosphere()
 
         # recalculate Rayleigh scattering: @ todo Why here? Shouldn't we move it to atmosphere????
+        # @todo this should move to atmosphere 
         if self.forwardmodel_type == 'transmission':
             if self.params.in_include_Rayleigh:
                 self.forwardmodel.Rsig = self.forwardmodel.get_Rsig()
@@ -420,7 +423,7 @@ class fitting(base):
         res = (data - model_binned) / datastd
         res = sum(res*res)
 
-        #
+        # ion()
         # figure(1)
         # clf()
         # plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
@@ -431,15 +434,16 @@ class fitting(base):
         # draw()
         # pause(0.0001)
         #
-        # figure(2)
-        # clf()
-        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-        # plot(self.data.spectrum[:,0], model_binned)
-        # xlabel('Wavelength (micron)')
-        # ylabel('Transit depth')
-        # xscale('log')
-        # xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-        # draw()
+#         ion()
+#         figure(2)
+#         clf()
+#         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+#         plot(self.data.spectrum[:,0], model_binned)
+#         xlabel('Wavelength (micron)')
+#         ylabel('Transit depth')
+#         xscale('log')
+#         xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
+#         draw()
         # pause(0.0001)
         #
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
@@ -456,8 +460,8 @@ class fitting(base):
 
     #@profile
     def downhill_fit(self):
-
-        ion()
+    # fitting using downhill algorithm. 
+    # @todo makes this proper MLE by replacing chi-squared with likelihood function
 
         logging.info('Fit data using %s minimisation' % self.params.downhill_type)
 
@@ -481,8 +485,7 @@ class fitting(base):
 
     #@profile #line-by-line profiling decorator
     def mcmc_fit(self):
-
-        # adaptive Markov Chain Monte Carlo
+    # fitting using adaptive Markov Chain Monte Carlo
 
         logging.info('Start MCMC fit')
 
@@ -608,7 +611,7 @@ class fitting(base):
             if os.name == 'mac':
                 subprocess.call(('open', filepath))
             elif os.name == 'nt':
-                os.startfile(filepath)
+                os.startfile(filepath) #@todo possible error here but noone has windows anyways...
 
         def multinest_loglike(cube, ndim, nparams):
             # log-likelihood function called by multinest

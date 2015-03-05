@@ -18,7 +18,7 @@ wavemin = 0.4
 wavemax = 20.0
 
 #resolution of internal model runs (R)
-spec_res = 500
+spec_res = 1000
 
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
@@ -82,6 +82,7 @@ internal_name = transmissionspec.dat
 #save plots to .pdf
 save_plots = True
 
+#plotting contours onto densities in posterior plots
 plot_contour = True
 
 [Preselector]
@@ -203,7 +204,7 @@ num_scaleheights = 20
 
 #number of atmospheric levels.
 #If var_atm = False, atm_levels is taken from .atm file
-atm_levels = 40
+atm_levels = 80
 
 #set temperature as variables todo not used. Moved to Fitting : fix_temp
 var_temp = True
@@ -218,6 +219,7 @@ atm_max_pressure = 1e6
 var_mix = True
 
 #TP profile type to be selected (only sets for emission, tranmission = isothermal)
+#available profiles are: isothermal, guillot, hybrid, 2point, 3point
 profile_type = guillot
 
 
@@ -229,6 +231,9 @@ transmission = True
 
 #fit emission model
 emission     = False
+
+#fit emission in 2 stage mode 
+emission_stage2 = True
 
 #free parameters, temperature, abundance. Currently not used. not sure whether should be implemented and in what form
 param_free = 1,42
@@ -297,16 +302,18 @@ update_std = True
 
 
 #MCMC number of total iterations
-iter = 300
+iter = 10000
 
 #MCMC burn in period
-burn = 10
+burn = 1000
 
 #MCMC thinning factor
 thin = 1
 
+#toggle verbose
 verbose = True
 
+#show progress bar
 progressbar = True
 
 [MultiNest]
@@ -328,7 +335,7 @@ nest_path = chains/
 sampling_eff = parameter
 
 #number of live points
-n_live_points = 100
+n_live_points = 1000
 
 #maximum no. of iterations (0=inf)
 max_iter = 0
