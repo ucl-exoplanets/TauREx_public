@@ -32,7 +32,7 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
 
     Tmean = TP_function(TP_params)
 
-    print 'Tmean', Tmean
+#     print 'Tmean', Tmean
 
     bounds = [] #list of lower and upper parameter bounds 
     for i in xrange(len(TP_params)):

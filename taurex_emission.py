@@ -57,15 +57,15 @@ def run(params):
         fittingob.multinest_fit() # Nested sampling fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
+    
+    #loading output module for stage 0
+    outputob = output(fittingob)
     #generating TP profile covariance from previous fit
     Cov_array = emlib.generate_tp_covariance(outputob)
 
-    # pl.figure()
-    # pl.imshow(Cov_array,origin='lower')
-    # pl.show()
-
     #saving covariance
-    np.savetxt(os.path.join(params.out_path, 'tp_covariance.dat'), Cov_array)
+    if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
+        np.savetxt(os.path.join(params.out_path, 'tp_covariance.dat'), Cov_array)
     # Cov_array = np.loadtxt(os.path.join(params.out_path, 'tp_covariance.dat'))
 
     ###############################
@@ -109,7 +109,6 @@ def run(params):
         exit()
         
     #initiating output instance with fitted data from fitting class
-    outputob = output(fittingob)
     if params.fit_emission_stage2:
         outputob1 = output(fittingob1)
 
