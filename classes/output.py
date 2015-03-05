@@ -22,11 +22,12 @@ from base import base
 import numpy as np
 import os
 import pylab as py
-import emission, transmission, atmosphere, library_plotting
+import emission, transmission, atmosphere, library_plotting, library_emission
 from emission import *
 from transmission import *
 from atmosphere import *
 from library_plotting import *
+from library_emission import *
 from scipy.optimize import curve_fit
 import pickle
 
@@ -104,32 +105,18 @@ class output(base):
 
         logging.info('Store the DOWNHILL results')
 
-        self.fitting.update_atmospheric_parameters(self.fitting.DOWN_fit_output)
+        self.params_names = self.fitting.fit_params_names
 
         dict = {}
-        if 'P0' in self.fitting.fit_params_names:
-            dict['P0'] = {'value': np.log10(self.fitting.forwardmodel.atmosphere.max_pressure) } # pressure in log space
-        if 'Temperature' in self.fitting.fit_params_names:
-            dict['Temperature'] = {'value': self.fitting.forwardmodel.atmosphere.planet_temp }
-        if 'Radius' in self.fitting.fit_params_names:
-            dict['Radius'] = {'value': self.fitting.forwardmodel.atmosphere.planet_radius/RJUP } # pressure in log space
-        for idx_gas, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
-            dict[gasname] = {'value': self.fitting.forwardmodel.atmosphere.absorbing_gases_X[idx_gas] }
-        if not self.params.fit_fix_inactive:
-            for idx_gas, gasname in enumerate(self.fitting.forwardmodel.atmosphere.inactive_gases):
-                dict[gasname] = {'value': self.fitting.forwardmodel.atmosphere.inactive_gases_X[idx_gas] }
-
+        for idx, param_name in enumerate(self.params_names):
+            dict[param_name] = {'value': self.fitting.DOWN_fit_output[idx] }
         DOWN_out = [{'fit_params': dict}]
 
         self.DOWN_out = self.add_spectra_from_solutions(DOWN_out)
         self.DOWN_params_values = self.fitting.DOWN_fit_output
-
         self.DOWN_TP_params_values = self.DOWN_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
-        print 'DOWN_params_values', self.fitting.fit_params_names
-        print 'DOWN_params_values', self.DOWN_params_values
-        print 'DOWN_TP_params_values'  , self.DOWN_TP_params_values
 
-        self.params_names = self.fitting.fit_params_names
+
 
     def store_mcmc_solutions(self):
 
@@ -143,10 +130,10 @@ class output(base):
 
         if self.params.fit_clr_trans:
             # the mixing ratios are sampled in the log-ratio space. Need to convert them back to simplex
-            self.MCMC_out, self.MCMC_tracedata_clr_inv, self.MCMC_labels =  self.analyse_traces(tracedata, multimode=False, clr_inv=True)
+            self.MCMC_out, self.MCMC_tracedata_clr_inv, self.MCMC_labels =  self.analyse_traces(tracedata, cluster_analysis=False, clr_inv=True)
             self.MCMC_tracedata = tracedata
         else:
-            self.MCMC_out, self.MCMC_tracedata, self.MCMC_labels = self.analyse_traces(tracedata, multimode=False)
+            self.MCMC_out, self.MCMC_tracedata, self.MCMC_labels = self.analyse_traces(tracedata, cluster_analysis=False)
 
         self.MCMC_params_values = [self.MCMC_out[0]['fit_params'][param]['value'] for param in self.params_names]
         self.MCMC_params_std = [self.MCMC_out[0]['fit_params'][param]['std'] for param in self.params_names]
@@ -165,17 +152,27 @@ class output(base):
         self.NEST_tracedata = NEST_data[:,2:] # exclude first two columns
         self.NEST_likelihood = NEST_data[:,:2] # get first two columns
 
+        cluster_analysis = self.params.nest_cluster_analysis
+
         if self.params.fit_clr_trans:
-
             # the mixing ratios are sampled in the log-ratio space. Need to convert them back to simplex
-            self.NEST_out, self.NEST_tracedata_clr_inv, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata, multimode=True, clr_inv=True)
-
-            # save file with clr traces converted back to simplex, in multinest format
+            self.NEST_out, self.NEST_tracedata_clr_inv, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata,
+                                                                                                cluster_analysis=cluster_analysis,
+                                                                                                clr_inv=True)
+            # store clr traces converted back to simplex
             self.NEST_data_clr_inv = np.c_[NEST_data[:, :2], self.NEST_tracedata_clr_inv]
 
         else:
-            self.NEST_out, self.NEST_tracedata, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata, multimode=True)
+            if cluster_analysis:
+                self.NEST_out, self.NEST_tracedata, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata,
+                                                                                      cluster_analysis=cluster_analysis)
+            else:
+                # get multinest solutions from multinest.Analyzer. It detect the different modes, but does not return labels for tracedata
+                # (self.NEST_labels always None)
+                self.NEST_out, self.NEST_tracedata, self.NEST_labels =  self.get_multinest_solutions()
 
+
+        # storing fit_params output and standard deviation (of first mode only!!!). @todo What about the other modes??
         self.NEST_params_values = [self.NEST_out[0]['fit_params'][param]['value'] for param in self.params_names]
         self.NEST_params_std = [self.NEST_out[0]['fit_params'][param]['std'] for param in self.params_names]
         self.NEST_X_params_values = self.NEST_params_values[:self.fitting.fit_X_nparams]
@@ -183,7 +180,7 @@ class output(base):
         self.NEST_TP_params_values = self.NEST_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
         self.NEST_TP_params_std = self.NEST_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
 
-    def analyse_traces(self, tracedata, clr_inv=False, multimode=False):
+    def analyse_traces(self, tracedata, clr_inv=False, cluster_analysis=False):
 
         ntraces = len(tracedata[:,0])
         ncol = len(tracedata[0,:])
@@ -203,6 +200,7 @@ class output(base):
             for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
                     self.fitting.forwardmodel.atmosphere.inactive_gases):
                 self.params_names.append(gasname)
+            # todo careful about adding coupled_mu, it might interefer with fit-params?
             self.params_names.append('coupled_mu')
             for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                 self.params_names.append(self.fitting.fit_params_names[i])
@@ -211,7 +209,9 @@ class output(base):
             self.params_names = self.fitting.fit_params_names
             tracedata_analyse = tracedata # set the trace to analyse and get solutions from
 
-        if multimode == True:
+
+        # todo: if cluster_analysis is False, but multinest is in multimode, then we should get solutions from multinest output. See end of file with commented code.
+        if cluster_analysis == True:
 
             # clustering analysis on traces. Split up the traces into individual clusters
             logging.info('Cluster analysis with sklearn MeanShift')
@@ -235,7 +235,7 @@ class output(base):
             unique_labels = [0]
             labels = np.zeros(ntraces)
 
-        fit_out = self.get_solutions_from_traces(tracedata_analyse, multimode, labels)
+        fit_out = self.get_solutions_from_traces(tracedata_analyse, multimode=cluster_analysis, labels=labels) # todo: needs to be changed, if we get solutions from multinest multimode (see above)
         fit_out = self.add_spectra_from_solutions(fit_out)
 
         return fit_out, tracedata_analyse, labels
@@ -251,14 +251,10 @@ class output(base):
         else:
             unique_labels = set(labels)
             if len(labels) != ntraces:
-                logging.error('Multimode is ON and the number of labels is different by the number of samples')
+                logging.error('Multimode is ON and the number of labels is different from the number of samples')
 
         # Create list of solutions. Each solution (cluster) is stored into a dictionary. If multimode = False, then
         # only only one solution is stored.
-
-        # params = ['coupled_mu', 'Temperature', 'Radius', 'P0']
-        # params += self.fitting.forwardmodel.atmosphere.absorbing_gases # list of absorbing gases
-        # params +=  self.fitting.forwardmodel.atmosphere.inactive_gases # list of inactive gases
 
         fit_out = []
         for k in unique_labels:
@@ -277,11 +273,7 @@ class output(base):
                         try:
                             cluster = tracedata[labels == k, idx] # get cluster of points correposning to cluster k, and param idx
 
-                            if param == 'mu' or param == 'coupled_mu':
-                                cluster /= AMU # mu in AMU
-
                             # get errors
-
                             hist, bin_edges = np.histogram(cluster, bins=100, density=True)
                             bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
                             idxmax = np.argmax(hist)
@@ -352,35 +344,75 @@ class output(base):
 
         return np.power(10, mixing_ratios_tracedata), coupled_mu_trace
 
+    def get_multinest_solutions(self):
+
+        # get solutions from multinest
+        self.params_names = self.fitting.fit_params_names
+
+        data = np.loadtxt(os.path.join(self.fitting.dir_multinest, '1-.txt'))
+
+        NEST_analyzer = pymultinest.Analyzer(n_params=len(self.fitting.fit_params),
+                                             outputfiles_basename=os.path.join(self.fitting.dir_multinest, '1-'))
+        NEST_stats = NEST_analyzer.get_stats()
+        NEST_out = []
+
+        modes = []
+        chains = []
+
+        if self.params.nest_multimodes:
+            # get separate chains for each mode
+            with open(os.path.join(self.fitting.dir_multinest, '1-post_separate.dat')) as f:
+                lines = f.readlines()
+                for idx, line in enumerate(lines):
+                    if idx > 2: # skip the first two lines
+                        if lines[idx-1] == '\n' and lines[idx-2] == '\n':
+                            modes.append(chains)
+                            chains = []
+                    chain = [float(x) for x in line.split()[2:]]
+
+                    if len(chain) > 0:
+                        chains.append(chain)
+                modes.append(chains)
+            modes_array = []
+            for mode in modes:
+                mode_array = np.zeros((len(mode), len(mode[0])))
+                for idx, line in enumerate(mode):
+                    mode_array[idx, :] = line
+                modes_array.append(mode_array)
+        else:
+            # not running in multimode. Get chain directly from file 1-.txt
+            modes_array = [data[:,2:]]
+
+        NEST_tracedata = data[:,2:]
+
+        for n in range(len(modes)):
+
+            dict = {'fit_params': {}}
+            sort_order = 0
+            for i in range(len(self.fitting.fit_params)):
+                value = NEST_stats['modes'][n]['maximum a posterior'][i]
+                std = NEST_stats['modes'][n]['sigma'][i]
+                chain = modes_array[n][:,i]
+                dict['fit_params'][self.params_names[i]] = {
+                    'value': value,
+                    'std': std,
+                    'trace': chain,
+                    'sort_order': sort_order
+                }
+                sort_order += 1
+
+            NEST_out.append(dict)
+
+        NEST_out = self.add_spectra_from_solutions(NEST_out)
+        return NEST_out, NEST_tracedata, None
+
+
     def add_spectra_from_solutions(self, fitting_out):
 
         for idx, solution in enumerate(fitting_out):
 
-            fit_params = solution['fit_params']
-
-            for idx_gas, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
-                self.fitting.forwardmodel.atmosphere.absorbing_gases_X[idx_gas] = np.power(10, fit_params[gasname]['value'])
-            if not self.params.fit_fix_inactive:
-                for idx_gas, gasname in enumerate(self.fitting.forwardmodel.atmosphere.inactive_gases):
-                    self.fitting.forwardmodel.atmosphere.inactive_gases_X[idx_gas] = np.power(10, fit_params[gasname]['value'])
-
-            if 'mu' in fit_params:
-                self.fitting.forwardmodel.atmosphere.planet_mu = fit_params['mu']['value']*AMU
-            else:
-                self.fitting.forwardmodel.atmosphere.planet_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu()
-
-            if 'Radius' in fit_params:
-                self.fitting.forwardmodel.atmosphere.planet_radius = fit_params['Radius']['value']*RJUP
-
-            if 'P0' in fit_params:
-                self.fitting.forwardmodel.atmosphere.max_pressure = np.power(10, fit_params['P0']['value'])
-
-            if 'Temperature' in fit_params:
-                self.fitting.forwardmodel.atmosphere.planet_temp = fit_params['Temperature']['value']
-
-            # update atmospheric parameters (PTA, rho, etc)
-            self.fitting.forwardmodel.atmosphere.update_atmosphere()
-
+            fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
+            self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
             model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
 
@@ -422,7 +454,8 @@ class output(base):
         if self.NEST:
             np.savetxt(os.path.join(self.params.out_path, 'NEST_tracedata.txt'), self.NEST_tracedata)
             np.savetxt(os.path.join(self.params.out_path, 'NEST_likelihood.txt'), self.NEST_likelihood)
-            np.savetxt(os.path.join(self.fitting.dir_multinest, 'NEST_labels.txt'), self.NEST_labels)
+            if self.NEST_labels is not None:
+                np.savetxt(os.path.join(self.fitting.dir_multinest, 'NEST_labels.txt'), self.NEST_labels)
             if self.params.fit_clr_trans:
                 np.savetxt(os.path.join(self.params.out_path, 'NEST_clr_inv_tracedata.txt'), self.NEST_data_clr_inv)
             pickle.dump(self.NEST_out, open('Output/NEST_out.db', 'wb'))
@@ -550,6 +583,7 @@ class output(base):
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
+
     def save_ascii_spectra(self):
 
         logging.info('Dumps all model fits and observed spectra to file')
@@ -579,74 +613,97 @@ class output(base):
         logging.info('Spectrum saved to %s ' % saveas)
         np.savetxt(saveas, spectrum)
 
+    def save_TP_profile(self, save_manual=None, FIT_params=None, FIT_params_std=None, save2pdf=False):
+        '''
+        function saving TP profiles for individual minimisation/sampling modes.
+        If save_manual = True, one can provide FIT_params and FIT_params_std to manually
+        save TP_profiles.
+        '''
+        profilename = '_TP_profile_'
+        basename = os.path.join(self.params.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
 
-    # the mixing ratio are not sampled in the log-ratio space, hence we can use the different
-        # modes detected by multinest and get individual solutions, errors and chains
-        #     self.params_names = self.fitting.fit_params_names
-        #
-        #     NEST_analyzer = pymultinest.Analyzer(n_params=len(self.fitting.fit_params),
-        #                                          outputfiles_basename=os.path.join(self.fitting.dir_multinest, '1-'))
-        #     NEST_stats = NEST_analyzer.get_stats()
-        #     self.NEST_out = []
-        #
-        #     modes = []
-        #     chains = []
-        #
-        #     if self.params.nest_multimodes:
-        #         # get separate chains for each mode
-        #         with open(os.path.join(self.fitting.dir_multinest, '1-post_separate.dat')) as f:
-        #             lines = f.readlines()
-        #             for idx, line in enumerate(lines):
-        #                 if idx > 2: # skip the first two lines
-        #                     if lines[idx-1] == '\n' and lines[idx-2] == '\n':
-        #                         modes.append(chains)
-        #                         chains = []
-        #                 chain = [float(x) for x in line.split()[2:]]
-        #
-        #                 if len(chain) > 0:
-        #                     chains.append(chain)
-        #             modes.append(chains)
-        #         modes_array = []
-        #         for mode in modes:
-        #             mode_array = np.zeros((len(mode), len(mode[0])))
-        #             for idx, line in enumerate(mode):
-        #                 mode_array[idx, :] = line
-        #             modes_array.append(mode_array)
-        #     else:
-        #         # not running in multimode. Get chain directly from file 1-.txt
-        #         data = np.loadtxt(os.path.join(self.fitting.dir_multinest, '1-.txt'))
-        #         modes_array = [data[:,2:]]
-        #
-        #     import pickle
-        #     pickle.dump(modes_array, open('Output/modes.db', 'wb'))
-        #
-        #     for n in range(len(modes)):
-        #
-        #         dict = {'fit_params': {}}
-        #         sort_order = 0
-        #         for i in range(len(self.fitting.fit_params)):
-        #             value = NEST_stats['modes'][n]['maximum a posterior'][i]
-        #             std = NEST_stats['modes'][n]['sigma'][i]
-        #             chain = modes_array[n][:,i]
-        #
-        #             if self.params_names[i] == 'mu':
-        #                 value /= AMU
-        #                 std /= AMU
-        #                 chain /= AMU
-        #             elif self.params_names[i] == 'P0':
-        #                 value = np.power(10, mu)
-        #                 std *= value
-        #                 chain = np.power(10, chain)
-        #
-        #             dict['fit_params'][self.params_names[i]] = {
-        #                 'value': value,
-        #                 'std': std,
-        #                 'chain': chain,
-        #                 'sort_order': sort_order
-        #             }
-        #             sort_order += 1
-        #
-        #         self.NEST_out.append(dict)
-        #
-        # self.NEST_out = self.add_spectra_from_solutions(self.NEST_out)
-        # pickle.dump(self.MCMC_out, open('Output/NEST_out.db', 'wb'))
+        P = self.fitting.forwardmodel.atmosphere.P
+
+        out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
+        out[:,0] = P # pressure
+
+        if save_manual is not None:
+            if len(FIT_params) > 0 and len(FIT_params_std) > 0:
+                T_mean, T_minmax, P = iterate_TP_profile(FIT_params, FIT_params_std,
+                                                         self.fitting.forwardmodel.atmosphere.TP_profile)
+                T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+                out[:,1] = T_mean; out[:,2] = T_sigma
+
+                filename = str(basename)+profilename+'.dat'
+                logging.info('Saving manual TP_profile to %s' % filename)
+                np.savetxt(filename,out)
+
+                if plot:
+                    fig = plot_TP_profile(P, T_mean, T_minmax,  fig=fig, name='NEST',
+                                          save2pdf=save2pdf, out_path=self.params.out_path)
+
+            else:
+                logging.error('Saving manual TP_profile with wrong input parameters')
+                exit()
+
+        if self.DOWN:
+
+            fit_params = [self.NEST_out[0]['fit_params'][param]['value'] for param in self.params_names]
+            self.fitting.update_atmospheric_parameters(fit_params)
+            T_mean = self.fitting.forwardmodel.T
+            T_sigma  = np.zeros_like(T_mean)
+            out[:,1] = T_mean
+            out[:,2] = T_sigma
+            filename = str(basename)+profilename+'down.dat'
+            logging.info('Saving MLE TP_profile to %s' % filename)
+            np.savetxt(filename,out)
+
+            if save2pdf:
+                fig = plot_TP_profile(P, T_mean, fig=fig, name='NEST', save2pdf=save2pdf, out_path=self.params.out_path)
+
+        if self.MCMC:
+
+            fig = None
+
+            logging.info('There are %i different MCMC chains. '
+                         'Saving one TP profile for each chain' % len(self.MCMC_out))
+
+            for idx, solution in enumerate(self.MCMC_out):
+
+                #iterate through all upper/lower bounds of parameters to find function minimum and maximum
+                fit_params = [self.MCMC_out[idx]['fit_params'][param]['value'] for param in self.params_names]
+
+                T_mean, T_minmax = iterate_TP_profile(self.MCMC_TP_params_values, self.MCMC_TP_params_std,
+                                                      self.fitting.forwardmodel.atmosphere.TP_profile)
+                T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+                out[:,1] = T_mean;
+                out[:,2] = T_sigma
+                filename = str(basename)+profilename+'_mcmc.dat'
+                logging.info('Saving MCMC TP_profile to %s' % filename)
+                np.savetxt(filename,out)
+
+                if save2pdf:
+                    fig = plot_TP_profile(P, T_mean, T_minmax,  fig=fig, name='MCMC',
+                                          save2pdf=save2pdf, out_path=self.params.out_path)
+
+        if self.NEST:
+            fig = None
+
+            logging.info('MultiNest detected %i different modes. '
+                         'Saving one TP profile for each solution' % len(self.NEST_out))
+            for idx, solution in enumerate(self.NEST_out):
+
+                T_mean, T_minmax = iterate_TP_profile(self.NEST_TP_params_values, self.NEST_TP_params_std,
+                                                      self.fitting.forwardmodel.atmosphere.TP_profile)
+                T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+                out[:,1] = T_mean;
+                out[:,2] = T_sigma
+                filename = str(basename)+profilename+'_spectrum_nest_%i.dat' % (idx)
+
+                logging.info('Saving Nested Sampling spectrum for solution %i to %s' % (idx, filename))
+                np.savetxt(filename, out)
+
+                if save2pdf:
+                    fig = plot_TP_profile(P, T_mean, T_minmax,  fig=fig, name='NEST',
+                                          save2pdf=save2pdf, out_path=self.params.out_path)
+

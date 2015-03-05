@@ -33,7 +33,7 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
     Tmean = TP_function(TP_params)
 
     print 'Tmean', Tmean
-    
+
     bounds = [] #list of lower and upper parameter bounds 
     for i in xrange(len(TP_params)):
         bounds.append((TP_params[i]-TP_params_std[i],TP_params[i]+TP_params_std[i]))
@@ -47,6 +47,7 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
     for i in range(iter_num):
         T_iter[:,i]  = TP_function(iterlist[i])
 
+    Tmean = np.mean(T_iter,1)
     T_minmax[:,0] = np.min(T_iter,1)
     T_minmax[:,1] = np.max(T_iter,1)
     
@@ -59,7 +60,6 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
     #She's got everything I need: pharmacy keys.
     #She's fallen hard for me. I can see it in her eyes
     #She acts just like a nurse... with all the other guys. 
-    print 'Tmean, Tminmax', Tmean, T_minmax
 
     return Tmean, T_minmax
 
@@ -73,34 +73,34 @@ def generate_tp_covariance(outob):
     #translating fitting parameters to mean temperature and lower/upper bounds
     if outob.NEST:
         T_mean, T_minmax = iterate_TP_profile(outob.NEST_TP_params_values, outob.NEST_TP_params_std,
-                                              outob.fitting.atmosphere.TP_profile)
+                                              outob.fitting.forwardmodel.atmosphere.TP_profile)
     elif outob.MCMC:
         T_mean, T_minmax = iterate_TP_profile(outob.MCMC_TP_params_values, outob.MCMC_TP_params_std,
-                                              outob.fitting.atmosphere.TP_profile)
+                                              outob.fitting.forwardmodel.atmosphere.TP_profile)
     elif outob.DOWN:
         FIT_std = np.zeros_like(outob.DOWN_TP_params_values)
 
-        print 'iterating', outob.DOWN_TP_params_values
-
         T_mean, T_minmax  = iterate_TP_profile(outob.DOWN_TP_params_values, FIT_std,
-                                               outob.fitting.atmosphere.TP_profile)
+                                               outob.fitting.forwardmodel.atmosphere.TP_profile)
     else:
         logging.error('Cannot compute TP-covariance. No Stage 0 fit (NS/MCMC/MLE) can be found.')
         exit()
     
     #getting temperature error
-    T_sigma = T_minmax[:,1] - T_minmax[:,0]
-    nlayers = outob.fitting.atmosphere.nlayers
+    T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2
+    nlayers = outob.fitting.forwardmodel.atmosphere.nlayers
     
     #setting up arrays
-    Ent_arr = np.zeros((nlayers, nlayers))
-#     Sig_arr = np.zeros((nlayers,nlayers))
-    
+    Ent_arr = np.zeros((nlayers,nlayers))
+    Sig_arr = np.zeros((nlayers,nlayers))
+
     #populating arrays
     for i in range(nlayers):
-        Ent_arr[i,:] = np.abs((T_mean[i]-T_sigma[i]-T_mean[:]-T_sigma[:]))
+        Ent_arr[i,:] = np.abs((T_mean[i])-(T_mean[:]))
+        Sig_arr[i,:] = np.abs(T_sigma[i]+T_sigma[:])
 
-    Diff_arr = np.abs(Ent_arr)
+    Diff_arr = np.sqrt(Ent_arr**2+Sig_arr**2)
+
     Diff_norm = ((Diff_arr-np.min(Diff_arr))/np.max(Diff_arr-np.min(Diff_arr)))
     Cov_array = 1.0 - Diff_norm
     

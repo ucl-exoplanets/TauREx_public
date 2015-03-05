@@ -145,6 +145,7 @@ class emission(base):
         if temperature is None:
             temperature = self.atmosphere.T#self.planet_temp
 
+
         BB_star = self.F_star
 
         #constants 

@@ -34,6 +34,32 @@ def plot_posteriors(fit_out, plot_name='plot', save2pdf=False, out_path=None, pl
                 logging.info('Plot saved in %s and %s' % (filename1, filename2))
 
 
+def plot_TP_profile(P, T_mean, T_minmax=None, fig=None, name=None, color='blue', save2pdf=False, out_path=None, linewidth=2.0):
+
+    if fig is None: #accepting externally passed figure references
+        fig = pl.figure()
+
+    if name != 'downhill' and T_minmax is not None:
+        pl.fill_betweenx(P*1e-5, T_minmax[:,0], T_minmax[:,1],alpha=0.3,color=color)
+        pl.plot(T_minmax[:,0],P*1e-5,'--',linewidth=linewidth,alpha=0.5,color=color)
+        pl.plot(T_minmax[:,1],P*1e-5,'--',linewidth=linewidth,alpha=0.5,color=color)
+
+    pl.plot(T_mean,P*1e-5,linewidth=linewidth,color=color)
+    pl.yscale('log')
+    pl.xlabel('Temperature')
+    pl.ylabel('Pressure (bar)')
+    pl.gca().invert_yaxis()
+
+    if save2pdf:
+        if name is not None:
+            filename = os.path.join(out_path, 'tp_profile_'+name+'.pdf')
+        else:
+            filename = os.path.join(out_path, 'tp_profile.pdf')
+        fig.savefig(filename)
+        logging.info('Plot saved in %s' % filename)
+
+    return fig
+
 def _plot_posteriors(fit_out, plot_contour=False):
 
     try:

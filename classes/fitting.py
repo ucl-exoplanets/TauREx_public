@@ -134,7 +134,7 @@ class fitting(base):
             clr = self.get_mixing_ratio_clr()
 
             # append all mixing ratios, minus one (as we're using the centered-log-ratio transformation)
-            for i in range(self.atmosphere.nallgases - 1):
+            for i in range(self.forwardmodel.atmosphere.nallgases - 1):
                 self.fit_params.append(clr[i])
                 self.fit_bounds.append((-10, 10)) # @todo bounds seem ok, what's the minimum X we can get with this?
                 self.fit_params_names.append('CLR_X_%i' % i)
@@ -159,44 +159,46 @@ class fitting(base):
 
         self.fit_X_nparams = count_X # set the number of fitted mixing ratios
 
+
         ##########################################################################
         # TP profile parameters
 
         T_bounds = (self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up) #lower and upper bounds for temperature
         T_mean = np.mean(T_bounds)
 
-        if self.atmosphere.TP_type   == 'isothermal':
+        if self.forwardmodel.atmosphere.TP_type   == 'isothermal':
 
-            if self.params.fit_fix_T: # in the isothermal case, we can fix the temperature...
+            if self.params.fit_fix_temp: # in the isothermal case, we can fix the temperature...
                 self.fit_TP_nparams = 0
             else:
-                self.fit_TP_nparams = self.atmosphere.nlayers
+                self.fit_TP_nparams = 1
 
                 self.fit_params_names.append('T')
                 self.fit_bounds.append((T_bounds[0],T_bounds[1])) #isothermal T
                 self.fit_params.append(T_mean)
 
-        elif self.atmosphere.TP_type == 'rodgers':
+        elif self.forwardmodel.atmosphere.TP_type == 'rodgers':
 
-            self.fit_TP_nparams = self.atmosphere.nlayers
+            self.fit_TP_nparams = self.forwardmodel.atmosphere.nlayers
 
-            for i in xrange(self.atmosphere.nlayers):
+            for i in xrange(self.forwardmodel.atmosphere.nlayers):
                 self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                 self.fit_params.append(T_mean)
 
-        elif self.atmosphere.TP_type == 'hybrid':
+        elif self.forwardmodel.atmosphere.TP_type == 'hybrid':
 
-            self.fit_TP_nparams = len(self.atmosphere.P_index) + 1
+            self.fit_TP_nparams = len(self.forwardmodel.atmosphere.P_index) + 1
 
             self.fit_params_names.append('alpha')
-            self.fit_bounds.append((0.0,1.0)) #alpha parameter
-            self.fit_params.append(T_mean)
-            for i in xrange(len(self.atmosphere.P_index)):
+            self.fit_bounds.append((0.5,1.0)) #alpha parameter
+            self.fit_params.append(np.mean((0.5,1.0)))
+
+            for i in xrange(len(self.forwardmodel.atmosphere.P_index)):
                 self.fit_params_names.append('T_%i' % i)
                 self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                 self.fit_params.append(T_mean)
 
-        elif self.atmosphere.TP_type == 'guillot':
+        elif self.forwardmodel.atmosphere.TP_type == 'guillot':
 
             self.fit_TP_nparams = 5
 
@@ -217,10 +219,10 @@ class fitting(base):
             self.fit_params.append(np.mean((0.0,1e-2)))
 
             self.fit_params_names.append('alpha')
-            self.fit_bounds.append((0.0,1.0))
+            self.fit_bounds.append((0.5,1.0))
             self.fit_params.append(np.mean((0.0,1.0)))
 
-        elif self.atmosphere.TP_type == '2point':
+        elif self.forwardmodel.atmosphere.TP_type == '2point':
 
             self.fit_TP_nparams = 3
 
@@ -236,7 +238,7 @@ class fitting(base):
             self.fit_bounds.append((1.0,1e5))
             self.fit_params.append(np.mean((1.0,1e5)))
 
-        elif self.atmosphere.sTP_type == '3point':
+        elif self.forwardmodel.atmosphere.sTP_type == '3point':
 
             self.fit_TP_nparams = 5
 
@@ -281,12 +283,10 @@ class fitting(base):
             self.fit_params_names.append('P0')
             self.fit_params.append(np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up))))
             self.fit_bounds.append((log(self.params.fit_P0_low), log(self.params.fit_P0_up)))
-            print 'pressure start', np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up)))
 
-        print self.fit_params_names
-        print self.fit_params
-        print self.fit_bounds
-
+        # print 'params names', self.fit_params_names, len(self.fit_params_names)
+        # print 'params fit_params', self.fit_params, len(self.fit_params)
+        # print 'params fit_bounds', self.fit_bounds, len(self.fit_bounds)
 
         # define total number of parameters to be fitted
         self.fit_nparams = len(self.fit_params)
@@ -323,7 +323,7 @@ class fitting(base):
             # convert centered-log-ratio mixing ratios back to simplex
 
             # build list of log-ratios
-            clr = fit_params[:self.atmosphere.nallgases-1]
+            clr = fit_params[:self.forwardmodel.atmosphere.nallgases-1]
             clr.append(-sum(clr)) # append last log-ratio. This is not fitted, but derived as sum(log-ratios) = 0
 
             # convert log-ratios to simplex
@@ -338,7 +338,7 @@ class fitting(base):
                 self.forwardmodel.atmosphere.inactive_gases_X[idx] = clr_inv[j]
                 j += 1
 
-            count = self.atmosphere.nallgases - 1
+            count = self.forwardmodel.atmosphere.nallgases - 1
 
         else:
 
@@ -364,8 +364,10 @@ class fitting(base):
 
         # get TP profile fitted parameters. Number of parameter is profile dependent, and defined by self.fit_TP_nparams
         if self.fit_TP_nparams > 0:
+
             TP_params = fit_params[count:count+self.fit_TP_nparams]
-            self.forwardmodel.atmosphere.T = self.atmosphere.TP_profile(fit_params=TP_params)
+            self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params)
+            count += self.fit_TP_nparams
 
         #####################################################
         # Mean molecular weight.
@@ -392,7 +394,6 @@ class fitting(base):
 
         if not self.params.fit_fix_P0:
             self.forwardmodel.atmosphere.max_pressure = power(10, fit_params[count])
-            print 'set surface pressure to ', power(10, fit_params[count])
             count += 1
 
         # Update surface gravity, scale height, density bla bla
@@ -422,7 +423,7 @@ class fitting(base):
         #
         # figure(1)
         # clf()
-        # plot(self.atmosphere.T, self.atmosphere.P)
+        # plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
         # gca().invert_yaxis()
         # xlabel('Temperature')
         # ylabel('Pressure (Pa)')
@@ -447,7 +448,7 @@ class fitting(base):
         #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
         #     self.forwardmodel.atmosphere.absorbing_gases_X, \
         #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
-
+        #
         return res
 
     ###############################################################################
@@ -471,18 +472,9 @@ class fitting(base):
 
         logging.info('Saving the downhill minimization results')
 
-        # todo improve outpue. Save something like NEST_out
-
         self.DOWN_fit_output = fit_output['x']
         self.DOWN = True
 
-        # self.update_atmospheric_parameters(fit_output['x'])
-        # self.DOWNHILL = True
-        # self.DOWNHILL_T_mean = self.forwardmodel.atmosphere.planet_temp
-        # self.DOWNHILL_X_mean = self.forwardmodel.atmosphere.X
-        # self.DOWNHILL_fit_output = fit_output['x']
-        # logging.info('Printing out DOWNHILL results')
-        # self.print_fit_results()
 
     ###############################################################################
     #Markov Chain Monte Carlo algorithm
@@ -689,13 +681,13 @@ class fitting(base):
 
         # transform back to simplex space
         clr_inv_tmp = []
-        for i in range(self.atmosphere.nallgases):
+        for i in range(self.forwardmodel.atmosphere.nallgases):
             clr_inv_tmp.append(exp(clr[i]))
         clr_inv_tmp = asarray(clr_inv_tmp)/sum(clr_inv_tmp) # closure
 
         # set very low abundances to zero todo needed?
         clr_inv = []
-        for i in range(self.atmosphere.nallgases):
+        for i in range(self.forwardmodel.atmosphere.nallgases):
             if clr_inv_tmp[i] < 1.e-7:
                 clr_inv.append(0)
             else:

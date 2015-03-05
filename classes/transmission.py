@@ -277,10 +277,6 @@ class transmission(base):
         else:
             self.Rsig = zeros((self.nlambda))
 
-
-
-
-
         #selecting correct sigma_array for temperature
         sigma_array = self.get_sigma_array(temperature)
 

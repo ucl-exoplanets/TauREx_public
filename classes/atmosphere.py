@@ -102,7 +102,8 @@ class atmosphere(base):
             else:
                 self.TP_type = tp_profile_type
 
-        if self.params.gen_type == 'transmission':
+        elif self.params.gen_type == 'transmission':
+
             if tp_profile_type is None:
                 self.TP_type = 'isothermal'
             else:
@@ -436,8 +437,6 @@ class atmosphere(base):
         T4 = 3.0*T_int**4/4.0 * (2.0/3.0 + tau) + 3.0*T_irr**4/4.0 *(1.0 - alpha) * eta(gamma_1,tau) + 3.0 * T_irr**4/4.0 * alpha * eta(gamma_2,tau)
         T = T4**0.25
 
-        print T
-
         return np.asarray(T)
 
     def _TP_rodgers2000(self, TP_params, h=1.5, covmatrix=None):
@@ -493,8 +492,6 @@ class atmosphere(base):
 
         return T
 
-
-
     def _TP_hybrid(self, TP_params, h=5.0):
         '''
         Layer-by-layer temperature pressure profile. It is a hybrid between the _TP_rodgers2000 profile and
@@ -517,6 +514,7 @@ class atmosphere(base):
 
         #assigning parameters
         alpha  = TP_params[0]
+
 #         alpha = 0.5
 #         print 'alpha ',alpha
 #         print 'tparams ', TP_params[:10]
