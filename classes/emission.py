@@ -115,7 +115,7 @@ class emission(base):
     def get_sigma_array_c(self):
     #generating 3D sigma_array from sigma_dict for c++ path integral
         tempgrid = self.sigma_dict['tempgrid']
-        OUT = np.zeros((len(tempgrid),2,len(self.specgrid)),dtype=np.float64)
+        OUT = np.zeros((len(tempgrid),self.n_gas,len(self.specgrid)),dtype=np.float64)
         
         c=0
         for t in tempgrid:
