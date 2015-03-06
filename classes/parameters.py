@@ -8,9 +8,8 @@ from ConfigParser import SafeConfigParser
 import numpy as np
 from numpy import genfromtxt,arange,size
 from StringIO import StringIO
-import ast
-import logging
-import os
+import ast, logging, os
+
 
 try:
     from mpi4py import MPI
@@ -58,6 +57,9 @@ class parameters(base):
 
         if len(logging.getLogger().handlers) == 0: # be sure to load only one logging handler
             # configure logging instance
+            if not os.path.isdir('Output'):
+                    logging.info('Create folder Output')
+                    os.mkdir('Output')
             logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
                                 level=logging.DEBUG)
 
