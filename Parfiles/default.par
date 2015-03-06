@@ -222,6 +222,9 @@ var_mix = True
 #available profiles are: isothermal, guillot, hybrid, 2point, 3point
 profile_type = guillot
 
+#Correlation length of TP profile for Rodgers2000 and Hybrid 
+corr_length = 5.0
+
 
 [Fitting]
 #defines general fittings parameters, independent of method
@@ -234,6 +237,12 @@ emission     = False
 
 #fit emission in 2 stage mode 
 emission_stage2 = True
+
+#lower and upper bounds for TP-profile hybrid alpha parameter 
+hybrid_alpha_low  = 0.0 
+hybrid_alpha_high = 1.0
+
+
 
 #free parameters, temperature, abundance. Currently not used. not sure whether should be implemented and in what form
 param_free = 1,42

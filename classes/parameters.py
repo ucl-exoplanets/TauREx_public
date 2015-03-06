@@ -151,6 +151,7 @@ class parameters(base):
         self.tp_max_pres           = self.getpar('T-P profile', 'atm_max_pressure', 'float')
         self.tp_var_mix            = self.getpar('T-P profile', 'var_mix', 'bool')
         self.tp_type               = self.getpar('T-P profile', 'profile_type')
+        self.tp_corrlength         = self.getpar('T-P profile', 'corr_length','float')
 
 
         try:
@@ -173,6 +174,8 @@ class parameters(base):
             self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
             self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
             self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
+            self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
+            self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
             self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
             self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
             self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)

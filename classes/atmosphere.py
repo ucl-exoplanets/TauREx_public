@@ -439,7 +439,7 @@ class atmosphere(base):
 
         return np.asarray(T)
 
-    def _TP_rodgers2000(self, TP_params, h=1.5, covmatrix=None):
+    def _TP_rodgers2000(self, TP_params, h=None, covmatrix=None):
         '''
         Layer-by-layer temperature - pressure profile retrieval using dampening factor
         Introduced in Rodgers (2000): Inverse Methods for Atmospheric Sounding (equation 3.26)
@@ -454,6 +454,8 @@ class atmosphere(base):
             - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
                   may be left as free and Pressure dependent parameter later.
         '''
+        if h is None:
+            h = self.params.tp_corrlength
 
         #assigning parameters
         T_init = TP_params
@@ -492,7 +494,7 @@ class atmosphere(base):
 
         return T
 
-    def _TP_hybrid(self, TP_params, h=5.0):
+    def _TP_hybrid(self, TP_params, h=None):
         '''
         Layer-by-layer temperature pressure profile. It is a hybrid between the _TP_rodgers2000 profile and
         a second (externally calculated) covariance matrix. The external covariance can be calculated
@@ -508,7 +510,9 @@ class atmosphere(base):
             - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
                   may be left as free and Pressure dependent parameter later.
         '''
-
+        if h is None:
+            h = self.params.tp_corrlength
+            
         #if self.TP_setup:
         T = np.zeros((self.nlayers)) #temperature array
 
