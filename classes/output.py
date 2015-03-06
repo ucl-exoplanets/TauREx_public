@@ -172,12 +172,21 @@ class output(base):
 
 
         # storing fit_params output and standard deviation (of first mode only!!!). @todo What about the other modes??
-        self.NEST_params_values = [self.NEST_out[0]['fit_params'][param]['value'] for param in self.params_names]
-        self.NEST_params_std = [self.NEST_out[0]['fit_params'][param]['std'] for param in self.params_names]
-        self.NEST_X_params_values = self.NEST_params_values[:self.fitting.fit_X_nparams]
-        self.NEST_X_params_std = self.NEST_params_std[:self.fitting.fit_X_nparams]
-        self.NEST_TP_params_values = self.NEST_params_values[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
-        self.NEST_TP_params_std = self.NEST_params_std[self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+        self.NEST_params_values    = {}
+        self.NEST_params_std       = {}
+        self.NEST_TP_params_std    = {}
+        self.NEST_X_params_values  = {}
+        self.NEST_X_params_std     = {}
+        self.NEST_TP_params_values = {}
+        self.NEST_TP_params_std    = {}
+        for idx, solution in enumerate(self.NEST_out):
+            self.NEST_params_values[idx] = [self.NEST_out[idx]['fit_params'][param]['value'] for param in self.params_names]
+            self.NEST_params_std[idx]    = [self.NEST_out[idx]['fit_params'][param]['std'] for param in self.params_names]
+        
+            self.NEST_X_params_values[idx]  = self.NEST_params_values[idx][:self.fitting.fit_X_nparams]
+            self.NEST_X_params_std[idx]     = self.NEST_params_std[idx][:self.fitting.fit_X_nparams]
+            self.NEST_TP_params_values[idx] = self.NEST_params_values[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+            self.NEST_TP_params_std[idx]    = self.NEST_params_std[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
 
     def analyse_traces(self, tracedata, clr_inv=False, cluster_analysis=False):
 
@@ -625,12 +634,12 @@ class output(base):
 
         out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
         out[:,0] = P # pressure
-
+            
         if save_manual is not None:
             if len(FIT_params) > 0 and len(FIT_params_std) > 0:
-                T_mean, T_minmax, P = iterate_TP_profile(FIT_params, FIT_params_std,
+                T_mean, T_sigma, P = iterate_TP_profile(FIT_params, FIT_params_std,
                                                          self.fitting.forwardmodel.atmosphere.TP_profile)
-                T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+                
                 out[:,1] = T_mean; out[:,2] = T_sigma
 
                 filename = str(basename)+profilename+'.dat'
@@ -638,7 +647,7 @@ class output(base):
                 np.savetxt(filename,out)
 
                 if plot:
-                    fig = plot_TP_profile(P, T_mean, T_minmax,  fig=fig, name='NEST',
+                    plot_TP_profile(P, T_mean, T_sigma, name='NEST',
                                           save2pdf=save2pdf, out_path=self.params.out_path)
 
             else:
@@ -658,23 +667,22 @@ class output(base):
             np.savetxt(filename,out)
 
             if save2pdf:
-                fig = plot_TP_profile(P, T_mean, fig=fig, name='NEST', save2pdf=save2pdf, out_path=self.params.out_path)
+                plot_TP_profile(P, T_mean, name='NEST', save2pdf=save2pdf, out_path=self.params.out_path)
 
         if self.MCMC:
-
-            fig = None
 
             logging.info('There are %i different MCMC chains. '
                          'Saving one TP profile for each chain' % len(self.MCMC_out))
 
+        
             for idx, solution in enumerate(self.MCMC_out):
 
                 #iterate through all upper/lower bounds of parameters to find function minimum and maximum
-                fit_params = [self.MCMC_out[idx]['fit_params'][param]['value'] for param in self.params_names]
+#                 fit_params = [self.MCMC_out[idx]['fit_params'][param]['value'] for param in self.params_names]
 
-                T_mean, T_minmax = iterate_TP_profile(self.MCMC_TP_params_values, self.MCMC_TP_params_std,
+                T_mean, T_sigma = iterate_TP_profile(self.MCMC_TP_params_values[idx], self.MCMC_TP_params_std[idx],
                                                       self.fitting.forwardmodel.atmosphere.TP_profile)
-                T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+                
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
                 filename = str(basename)+profilename+'_mcmc.dat'
@@ -682,19 +690,19 @@ class output(base):
                 np.savetxt(filename,out)
 
                 if save2pdf:
-                    fig = plot_TP_profile(P, T_mean, T_minmax,  fig=fig, name='MCMC',
+                    plot_TP_profile(P, T_mean, T_sigma, name='MCMC_'+str(idx),
                                           save2pdf=save2pdf, out_path=self.params.out_path)
 
         if self.NEST:
-            fig = None
 
             logging.info('MultiNest detected %i different modes. '
                          'Saving one TP profile for each solution' % len(self.NEST_out))
+            
             for idx, solution in enumerate(self.NEST_out):
-
-                T_mean, T_minmax = iterate_TP_profile(self.NEST_TP_params_values, self.NEST_TP_params_std,
+            
+                T_mean, T_sigma = iterate_TP_profile(self.NEST_TP_params_values[idx], self.NEST_TP_params_std[idx],
                                                       self.fitting.forwardmodel.atmosphere.TP_profile)
-                T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+            
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
                 filename = str(basename)+profilename+'_spectrum_nest_%i.dat' % (idx)
@@ -703,6 +711,6 @@ class output(base):
                 np.savetxt(filename, out)
 
                 if save2pdf:
-                    fig = plot_TP_profile(P, T_mean, T_minmax,  fig=fig, name='NEST',
+                    plot_TP_profile(P, T_mean, T_sigma, name='NEST_'+str(idx),
                                           save2pdf=save2pdf, out_path=self.params.out_path)
 

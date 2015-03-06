@@ -50,18 +50,10 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
     Tmean = np.mean(T_iter,1)
     T_minmax[:,0] = np.min(T_iter,1)
     T_minmax[:,1] = np.max(T_iter,1)
-    
-    #Say hello, to the rug's topography
-    #It holds quite a lot of interest with your face down on it. 
-    #Say hello, to the shrinking in your head
-    #You can't see it but you know it's there, so don't negelect it. 
-    
-    #I'm taking her home with me. All dressed in white.
-    #She's got everything I need: pharmacy keys.
-    #She's fallen hard for me. I can see it in her eyes
-    #She acts just like a nurse... with all the other guys. 
-
-    return Tmean, T_minmax
+#     T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+    T_sigma = np.std(T_iter,1)
+   
+    return Tmean, T_sigma
 
 
 def generate_tp_covariance(outob):
@@ -72,22 +64,21 @@ def generate_tp_covariance(outob):
     
     #translating fitting parameters to mean temperature and lower/upper bounds
     if outob.NEST:
-        T_mean, T_minmax = iterate_TP_profile(outob.NEST_TP_params_values, outob.NEST_TP_params_std,
+        T_mean, T_sigma = iterate_TP_profile(outob.NEST_TP_params_values[0], outob.NEST_TP_params_std[0],
                                               outob.fitting.forwardmodel.atmosphere.TP_profile)
     elif outob.MCMC:
-        T_mean, T_minmax = iterate_TP_profile(outob.MCMC_TP_params_values, outob.MCMC_TP_params_std,
+        T_mean, T_sigma = iterate_TP_profile(outob.MCMC_TP_params_values[0], outob.MCMC_TP_params_std[0],
                                               outob.fitting.forwardmodel.atmosphere.TP_profile)
     elif outob.DOWN:
         FIT_std = np.zeros_like(outob.DOWN_TP_params_values)
 
-        T_mean, T_minmax  = iterate_TP_profile(outob.DOWN_TP_params_values, FIT_std,
+        T_mean, T_sigma  = iterate_TP_profile(outob.DOWN_TP_params_values, FIT_std,
                                                outob.fitting.forwardmodel.atmosphere.TP_profile)
     else:
         logging.error('Cannot compute TP-covariance. No Stage 0 fit (NS/MCMC/MLE) can be found.')
         exit()
     
     #getting temperature error
-    T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2
     nlayers = outob.fitting.forwardmodel.atmosphere.nlayers
     
     #setting up arrays
