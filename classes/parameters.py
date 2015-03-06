@@ -75,7 +75,7 @@ class parameters(base):
 
         # list of all molecules for which we have cross sections
         self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
-                                    '28Si-16O', '48Ti-16O', '14N-16O'] # VO removed due to lowest T = 1000 in cross sections
+                                    '28Si-16O', '48Ti-16O', '14N-16O', '1H2-32S'] # VO removed due to lowest T = 1000 in cross sections
 
         # list of all inactive gases we take care of
         self.all_inactive_gases = ['He', 'H2', 'N2']
