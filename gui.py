@@ -138,6 +138,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_TiO.valueChanged.connect(self.event_status_changed)
         #self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_H2S.valueChanged.connect(self.event_status_changed)
 
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
@@ -165,6 +166,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_TiO.valueChanged.disconnect(self.event_status_changed)
         #self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_H2S.valueChanged.disconnect(self.event_status_changed)
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
 
@@ -261,6 +263,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_TiO.setValue(self.forwardmodel.params.planet_mixing[7]*100.)
         #self.doubleSpinBox_VO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
         self.doubleSpinBox_NO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
+        self.doubleSpinBox_H2S.setValue(self.forwardmodel.params.planet_mixing[9]*100.)
         self.doubleSpinBox_He.setValue(self.forwardmodel.atmosphere.inactive_gases_X[0]*100.)
         self.doubleSpinBox_H2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[1]*100.)
         self.doubleSpinBox_N2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[2]*100.)
@@ -295,6 +298,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.absorbing_gases_X[7] = self.doubleSpinBox_TiO.value() / 100.
         #self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_VO.value() / 100.
         self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_NO.value() / 100.
+        self.forwardmodel.atmosphere.absorbing_gases_X[9] = self.doubleSpinBox_H2S.value() / 100.
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
         self.forwardmodel.atmosphere.inactive_gases_X[0] = self.doubleSpinBox_He.value() / 100.
         self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.

@@ -219,12 +219,12 @@ class atmosphere(base):
     def get_gas_fraction(self, gasname):
 
         # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
-        if gasname in self.data.all_absorbing_gases:
+        if gasname in self.params.all_absorbing_gases:
             if gasname in self.params.planet_molec:
                 index = self.params.planet_molec.index(gasname)
                 return self.X[index, 0]
 
-        elif gasname in self.data.all_inactive_gases:
+        elif gasname in self.params.all_inactive_gases:
             if gasname in self.params.planet_inactive_gases:
                 index = self.params.planet_inactive_gases.index(gasname)
                 return self.inactive_gases_X[index]

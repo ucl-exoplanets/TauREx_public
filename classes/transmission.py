@@ -68,7 +68,7 @@ class transmission(base):
 
         # preload Rayleigh for all gases and the given wavelengths (lambdagrid)
         self.sigma_R_dict = {}
-        for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
+        for gasname in self.params.all_absorbing_gases + self.params.all_inactive_gases:
             if gasname in self.data.sigma_R:
                 self.sigma_R_dict[gasname] =  self.data.sigma_R[gasname](self.lambdagrid)
 
@@ -116,7 +116,7 @@ class transmission(base):
         Rsig = zeros((self.nlambda))
 
         # loop through all gases (absorbing + inactive)
-        for gasname in self.data.all_absorbing_gases + self.data.all_inactive_gases:
+        for gasname in self.params.all_absorbing_gases + self.params.all_inactive_gases:
             if gasname in self.data.sigma_R:
                 Rsig += self.atmosphere.get_gas_fraction(gasname) * self.sigma_R_dict[gasname]
         return Rsig
@@ -132,6 +132,7 @@ class transmission(base):
     #@profile
     def get_sigma_array(self, temperature):
         # getting sigma array from sigma_dic for given temperature
+
         return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
 
     def get_Csig(self):
@@ -168,7 +169,7 @@ class transmission(base):
         if rho is None:
             rho = self.atmosphere.rho
         if temperature is None:
-            temperature = self.atmosphere.T
+            temperature = self.atmosphere.T[0] # todo careful assuming a isothermal TP profile!
 
 
         dz = self.get_dz()
