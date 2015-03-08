@@ -20,8 +20,8 @@
 #loading libraries
 from base import base
 import numpy as np
-import os,glob, pickle
 import pylab as py
+import os, glob, pickle, shutil
 import emission, transmission, atmosphere, library_plotting, library_emission
 from emission import *
 from transmission import *
@@ -96,7 +96,8 @@ class output(base):
         if self.NEST:
             self.store_nest_solutions()
 
-        self.save_fit_output_files()
+        if fitting is not None:
+           self.save_fit_output_files()
 
     #class methods
 
@@ -199,7 +200,7 @@ class output(base):
             mixing_ratios_clr = tracedata[:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
             mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
 
-            self.tracedata_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace,
+            self.tracedata_clr_inv = np.c_[mixing_ratios_clr_inv, #coupled_mu_trace,
                                            tracedata[:, self.fitting.forwardmodel.atmosphere.nallgases-1:]]
             tracedata_analyse = self.tracedata_clr_inv # set the trace to analyse and get solutions from
 
@@ -208,8 +209,8 @@ class output(base):
             for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
                     self.fitting.forwardmodel.atmosphere.inactive_gases):
                 self.params_names.append(gasname)
-            # todo careful about adding coupled_mu, it might interfere with fit-params?
-            self.params_names.append('coupled_mu')
+            ## todo careful about adding coupled_mu, it might interfere with fit-params?
+            #self.params_names.append('coupled_mu')
             for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                 self.params_names.append(self.fitting.fit_params_names[i])
 
@@ -350,7 +351,7 @@ class output(base):
             coupled_mu_trace[i] = coupled_mu
             i += 1
 
-        return np.power(10, mixing_ratios_tracedata), coupled_mu_trace
+        return np.log10(mixing_ratios_tracedata), coupled_mu_trace
 
     def get_multinest_solutions(self):
 
@@ -420,6 +421,14 @@ class output(base):
         for idx, solution in enumerate(fitting_out):
 
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
+
+            # if using the clr transformation, before parsing fit_params to update the atmosphere from fitting object,
+            # set fit_clr_trans and fit_fix_inactive to False, as output fit_params will always contain the transformed
+            # mixing ratios of absorbing and inactive gases
+            if self.fitting.params.fit_clr_trans == True:
+                self.fitting.params.fit_clr_trans = False
+                self.fitting.params.fit_fix_inactive = False
+
             self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
             model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
@@ -450,14 +459,15 @@ class output(base):
             f.close()
 
         if self.DOWN:
-            pickle.dump(self.DOWN_out, open('Output/DOWN_out.db', 'wb'))
+            pickle.dump(self.DOWN_out, open(os.path.join(self.params.out_path, 'DOWN_out.db'), 'wb'))
 
         if self.MCMC:
             np.savetxt(os.path.join(self.params.out_path, 'MCMC_tracedata.txt'), self.MCMC_tracedata)
             np.savetxt(os.path.join(self.fitting.dir_multinest, 'MCMC_labels.txt'), self.MCMC_labels)
             if self.params.fit_clr_trans:
                 np.savetxt(os.path.join(self.params.out_path, 'MCMC_clr_inv_tracedata.txt'), self.MCMC_data_clr_inv)
-            pickle.dump(self.MCMC_out, open('Output/MCMC_out.db', 'wb'))
+            pickle.dump(self.MCMC_out, open(os.path.join(self.params.out_path, 'MCMC_out.db'), 'wb'))
+            self.save_fit_out_to_file(self.MCMC_out, type='MCMC')
 
         if self.NEST:
             np.savetxt(os.path.join(self.params.out_path, 'NEST_tracedata.txt'), self.NEST_tracedata)
@@ -466,7 +476,24 @@ class output(base):
                 np.savetxt(os.path.join(self.fitting.dir_multinest, 'NEST_labels.txt'), self.NEST_labels)
             if self.params.fit_clr_trans:
                 np.savetxt(os.path.join(self.params.out_path, 'NEST_clr_inv_tracedata.txt'), self.NEST_data_clr_inv)
-            pickle.dump(self.NEST_out, open('Output/NEST_out.db', 'wb'))
+            pickle.dump(self.NEST_out, open(os.path.join(self.params.out_path, 'NEST_out.db'), 'wb'))
+            self.save_fit_out_to_file(self.NEST_out, type='NEST')
+
+        # save param file and observation to files
+        shutil.copy(self.params.parfile, self.params.out_path)
+        shutil.copy(self.params.in_spectrum_file, self.params.out_path)
+
+
+
+    def save_fit_out_to_file(self, fit_out, type=''):
+
+        f = open(os.path.join(self.params.out_path, '%s_out.txt' % type),'w')
+        for idx, solution in enumerate(fit_out):
+            f.write('%s solution %i\n' % (type, idx))
+            for param in self.params_names:
+                f.write('%s %f %f\n' %  (param, solution['fit_params'][param]['value'],
+                                              solution['fit_params'][param]['std']))
+            f.write('\n')
 
     def plot_all(self, save2pdf=False):
 
@@ -618,8 +645,9 @@ class output(base):
         np.savetxt(filename, self.data.spectrum)
 
     def save_spectrum_to_file(self, spectrum, saveas):
-        logging.info('Spectrum saved to %s ' % saveas)
-        np.savetxt(saveas, spectrum)
+        filename = os.path.join(self.params.out_path, saveas)
+        logging.info('Spectrum saved to %s ' % filename)
+        np.savetxt(filename, spectrum)
 
     def save_TP_profile(self, save_manual=None, FIT_params=None, FIT_params_std=None, save2pdf=False):
         '''
@@ -713,4 +741,5 @@ class output(base):
                 if save2pdf:
                     plot_TP_profile(P, T_mean, T_sigma, name='NEST_'+str(idx),
                                           save2pdf=save2pdf, out_path=self.params.out_path)
+
 

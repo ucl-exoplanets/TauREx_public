@@ -75,6 +75,10 @@ parser.add_option('-r', '--res',
                   dest="resolution",
                   default=1000,
 )
+parser.add_option('-e', '--error',
+                  dest="error",
+                  default=50,
+)
 parser.add_option('-v', '--verbose',
                   dest="verbose",
                   default=True,
@@ -89,6 +93,7 @@ params = parameters(options.param_filename)
 
 # set model resolution to 1000
 params.gen_spec_res = 1000
+params.gen_manual_waverange = True
 
 #initialising data object
 dataob = data(params)
@@ -111,7 +116,7 @@ model_binned = [model[spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_
 out = np.zeros((len(wavegrid),3))
 out[:,0] = wavegrid
 out[:,1] = model_binned
-out[:,2] += 1e-5 #adding errorbars. can be commented
+out[:,2] += float(options.error) * 1e-6
 
 #initiating output object with fitted data from fitting class
 outputob = output(forwardmodel=forwardmodelob)
@@ -121,7 +126,7 @@ outputob.plot_manual(out, save2pdf=params.out_save_plots)
 
 if params.out_dump_internal:
     #saving models to ascii
-    outputob.save_model(modelout=out, modelsaveas=params.out_internal_name)
+    outputob.save_spectrum_to_file(spectrum=out, saveas=params.out_internal_name)
 
 
 #end of main code

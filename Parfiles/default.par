@@ -26,7 +26,7 @@ type = transmission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/hotjupiter_r300_5e-5.dat
+spectrum_file = False
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False

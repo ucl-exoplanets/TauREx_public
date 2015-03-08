@@ -282,7 +282,7 @@ class fitting(base):
         if not self.params.fit_fix_P0:
             self.fit_params_names.append('P0')
             self.fit_params.append(np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up))))
-            self.fit_bounds.append((log(self.params.fit_P0_low), log(self.params.fit_P0_up)))
+            self.fit_bounds.append((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up)))
 
         # print 'params names', self.fit_params_names, len(self.fit_params_names)
         # print 'params fit_params', self.fit_params, len(self.fit_params)
@@ -298,6 +298,9 @@ class fitting(base):
         fit_params contains list of parameters as defined in build_fit_params
         the order in which parameters are read from fit_params must be the same as how these were
         defined in build_fit_params '''
+
+        if type(fit_params).__name__ == 'ndarray':
+            fit_params = fit_params.tolist()
 
         ###############################################
         # Parameters are stored in this order:
@@ -357,6 +360,7 @@ class fitting(base):
         # @todo as this may be removed in favour of atmosphere.absorbing_gases_X (which always assumes a constant mixing ratio vs pressure
         # @todo in the future we might want to change it and allow for varying absorbing_gases_X and inactive_gases_X with pressure
         # @todo this may be made implicit not explicit and just reassigned in atmosphere internally
+        # @todo Further comment: NO! We want to leave the possibility to have varying X with altitude....
         # set mixing ratio profiles. This assumes constant ratios vs Pressure
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
 
@@ -367,7 +371,8 @@ class fitting(base):
         if self.fit_TP_nparams > 0:
 
             TP_params = fit_params[count:count+self.fit_TP_nparams]
-            self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params) #@todo same as above, may be implicit not explicit in future
+            #@todo same as above, may be implicit not explicit in future
+            self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params)
             count += self.fit_TP_nparams
 
         #####################################################
@@ -434,16 +439,16 @@ class fitting(base):
         # draw()
         # pause(0.0001)
         #
-#         ion()
-#         figure(2)
-#         clf()
-#         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-#         plot(self.data.spectrum[:,0], model_binned)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         xscale('log')
-#         xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-#         draw()
+        # ion()
+        # figure(2)
+        # clf()
+        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        # plot(self.data.spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
+        # draw()
         # pause(0.0001)
         #
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \

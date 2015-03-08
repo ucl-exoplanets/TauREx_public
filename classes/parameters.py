@@ -49,6 +49,7 @@ class parameters(base):
             self.parser = SafeConfigParser()
             self.parser.readfp(open(parfile, 'rb'))
 
+        self.parfile = parfile
         self.default_parser = SafeConfigParser()
         self.default_parser.read('Parfiles/default.par')
         self.default_parser.sections()
@@ -57,9 +58,9 @@ class parameters(base):
 
         if len(logging.getLogger().handlers) == 0: # be sure to load only one logging handler
             # configure logging instance
-            if not os.path.isdir('Output'):
+            if not os.path.isdir(self.getpar('Output','path')):
                     logging.info('Create folder Output')
-                    os.mkdir('Output')
+                    os.makedirs(self.getpar('Output','path'))
             logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
                                 level=logging.DEBUG)
 
