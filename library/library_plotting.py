@@ -60,7 +60,7 @@ def plot_TP_profile(P, T_mean, T_sigma=None, fig=None, name=None, color='blue', 
 
     return fig
 
-def _plot_posteriors(fit_out, plot_contour=False):
+def _plot_posteriors(fit_out, plot_contour=False,fontsize=30):
 
     try:
         params_sorted = sorted(fit_out[0]['fit_params'].iterkeys(),
@@ -83,12 +83,12 @@ def _plot_posteriors(fit_out, plot_contour=False):
         ax = plot_1Dposterior(ax, fit_out, i, plot_contour)
 
         if i == 0:
-            pl.ylabel("Prob. density",fontsize=20)
-        pl.xlabel(params_sorted[i],x=0.6, ha='right', fontsize=20)
+            pl.ylabel("Prob. density",fontsize=fontsize)
+        pl.xlabel(params_sorted[i],x=0.6, ha='right', fontsize=fontsize)
         globalxlims= ax.get_xlim()
 
         #scaling axis labels @todo labels can be improved but works now at least
-        pl.rc('font', size=20)
+        pl.rc('font', size=fontsize)
         SciFormatter = ScalarFormatter(useMathText=True,useOffset=True,useLocale=True)
         SciFormatter.set_powerlimits((-1, 4))
         ax.get_xaxis().set_major_formatter(SciFormatter)
@@ -96,11 +96,11 @@ def _plot_posteriors(fit_out, plot_contour=False):
 
         for tick in ax.xaxis.get_major_ticks():
             tick.label.set_rotation(+40)
-            tick.label.set_fontsize(20)
+            tick.label.set_fontsize(fontsize)
         if i == 0:
             for tick in ax.yaxis.get_major_ticks():
                 tick.label.set_rotation(+40)
-                tick.label.set_fontsize(20)
+                tick.label.set_fontsize(fontsize)
         else:
             for tick in ax.yaxis.get_major_ticks():
                 tick.label.set_visible(False)
@@ -116,8 +116,8 @@ def _plot_posteriors(fit_out, plot_contour=False):
             plot_2Ddistribution(ax2, fit_out, i, j, suppressAxes=True, plot_contour=plot_contour)
             for tick in ax2.xaxis.get_major_ticks():
                 tick.label.set_rotation(+30)
-                tick.label.set_fontsize(20)
-    pl.subplots_adjust(left=0, bottom=0, right=1, top=1, hspace=0.0,wspace=0.0)
+                tick.label.set_fontsize(fontsize)
+    pl.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95, hspace=0.0,wspace=0.0)
     return fig
 
 def plot_2Ddistribution(ax, fit_out, param1_idx, param2_idx, plot_contour=False, suppressAxes=False):
