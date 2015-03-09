@@ -28,9 +28,10 @@ parser.add_option('-v', '--verbose',
 options, remainder = parser.parse_args()
 params = parameters(options.param_filename)
 
+dataob = data(params)
+atmosphereob = atmosphere(dataob)
+
 if params.gen_type == 'transmission' or params.fit_transmission:
-    dataob = data(params)
-    atmosphereob = atmosphere(dataob)
     forwardmodelob = transmission(atmosphereob)
     fittingob = fitting(forwardmodelob)
     if params.mcmc_run and pymc_import:
@@ -41,3 +42,19 @@ if params.gen_type == 'transmission' or params.fit_transmission:
     if params.verbose or params.out_save_plots:
         outputob.plot_all(save2pdf=params.out_save_plots)
     outputob.save_ascii_spectra()
+    
+    
+if params.gen_type == 'emission' or params.fit_emission:
+    forwardmodelob = emission(atmosphereob)
+    fittingob = fitting(forwardmodelob)
+    if params.mcmc_run and pymc_import:
+        fittingob.MCMC = True
+    if params.nest_run and multinest_import:
+        fittingob.NEST = True
+    outputob = output(fittingob)
+    if params.verbose or params.out_save_plots:
+        outputob.plot_all(save2pdf=params.out_save_plots)
+    outputob.save_ascii_spectra()
+    
+    
+    
