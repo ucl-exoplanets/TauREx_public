@@ -28,10 +28,14 @@ parser.add_option('-v', '--verbose',
 options, remainder = parser.parse_args()
 params = parameters(options.param_filename)
 
-dataob = data(params)
-atmosphereob = atmosphere(dataob)
+out_path_orig = params.out_path
 
 if params.gen_type == 'transmission' or params.fit_transmission:
+    if os.path.isdir(os.path.join(out_path_orig, 'stage_0')):
+        params.out_path = os.path.join(out_path_orig, 'stage_0')
+            
+    dataob = data(params)
+    atmosphereob = atmosphere(dataob)
     forwardmodelob = transmission(atmosphereob)
     fittingob = fitting(forwardmodelob)
     if params.mcmc_run and pymc_import:
@@ -45,16 +49,24 @@ if params.gen_type == 'transmission' or params.fit_transmission:
     
     
 if params.gen_type == 'emission' or params.fit_emission:
-    forwardmodelob = emission(atmosphereob)
-    fittingob = fitting(forwardmodelob)
-    if params.mcmc_run and pymc_import:
-        fittingob.MCMC = True
-    if params.nest_run and multinest_import:
-        fittingob.NEST = True
-    outputob = output(fittingob)
-    if params.verbose or params.out_save_plots:
-        outputob.plot_all(save2pdf=params.out_save_plots)
-    outputob.save_ascii_spectra()
+        
+    folders = [os.path.join(out_path_orig, 'stage_0'),os.path.join(out_path_orig, 'stage_1')]
+    for f in folders:
+        if os.path.isdir(f):
+            params.out_path = f
+            
+            dataob = data(params)
+            atmosphereob = atmosphere(dataob)
+            forwardmodelob = emission(atmosphereob)
+            fittingob = fitting(forwardmodelob)
+            if params.mcmc_run and pymc_import:
+                fittingob.MCMC = True
+            if params.nest_run and multinest_import:
+                fittingob.NEST = True
+            outputob = output(fittingob)
+            if params.verbose or params.out_save_plots:
+                outputob.plot_all(save2pdf=params.out_save_plots)
+            outputob.save_ascii_spectra()
     
     
     
