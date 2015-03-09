@@ -58,11 +58,12 @@ class parameters(base):
 
         if len(logging.getLogger().handlers) == 0: # be sure to load only one logging handler
             # configure logging instance
-            if not os.path.isdir(self.getpar('Output','path')):
-                    logging.info('Create folder Output')
-                    os.makedirs(self.getpar('Output','path'))
-            logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
-                                level=logging.DEBUG)
+            if MPIrank == 0:
+                if not os.path.isdir(self.getpar('Output','path')):
+                        logging.info('Create folder Output')
+                        os.makedirs(self.getpar('Output','path'))
+                logging.basicConfig(filename=os.path.join(self.getpar('Output','path'), 'taurex.log'),
+                                    level=logging.DEBUG)
 
             if (MPIrank == 0 and not self.verbose_all_threads) or self.verbose_all_threads:
 
@@ -78,7 +79,7 @@ class parameters(base):
 
         # list of all molecules for which we have cross sections
         self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
-                                    '28Si-16O', '48Ti-16O', '14N-16O', '1H2-32S'] # VO removed due to lowest T = 1000 in cross sections
+                                    '28Si-16O', '48Ti-16O', '14N-16O', '1H2-32S', 'C2H2'] # VO removed due to lowest T = 1000 in cross sections
 
         # list of all inactive gases we take care of
         self.all_inactive_gases = ['He', 'H2', 'N2']
