@@ -116,6 +116,7 @@ class parameters(base):
         self.out_internal_name     = self.getpar('Output','internal_name')
         self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
         self.out_plot_contour        = self.getpar('Output','plot_contour', 'bool')
+        self.out_plot_colour        = self.getpar('Output','plot_colour', 'bool')
 
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
         self.star_temp             = self.getpar('Star','temp', 'float')

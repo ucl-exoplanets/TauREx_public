@@ -85,8 +85,8 @@ save_plots = True
 #plotting contours onto densities in posterior plots
 plot_contour = True
 
-#plot posterior distribution in cenetered-log-ratio space (only if Fitting > clr_trans = True)
-plot_clr_distribution = True
+# posterior plots colour (matplotlib colormaps)
+plot_colour = brg
 
 [Preselector]
 
