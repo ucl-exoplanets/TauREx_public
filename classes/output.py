@@ -156,11 +156,9 @@ class output(base):
 
         if self.params.fit_clr_trans:
             # the mixing ratios are sampled in the log-ratio space. Need to convert them back to simplex
-            self.NEST_out, self.NEST_tracedata_clr_inv, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata,
+            self.NEST_out, self.NEST_data_clr_inv, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata,
                                                                                                 cluster_analysis=cluster_analysis,
                                                                                                 clr_inv=True)
-            # store clr traces converted back to simplex
-            self.NEST_data_clr_inv = np.c_[NEST_data[:, :2], self.NEST_tracedata_clr_inv]
 
         else:
             if cluster_analysis:
@@ -200,7 +198,7 @@ class output(base):
             mixing_ratios_clr = tracedata[:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
             mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
 
-            self.tracedata_clr_inv = np.c_[mixing_ratios_clr_inv, #coupled_mu_trace,
+            self.tracedata_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace,
                                            tracedata[:, self.fitting.forwardmodel.atmosphere.nallgases-1:]]
             tracedata_analyse = self.tracedata_clr_inv # set the trace to analyse and get solutions from
 
@@ -210,7 +208,7 @@ class output(base):
                     self.fitting.forwardmodel.atmosphere.inactive_gases):
                 self.params_names.append(gasname)
             ## todo careful about adding coupled_mu, it might interfere with fit-params?
-            #self.params_names.append('coupled_mu')
+            self.params_names.append('coupled_mu')
             for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                 self.params_names.append(self.fitting.fit_params_names[i])
 
@@ -418,17 +416,24 @@ class output(base):
 
     def add_spectra_from_solutions(self, fitting_out):
 
+
+        # if using the clr transformation, before parsing fit_params to update the atmosphere from fitting object,
+        # set fit_clr_trans and fit_fix_inactive to False, as output fit_params will always contain the transformed
+        # mixing ratios of absorbing and inactive gases
+        clr_trans = False
+        if self.fitting.params.fit_clr_trans == True:
+            clr_trans = True
+            self.fitting.params.fit_clr_trans = False
+            self.fitting.params.fit_fix_inactive = False
+            params_names = self.params_names
+            params_names.remove('coupled_mu')
+        else:
+            params_names = self.params_names
+
+        # loop through solutions
         for idx, solution in enumerate(fitting_out):
 
-            fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
-
-            # if using the clr transformation, before parsing fit_params to update the atmosphere from fitting object,
-            # set fit_clr_trans and fit_fix_inactive to False, as output fit_params will always contain the transformed
-            # mixing ratios of absorbing and inactive gases
-            if self.fitting.params.fit_clr_trans == True:
-                self.fitting.params.fit_clr_trans = False
-                self.fitting.params.fit_fix_inactive = False
-
+            fit_params = [solution['fit_params'][param]['value'] for param in params_names]
             self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
             model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
@@ -436,8 +441,21 @@ class output(base):
             out = np.zeros((len(self.data.spectrum[:,0]), 2))
             out[:,0] = self.data.spectrum[:,0]
             out[:,1] = model_binned
-
             fitting_out[idx]['spectrum'] = out
+
+            # high res spectrum
+            out = np.zeros((len(self.data.specgrid), 2))
+            out[:,0] = self.data.specgrid
+            out[:,1] = model
+            fitting_out[idx]['highres_spectrum'] = out
+
+            if self.fitting.params.fit_clr_trans == True:
+                self.fitting.params.fit_clr_trans = False
+                self.fitting.params.fit_fix_inactive = False
+
+        # restore param fit_clr_trans to original value
+        if clr_trans == True:
+            self.fitting.params.fit_clr_trans = True
 
         return fitting_out
 
@@ -473,7 +491,7 @@ class output(base):
             np.savetxt(os.path.join(self.params.out_path, 'NEST_tracedata.txt'), self.NEST_tracedata)
             np.savetxt(os.path.join(self.params.out_path, 'NEST_likelihood.txt'), self.NEST_likelihood)
             if self.NEST_labels is not None:
-                np.savetxt(os.path.join(self.fitting.dir_multinest, 'NEST_labels.txt'), self.NEST_labels)
+                np.savetxt(os.path.join(self.params.out_path, 'NEST_labels.txt'), self.NEST_labels)
             if self.params.fit_clr_trans:
                 np.savetxt(os.path.join(self.params.out_path, 'NEST_clr_inv_tracedata.txt'), self.NEST_data_clr_inv)
             pickle.dump(self.NEST_out, open(os.path.join(self.params.out_path, 'NEST_out.db'), 'wb'))
@@ -625,21 +643,27 @@ class output(base):
 
         if self.MCMC:
             for idx, solution in enumerate(self.NEST_out):
-                filename = os.path.join(self.params.out_path, 'MCMC_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
-                logging.info('Saving MCMC spectrum for solution %i to %s' % (idx, filename))
-                np.savetxt(filename, solution['spectrum'])
+                filename1 = os.path.join(self.params.out_path, 'MCMC_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename2 = os.path.join(self.params.out_path, 'MCMC_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                logging.info('Saving MCMC spectrum for solution %i to %s and %s' % (idx, filename1, filename2))
+                np.savetxt(filename1, solution['spectrum'])
+                np.savetxt(filename2, solution['highres_spectrum'])
 
         if self.NEST:
             logging.info('MultiNest detected %i different modes. '
                          'Saving one model spectrum for each solution' % len(self.NEST_out))
             for idx, solution in enumerate(self.NEST_out):
-                filename = os.path.join(self.params.out_path, 'NEST_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
-                logging.info('Saving Nested Sampling spectrum for solution %i to %s' % (idx, filename))
-                np.savetxt(filename, solution['spectrum'])
+                filename1 = os.path.join(self.params.out_path, 'NEST_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename2 = os.path.join(self.params.out_path, 'NEST_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                logging.info('Saving Nested Sampling spectrum for solution %i to %s and %s' % (idx, filename1, filename2))
+                np.savetxt(filename1, solution['spectrum'])
+                np.savetxt(filename2, solution['highres_spectrum'])
         if self.DOWN:
-                filename = os.path.join(self.params.out_path, 'DOWN_%s_spectrum.dat' % (self.__MODEL_ID__))
-                logging.info('Saving DOWHNILL spectrum to %s' % filename)
-                np.savetxt(filename, self.DOWN_out[0]['spectrum'])
+                filename1 = os.path.join(self.params.out_path, 'DOWN_%s_spectrum.dat' % (self.__MODEL_ID__))
+                filename2 = os.path.join(self.params.out_path, 'DOWN_%s_highres_spectrum.dat' % (self.__MODEL_ID__))
+                logging.info('Saving DOWHNILL spectrum to %s and %s' % (filename1, filename2))
+                np.savetxt(filename1, self.DOWN_out[0]['spectrum'])
+                np.savetxt(filename2, self.DOWN_out[0]['highres_spectrum'])
 
         filename = os.path.join(self.params.out_path, 'observed_%s_spectrum.dat' % (self.__MODEL_ID__))
         np.savetxt(filename, self.data.spectrum)

@@ -38,7 +38,7 @@ atm_file = Input/profile.atm
 abs_path = Input/crosssections/
 
 #run ExoMol cross section conversion from wavenumbers to microns
-convert2microns = False
+convert2microns = True
 
 #files containing absorption cores-sections
 #you can specify several file names separated by commas
@@ -84,6 +84,9 @@ save_plots = True
 
 #plotting contours onto densities in posterior plots
 plot_contour = True
+
+#plot posterior distribution in cenetered-log-ratio space (only if Fitting > clr_trans = True)
+plot_clr_distribution = True
 
 [Preselector]
 

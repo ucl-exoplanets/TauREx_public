@@ -101,6 +101,9 @@ dataob = data(params)
 #initialising TP profile object
 atmosphereob = atmosphere(dataob)
 
+print 'Mean molecular weight is ', atmosphereob.planet_mu
+exit()
+
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
     forwardmodelob = transmission(atmosphereob)

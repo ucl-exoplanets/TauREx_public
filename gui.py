@@ -139,6 +139,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         #self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_H2S.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_C2H2.valueChanged.connect(self.event_status_changed)
 
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
@@ -167,6 +168,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         #self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_H2S.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_C2H2.valueChanged.disconnect(self.event_status_changed)
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
 
@@ -244,7 +246,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         params.planet_inactive_gases_X = planet_inactive_gases_X_tmp
         params.planet_inactive_gases =  params.all_inactive_gases
 
-        params.gen_spec_res = 500
+        params.gen_spec_res = 1000
         params.gen_wavemin = 0.4
         params.gen_wavemax = 20.0
         params.gen_manual_waverange = True
@@ -264,6 +266,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         #self.doubleSpinBox_VO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
         self.doubleSpinBox_NO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
         self.doubleSpinBox_H2S.setValue(self.forwardmodel.params.planet_mixing[9]*100.)
+        self.doubleSpinBox_C2H2.setValue(self.forwardmodel.params.planet_mixing[10]*100.)
         self.doubleSpinBox_He.setValue(self.forwardmodel.atmosphere.inactive_gases_X[0]*100.)
         self.doubleSpinBox_H2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[1]*100.)
         self.doubleSpinBox_N2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[2]*100.)
@@ -299,6 +302,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         #self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_VO.value() / 100.
         self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_NO.value() / 100.
         self.forwardmodel.atmosphere.absorbing_gases_X[9] = self.doubleSpinBox_H2S.value() / 100.
+        self.forwardmodel.atmosphere.absorbing_gases_X[10] = self.doubleSpinBox_C2H2.value() / 100.
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
         self.forwardmodel.atmosphere.inactive_gases_X[0] = self.doubleSpinBox_He.value() / 100.
         self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.
@@ -371,7 +375,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         color = str(self.lineEdit_color.text())
 
         self.plot_observations()
-        self.aw.qmc.axes.plot(out[:,0], out[:,1]*1.e6, lw=2, color=str(self.lineEdit_color.text()))
+        self.aw.qmc.axes.plot(out[:,0], out[:,1]*1.e6, lw=1, color=str(self.lineEdit_color.text()))
         self.aw.qmc.axes.set_xscale('log')
         self.aw.qmc.axes.set_xlabel('Wavelength (micron)')
         self.aw.qmc.axes.set_ylabel('Transit depth (ppm)')
