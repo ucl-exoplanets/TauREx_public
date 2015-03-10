@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 def analyse_traces(self, tracedata, clr_inv=False, cluster_analysis=False):
 
@@ -150,7 +151,7 @@ def inverse_clr_transform(self, clr_tracedata):
     ntraces = len(clr_tracedata[:,0])
     ncol = len(clr_tracedata[0,:])
 
-    mixing_ratios_tracedata = exp(np.c_[clr_tracedata, -sum(clr_tracedata, axis=1)]) # add log-ratio (= -sum(other log ratios)
+    mixing_ratios_tracedata = np.exp(np.c_[clr_tracedata, -sum(clr_tracedata, axis=1)]) # add log-ratio (= -sum(other log ratios)
     mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*(ncol+1)).transpose()) # clousure operation
 
     # calculate couple mean molecular weight trace as a byproduct
