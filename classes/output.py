@@ -229,7 +229,7 @@ class output(base):
 
             if self.params.fit_clr_trans == True:
 
-                # if clr is on
+                # if centered-log-ratio transformation is True, transform the traces of the log ratios back to abundances
                 mixing_ratios_clr = modes_array[nmode][:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
                 mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
 
@@ -241,8 +241,9 @@ class output(base):
                 clr = np.append(clr, -np.sum(clr))
                 mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
                 mixing_means /= sum(mixing_means) # closure operation
+                mixing_means = np.log10(mixing_means) # take log
 
-                # set parameter names of new traces
+                # set new list of params names, including the clr inv mixing ratios
                 self.clrinv_params_names = []
                 for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
                         self.fitting.forwardmodel.atmosphere.inactive_gases):
@@ -361,8 +362,11 @@ class output(base):
             self.save_fit_out_to_file(self.NEST_out, type='NEST')
 
         # save param file and observation to files
-        shutil.copy(self.params.parfile, self.params.out_path)
-        shutil.copy(self.params.in_spectrum_file, self.params.out_path)
+        try:
+            shutil.copy(self.params.parfile, self.params.out_path)
+            shutil.copy(self.params.in_spectrum_file, self.params.out_path)
+        except:
+            pass
 
     def save_fit_out_to_file(self, fit_out, type=''):
 

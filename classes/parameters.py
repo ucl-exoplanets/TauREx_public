@@ -115,13 +115,12 @@ class parameters(base):
         self.out_dump_internal     = self.getpar('Output','dump_internal', 'bool')
         self.out_internal_name     = self.getpar('Output','internal_name')
         self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
-        self.out_plot_contour        = self.getpar('Output','plot_contour', 'bool')
-        self.out_plot_colour        = self.getpar('Output','plot_colour', 'bool')
+        self.out_plot_contour      = self.getpar('Output','plot_contour', 'bool')
+        self.out_plot_colour       = self.getpar('Output','plot_colour')
 
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
         self.star_temp             = self.getpar('Star','temp', 'float')
         
-        self.planet_name           = self.getpar('Planet', 'name')
         self.planet_radius         = self.getpar('Planet', 'radius', 'float')  *RJUP
         self.planet_mass           = self.getpar('Planet', 'mass', 'float')     *MJUP
         self.planet_sma            = self.getpar('Planet', 'sma', 'float')     *AU
@@ -242,12 +241,6 @@ class parameters(base):
             self.nest_cluster_analysis = self.getpar('MultiNest','cluster_analysis', 'bool')
         except:
             self.nest_run              = False
-            pass
-
-        try:
-            self.grid_res              = self.getpar('Grid','resolution', 'list-float')
-            self.grid_snr              = self.getpar('Grid','snr', 'list-float')
-        except:
             pass
 
         try:

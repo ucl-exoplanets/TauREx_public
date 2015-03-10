@@ -110,7 +110,7 @@ def _plot_posteriors(fit_out, params_names=[], plot_contour=False,fontsize=30, c
             ax2 = pl.subplot(n_params, n_params, n_params * j + i + 1)
             seq += 1
             ax2.ticklabel_format(style='sci')
-            plot_2Ddistribution(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color='Blues')
+            plot_2Ddistribution(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color)
             for tick in ax2.xaxis.get_major_ticks():
                 tick.label.set_rotation(+30)
                 tick.label.set_fontsize(fontsize)
@@ -140,8 +140,8 @@ def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_
         ally = np.concatenate((solution['fit_params'][params_names[param2_idx]]['trace'], ally))
 
     zd = grid_density_boxsum(np.min(allx), np.min(ally), np.max(allx), np.max(ally), 256, 256, zip(allx, ally))
-    ax.imshow(zd, origin='lower', cmap=cm.get_cmap(color), alpha=0.6,
-                extent=[np.min(allx), np.max(allx), np.min(ally), np.max(ally)])
+    ax.imshow(zd, origin='lower', cmap=cm.get_cmap(color),
+              extent=[np.min(allx), np.max(allx), np.min(ally), np.max(ally)])
 
      #plot 1,2,3 sigma contours
     if plot_contour:

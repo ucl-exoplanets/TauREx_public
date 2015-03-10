@@ -86,7 +86,7 @@ save_plots = True
 plot_contour = True
 
 # posterior plots colour (matplotlib colormaps)
-plot_colour = brg
+plot_colour = Blues
 
 [Preselector]
 
