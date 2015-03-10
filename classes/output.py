@@ -130,10 +130,10 @@ class output(base):
 
         if self.params.fit_clr_trans:
             # the mixing ratios are sampled in the log-ratio space. Need to convert them back to simplex
-            self.MCMC_out, self.MCMC_tracedata_clr_inv, self.MCMC_labels =  self.analyse_traces(tracedata, cluster_analysis=False, clr_inv=True)
+            self.MCMC_out, self.MCMC_tracedata_clr_inv, self.MCMC_labels =  self.analyse_traces(tracedata, clr_inv=True)
             self.MCMC_tracedata = tracedata
         else:
-            self.MCMC_out, self.MCMC_tracedata, self.MCMC_labels = self.analyse_traces(tracedata, cluster_analysis=False)
+            self.MCMC_out, self.MCMC_tracedata, self.MCMC_labels = self.analyse_traces(tracedata)
 
         self.MCMC_params_values = [self.MCMC_out[0]['fit_params'][param]['value'] for param in self.params_names]
         self.MCMC_params_std = [self.MCMC_out[0]['fit_params'][param]['std'] for param in self.params_names]
@@ -152,25 +152,9 @@ class output(base):
         self.NEST_tracedata = NEST_data[:,2:] # exclude first two columns
         self.NEST_likelihood = NEST_data[:,:2] # get first two columns
 
-        cluster_analysis = self.params.nest_cluster_analysis
+        self.NEST_out, self.NEST_tracedata =  self.get_multinest_solutions()
 
-        if self.params.fit_clr_trans:
-            # the mixing ratios are sampled in the log-ratio space. Need to convert them back to simplex
-            self.NEST_out, self.NEST_data_clr_inv, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata,
-                                                                                                cluster_analysis=cluster_analysis,
-                                                                                                clr_inv=True)
-
-        else:
-            if cluster_analysis:
-                self.NEST_out, self.NEST_tracedata, self.NEST_labels =  self.analyse_traces(self.NEST_tracedata,
-                                                                                      cluster_analysis=cluster_analysis)
-            else:
-                # get multinest solutions from multinest.Analyzer. It detect the different modes, but does not return labels for tracedata
-                # (self.NEST_labels always None)
-                self.NEST_out, self.NEST_tracedata, self.NEST_labels =  self.get_multinest_solutions()
-
-
-        # storing fit_params output and standard deviation (of first mode only!!!). @todo What about the other modes??
+        # storing fit_params output and standard deviation
         self.NEST_params_values    = {}
         self.NEST_params_std       = {}
         self.NEST_TP_params_std    = {}
@@ -181,175 +165,10 @@ class output(base):
         for idx, solution in enumerate(self.NEST_out):
             self.NEST_params_values[idx] = [self.NEST_out[idx]['fit_params'][param]['value'] for param in self.params_names]
             self.NEST_params_std[idx]    = [self.NEST_out[idx]['fit_params'][param]['std'] for param in self.params_names]
-        
             self.NEST_X_params_values[idx]  = self.NEST_params_values[idx][:self.fitting.fit_X_nparams]
             self.NEST_X_params_std[idx]     = self.NEST_params_std[idx][:self.fitting.fit_X_nparams]
             self.NEST_TP_params_values[idx] = self.NEST_params_values[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
             self.NEST_TP_params_std[idx]    = self.NEST_params_std[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
-
-    def analyse_traces(self, tracedata, clr_inv=False, cluster_analysis=False):
-
-        ntraces = len(tracedata[:,0])
-        ncol = len(tracedata[0,:])
-
-        if clr_inv == True:
-            # create new array of traces with the mixing ratios obtained from CLR traces
-            # log-ratios are always the first n columns
-            mixing_ratios_clr = tracedata[:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
-            mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
-
-            self.tracedata_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace,
-                                           tracedata[:, self.fitting.forwardmodel.atmosphere.nallgases-1:]]
-            tracedata_analyse = self.tracedata_clr_inv # set the trace to analyse and get solutions from
-
-            # set parameter names of new traces
-            self.params_names = []
-            for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
-                    self.fitting.forwardmodel.atmosphere.inactive_gases):
-                self.params_names.append(gasname)
-            ## todo careful about adding coupled_mu, it might interfere with fit-params?
-            self.params_names.append('coupled_mu')
-            for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
-                self.params_names.append(self.fitting.fit_params_names[i])
-
-        else:
-            self.params_names = self.fitting.fit_params_names
-            tracedata_analyse = tracedata # set the trace to analyse and get solutions from
-
-
-        # @todo: if cluster_analysis is False, but multinest is in multimode, then we should get solutions from multinest output. See end of file with commented code.
-        if cluster_analysis == True:
-
-            # clustering analysis on traces. Split up the traces into individual clusters
-            logging.info('Cluster analysis with sklearn MeanShift')
-
-            from sklearn.cluster import MeanShift
-            from sklearn.preprocessing import normalize
-            data_normalized = normalize(tracedata_analyse, axis=0)  # normalize the data
-            estimator = MeanShift()
-            estimator.fit(data_normalized)
-            labels = estimator.labels_
-
-            # save txt with labels corresponding to different clusters found in the posterior traces
-            np.savetxt('Output/labels.txt', labels)
-            # labels = np.loadtxt('Output/labels.txt')
-            unique_labels = set(labels)
-            n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
-            logging.info('Estimated number of clusters: %d' % n_clusters)
-
-        else:
-            # clustering analysis is not performed. Only one mode assumed
-            unique_labels = [0]
-            labels = np.zeros(ntraces)
-
-        fit_out = self.get_solutions_from_traces(tracedata_analyse, multimode=cluster_analysis, labels=labels) # todo: needs to be changed, if we get solutions from multinest multimode (see above)
-        fit_out = self.add_spectra_from_solutions(fit_out)
-
-        return fit_out, tracedata_analyse, labels
-
-    def get_solutions_from_traces(self, tracedata, multimode=False, labels=[]):
-
-        ntraces = len(tracedata[:,0])
-        ncol = len(tracedata[0,:])
-
-        if multimode == False:
-            unique_labels = [0]
-            labels = np.zeros(ntraces)
-        else:
-            unique_labels = set(labels)
-            if len(labels) != ntraces:
-                logging.error('Multimode is ON and the number of labels is different from the number of samples')
-
-        # Create list of solutions. Each solution (cluster) is stored into a dictionary. If multimode = False, then
-        # only only one solution is stored.
-
-        fit_out = []
-        for k in unique_labels:
-            if k >= 0:
-
-                if (k > 0 and len(tracedata[labels == k-1, 0])/len(tracedata[labels == k, 0]) > 20):
-                    # exlcude solutions that have a factor of 20 fewer samples than the previous solution @todo careful!
-                    break
-                else:
-
-                    # save individual solutions into a dictionary
-                    dict = {'fit_params': {}}
-                    sort_order = 0
-                    for idx, param in enumerate(self.params_names):
-
-                        try:
-                            cluster = tracedata[labels == k, idx] # get cluster of points corresponding to cluster k, and param idx
-
-                            # get errors
-                            hist, bin_edges = np.histogram(cluster, bins=100, density=True)
-                            bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
-                            idxmax = np.argmax(hist)
-                            value = bin_centres[idxmax]
-                            left = hist[:idxmax][::-1]
-                            right = hist[idxmax:]
-                            left_centres = bin_centres[:idxmax][::-1]
-                            right_centres = bin_centres[idxmax:]
-
-                            try:
-                                left_err = value - left_centres[(np.abs(left-np.percentile(left,68))).argmin()]
-                            except:
-                                left_err = 0
-                            try:
-                                right_err = right_centres[(np.abs(right-np.percentile(right,68))).argmin()] - value
-                            except:
-                                right_err = 0
-                            if left_err == 0 and right_err > 0:
-                                left_err = right_err
-                            if right_err == 0 and left_err > 0:
-                                right_err = left_err
-
-                            mean_err = np.mean((left_err, right_err))
-
-                            dict['fit_params'][self.params_names[idx]] = {
-                                'value': value,
-                                'std': np.std(cluster),
-                                #'std': mean_err, @ todo try to use mean err!
-                                'std_plus': right_err,
-                                'std_minus': left_err,
-                                'trace': np.asarray(cluster),
-                                'sort_order': sort_order
-                            }
-                            sort_order += 1
-
-                        except ValueError:
-                            # this parameter was not fitted...
-                            pass
-                    fit_out.append(dict)
-
-        logging.info('Number of solutions identified: %d' % len(fit_out))
-
-        return fit_out
-
-    def inverse_clr_transform(self, clr_tracedata):
-
-        # Convert the traces of the log-ratios back to the gas mixing ratios in log space. This is done by calculating the inverse
-        # CLR in the tracedata array, line by line. The new traces are then returned.
-
-        logging.info('Inverse log-ratio transformation of the traces')
-
-        ntraces = len(clr_tracedata[:,0])
-        ncol = len(clr_tracedata[0,:])
-
-        mixing_ratios_tracedata = exp(np.c_[clr_tracedata, -sum(clr_tracedata, axis=1)]) # add log-ratio (= -sum(other log ratios)
-        mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*(ncol+1)).transpose()) # closure operation
-
-        # calculate couple mean molecular weight trace as a byproduct
-        coupled_mu_trace = np.zeros(ntraces)
-        i = 0
-        for sample in mixing_ratios_tracedata:
-            # get mean molecular weight from gas mixing ratios
-            absorbing_gases_X = sample[:len(self.fitting.forwardmodel.atmosphere.absorbing_gases)]
-            inactive_gases_X = sample[len(self.fitting.forwardmodel.atmosphere.inactive_gases):]
-            coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
-            coupled_mu_trace[i] = coupled_mu
-            i += 1
-
-        return np.log10(mixing_ratios_tracedata), coupled_mu_trace
 
     def get_multinest_solutions(self):
 
@@ -392,15 +211,15 @@ class output(base):
 
         NEST_tracedata = data[:,2:]
 
-        for n in range(len(modes)):
+        for nmode in range(len(modes)):
 
             dict = {'fit_params': {}}
             sort_order = 0
-            for i in range(len(self.fitting.fit_params)):
-                value = NEST_stats['modes'][n]['maximum a posterior'][i]
-                std = NEST_stats['modes'][n]['sigma'][i]
-                chain = modes_array[n][:,i]
-                dict['fit_params'][self.params_names[i]] = {
+            for idx, param_name in enumerate(self.params_names):
+                value = NEST_stats['modes'][nmode]['maximum a posterior'][idx]
+                std = NEST_stats['modes'][nmode]['sigma'][idx]
+                chain = modes_array[nmode][:,idx]
+                dict['fit_params'][param_name] = {
                     'value': value,
                     'std': std,
                     'trace': chain,
@@ -408,36 +227,92 @@ class output(base):
                 }
                 sort_order += 1
 
+            if self.params.fit_clr_trans == True:
+
+                # if centered-log-ratio transformation is True, transform the traces of the log ratios back to abundances
+                mixing_ratios_clr = modes_array[nmode][:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
+                mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
+
+                self.NEST_data_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace]
+
+                # get means. What about STD????
+                clr = np.asarray([NEST_stats['modes'][nmode]['maximum a posterior'][i]
+                                  for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1)])
+                clr = np.append(clr, -np.sum(clr))
+                mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
+                mixing_means /= sum(mixing_means) # closure operation
+                mixing_means = np.log10(mixing_means) # take log
+
+                # set new list of params names, including the clr inv mixing ratios
+                self.clrinv_params_names = []
+                for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
+                        self.fitting.forwardmodel.atmosphere.inactive_gases):
+                    self.clrinv_params_names.append(gasname)
+                self.clrinv_params_names.append('coupled_mu')
+                for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
+                     self.clrinv_params_names.append(self.fitting.fit_params_names[i])
+
+                for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1):
+                    if self.clrinv_params_names[idx] == 'coupled_mu':
+                        trace = coupled_mu_trace
+                        value = 0 # todo add value here
+                        std = 0 # todo add value here
+                    else:
+                        trace = mixing_ratios_clr_inv[:,idx]
+                        value = mixing_means[idx]
+                        std = 0 # todo add value here
+                    dict['fit_params'][self.clrinv_params_names[idx]] = {
+                        'value': value,
+                        'std': std,
+                        'trace': trace,
+                        'sort_order': sort_order
+                    }
+                    sort_order += 1
+
             NEST_out.append(dict)
 
-        NEST_out = self.add_spectra_from_solutions(NEST_out)
-        return NEST_out, NEST_tracedata, None
 
+
+        NEST_out = self.add_spectra_from_solutions(NEST_out)
+        return NEST_out, NEST_tracedata
+
+    def inverse_clr_transform(self, clr_tracedata):
+
+        # Convert the traces of the log-ratios back to the gas mixing ratios in log space. This is done by calculating the inverse
+        # CLR in the tracedata array, line by line. The new traces are then returned.
+
+        logging.info('Inverse log-ratio transformation of the traces')
+
+        ntraces = len(clr_tracedata[:,0])
+        ncol = len(clr_tracedata[0,:])
+
+        mixing_ratios_tracedata = exp(np.c_[clr_tracedata, -sum(clr_tracedata, axis=1)]) # add log-ratio (= -sum(other log ratios)
+        mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*(ncol+1)).transpose()) # closure operation
+
+        # calculate couple mean molecular weight trace as a byproduct
+        coupled_mu_trace = np.zeros(ntraces)
+        i = 0
+        for sample in mixing_ratios_tracedata:
+            # get mean molecular weight from gas mixing ratios
+            absorbing_gases_X = sample[:len(self.fitting.forwardmodel.atmosphere.absorbing_gases)]
+            inactive_gases_X = sample[len(self.fitting.forwardmodel.atmosphere.inactive_gases):]
+            coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
+            coupled_mu_trace[i] = coupled_mu
+            i += 1
+
+        return np.log10(mixing_ratios_tracedata), coupled_mu_trace
 
     def add_spectra_from_solutions(self, fitting_out):
-
-
-        # if using the clr transformation, before parsing fit_params to update the atmosphere from fitting object,
-        # set fit_clr_trans and fit_fix_inactive to False, as output fit_params will always contain the transformed
-        # mixing ratios of absorbing and inactive gases
-        clr_trans = False
-        if self.fitting.params.fit_clr_trans == True:
-            clr_trans = True
-            self.fitting.params.fit_clr_trans = False
-            self.fitting.params.fit_fix_inactive = False
-            params_names = self.params_names
-            params_names.remove('coupled_mu')
-        else:
-            params_names = self.params_names
 
         # loop through solutions
         for idx, solution in enumerate(fitting_out):
 
-            fit_params = [solution['fit_params'][param]['value'] for param in params_names]
+            fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
             self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
             model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
 
+            # model spectrum binned to observed spectrum
             out = np.zeros((len(self.data.spectrum[:,0]), 2))
             out[:,0] = self.data.spectrum[:,0]
             out[:,1] = model_binned
@@ -448,14 +323,6 @@ class output(base):
             out[:,0] = self.data.specgrid
             out[:,1] = model
             fitting_out[idx]['highres_spectrum'] = out
-
-            if self.fitting.params.fit_clr_trans == True:
-                self.fitting.params.fit_clr_trans = False
-                self.fitting.params.fit_fix_inactive = False
-
-        # restore param fit_clr_trans to original value
-        if clr_trans == True:
-            self.fitting.params.fit_clr_trans = True
 
         return fitting_out
 
@@ -481,7 +348,6 @@ class output(base):
 
         if self.MCMC:
             np.savetxt(os.path.join(self.params.out_path, 'MCMC_tracedata.txt'), self.MCMC_tracedata)
-            np.savetxt(os.path.join(self.fitting.dir_multinest, 'MCMC_labels.txt'), self.MCMC_labels)
             if self.params.fit_clr_trans:
                 np.savetxt(os.path.join(self.params.out_path, 'MCMC_clr_inv_tracedata.txt'), self.MCMC_data_clr_inv)
             pickle.dump(self.MCMC_out, open(os.path.join(self.params.out_path, 'MCMC_out.db'), 'wb'))
@@ -490,27 +356,28 @@ class output(base):
         if self.NEST:
             np.savetxt(os.path.join(self.params.out_path, 'NEST_tracedata.txt'), self.NEST_tracedata)
             np.savetxt(os.path.join(self.params.out_path, 'NEST_likelihood.txt'), self.NEST_likelihood)
-            if self.NEST_labels is not None:
-                np.savetxt(os.path.join(self.params.out_path, 'NEST_labels.txt'), self.NEST_labels)
             if self.params.fit_clr_trans:
                 np.savetxt(os.path.join(self.params.out_path, 'NEST_clr_inv_tracedata.txt'), self.NEST_data_clr_inv)
             pickle.dump(self.NEST_out, open(os.path.join(self.params.out_path, 'NEST_out.db'), 'wb'))
             self.save_fit_out_to_file(self.NEST_out, type='NEST')
 
         # save param file and observation to files
-        shutil.copy(self.params.parfile, self.params.out_path)
-        shutil.copy(self.params.in_spectrum_file, self.params.out_path)
-
-
+        try:
+            shutil.copy(self.params.parfile, self.params.out_path)
+            shutil.copy(self.params.in_spectrum_file, self.params.out_path)
+        except:
+            pass
 
     def save_fit_out_to_file(self, fit_out, type=''):
+
+        ''' Save value and standard deviation of each parameter for each solution to txt file '''
 
         f = open(os.path.join(self.params.out_path, '%s_out.txt' % type),'w')
         for idx, solution in enumerate(fit_out):
             f.write('%s solution %i\n' % (type, idx))
             for param in self.params_names:
                 f.write('%s %f %f\n' %  (param, solution['fit_params'][param]['value'],
-                                              solution['fit_params'][param]['std']))
+                                                solution['fit_params'][param]['std']))
             f.write('\n')
 
     def plot_all(self, save2pdf=False):
@@ -606,16 +473,16 @@ class output(base):
 
         if self.fitting.MCMC:
             plot_posteriors(self.MCMC_out,
-                            save2pdf=save2pdf,
-                            out_path=self.params.out_path,
-                            plot_name = 'mcmc',
-                            plot_contour=self.params.out_plot_contour)
+                            save2pdf=save2pdf,out_path=self.params.out_path,plot_name = 'MCMC',
+                            plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour)
         if self.fitting.NEST:
-            plot_posteriors(self.NEST_out,
-                            save2pdf=save2pdf,
-                            out_path=self.params.out_path,
-                            plot_name = 'nest',
-                            plot_contour=self.params.out_plot_contour)
+
+            plot_posteriors(self.NEST_out, params_names=self.params_names,save2pdf=save2pdf,out_path=self.params.out_path,
+                            plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
+
+            if self.params.fit_clr_trans == True:
+                plot_posteriors(self.NEST_out,params_names=self.clrinv_params_names,save2pdf=save2pdf,out_path=self.params.out_path,
+                                plot_name = 'NEST_clrinv',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
     def plot_manual(self,model,save2pdf=False,linewidth=2.0):
 
@@ -767,3 +634,145 @@ class output(base):
                                           save2pdf=save2pdf, out_path=self.params.out_path)
 
 
+
+
+    #
+    #
+    # def analyse_traces(self, tracedata, clr_inv=False, cluster_analysis=False):
+    #
+    #     ntraces = len(tracedata[:,0])
+    #     ncol = len(tracedata[0,:])
+    #
+    #     if clr_inv == True:
+    #         # create new array of traces with the mixing ratios obtained from CLR traces
+    #         # log-ratios are always the first n columns
+    #         mixing_ratios_clr = tracedata[:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
+    #         mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
+    #
+    #         self.tracedata_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace,
+    #                                        tracedata[:, self.fitting.forwardmodel.atmosphere.nallgases-1:]]
+    #         tracedata_analyse = self.tracedata_clr_inv # set the trace to analyse and get solutions from
+    #
+    #         # set parameter names of new traces
+    #         self.params_names = []
+    #         for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
+    #                 self.fitting.forwardmodel.atmosphere.inactive_gases):
+    #             self.params_names.append(gasname)
+    #         ## todo careful about adding coupled_mu, it might interfere with fit-params?
+    #         self.params_names.append('coupled_mu')
+    #         for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
+    #             self.params_names.append(self.fitting.fit_params_names[i])
+    #
+    #     else:
+    #         self.params_names = self.fitting.fit_params_names
+    #         tracedata_analyse = tracedata # set the trace to analyse and get solutions from
+    #
+    #
+    #     # @todo: if cluster_analysis is False, but multinest is in multimode, then we should get solutions from multinest output. See end of file with commented code.
+    #     if cluster_analysis == True:
+    #
+    #         # clustering analysis on traces. Split up the traces into individual clusters
+    #         logging.info('Cluster analysis with sklearn MeanShift')
+    #
+    #         from sklearn.cluster import MeanShift
+    #         from sklearn.preprocessing import normalize
+    #         data_normalized = normalize(tracedata_analyse, axis=0)  # normalize the data
+    #         estimator = MeanShift()
+    #         estimator.fit(data_normalized)
+    #         labels = estimator.labels_
+    #
+    #         # save txt with labels corresponding to different clusters found in the posterior traces
+    #         np.savetxt('Output/labels.txt', labels)
+    #         # labels = np.loadtxt('Output/labels.txt')
+    #         unique_labels = set(labels)
+    #         n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
+    #         logging.info('Estimated number of clusters: %d' % n_clusters)
+    #
+    #     else:
+    #         # clustering analysis is not performed. Only one mode assumed
+    #         unique_labels = [0]
+    #         labels = np.zeros(ntraces)
+    #
+    #     fit_out = self.get_solutions_from_traces(tracedata_analyse, multimode=cluster_analysis, labels=labels) # todo: needs to be changed, if we get solutions from multinest multimode (see above)
+    #     fit_out = self.add_spectra_from_solutions(fit_out)
+    #
+    #     return fit_out, tracedata_analyse, labels
+    #
+    # def get_solutions_from_traces(self, tracedata, multimode=False, labels=[]):
+    #
+    #     ntraces = len(tracedata[:,0])
+    #     ncol = len(tracedata[0,:])
+    #
+    #     if multimode == False:
+    #         unique_labels = [0]
+    #         labels = np.zeros(ntraces)
+    #     else:
+    #         unique_labels = set(labels)
+    #         if len(labels) != ntraces:
+    #             logging.error('Multimode is ON and the number of labels is different from the number of samples')
+    #
+    #     # Create list of solutions. Each solution (cluster) is stored into a dictionary. If multimode = False, then
+    #     # only only one solution is stored.
+    #
+    #     fit_out = []
+    #     for k in unique_labels:
+    #         if k >= 0:
+    #
+    #             if (k > 0 and len(tracedata[labels == k-1, 0])/len(tracedata[labels == k, 0]) > 20):
+    #                 # exlcude solutions that have a factor of 20 fewer samples than the previous solution @todo careful!
+    #                 break
+    #             else:
+    #
+    #                 # save individual solutions into a dictionary
+    #                 dict = {'fit_params': {}}
+    #                 sort_order = 0
+    #                 for idx, param in enumerate(self.params_names):
+    #
+    #                     try:
+    #                         cluster = tracedata[labels == k, idx] # get cluster of points corresponding to cluster k, and param idx
+    #
+    #                         # get errors
+    #                         hist, bin_edges = np.histogram(cluster, bins=100, density=True)
+    #                         bin_centres = (bin_edges[:-1] + bin_edges[1:])/2
+    #                         idxmax = np.argmax(hist)
+    #                         value = bin_centres[idxmax]
+    #                         left = hist[:idxmax][::-1]
+    #                         right = hist[idxmax:]
+    #                         left_centres = bin_centres[:idxmax][::-1]
+    #                         right_centres = bin_centres[idxmax:]
+    #
+    #                         try:
+    #                             left_err = value - left_centres[(np.abs(left-np.percentile(left,68))).argmin()]
+    #                         except:
+    #                             left_err = 0
+    #                         try:
+    #                             right_err = right_centres[(np.abs(right-np.percentile(right,68))).argmin()] - value
+    #                         except:
+    #                             right_err = 0
+    #                         if left_err == 0 and right_err > 0:
+    #                             left_err = right_err
+    #                         if right_err == 0 and left_err > 0:
+    #                             right_err = left_err
+    #
+    #                         mean_err = np.mean((left_err, right_err))
+    #
+    #                         dict['fit_params'][self.params_names[idx]] = {
+    #                             'value': value,
+    #                             'std': np.std(cluster),
+    #                             #'std': mean_err, @ todo try to use mean err!
+    #                             'std_plus': right_err,
+    #                             'std_minus': left_err,
+    #                             'trace': np.asarray(cluster),
+    #                             'sort_order': sort_order
+    #                         }
+    #                         sort_order += 1
+    #
+    #                     except ValueError:
+    #                         # this parameter was not fitted...
+    #                         pass
+    #                 fit_out.append(dict)
+    #
+    #     logging.info('Number of solutions identified: %d' % len(fit_out))
+    #
+    #     return fit_out
+    #

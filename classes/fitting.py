@@ -457,7 +457,7 @@ class fitting(base):
         #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
         #     self.forwardmodel.atmosphere.absorbing_gases_X, \
         #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
-        #
+
         return res
 
     ###############################################################################
@@ -693,13 +693,7 @@ class fitting(base):
         for i in range(self.forwardmodel.atmosphere.nallgases):
             clr_inv_tmp.append(exp(clr[i]))
         clr_inv_tmp = asarray(clr_inv_tmp)/sum(clr_inv_tmp) # closure
+        clr_inv = clr_inv_tmp
 
-        # set very low abundances to zero todo needed?
-        clr_inv = []
-        for i in range(self.forwardmodel.atmosphere.nallgases):
-            if clr_inv_tmp[i] < 1.e-7:
-                clr_inv.append(0)
-            else:
-                clr_inv.append(clr_inv_tmp[i])
 
         return clr_inv
