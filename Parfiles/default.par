@@ -362,7 +362,8 @@ max_modes = 100
 const_eff = False
 
 #set log likelihood tolerance. If change is smaller, multinest will have converged
-tol = 0.01
+evidence_tolerance = 0.5
+mode_tolerance = -1e90
 
 #importance nested sampling
 imp_sampling = False
