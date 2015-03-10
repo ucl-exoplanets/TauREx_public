@@ -361,6 +361,9 @@ max_modes = 100
 #run in constant efficiency mode
 const_eff = False
 
+#set log likelihood tolerance. If change is smaller, multinest will have converged
+tol = 0.01
+
 #importance nested sampling
 imp_sampling = False
 

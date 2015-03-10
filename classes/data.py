@@ -194,7 +194,7 @@ class data(base):
                 logging.warning('WARNING: Stellar temp. in .par file exceeds range %.1f - %.1f K. '
                                 'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
             self.star_blackbody = True
-            SED = libem.black_body(self.specgrid,self.params.star_temp) #@todo bug here! not multiplied by size of star 4piRs^2
+            SED = libem.black_body(self.specgrid,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
 #             SED *= self.params.star_radius**2 * np.pi * 4.
 
 #             SED *= self.params.star_radius**2 * np.pi * 4.
@@ -208,7 +208,8 @@ class data(base):
                     self.SED_filename = file
 
             #reading in correct file and interpolating it onto self.specgrid
-            SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#') #@todo bug here! not multiplied by size of star 4piRs^2 and units are wrong as well
+            SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
+            SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane 
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         return SED
 

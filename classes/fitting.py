@@ -653,6 +653,7 @@ class fitting(base):
                         resume = resume,
                         verbose = self.params.nest_verbose,
                         sampling_efficiency = self.params.nest_samp_eff,
+                        tol = self.params.nest_tol,
                         n_live_points = self.params.nest_nlive,
                         max_iter= self.params.nest_max_iter,
                         init_MPI=False)

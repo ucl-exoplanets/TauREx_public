@@ -237,6 +237,7 @@ class parameters(base):
             self.nest_multimodes       = self.getpar('MultiNest','multimodes')
             self.nest_max_modes        = self.getpar('MultiNest','max_modes', 'int')
             self.nest_const_eff        = self.getpar('MultiNest','const_eff', 'bool')
+            self.nest_tol              = self.getpar('MultiNest','tol','float')
             self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
             self.nest_cluster_analysis = self.getpar('MultiNest','cluster_analysis', 'bool')
         except:
