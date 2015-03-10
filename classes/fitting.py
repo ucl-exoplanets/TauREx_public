@@ -219,7 +219,7 @@ class fitting(base):
             self.fit_params.append(np.mean((0.0,1e-2)))
 
             self.fit_params_names.append('alpha')
-            self.fit_bounds.append((0.5,1.0))
+            self.fit_bounds.append((0.0,1.0))
             self.fit_params.append(np.mean((0.0,1.0)))
 
         elif self.forwardmodel.atmosphere.TP_type == '2point':
