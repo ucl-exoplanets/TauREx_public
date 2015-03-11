@@ -48,18 +48,22 @@ def run(params):
     #fit data for stage 1
     if params.downhill_run:
         fittingob.downhill_fit()    #simplex downhill fit
-
+#     fittingob.downhill_fit()    #simplex downhill fit
+# 
     if params.mcmc_run and pymc_import:
         fittingob.mcmc_fit() # MCMC fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
- 
+  
     if params.nest_run and multinest_import:
         fittingob.multinest_fit() # Nested sampling fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
     
     #loading output module for stage 0
-    outputob = output(fittingob)
+    outputob = output(fittingob,out_path=os.path.join(out_path_orig, 'stage_0'))
+    
+    
+    
     #generating TP profile covariance from previous fit
     Cov_array = emlib.generate_tp_covariance(outputob)
 
@@ -110,7 +114,7 @@ def run(params):
         
     #initiating output instance with fitted data from fitting class
     if params.fit_emission_stage2:
-        outputob1 = output(fittingob1)
+        outputob1 = output(fittingob1,out_path=os.path.join(out_path_orig, 'stage_1'))
 
     #plotting fits and data
     logging.info('Plotting and saving results')
