@@ -31,13 +31,13 @@ N_LAYERS = 80 #number of atmospheric layers
 N_SCALE  = 20.0   #number of scale heights 
 MAX_P    = 1e6 #maximum pressure (Pa)
 
-MOL_NUM  = 4   #number of molecules 
+MOL_NUM  = 3   #number of molecules 
 
 smooth_window = 5 #smoothing window size as percent of total data
 
-T_surf = 2200.0  #surface temperature (K)
+T_surf = 1400.0  #surface temperature (K)
 mu     = 2.3   #mean molecular weight (atomic units)
-g      = 7.1  #surface gravity (m/s^2)
+g      = 22.0  #surface gravity (m/s^2)
         
 
 # print 'boltzmann ', con.k
@@ -67,9 +67,9 @@ print 'max_z ',max_z, 'end z ', PTA_arr[-1,2]
 #setting TP nodes
 # Znodes = [0.0, 4.0e6,5e6,max_z]
 # Pnodes = [MAX_P,1000.0, 0.0]
-Pnodes = [MAX_P,1e5, 100.0,MIN_P]
+Pnodes = [MAX_P,1e5, 500.0,MIN_P]
 # Tnodes = [T_surf,1200.0,1200.0]
-Tnodes = [T_surf,T_surf,2000.0,2000.0]
+Tnodes = [T_surf,T_surf,900.0,900.0]
 # Tnodes = [T_surf,T_surf,T_surf, T_surf]
 
 print 'Pnodes ',Pnodes
@@ -84,21 +84,21 @@ TP = np.interp((np.log(PTA_arr[::-1])[:,0]), np.log(Pnodes[::-1]), Tnodes[::-1])
 # print TP
 
 #smoothing T-P profile
-# wsize = N_LAYERS*(smooth_window/100.0)
-# if (wsize %2 == 0):
-#     wsize += 1 
-# TP_smooth = movingaverage(TP,wsize)
-# border = np.int((len(TP) - len(TP_smooth))/2)
+wsize = N_LAYERS*(smooth_window/50.0)
+if (wsize %2 == 0):
+    wsize += 1 
+TP_smooth = movingaverage(TP,wsize)
+border = np.int((len(TP) - len(TP_smooth))/2)
 
 PTA_arr[:,1] = TP[::-1]
-# PTA_arr[border:-border,1] = TP_smooth
+PTA_arr[border:-border,1] = TP_smooth[::-1]
 
 
 
 #adding mixing ratios for molecules 
-# X = [6.0e-5,1.0e-5,5.0e-6]
+X = [1.0e-7,1.0e-5,5.0e-6]
 # X = [1.0e-7,1.0e-7,1.0e-7]
-X = [5e-6,2e-7]
+# X = [5e-6,2e-7] #55cnc example
 
 for i in range(len(X)):
     PTA_arr[:,2+i+1] = X[i]

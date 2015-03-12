@@ -9,10 +9,10 @@ type = emission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/55cnc_emission_r6060_55cnce_taurex_t20.dat
+spectrum_file = Input/observations/55cnc_emission_r6060_55cnce_taurex_t100_new.dat
 
-use_ATMfile = False
-atm_file = TP_profile.txt
+use_ATMfile = True
+atm_file = Input/55cnc_tp_profile.txt
 abs_path = Input/crosssections/
 convert2microns = False
 __legacy__abs_files = h2o_1500K.abs
@@ -102,27 +102,28 @@ atm_max_pressure = 1e6
 var_mix = True
 corr_length = 5.0
 
+
 [Fitting]
 transmission = False
 emission     = True
-emission_stage2 = False
-hybrid_alpha_low  = 0.0 
+emission_stage2 = True
+hybrid_alpha_low  = 0.5 
 hybrid_alpha_high = 1.0
 
 fix_radius = True
 fix_temp = False
-fix_mu = False
+fix_mu = True
 fix_P0 = True
 couple_mu = False
-T_up  = 200
-T_low = 200
+T_up  = 1000
+T_low = 1000
 mu_up = 40
 mu_low = 0
 radius_up  = 0.05
 radius_low = 0.05
 P0_up = 1.e8
 P0_low = 1.e2
-X_up  = 1.0
+X_up  = 5e-4
 X_low = 1.e-8
 X_inactive_up  = 1.0
 X_inactive_low = 0.0

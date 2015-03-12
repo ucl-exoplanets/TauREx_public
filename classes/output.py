@@ -580,7 +580,7 @@ class output(base):
 
         if self.DOWN:
 
-            fit_params = [self.NEST_out[0]['fit_params'][param]['value'] for param in self.params_names]
+            fit_params = self.DOWN_params_values
             self.fitting.update_atmospheric_parameters(fit_params)
             T_mean = self.fitting.forwardmodel.T
             T_sigma  = np.zeros_like(T_mean)
@@ -591,7 +591,7 @@ class output(base):
             np.savetxt(filename,out)
 
             if save2pdf:
-                plot_TP_profile(P, T_mean, name='NEST', save2pdf=save2pdf, out_path=self.out_path)
+                plot_TP_profile(P, T_mean, name='DOWN', save2pdf=save2pdf, out_path=self.out_path)
 
         if self.MCMC:
 
