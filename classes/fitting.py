@@ -427,6 +427,9 @@ class fitting(base):
         # get residuals
         res = (data - model_binned) / datastd
         res = sum(res*res)
+        
+#         self.db_count += 1
+#         print self.db_count, '  ', res
 
 #         ion()
 #         figure(1)
@@ -437,8 +440,8 @@ class fitting(base):
 #         ylabel('Pressure (Pa)')
 #         yscale('log')
 #         draw()
-#         # pause(0.0001)
-#         #
+# #         # pause(0.0001)
+# #         #
 #         ion()
 #         figure(2)
 #         clf()

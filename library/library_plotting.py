@@ -114,7 +114,7 @@ def _plot_posteriors(fit_out, params_names=[], plot_contour=False,fontsize=30, c
             for tick in ax2.xaxis.get_major_ticks():
                 tick.label.set_rotation(+30)
                 tick.label.set_fontsize(fontsize)
-    pl.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95, hspace=0.0,wspace=0.0)
+    pl.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, hspace=0.0,wspace=0.0)
     return fig
 
 def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_contour=False, suppressAxes=False, color='Blues'):

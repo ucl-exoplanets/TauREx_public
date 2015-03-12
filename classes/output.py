@@ -385,13 +385,13 @@ class output(base):
                                                 solution['fit_params'][param]['std']))
             f.write('\n')
 
-    def plot_all(self, save2pdf=False):
+    def plot_all(self, save2pdf=False,params_names=None):
 
         logging.info('Plotting absolutely everything')
 
         self.plot_spectrum(save2pdf=save2pdf)
         self.plot_fit(save2pdf=save2pdf)
-        self.plot_distributions(save2pdf=save2pdf)
+        self.plot_distributions(save2pdf=save2pdf,params_names=params_names)
 
     def plot_spectrum(self,save2pdf=False,linewidth=2.0):
 
@@ -472,21 +472,25 @@ class output(base):
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
-    def plot_distributions(self, save2pdf=False):
+    def plot_distributions(self, save2pdf=False, params_names=None):
 
         logging.info('Plotting sampling distributions. Saving to %s' % self.out_path)
 
+        if params_names is None:
+                params_names = self.params_names
+                
         if self.fitting.MCMC:
-            plot_posteriors(self.MCMC_out,
+            plot_posteriors(self.MCMC_out,params_names=params_names,
                             save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',
                             plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour)
         if self.fitting.NEST:
-
-            plot_posteriors(self.NEST_out, params_names=self.params_names,save2pdf=save2pdf,out_path=self.out_path,
+            plot_posteriors(self.NEST_out, params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                             plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
             if self.params.fit_clr_trans == True:
-                plot_posteriors(self.NEST_out,params_names=self.clrinv_params_names,save2pdf=save2pdf,out_path=self.out_path,
+                if params_names is None:
+                    params_names = self.clrinv_params_names
+                plot_posteriors(self.NEST_out,params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                                 plot_name = 'NEST_clrinv',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
     def plot_manual(self,model,save2pdf=False,linewidth=2.0):
