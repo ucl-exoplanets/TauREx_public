@@ -230,7 +230,7 @@ class data(base):
 
         #interpolating to specgrid
         if interpolate:
-            interpflux = interp(self.specgrid, out[:,0], out[:,1], left=0, right=0)
+            interpflux = interp(self.specgrid, out[:,0], out[:,1])
             out = transpose(vstack((self.specgrid, interpflux)))
 
         return out
@@ -488,6 +488,10 @@ class data(base):
             mu = 17.
         elif gasname == '1H2-16O':
             mu = 18.
+        elif gasname == 'C2H2':
+            mu = 26.04
+        elif gasname == '1H2-32S':
+            mu = 34.0809
         else:
             mu = 0
 

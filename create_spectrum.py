@@ -65,6 +65,7 @@ from library_transmission import *
 from library_general import *
 from library_plotting import *
 
+AMU   = 1.660538921e-27 #atomic mass to kg
 
 parser = optparse.OptionParser()
 parser.add_option('-p', '--parfile',
@@ -78,6 +79,10 @@ parser.add_option('-r', '--res',
 parser.add_option('-e', '--error',
                   dest="error",
                   default=50,
+)
+parser.add_option('-T', '--T_profile',
+                  dest="tp_profile",
+                  default=0,
 )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
@@ -100,6 +105,35 @@ dataob = data(params)
 
 #initialising TP profile object
 atmosphereob = atmosphere(dataob)
+
+## Apply TP profile
+def movingaverage(values,window):
+    weigths = np.repeat(1.0, window)/window
+    smas = np.convolve(values, weigths, 'valid')
+#     smas2 = np.convolve(smas[::-1],weigths,'valid')
+    return smas #smas2[::-1] # as a numpy array
+if int(options.tp_profile) == 1:
+    logging.info('Applying custom TP profile')
+    MAX_P = atmosphereob.P[0]
+    MIN_P = atmosphereob.P[-1]
+    smooth_window = 5 #smoothing window size as percent of total data
+    Pnodes = [MAX_P, 1e6, 1e4, MIN_P]
+    Tnodes = [800,800,350,350]
+    TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
+    #smoothing T-P profile
+    wsize = atmosphereob.nlayers*(smooth_window/100.0)
+    if (wsize %2 == 0):
+        wsize += 1
+    TP_smooth = movingaverage(TP,wsize)
+    border = np.int((len(TP) - len(TP_smooth))/2)
+    atmosphereob.T = TP[::-1]
+
+    out = np.zeros((len(atmosphereob.T),2))
+    out[:,0] = atmosphereob.T
+    out[:,1] = atmosphereob.P
+    np.savetxt(os.path.join(params.out_path, 'TP_profile.dat'), out)
+
+print 'The mean molecular weight is', atmosphereob.planet_mu/AMU
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':

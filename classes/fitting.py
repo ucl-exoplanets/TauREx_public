@@ -136,7 +136,7 @@ class fitting(base):
             # append all mixing ratios, minus one (as we're using the centered-log-ratio transformation)
             for i in range(self.forwardmodel.atmosphere.nallgases - 1):
                 self.fit_params.append(clr[i])
-                self.fit_bounds.append((-10, 10)) # @todo bounds seem ok, what's the minimum X we can get with this?
+                self.fit_bounds.append((-20, 20)) # @todo bounds seem ok, what's the minimum X we can get with this?
                 self.fit_params_names.append('CLR_X_%i' % i)
                 count_X += 1
         else:

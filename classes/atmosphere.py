@@ -95,7 +95,12 @@ class atmosphere(base):
         self.z          = self.pta[:,2] # altitude array
         self.rho        = self.get_rho() # assume self.T, self.P
 
-        #selecting TP profile to use
+        if self.params.in_use_TP_file == True: # todo temporary. Just to feed a given T profile.
+            self.T = np.loadtxt(self.params.in_TP_file)[:,0]
+            print 'AHAHHA set T to'
+            print self.T
+
+         #selecting TP profile to use
         if self.params.gen_type == 'emission':
             if tp_profile_type is None:
                 self.TP_type = self.params.tp_type
@@ -155,9 +160,6 @@ class atmosphere(base):
     def get_surface_gravity(self, mass=None, radius=None):
 
         #calculate surface gravity of planet using Rp and Mp
-        # todo surface gravity calculated at 10 mbar radius. Is it ok? Can't really use radius at P0, as it depends on
-        # todo the TP profile, which depends on scaleheight, which depends on surface gravity... it's a loop!
-
         if not mass:
             mass = self.planet_mass
         if not radius:

@@ -42,7 +42,7 @@ AMU   = 1.660538921e-27 #atomic mass to kg
 class output(base):
 
     def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None):
-         
+
         logging.info('Initialise object output')
 
         if params is not None:
@@ -214,34 +214,48 @@ class output(base):
         for nmode in range(len(modes)):
 
             dict = {'fit_params': {}}
-            sort_order = 0
             for idx, param_name in enumerate(self.params_names):
-                value = NEST_stats['modes'][nmode]['maximum a posterior'][idx]
-                std = NEST_stats['modes'][nmode]['sigma'][idx]
-                chain = modes_array[nmode][:,idx]
                 dict['fit_params'][param_name] = {
-                    'value': value,
-                    'std': std,
-                    'trace': chain,
-                    'sort_order': sort_order
+                    'value': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
+                    'std': NEST_stats['modes'][nmode]['sigma'][idx],
+                    'trace': modes_array[nmode][:,idx],
                 }
-                sort_order += 1
 
             if self.params.fit_clr_trans == True:
 
+                nallgases = self.fitting.forwardmodel.atmosphere.nallgases
+
                 # if centered-log-ratio transformation is True, transform the traces of the log ratios back to abundances
-                mixing_ratios_clr = modes_array[nmode][:, :self.fitting.forwardmodel.atmosphere.nallgases-1] # get traces of log-ratios
+                mixing_ratios_clr = modes_array[nmode][:, :nallgases-1] # get traces of log-ratios
+                mixing_ratios_clr = np.c_[mixing_ratios_clr, -sum(mixing_ratios_clr, axis=1)] #add last clr (= -sum(clr) )
                 mixing_ratios_clr_inv, coupled_mu_trace = self.inverse_clr_transform(mixing_ratios_clr)
 
                 self.NEST_data_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace]
 
-                # get means. What about STD????
-                clr = np.asarray([NEST_stats['modes'][nmode]['maximum a posterior'][i]
-                                  for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1)])
+                # get means
+                clr = np.asarray([NEST_stats['modes'][nmode]['maximum a posterior'][i] for i in range(nallgases-1)])
                 clr = np.append(clr, -np.sum(clr))
+
+                # add last CLR to dictionary. This is not fitted, as it is equal to minus the sum of all the other CLRs
+                # Note that that the sum of all CLR is equal to zero
+                dict['fit_params']['CLR_X_%i' % nallgases] = {
+                    'value': clr[nallgases-1],
+                    'std': np.std(mixing_ratios_clr[nallgases-1]),
+                    'trace': mixing_ratios_clr[nallgases-1],
+                }
+
+
                 mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
                 mixing_means /= sum(mixing_means) # closure operation
-                mixing_means = np.log10(mixing_means) # take log
+
+                # get coupled std of means
+                absorbing_gases_X = mixing_means[:len(self.fitting.forwardmodel.atmosphere.absorbing_gases)]
+                inactive_gases_X = mixing_means[len(self.fitting.forwardmodel.atmosphere.inactive_gases)+1:]
+
+                coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
+
+                # convert mixing means to log space
+                mixing_means = np.log10(mixing_means)
 
                 # set new list of params names, including the clr inv mixing ratios
                 self.clrinv_params_names = []
@@ -252,22 +266,20 @@ class output(base):
                 for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                      self.clrinv_params_names.append(self.fitting.fit_params_names[i])
 
-                for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1):
+                for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1): # all gases + coupled_mu
                     if self.clrinv_params_names[idx] == 'coupled_mu':
                         trace = coupled_mu_trace
-                        value = 0 # todo add value here
-                        std = 0 # todo add value here
+                        value = coupled_mu
+                        std = np.std(trace)
                     else:
                         trace = mixing_ratios_clr_inv[:,idx]
                         value = mixing_means[idx]
-                        std = 0 # todo add value here
+                        std = np.std(trace)
                     dict['fit_params'][self.clrinv_params_names[idx]] = {
                         'value': value,
                         'std': std,
                         'trace': trace,
-                        'sort_order': sort_order
                     }
-                    sort_order += 1
 
             NEST_out.append(dict)
 
@@ -286,8 +298,8 @@ class output(base):
         ntraces = len(clr_tracedata[:,0])
         ncol = len(clr_tracedata[0,:])
 
-        mixing_ratios_tracedata = exp(np.c_[clr_tracedata, -sum(clr_tracedata, axis=1)]) # add log-ratio (= -sum(other log ratios)
-        mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*(ncol+1)).transpose()) # closure operation
+        mixing_ratios_tracedata = exp(clr_tracedata)
+        mixing_ratios_tracedata /= (np.asarray([np.sum(mixing_ratios_tracedata, axis=1),]*ncol).transpose()) # closure operation
 
         # calculate couple mean molecular weight trace as a byproduct
         coupled_mu_trace = np.zeros(ntraces)
@@ -295,7 +307,7 @@ class output(base):
         for sample in mixing_ratios_tracedata:
             # get mean molecular weight from gas mixing ratios
             absorbing_gases_X = sample[:len(self.fitting.forwardmodel.atmosphere.absorbing_gases)]
-            inactive_gases_X = sample[len(self.fitting.forwardmodel.atmosphere.inactive_gases):]
+            inactive_gases_X = sample[len(self.fitting.forwardmodel.atmosphere.inactive_gases)+1:]
             coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
             coupled_mu_trace[i] = coupled_mu
             i += 1
@@ -373,11 +385,26 @@ class output(base):
         ''' Save value and standard deviation of each parameter for each solution to txt file '''
 
         f = open(os.path.join(self.params.out_path, '%s_out.txt' % type),'w')
+        f.write('Note: mixing ratios are expressed as fractions in linear space, mean molecular weight '
+                'in AMU, pressure in Pascal\n\n')
         for idx, solution in enumerate(fit_out):
             f.write('%s solution %i\n' % (type, idx))
-            for param in self.params_names:
-                f.write('%s %f %f\n' %  (param, solution['fit_params'][param]['value'],
-                                                solution['fit_params'][param]['std']))
+
+            for param in solution['fit_params'].keys():
+                if param in self.params.all_absorbing_gases or param in self.params.all_inactive_gases or param == 'P0':
+                    f.write('log(%s)	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
+                                                     solution['fit_params'][param]['std']))
+
+                    f.write('%s	%f	%f\n' %  (param, np.power(10, solution['fit_params'][param]['value']),
+                                              np.power(10, solution['fit_params'][param]['value'])*np.log(10)*solution['fit_params'][param]['std'] ))
+                elif param == 'mu' or param == 'coupled_mu':
+                    f.write('%s (AMU)	%f	%f\n' %  (param, solution['fit_params'][param]['value']/AMU,
+                                                      solution['fit_params'][param]['std']/AMU))
+                else:
+                    f.write('%s	%.3e	%.3e\n' %  (param, solution['fit_params'][param]['value'],
+                            solution['fit_params'][param]['std']))
+
+
             f.write('\n')
 
     def plot_all(self, save2pdf=False):
@@ -553,12 +580,12 @@ class output(base):
 
         out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
         out[:,0] = P # pressure
-            
+
         if save_manual is not None:
             if len(FIT_params) > 0 and len(FIT_params_std) > 0:
                 T_mean, T_sigma, P = iterate_TP_profile(FIT_params, FIT_params_std,
                                                          self.fitting.forwardmodel.atmosphere.TP_profile)
-                
+
                 out[:,1] = T_mean; out[:,2] = T_sigma
 
                 filename = str(basename)+profilename+'.dat'
@@ -593,7 +620,7 @@ class output(base):
             logging.info('There are %i different MCMC chains. '
                          'Saving one TP profile for each chain' % len(self.MCMC_out))
 
-        
+
             for idx, solution in enumerate(self.MCMC_out):
 
                 #iterate through all upper/lower bounds of parameters to find function minimum and maximum
@@ -601,7 +628,7 @@ class output(base):
 
                 T_mean, T_sigma = iterate_TP_profile(self.MCMC_TP_params_values[idx], self.MCMC_TP_params_std[idx],
                                                       self.fitting.forwardmodel.atmosphere.TP_profile)
-                
+
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
                 filename = str(basename)+profilename+'_mcmc.dat'
@@ -616,12 +643,12 @@ class output(base):
 
             logging.info('MultiNest detected %i different modes. '
                          'Saving one TP profile for each solution' % len(self.NEST_out))
-            
+
             for idx, solution in enumerate(self.NEST_out):
-            
+
                 T_mean, T_sigma = iterate_TP_profile(self.NEST_TP_params_values[idx], self.NEST_TP_params_std[idx],
                                                       self.fitting.forwardmodel.atmosphere.TP_profile)
-            
+
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
                 filename = str(basename)+profilename+'_spectrum_nest_%i.dat' % (idx)
@@ -632,8 +659,6 @@ class output(base):
                 if save2pdf:
                     plot_TP_profile(P, T_mean, T_sigma, name='NEST_'+str(idx),
                                           save2pdf=save2pdf, out_path=self.params.out_path)
-
-
 
 
     #

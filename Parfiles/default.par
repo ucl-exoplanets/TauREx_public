@@ -34,6 +34,10 @@ use_ATMfile = False
 #file containing pre-determined T-P profile and mixing ratios
 atm_file = Input/profile.atm
 
+# T profile file todo temporary param
+use_TP_file = None
+TP_file = None
+
 #Path of ExoMol cross section files folder
 abs_path = Input/crosssections/
 

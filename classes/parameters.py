@@ -98,6 +98,8 @@ class parameters(base):
             self.in_spectrum_file = False
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
+        self.in_use_TP_file         = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
+        self.in_TP_file             = self.getpar('Input','TP_file') # todo temporary param
         self.in_abs_path           = self.getpar('Input','abs_path')
         self.in_convert2microns    = self.getpar('Input','convert2microns', 'bool')
         self.in_abs_files          = self.getpar('Input','__legacy__abs_files')
