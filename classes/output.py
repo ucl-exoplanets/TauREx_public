@@ -41,10 +41,11 @@ AMU   = 1.660538921e-27 #atomic mass to kg
 
 class output(base):
 
-    def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None):
+
+    def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None, out_path=None):
 
         logging.info('Initialise object output')
-
+        
         if params is not None:
             self.params = params
         else:
@@ -52,6 +53,11 @@ class output(base):
                 self.params = fitting.params #get params object from profile
             elif forwardmodel:
                 self.params = forwardmodel.params
+                
+        if out_path is None:
+            self.out_path = self.params.out_path
+        else:
+            self.out_path = out_path
 
         if data is not None:
             self.data = data
@@ -97,7 +103,7 @@ class output(base):
             self.store_nest_solutions()
 
         if fitting is not None:
-           self.save_fit_output_files()
+            self.save_fit_output_files()
 
     #class methods
 
@@ -341,7 +347,7 @@ class output(base):
     def save_fit_output_files(self):
 
         # store parameter names of traces
-        f = open(os.path.join(self.params.out_path, 'parameters.txt'),'w')
+        f = open(os.path.join(self.out_path, 'parameters.txt'),'w')
         for param in self.fitting.fit_params_names:
             f.write('%s\n' % param)
         f.close()
@@ -350,33 +356,33 @@ class output(base):
         if self.params.fit_clr_trans:
 
             # If clr inverse, write out parameter names with mixing ratio naems
-            f = open(os.path.join(self.params.out_path, 'parameters_clr_inv.txt'),'w')
+            f = open(os.path.join(self.out_path, 'parameters_clr_inv.txt'),'w')
             for param in self.params_names:
                 f.write('%s\n' % param)
             f.close()
 
         if self.DOWN:
-            pickle.dump(self.DOWN_out, open(os.path.join(self.params.out_path, 'DOWN_out.db'), 'wb'))
+            pickle.dump(self.DOWN_out, open(os.path.join(self.out_path, 'DOWN_out.db'), 'wb'))
 
         if self.MCMC:
-            np.savetxt(os.path.join(self.params.out_path, 'MCMC_tracedata.txt'), self.MCMC_tracedata)
+            np.savetxt(os.path.join(self.out_path, 'MCMC_tracedata.txt'), self.MCMC_tracedata)
             if self.params.fit_clr_trans:
-                np.savetxt(os.path.join(self.params.out_path, 'MCMC_clr_inv_tracedata.txt'), self.MCMC_data_clr_inv)
-            pickle.dump(self.MCMC_out, open(os.path.join(self.params.out_path, 'MCMC_out.db'), 'wb'))
+                np.savetxt(os.path.join(self.out_path, 'MCMC_clr_inv_tracedata.txt'), self.MCMC_data_clr_inv)
+            pickle.dump(self.MCMC_out, open(os.path.join(self.out_path, 'MCMC_out.db'), 'wb'))
             self.save_fit_out_to_file(self.MCMC_out, type='MCMC')
 
         if self.NEST:
-            np.savetxt(os.path.join(self.params.out_path, 'NEST_tracedata.txt'), self.NEST_tracedata)
-            np.savetxt(os.path.join(self.params.out_path, 'NEST_likelihood.txt'), self.NEST_likelihood)
+            np.savetxt(os.path.join(self.out_path, 'NEST_tracedata.txt'), self.NEST_tracedata)
+            np.savetxt(os.path.join(self.out_path, 'NEST_likelihood.txt'), self.NEST_likelihood)
             if self.params.fit_clr_trans:
-                np.savetxt(os.path.join(self.params.out_path, 'NEST_clr_inv_tracedata.txt'), self.NEST_data_clr_inv)
-            pickle.dump(self.NEST_out, open(os.path.join(self.params.out_path, 'NEST_out.db'), 'wb'))
+                np.savetxt(os.path.join(self.out_path, 'NEST_clr_inv_tracedata.txt'), self.NEST_data_clr_inv)
+            pickle.dump(self.NEST_out, open(os.path.join(self.out_path, 'NEST_out.db'), 'wb'))
             self.save_fit_out_to_file(self.NEST_out, type='NEST')
 
         # save param file and observation to files
         try:
-            shutil.copy(self.params.parfile, self.params.out_path)
-            shutil.copy(self.params.in_spectrum_file, self.params.out_path)
+            shutil.copy(self.params.parfile, self.out_path)
+            shutil.copy(self.params.in_spectrum_file, self.out_path)
         except:
             pass
 
@@ -384,9 +390,10 @@ class output(base):
 
         ''' Save value and standard deviation of each parameter for each solution to txt file '''
 
-        f = open(os.path.join(self.params.out_path, '%s_out.txt' % type),'w')
+        f = open(os.path.join(self.out_path, '%s_out.txt' % type),'w')
         f.write('Note: mixing ratios are expressed as fractions in linear space, mean molecular weight '
                 'in AMU, pressure in Pascal\n\n')
+
         for idx, solution in enumerate(fit_out):
             f.write('%s solution %i\n' % (type, idx))
 
@@ -407,13 +414,13 @@ class output(base):
 
             f.write('\n')
 
-    def plot_all(self, save2pdf=False):
+    def plot_all(self, save2pdf=False,params_names=None):
 
         logging.info('Plotting absolutely everything')
 
         self.plot_spectrum(save2pdf=save2pdf)
         self.plot_fit(save2pdf=save2pdf)
-        self.plot_distributions(save2pdf=save2pdf)
+        self.plot_distributions(save2pdf=save2pdf,params_names=params_names)
 
     def plot_spectrum(self,save2pdf=False,linewidth=2.0):
 
@@ -445,7 +452,7 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.params.out_path, 'spectrum_data.pdf')
+            filename = os.path.join(self.out_path, 'spectrum_data.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
@@ -490,25 +497,29 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.params.out_path, 'model_fit.pdf')
+            filename = os.path.join(self.out_path, 'model_fit.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
-    def plot_distributions(self, save2pdf=False):
+    def plot_distributions(self, save2pdf=False, params_names=None):
 
-        logging.info('Plotting sampling distributions. Saving to %s' % self.params.out_path)
+        logging.info('Plotting sampling distributions. Saving to %s' % self.out_path)
 
+        if params_names is None:
+                params_names = self.params_names
+                
         if self.fitting.MCMC:
-            plot_posteriors(self.MCMC_out,
-                            save2pdf=save2pdf,out_path=self.params.out_path,plot_name = 'MCMC',
+            plot_posteriors(self.MCMC_out,params_names=params_names,
+                            save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',
                             plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour)
         if self.fitting.NEST:
-
-            plot_posteriors(self.NEST_out, params_names=self.params_names,save2pdf=save2pdf,out_path=self.params.out_path,
+            plot_posteriors(self.NEST_out, params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                             plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
             if self.params.fit_clr_trans == True:
-                plot_posteriors(self.NEST_out,params_names=self.clrinv_params_names,save2pdf=save2pdf,out_path=self.params.out_path,
+                if params_names is None:
+                    params_names = self.clrinv_params_names
+                plot_posteriors(self.NEST_out,params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                                 plot_name = 'NEST_clrinv',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
     def plot_manual(self,model,save2pdf=False,linewidth=2.0):
@@ -526,7 +537,7 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.params.out_path, 'spectrum.pdf')
+            filename = os.path.join(self.out_path, 'spectrum.pdf')
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
@@ -537,8 +548,8 @@ class output(base):
 
         if self.MCMC:
             for idx, solution in enumerate(self.NEST_out):
-                filename1 = os.path.join(self.params.out_path, 'MCMC_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
-                filename2 = os.path.join(self.params.out_path, 'MCMC_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename1 = os.path.join(self.out_path, 'MCMC_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename2 = os.path.join(self.out_path, 'MCMC_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
                 logging.info('Saving MCMC spectrum for solution %i to %s and %s' % (idx, filename1, filename2))
                 np.savetxt(filename1, solution['spectrum'])
                 np.savetxt(filename2, solution['highres_spectrum'])
@@ -547,23 +558,23 @@ class output(base):
             logging.info('MultiNest detected %i different modes. '
                          'Saving one model spectrum for each solution' % len(self.NEST_out))
             for idx, solution in enumerate(self.NEST_out):
-                filename1 = os.path.join(self.params.out_path, 'NEST_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
-                filename2 = os.path.join(self.params.out_path, 'NEST_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename1 = os.path.join(self.out_path, 'NEST_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename2 = os.path.join(self.out_path, 'NEST_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
                 logging.info('Saving Nested Sampling spectrum for solution %i to %s and %s' % (idx, filename1, filename2))
                 np.savetxt(filename1, solution['spectrum'])
                 np.savetxt(filename2, solution['highres_spectrum'])
         if self.DOWN:
-                filename1 = os.path.join(self.params.out_path, 'DOWN_%s_spectrum.dat' % (self.__MODEL_ID__))
-                filename2 = os.path.join(self.params.out_path, 'DOWN_%s_highres_spectrum.dat' % (self.__MODEL_ID__))
+                filename1 = os.path.join(self.out_path, 'DOWN_%s_spectrum.dat' % (self.__MODEL_ID__))
+                filename2 = os.path.join(self.out_path, 'DOWN_%s_highres_spectrum.dat' % (self.__MODEL_ID__))
                 logging.info('Saving DOWHNILL spectrum to %s and %s' % (filename1, filename2))
                 np.savetxt(filename1, self.DOWN_out[0]['spectrum'])
                 np.savetxt(filename2, self.DOWN_out[0]['highres_spectrum'])
 
-        filename = os.path.join(self.params.out_path, 'observed_%s_spectrum.dat' % (self.__MODEL_ID__))
+        filename = os.path.join(self.out_path, 'observed_%s_spectrum.dat' % (self.__MODEL_ID__))
         np.savetxt(filename, self.data.spectrum)
 
     def save_spectrum_to_file(self, spectrum, saveas):
-        filename = os.path.join(self.params.out_path, saveas)
+        filename = os.path.join(self.out_path, saveas)
         logging.info('Spectrum saved to %s ' % filename)
         np.savetxt(filename, spectrum)
 
@@ -574,7 +585,7 @@ class output(base):
         save TP_profiles.
         '''
         profilename = '_TP_profile_'
-        basename = os.path.join(self.params.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
+        basename = os.path.join(self.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
 
         P = self.fitting.forwardmodel.atmosphere.P
 
@@ -594,7 +605,7 @@ class output(base):
 
                 if plot:
                     plot_TP_profile(P, T_mean, T_sigma, name='NEST',
-                                          save2pdf=save2pdf, out_path=self.params.out_path)
+                                          save2pdf=save2pdf, out_path=self.out_path)
 
             else:
                 logging.error('Saving manual TP_profile with wrong input parameters')
@@ -602,7 +613,7 @@ class output(base):
 
         if self.DOWN:
 
-            fit_params = [self.NEST_out[0]['fit_params'][param]['value'] for param in self.params_names]
+            fit_params = self.DOWN_params_values
             self.fitting.update_atmospheric_parameters(fit_params)
             T_mean = self.fitting.forwardmodel.T
             T_sigma  = np.zeros_like(T_mean)
@@ -613,7 +624,7 @@ class output(base):
             np.savetxt(filename,out)
 
             if save2pdf:
-                plot_TP_profile(P, T_mean, name='NEST', save2pdf=save2pdf, out_path=self.params.out_path)
+                plot_TP_profile(P, T_mean, name='DOWN', save2pdf=save2pdf, out_path=self.out_path)
 
         if self.MCMC:
 
@@ -637,7 +648,7 @@ class output(base):
 
                 if save2pdf:
                     plot_TP_profile(P, T_mean, T_sigma, name='MCMC_'+str(idx),
-                                          save2pdf=save2pdf, out_path=self.params.out_path)
+                                          save2pdf=save2pdf, out_path=self.out_path)
 
         if self.NEST:
 
@@ -658,7 +669,7 @@ class output(base):
 
                 if save2pdf:
                     plot_TP_profile(P, T_mean, T_sigma, name='NEST_'+str(idx),
-                                          save2pdf=save2pdf, out_path=self.params.out_path)
+                                          save2pdf=save2pdf, out_path=self.out_path)
 
 
     #
