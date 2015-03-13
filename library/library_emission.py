@@ -93,7 +93,6 @@ def generate_tp_covariance(outob):
 
     #populating arrays
     for i in range(nlayers):
-        print T_mean[i]
         Ent_arr[i,:] = np.abs((T_mean[i])-(T_mean[:]))
         Sig_arr[i,:] = np.abs(T_sigma[i]+T_sigma[:])
 
