@@ -36,7 +36,13 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
 
     bounds = [] #list of lower and upper parameter bounds 
     for i in xrange(len(TP_params)):
-        bounds.append((TP_params[i]-TP_params_std[i],TP_params[i]+TP_params_std[i]))
+        low = TP_params[i]-TP_params_std[i]
+        high = TP_params[i]+TP_params_std[i]
+        if low < 0.0:
+            low = 1e-10
+        
+        bounds.append((low,high))
+    
     
     iterlist = list(itertools.product(*bounds))
     iter_num = np.shape(iterlist)[0] #number of possible combinations
@@ -87,6 +93,7 @@ def generate_tp_covariance(outob):
 
     #populating arrays
     for i in range(nlayers):
+        print T_mean[i]
         Ent_arr[i,:] = np.abs((T_mean[i])-(T_mean[:]))
         Sig_arr[i,:] = np.abs(T_sigma[i]+T_sigma[:])
 
