@@ -11,6 +11,9 @@ import scipy.ndimage as ndimage
 from matplotlib.ticker import FuncFormatter,ScalarFormatter
 from matplotlib import cm
 from matplotlib import mlab
+import matplotlib.patches
+import itertools
+import scipy
 
 import logging
 
@@ -24,7 +27,7 @@ scale_pow = 0
 
 def plot_posteriors(fit_out, params_names=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='Blues'):
 
-        fig = _plot_posteriors(fit_out, params_names=params_names, plot_contour=plot_contour, color=color)
+        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, plot_contour=plot_contour, color=color)
 
         if save2pdf:
                 filename1 = os.path.join(out_path, '%s_posteriors.pdf' % plot_name)
@@ -60,9 +63,9 @@ def plot_TP_profile(P, T_mean, T_sigma=None, fig=None, name=None, color='blue', 
 
     return fig
 
-def _plot_posteriors(fit_out, params_names=[], plot_contour=False,fontsize=30, color='Blues'):
+def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=False,fontsize=30, color='Blues'):
 
-    if params_names == []:
+    if params_names == None:
         params_names = fit_out[0]['fit_params'].keys()
 
     n_params = len(params_names)
@@ -77,7 +80,10 @@ def _plot_posteriors(fit_out, params_names=[], plot_contour=False,fontsize=30, c
         ax = pl.subplot(n_params, n_params, n_params * i + i + 1)
         seq +=1
 
-        ax = plot_1Dposterior(ax, fit_out, params_names, i, plot_contour)
+        if plot_name == 'NEST' or plot_name == 'NEST_clrinv':
+            ax = NEST_plot_conditional(ax, fit_out, params_names, i, suppressAxes=False, plot_contour=plot_contour, color=color)
+        else:
+            ax = plot_1Dposterior(ax, fit_out, params_names, i, plot_contour)
 
         if i == 0:
             pl.ylabel("Prob. density",fontsize=fontsize)
@@ -110,15 +116,170 @@ def _plot_posteriors(fit_out, params_names=[], plot_contour=False,fontsize=30, c
             ax2 = pl.subplot(n_params, n_params, n_params * j + i + 1)
             seq += 1
             ax2.ticklabel_format(style='sci')
-            plot_2Ddistribution(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color)
+            if plot_name == 'NEST' or plot_name == 'NEST_clrinv':
+                NEST_plot_conditional(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color)
+            else:
+                plot_2Ddistribution(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color)
             for tick in ax2.xaxis.get_major_ticks():
                 tick.label.set_rotation(+30)
                 tick.label.set_fontsize(fontsize)
     pl.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, hspace=0.0,wspace=0.0)
     return fig
 
+
+def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None, plot_contour=False, suppressAxes=False,  color='Blues'):
+
+    with_ellipses = True
+    with_points = False
+    only_interpolate = False
+    use_log_values = False
+    grid_points = 100
+    marginalization_type='sum' # 'max', 'mean'
+
+    # this code is largely taken from PyMultinest plot.py PlotMarginalModes.plot_conditional()
+
+    # combine chains from all fit_out
+    dim1_column = np.zeros(0)
+    dim2_column = np.zeros(0)
+    values = np.zeros(0)
+
+    for idx, solution in enumerate(fit_out):
+        dim1_column = np.concatenate((solution['fit_params'][params_names[param1_idx]]['trace'], dim1_column))
+        if param2_idx is not None:
+            dim2_column = np.concatenate((solution['fit_params'][params_names[param2_idx]]['trace'], dim2_column))
+        values = np.concatenate((solution['weights'], values))
+
+    min1 = np.min(dim1_column)
+    max1 = np.max(dim1_column)
+    mean1 = solution['fit_params'][params_names[param1_idx]]['value']
+    std1 = solution['fit_params'][params_names[param1_idx]]['std']
+
+    if param2_idx is not None:
+        coords = np.array([dim1_column, dim2_column]).transpose()
+        min2 = np.min(dim2_column)
+        max2 = np.max(dim2_column)
+        mean2 = solution['fit_params'][params_names[param2_idx]]['value']
+        std2 = solution['fit_params'][params_names[param2_idx]]['std']
+    else:
+        coords = dim1_column.transpose()
+
+    if use_log_values:
+        values = np.log(values)
+
+
+    # determining min/max
+    # min1 = min([solution['fit_params'][params_names[param1_idx]]['value'] -
+    #             3*solution['fit_params'][params_names[param1_idx]]['std'] for solution in fit_out])
+    # max1 = max([solution['fit_params'][params_names[param1_idx]]['value'] +
+    #             3*solution['fit_params'][params_names[param1_idx]]['std'] for solution in fit_out])
+    # min2 = min([solution['fit_params'][params_names[param2_idx]]['value'] -
+    #             3*solution['fit_params'][params_names[param2_idx]]['std'] for solution in fit_out])
+    # max2 = max([solution['fit_params'][params_names[param2_idx]]['value'] +
+    #             3*solution['fit_params'][params_names[param2_idx]]['std'] for solution in fit_out])
+
+
+    n = grid_points
+    binsize1 = (max1 - min1) / n
+
+    if param2_idx is not None:
+        m = n
+        grid_x, grid_y = np.mgrid[min1:max1:n*1j, min2:max2:n*1j]
+        binsize2 = (max2 - min2) / m
+    else:
+        m = 1
+        grid_x = np.mgrid[min1:max1:n*1j]
+        grid_y = [0]
+
+    grid_z = np.zeros((n,m))
+    minvalue = values.min()
+    maxvalue = values.max()
+
+    # for each grid item, find the matching points and put them in.
+    for row, col in itertools.product(list(range(len(grid_x))), list(range(len(grid_y)))):
+
+        if param2_idx is not None:
+            xc = grid_x[row,col]
+            here_x = np.abs(dim1_column - xc) < binsize1 / 2.
+            yc = grid_y[row,col]
+            here_y = np.abs(dim2_column - yc) < binsize2 / 2.
+        else:
+            xc = grid_x[row]
+            here_x = np.abs(dim1_column - xc) < binsize1 / 2.
+            here_y = True
+
+        bin = values[np.logical_and(here_x, here_y)]
+        if bin.size != 0:
+            if marginalization_type == 'max':
+                grid_z[row,col] = bin.max()
+            elif marginalization_type == 'sum':
+                grid_z[row,col] = bin.sum()
+            elif marginalization_type == 'mean':
+                grid_z[row,col] = bin.mean()
+            elif marginalization_type == 'count':
+                grid_z[row,col] = bin.size
+            else:
+                assert False, "marginalization_type should be mean, sum or max"
+        else:
+            grid_z[row,col] = minvalue
+
+    if only_interpolate:
+    #   version A: interpolated -- may look weird because of the
+    #              loss of dimensions
+        grid_z = scipy.interpolate.griddata(coords, values, (grid_x, grid_y), method='cubic')
+
+    ax.set_xlim((min1,max1))
+    if param2_idx is not None:
+
+        ax.set_ylim((min2,max2))
+        ax.imshow(grid_z.transpose(), origin='lower', aspect='auto',
+                 cmap=cm.get_cmap('%s_r' % color), extent=(min1,max1,min2,max2))
+        #plt.colorbar()
+    else:
+		ax.plot(grid_x, grid_z[:,0], '-', color='grey', drawstyle='steps')
+
+    if use_log_values:
+        levels = [maxvalue, maxvalue - .5, maxvalue - 1.0, maxvalue - 2.0]
+    else:
+        levels = [maxvalue, maxvalue / 3, maxvalue / 10, maxvalue / 100]
+    leveltitles = ['max', 'max/3', 'max/10', 'max/100']
+    #ax.contour(grid_x, grid_y, grid_z, levels, linewidths=0.5, colors='k')
+
+    if with_points and param2_idx is not None:
+	    ax.scatter(dim1_column, dim2_column, marker='+', color='black', s=1, alpha=0.3)
+
+
+
+    if plot_contour:
+        for solution in fit_out:
+            mean1 = solution['fit_params'][params_names[param1_idx]]['value']
+            std1 = solution['fit_params'][params_names[param1_idx]]['std']
+            ax.axvline(x=mean1,linestyle='--',color='red')
+            if param2_idx is not None:
+                mean2 = solution['fit_params'][params_names[param2_idx]]['value']
+                std2 = solution['fit_params'][params_names[param2_idx]]['std']
+                ax.axhline(y=mean2,linestyle='--',color='red')
+            if param2_idx is not None:
+                if std1 > 0 and std2 > 0:
+                    postcov = np.cov(solution['fit_params'][params_names[param1_idx]]['trace'],
+                                     solution['fit_params'][params_names[param2_idx]]['trace'])
+                    [eigval,eigvec] = np.linalg.eig(postcov)
+                    postangle = np.arctan2(eigvec[1,:],eigvec[0,:])
+                    eX1,eY1 = ellipse(std1,std2,postangle[0],mean1,mean2)
+                    eX2,eY2 = ellipse(2.0*std1,2.0*std2,postangle[0],mean1,mean2)
+                    eX3,eY3 = ellipse(3.0*std1,3.0*std2,postangle[0],mean1,mean2)
+                    ax.plot(eX1,eY1,linewidth=1.0,color='red',linestyle='-')
+                    ax.plot(eX2,eY2,linewidth=1.0,color='orange',linestyle='-')
+                    ax.plot(eX3,eY3,linewidth=1.0,color='yellow',linestyle='-')
+
+    if suppressAxes:
+        pl.yticks([])
+        pl.xticks([])
+
+    return ax
+
 def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_contour=False, suppressAxes=False, color='Blues'):
 
+    #old code
 
     # combine chains from all fit_out
     allx = np.zeros(0)
@@ -136,6 +297,7 @@ def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_
         #             extent=[np.min(x), np.max(x), np.min(y), np.max(y)])
 
         # concatenate all separate traces to get a single 2D distribution
+
         allx = np.concatenate((solution['fit_params'][params_names[param1_idx]]['trace'], allx))
         ally = np.concatenate((solution['fit_params'][params_names[param2_idx]]['trace'], ally))
 

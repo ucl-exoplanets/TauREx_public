@@ -189,22 +189,26 @@ class output(base):
         NEST_out = []
 
         modes = []
+        modes_weights = []
         chains = []
-
+        chains_weights = []
         if self.params.nest_multimodes:
-            # get separate chains for each mode
+            # get parameter values and sample probability (=weight) for each mode
             with open(os.path.join(self.fitting.dir_multinest, '1-post_separate.dat')) as f:
                 lines = f.readlines()
                 for idx, line in enumerate(lines):
                     if idx > 2: # skip the first two lines
                         if lines[idx-1] == '\n' and lines[idx-2] == '\n':
                             modes.append(chains)
+                            modes_weights.append(chains_weights)
                             chains = []
+                            chains_weights = []
                     chain = [float(x) for x in line.split()[2:]]
-
                     if len(chain) > 0:
                         chains.append(chain)
+                        chains_weights.append(float(line.split()[0]))
                 modes.append(chains)
+                modes_weights.append(chains_weights)
             modes_array = []
             for mode in modes:
                 mode_array = np.zeros((len(mode), len(mode[0])))
@@ -212,14 +216,16 @@ class output(base):
                     mode_array[idx, :] = line
                 modes_array.append(mode_array)
         else:
-            # not running in multimode. Get chain directly from file 1-.txt
+            # not running in multimode. Get chains directly from file 1-.txt
             modes_array = [data[:,2:]]
+            chains_weights = [data[:,0]]
 
         NEST_tracedata = data[:,2:]
 
         for nmode in range(len(modes)):
 
-            dict = {'fit_params': {}}
+            dict = {'weights': modes_weights[nmode],
+                    'fit_params': {}}
             for idx, param_name in enumerate(self.params_names):
                 dict['fit_params'][param_name] = {
                     'value': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
@@ -244,12 +250,12 @@ class output(base):
 
                 # add last CLR to dictionary. This is not fitted, as it is equal to minus the sum of all the other CLRs
                 # Note that that the sum of all CLR is equal to zero
-                dict['fit_params']['CLR_X_%i' % nallgases] = {
+                dict['fit_params']['%s_CLR' % self.forwardmodel.atmosphere.inactive_gases[-1]] = {
+                    'value': clr[nallgases-1],
                     'value': clr[nallgases-1],
                     'std': np.std(mixing_ratios_clr[nallgases-1]),
                     'trace': mixing_ratios_clr[nallgases-1],
                 }
-
 
                 mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
                 mixing_means /= sum(mixing_means) # closure operation
@@ -271,7 +277,6 @@ class output(base):
                 self.clrinv_params_names.append('coupled_mu')
                 for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                      self.clrinv_params_names.append(self.fitting.fit_params_names[i])
-
                 for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1): # all gases + coupled_mu
                     if self.clrinv_params_names[idx] == 'coupled_mu':
                         trace = coupled_mu_trace
@@ -420,7 +425,7 @@ class output(base):
 
         self.plot_spectrum(save2pdf=save2pdf)
         self.plot_fit(save2pdf=save2pdf)
-        self.plot_distributions(save2pdf=save2pdf,params_names=params_names)
+        self.plot_distributions(save2pdf=save2pdf, params_names=params_names)
 
     def plot_spectrum(self,save2pdf=False,linewidth=2.0):
 
@@ -513,12 +518,15 @@ class output(base):
                             save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',
                             plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour)
         if self.fitting.NEST:
+
+            if params_names is None:
+                params_names = self.params_names
+
             plot_posteriors(self.NEST_out, params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                             plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
             if self.params.fit_clr_trans == True:
-                if params_names is None:
-                    params_names = self.clrinv_params_names
+                params_names = self.clrinv_params_names
                 plot_posteriors(self.NEST_out,params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                                 plot_name = 'NEST_clrinv',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 

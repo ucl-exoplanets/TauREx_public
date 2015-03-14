@@ -134,10 +134,11 @@ class fitting(base):
             clr = self.get_mixing_ratio_clr()
 
             # append all mixing ratios, minus one (as we're using the centered-log-ratio transformation)
+            gasnames = self.forwardmodel.atmosphere.absorbing_gases + self.forwardmodel.atmosphere.inactive_gases
             for i in range(self.forwardmodel.atmosphere.nallgases - 1):
                 self.fit_params.append(clr[i])
                 self.fit_bounds.append((-20, 20)) # @todo bounds seem ok, what's the minimum X we can get with this?
-                self.fit_params_names.append('CLR_X_%i' % i)
+                self.fit_params_names.append('%s_CLR' % gasnames[i])
                 count_X += 1
         else:
 
@@ -441,7 +442,7 @@ class fitting(base):
 #         yscale('log')
 #         draw()
 # #         # pause(0.0001)
-# #         #
+# # #         #
 #         ion()
 #         figure(2)
 #         clf()
@@ -452,8 +453,8 @@ class fitting(base):
 #         xscale('log')
 #         xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
 #         draw()
-        # pause(0.0001)
-        #
+#         pause(0.0001)
+
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
         #     self.forwardmodel.atmosphere.planet_mu/AMU, \
         #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
