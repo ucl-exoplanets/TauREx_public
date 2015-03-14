@@ -562,10 +562,12 @@ class output(base):
 
         out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
         out[:,0] = P # pressure
-            
+        
+        fit_TPparams_bounds = self.fitting.fit_bounds[self.fitting.fit_X_nparams:]
+        
         if save_manual is not None:
             if len(FIT_params) > 0 and len(FIT_params_std) > 0:
-                T_mean, T_sigma, P = iterate_TP_profile(FIT_params, FIT_params_std,
+                T_mean, T_sigma, P = iterate_TP_profile(FIT_params, FIT_params_std,fit_TPparams_bounds,
                                                          self.fitting.forwardmodel.atmosphere.TP_profile)
                 
                 out[:,1] = T_mean; out[:,2] = T_sigma
@@ -609,7 +611,7 @@ class output(base):
 #                 fit_params = [self.MCMC_out[idx]['fit_params'][param]['value'] for param in self.params_names]
 
                 T_mean, T_sigma = iterate_TP_profile(self.MCMC_TP_params_values[idx], self.MCMC_TP_params_std[idx],
-                                                      self.fitting.forwardmodel.atmosphere.TP_profile)
+                                                     fit_TPparams_bounds, self.fitting.forwardmodel.atmosphere.TP_profile)
                 
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
@@ -629,7 +631,7 @@ class output(base):
             for idx, solution in enumerate(self.NEST_out):
             
                 T_mean, T_sigma = iterate_TP_profile(self.NEST_TP_params_values[idx], self.NEST_TP_params_std[idx],
-                                                      self.fitting.forwardmodel.atmosphere.TP_profile)
+                                                      fit_TPparams_bounds,self.fitting.forwardmodel.atmosphere.TP_profile)
             
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
