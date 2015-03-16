@@ -8,7 +8,8 @@ import ctypes as C
 # from library.library_occultquad import *
 # from scipy.optimize import fmin
 # import string
-# import math
+import numpy as np
+import math
 
 # def linear_abs_temp_interpolator(TEMPLIST, ):
 
@@ -22,6 +23,15 @@ def house_keeping(params,options):
     subprocess.call('python '+params.clean_script,shell=True)
 
 
+def weighted_avg_and_std(values, weights):
+    """
+    Return the weighted average and standard deviation.
+
+    values, weights -- Numpy ndarrays with the same shape.
+    """
+    average = np.average(values, weights=weights)
+    variance = np.average((values-average)**2, weights=weights)  # Fast and numerically precise
+    return (average, math.sqrt(variance))
 
 def convert2microns(PATH, upcut=25):
 #Function converting ExoMol cross section files in dir:PATH from wavenumbers to microns and sorting

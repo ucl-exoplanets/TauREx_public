@@ -36,7 +36,7 @@ class preselector(base):
 
     def __init__(self, model_object, data=None, params=None):
 
-        logging.info('Initialising Marple object')
+        logging.info('Initialising Preselector object')
 
 
         if params:

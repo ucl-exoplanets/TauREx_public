@@ -135,6 +135,20 @@ class transmission(base):
 
         return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
 
+    def get_sigma_array_c(self):
+
+        #generating 3D sigma_array from sigma_dict for c++ path integral
+        tempgrid = self.data.sigma_dict['tempgrid']
+        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases),len(self.specgrid)), dtype=np.float64)
+
+        c=0
+        for t in tempgrid:
+            OUT[c,:,:] = self.data.sigma_dict[t]
+            c += 1
+
+        return OUT, np.asarray(tempgrid,dtype=np.float64)
+
+
     def get_Csig(self):
         '''
 
@@ -169,14 +183,16 @@ class transmission(base):
         if rho is None:
             rho = self.atmosphere.rho
         if temperature is None:
-            temperature = self.atmosphere.T[0] # todo careful assuming a isothermal TP profile!
+            temperature = self.atmosphere.T # todo careful assuming a isothermal TP profile!
 
+        print temperature
 
         dz = self.get_dz()
         dlarray = self.cget_path_length()
 
          #selecting correct sigma_array for temperature
-        sigma_array = self.get_sigma_array(temperature)
+        #sigma_array = self.get_sigma_array(temperature)
+        sigma_array, tempgrid = self.get_sigma_array_c(temperature)
 
         #casting changing arrays to c++ pointers
         Xs1, Xs2 = shape(X)

@@ -76,6 +76,10 @@ parser.add_option('-r', '--res',
                   dest="resolution",
                   default=1000,
 )
+parser.add_option('-n', '--noise',
+                  dest="noise",
+                  default=0,
+)
 parser.add_option('-e', '--error',
                   dest="error",
                   default=50,
@@ -118,7 +122,7 @@ if int(options.tp_profile) == 1:
     MIN_P = atmosphereob.P[-1]
     smooth_window = 5 #smoothing window size as percent of total data
     Pnodes = [MAX_P, 1e6, 1e4, MIN_P]
-    Tnodes = [800,800,350,350]
+    Tnodes = [800,800, 350,350]
     TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
     #smoothing T-P profile
     wsize = atmosphereob.nlayers*(smooth_window/100.0)
@@ -151,6 +155,10 @@ out = np.zeros((len(wavegrid),3))
 out[:,0] = wavegrid
 out[:,1] = model_binned
 out[:,2] += float(options.error) * 1e-6
+
+if int(options.noise) == 1:
+    out[:,1] += np.random.normal(0, float(options.error) * 1e-6, len(wavegrid))
+
 
 #initiating output object with fitted data from fitting class
 outputob = output(forwardmodel=forwardmodelob)

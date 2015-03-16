@@ -252,9 +252,8 @@ class output(base):
                 # Note that that the sum of all CLR is equal to zero
                 dict['fit_params']['%s_CLR' % self.forwardmodel.atmosphere.inactive_gases[-1]] = {
                     'value': clr[nallgases-1],
-                    'value': clr[nallgases-1],
-                    'std': np.std(mixing_ratios_clr[nallgases-1]),
-                    'trace': mixing_ratios_clr[nallgases-1],
+                    'std': weighted_avg_and_std(mixing_ratios_clr[:, nallgases-1], modes_weights[nmode])[1], # weighted std
+                    'trace': mixing_ratios_clr[:, nallgases-1],
                 }
 
                 mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
@@ -277,15 +276,15 @@ class output(base):
                 self.clrinv_params_names.append('coupled_mu')
                 for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
                      self.clrinv_params_names.append(self.fitting.fit_params_names[i])
+
                 for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1): # all gases + coupled_mu
                     if self.clrinv_params_names[idx] == 'coupled_mu':
                         trace = coupled_mu_trace
                         value = coupled_mu
-                        std = np.std(trace)
                     else:
                         trace = mixing_ratios_clr_inv[:,idx]
                         value = mixing_means[idx]
-                        std = np.std(trace)
+                    std = weighted_avg_and_std(trace, modes_weights[nmode])[1]
                     dict['fit_params'][self.clrinv_params_names[idx]] = {
                         'value': value,
                         'std': std,
@@ -293,8 +292,6 @@ class output(base):
                     }
 
             NEST_out.append(dict)
-
-
 
         NEST_out = self.add_spectra_from_solutions(NEST_out)
         return NEST_out, NEST_tracedata

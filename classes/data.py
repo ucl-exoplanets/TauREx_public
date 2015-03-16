@@ -372,7 +372,7 @@ class data(base):
         self.sigma_dict = {}
         self.sigma_dict['tempgrid'] = [int(temperature)]
         self.sigma_dict[int(temperature)] = sigma_array
-        self.data.nspecgrid = len(self.specgrid)
+        self.nspecgrid = len(self.specgrid)
         
         
     #@profile
