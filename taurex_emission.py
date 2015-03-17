@@ -68,7 +68,7 @@ def run(params):
     Cov_array = emlib.generate_tp_covariance(outputob)
 
     #saving covariance
-    if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
+    if MPIimport and MPI.COMM_WORLD.Get_rank() is 0 or MPIimport is False:
         np.savetxt(os.path.join(params.out_path, 'tp_covariance.dat'), Cov_array)
     # Cov_array = np.loadtxt(os.path.join(params.out_path, 'tp_covariance.dat'))
 

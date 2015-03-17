@@ -23,7 +23,7 @@ def black_body(lamb, temp):
     return BB * 1e-6
 
 
-def iterate_TP_profile(TP_params, TP_params_std, TP_function):
+def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function):
     '''
     function iterating through all lower and upper bounds of parameters
     to determine which combination gives the lowest/highest attainable 
@@ -36,7 +36,16 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_function):
 
     bounds = [] #list of lower and upper parameter bounds 
     for i in xrange(len(TP_params)):
-        bounds.append((TP_params[i]-TP_params_std[i],TP_params[i]+TP_params_std[i]))
+        low = TP_params[i]-TP_params_std[i]
+        high = TP_params[i]+TP_params_std[i]
+        if low < TP_bounds[i][0]:
+            low = TP_bounds[i][0]+1e-10
+        if high > TP_bounds[i][1]:
+            high = TP_bounds[i][1]-1e-10
+            
+        
+        bounds.append((low,high))
+    
     
     iterlist = list(itertools.product(*bounds))
     iter_num = np.shape(iterlist)[0] #number of possible combinations
@@ -63,16 +72,17 @@ def generate_tp_covariance(outob):
     '''
     
     #translating fitting parameters to mean temperature and lower/upper bounds
+    fit_TPparam_bounds = outob.fitting.fit_bounds[outob.fitting.fit_X_nparams:]
     if outob.NEST:
-        T_mean, T_sigma = iterate_TP_profile(outob.NEST_TP_params_values[0], outob.NEST_TP_params_std[0],
+        T_mean, T_sigma = iterate_TP_profile(outob.NEST_TP_params_values[0], outob.NEST_TP_params_std[0],fit_TPparam_bounds,
                                               outob.fitting.forwardmodel.atmosphere.TP_profile)
     elif outob.MCMC:
-        T_mean, T_sigma = iterate_TP_profile(outob.MCMC_TP_params_values[0], outob.MCMC_TP_params_std[0],
+        T_mean, T_sigma = iterate_TP_profile(outob.MCMC_TP_params_values[0], outob.MCMC_TP_params_std[0],fit_TPparam_bounds,
                                               outob.fitting.forwardmodel.atmosphere.TP_profile)
     elif outob.DOWN:
         FIT_std = np.zeros_like(outob.DOWN_TP_params_values)
 
-        T_mean, T_sigma  = iterate_TP_profile(outob.DOWN_TP_params_values, FIT_std,
+        T_mean, T_sigma  = iterate_TP_profile(outob.DOWN_TP_params_values, FIT_std,fit_TPparam_bounds,
                                                outob.fitting.forwardmodel.atmosphere.TP_profile)
     else:
         logging.error('Cannot compute TP-covariance. No Stage 0 fit (NS/MCMC/MLE) can be found.')

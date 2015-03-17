@@ -239,7 +239,7 @@ class fitting(base):
             self.fit_bounds.append((1.0,1e5))
             self.fit_params.append(np.mean((1.0,1e5)))
 
-        elif self.forwardmodel.atmosphere.sTP_type == '3point':
+        elif self.forwardmodel.atmosphere.TP_type == '3point':
 
             self.fit_TP_nparams = 5
 
@@ -249,19 +249,19 @@ class fitting(base):
 
             self.fit_params_names.append('T_point1') #point1 T difference (T_surface- Tdiff) = T_point1
             self.fit_bounds.append((0.0,500.0))
-            self.fit_params.append((0.0,500.0))
+            self.fit_params.append(np.mean((0.0,500.0)))
 
             self.fit_params_names.append('T_point2') #point2 T difference (T_point1- Tdiff) = T_point2
             self.fit_bounds.append((0.0,500.0))
-            self.fit_params.append((0.0,500.0))
+            self.fit_params.append(np.mean((0.0,500.0)))
 
             self.fit_params_names.append('P_point1')  #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
             self.fit_bounds.append((1.0,1e5))
-            self.fit_params.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
 
             self.fit_params_names.append('P_point2') #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
             self.fit_bounds.append((1.0,1e5))
-            self.fit_params.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
 
         ##########################################################################
         # mean molecular weight. Only if we are not coupling mu to the mixing ratios
