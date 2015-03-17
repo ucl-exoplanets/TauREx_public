@@ -207,16 +207,16 @@ class fitting(base):
             self.fit_params.append(T_mean)
 
             self.fit_params_names.append('kappa_irr')
-            self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_bounds.append((0.0,0.01))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('kappa_v1')
-            self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_bounds.append((0.0,0.01))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('kappa_v2')
-            self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_bounds.append((0.0,0.01))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('alpha')
             self.fit_bounds.append((0.0,1.0))
@@ -238,7 +238,7 @@ class fitting(base):
             self.fit_bounds.append((1.0,1e5))
             self.fit_params.append(np.mean((1.0,1e5)))
 
-        elif self.forwardmodel.atmosphere.sTP_type == '3point':
+        elif self.forwardmodel.atmosphere.TP_type == '3point':
 
             self.fit_TP_nparams = 5
 
@@ -248,19 +248,19 @@ class fitting(base):
 
             self.fit_params_names.append('T_point1') #point1 T difference (T_surface- Tdiff) = T_point1
             self.fit_bounds.append((0.0,500.0))
-            self.fit_params.append((0.0,500.0))
+            self.fit_params.append(np.mean((0.0,500.0)))
 
             self.fit_params_names.append('T_point2') #point2 T difference (T_point1- Tdiff) = T_point2
             self.fit_bounds.append((0.0,500.0))
-            self.fit_params.append((0.0,500.0))
+            self.fit_params.append(np.mean((0.0,500.0)))
 
             self.fit_params_names.append('P_point1')  #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
             self.fit_bounds.append((1.0,1e5))
-            self.fit_params.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
 
             self.fit_params_names.append('P_point2') #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
             self.fit_bounds.append((1.0,1e5))
-            self.fit_params.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
 
         ##########################################################################
         # mean molecular weight. Only if we are not coupling mu to the mixing ratios
@@ -431,27 +431,27 @@ class fitting(base):
 #         self.db_count += 1
 #         print self.db_count, '  ', res
 
-#         ion()
-#         figure(1)
-#         clf()
-#         plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
-#         gca().invert_yaxis()
-#         xlabel('Temperature')
-#         ylabel('Pressure (Pa)')
-#         yscale('log')
-#         draw()
+        ion()
+        figure(1)
+        clf()
+        plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
+        gca().invert_yaxis()
+        xlabel('Temperature')
+        ylabel('Pressure (Pa)')
+        yscale('log')
+        draw()
 # #         # pause(0.0001)
 # #         #
-#         ion()
-#         figure(2)
-#         clf()
-#         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-#         plot(self.data.spectrum[:,0], model_binned)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         xscale('log')
-#         xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-#         draw()
+        ion()
+        figure(2)
+        clf()
+        errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        plot(self.data.spectrum[:,0], model_binned)
+        xlabel('Wavelength (micron)')
+        ylabel('Transit depth')
+        xscale('log')
+        xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
+        draw()
         # pause(0.0001)
         #
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
