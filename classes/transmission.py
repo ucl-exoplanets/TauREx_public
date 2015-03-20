@@ -127,6 +127,7 @@ class transmission(base):
         a = (128.0* pi**5 * self.cld_a**6)
         b = (3.0 * self.lambdagrid**4)
         c = ((self.cld_m**2 -1.0)/(self.cld_m**2 +2.0))**2
+
         return a / b * c
 
     #@profile
@@ -139,7 +140,7 @@ class transmission(base):
 
         #generating 3D sigma_array from sigma_dict for c++ path integral
         tempgrid = self.data.sigma_dict['tempgrid']
-        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases),len(self.specgrid)), dtype=np.float64)
+        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases),len(self.data.specgrid)), dtype=np.float64)
 
         c=0
         for t in tempgrid:
@@ -185,24 +186,34 @@ class transmission(base):
         if temperature is None:
             temperature = self.atmosphere.T # todo careful assuming a isothermal TP profile!
 
-        print temperature
-
         dz = self.get_dz()
         dlarray = self.cget_path_length()
 
-         #selecting correct sigma_array for temperature
-        #sigma_array = self.get_sigma_array(temperature)
-        sigma_array, tempgrid = self.get_sigma_array_c(temperature)
+        #selecting correct sigma_array for temperature array
+        if len(np.unique(temperature)) == 1:
+            # constant T with altitude
+            sigma_array_2d = self.get_sigma_array(temperature[0])
+            sigma_array_3d = np.zeros(0)
+            cn_sig_temp= C.c_int(0)
+            cconst_temp = C.c_int(1)
+        else:
+            # varuable T with altitude. Get 3d sigma array
+            sigma_array_3d, tempgrid = self.get_sigma_array_c()
+            sigma_array_3d = sigma_array_3d.flatten()
+            cn_sig_temp= C.c_int(len(tempgrid))
+            sigma_array_2d = np.zeros(0)
+            cconst_temp = C.c_int(0)
 
-        #casting changing arrays to c++ pointers
+        #casting to c++ pointers
+        csigma_array_2d = cast2cpp(sigma_array_2d)
+        csigma_array_3d = cast2cpp(sigma_array_3d)
+
         Xs1, Xs2 = shape(X)
         Xnew = zeros((Xs1+1, Xs2))
         Xnew[:-1,:] = X
         cX = cast2cpp(Xnew)
         crho = cast2cpp(rho)
 
-        #casting fixed arrays and variables to c++ pointers
-        csigma_array = cast2cpp(sigma_array)
         cdlarray = cast2cpp(dlarray)
         znew = zeros((len(self.atmosphere.z)))
         znew[:] = self.atmosphere.z
@@ -235,8 +246,8 @@ class transmission(base):
         cpath_int = self.cpathlib.cpath_int
 
         #running c++ path integral
-        cpath_int(csigma_array,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
-                  clinecount,cnlayers,cn_gas,cInclude_cld,cCld_lowbound,\
+        cpath_int(csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
+                  clinecount,cnlayers,cn_gas,cn_sig_temp,cInclude_cld,cCld_lowbound,\
                   cCld_upbound,cP_bar,cCld_sig,C.c_void_p(absorption.ctypes.data))
 
         out = zeros((self.nlambda))
@@ -245,7 +256,6 @@ class transmission(base):
         del(absorption)
 
         return out
-
 
     # deprecated functions
 

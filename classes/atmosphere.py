@@ -56,19 +56,27 @@ class atmosphere(base):
         self.inactive_gases_X = self.params.planet_inactive_gases_X
         self.nallgases = len(self.absorbing_gases) + len(self.inactive_gases)
 
-        # set other atmosphere specific parameters
-        self.planet_temp = self.params.planet_temp
-        self.planet_mass = self.params.planet_mass
+        if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
+            self.nlayers  = self.data.nlayers
+        elif self.params.tp_var_atm:
+            self.nlayers  = int(self.params.tp_atm_levels)
 
         if self.params.fit_couple_mu:
             self.planet_mu = self.get_coupled_planet_mu()
         else:
             self.planet_mu = self.params.planet_mu
 
-        self.planet_radius = self.params.planet_radius
-        self.planet_grav = self.get_surface_gravity()
-        self.scaleheight = self.get_scaleheight()
+        # set other atmosphere specific parameters
         self.max_pressure = self.params.tp_max_pres
+        self.planet_radius = self.params.planet_radius
+        self.planet_mass = self.params.planet_mass
+        self.planet_grav = self.get_surface_gravity()
+        self.planet_temp = self.params.planet_temp
+        self.T = np.zeros((self.nlayers))
+        self.T[:] = self.planet_temp
+        self.scaleheight = self.get_scaleheight()
+
+
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
         if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
@@ -97,8 +105,6 @@ class atmosphere(base):
 
         if self.params.in_use_TP_file == True: # todo temporary. Just to feed a given T profile.
             self.T = np.loadtxt(self.params.in_TP_file)[:,0]
-            print 'AHAHHA set T to'
-            print self.T
 
          #selecting TP profile to use
         if self.params.gen_type == 'emission':
@@ -148,7 +154,7 @@ class atmosphere(base):
     def get_scaleheight(self, T=None, g=None, mu=None):
 
         if not T:
-            T = self.planet_temp
+            T = self.T
         if not g:
             g = self.planet_grav
         if not mu:
@@ -207,7 +213,8 @@ class atmosphere(base):
             T = T[0]
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        max_z = n_scale * self.scaleheight
+
+        max_z = n_scale * self.scaleheight[0]
 
         #generatinng altitude-pressure array
         pta_arr = np.zeros((self.nlayers,3))
@@ -321,8 +328,12 @@ class atmosphere(base):
         # update surface gravity and scale height
         self.planet_grav = self.get_surface_gravity()
         self.scaleheight = self.get_scaleheight()
+
+
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        max_z = n_scale * self.scaleheight
+        max_z = n_scale * self.scaleheight[0]
+
+
         self.z = np.linspace(0, max_z, num=self.nlayers) # altitude
         self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar

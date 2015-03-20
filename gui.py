@@ -136,8 +136,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_NH3.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_SiO.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_TiO.valueChanged.connect(self.event_status_changed)
-        #self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
+        #self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
         #self.doubleSpinBox_H2S.valueChanged.connect(self.event_status_changed)
         #self.doubleSpinBox_C2H2.valueChanged.connect(self.event_status_changed)
 
@@ -165,8 +165,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_NH3.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_SiO.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_TiO.valueChanged.disconnect(self.event_status_changed)
-        #self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
+        #self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
         #self.doubleSpinBox_H2S.valueChanged.disconnect(self.event_status_changed)
         #self.doubleSpinBox_C2H2.valueChanged.disconnect(self.event_status_changed)
         if not self.params.fit_couple_mu:
@@ -263,8 +263,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_NH3.setValue(self.forwardmodel.params.planet_mixing[5]*100.)
         self.doubleSpinBox_SiO.setValue(self.forwardmodel.params.planet_mixing[6]*100.)
         self.doubleSpinBox_TiO.setValue(self.forwardmodel.params.planet_mixing[7]*100.)
-        #self.doubleSpinBox_VO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
-        self.doubleSpinBox_NO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
+        self.doubleSpinBox_VO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
+        #self.doubleSpinBox_NO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
 #        self.doubleSpinBox_H2S.setValue(self.forwardmodel.params.planet_mixing[9]*100.)
 #        self.doubleSpinBox_C2H2.setValue(self.forwardmodel.params.planet_mixing[10]*100.)
         self.doubleSpinBox_He.setValue(self.forwardmodel.atmosphere.inactive_gases_X[0]*100.)
@@ -299,8 +299,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.absorbing_gases_X[5] = self.doubleSpinBox_NH3.value() / 100.
         self.forwardmodel.atmosphere.absorbing_gases_X[6] = self.doubleSpinBox_SiO.value() / 100.
         self.forwardmodel.atmosphere.absorbing_gases_X[7] = self.doubleSpinBox_TiO.value() / 100.
-        #self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_VO.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_NO.value() / 100.
+        self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_VO.value() / 100.
+        #self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_NO.value() / 100.
         #self.forwardmodel.atmosphere.absorbing_gases_X[9] = self.doubleSpinBox_H2S.value() / 100.
         #self.forwardmodel.atmosphere.absorbing_gases_X[10] = self.doubleSpinBox_C2H2.value() / 100.
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()

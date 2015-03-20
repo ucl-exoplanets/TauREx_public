@@ -58,8 +58,11 @@ params = parameters(options.param_filename)
 params.gen_spec_res = 1000
 params.gen_manual_waverange = True
 
-errors = [10, 50, 100, 250, 500] #ppm
-resolutions = [10, 50, 100, 250, 500]
+errors = [50, 100, 300]
+resolutions = [300, 100, 50, 10]
+
+#errors = [100]
+#resolutions = [100]
 
 out_path_orig = params.out_path
 
@@ -94,11 +97,11 @@ for error in errors:
                 MAX_P = atmosphereob.P[0]
                 MIN_P = atmosphereob.P[-1]
                 smooth_window = 5 #smoothing window size as percent of total data
-
-                Pnodes = [MAX_P, MAX_P, 1e4, MIN_P]
-                Tnodes = [800,800, 350,350]
+                Pnodes = [MAX_P, MAX_P, 0.65e4, MIN_P]
+                Tnodes = [1000,1000, 600,600]
                 TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
                 atmosphereob.T = TP[::-1]
+                atmosphereob.update_atmosphere()
 
                 # save TP profile to file
                 out = np.zeros((len(atmosphereob.T),2))
@@ -140,8 +143,11 @@ for error in errors:
             logging.info('Start fitting...')
 
             params.gen_manual_waverange = False
+
             dataob = data(params)
             atmosphereob = atmosphere(dataob)
+            if params.fit_fix_temp == True:
+                atmosphereob.T = TP[::-1]
             forwardmodelob = transmission(atmosphereob)
             fittingob = fitting(forwardmodelob)
             fittingob.multinest_fit() # Nested sampling fit

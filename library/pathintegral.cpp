@@ -58,11 +58,12 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
         }
     }
 }
-
-void cpath_int(const double ** sigma_array, const double * dlarray, const double * z,
+ void cpath_int(const double ** sigma_array, const double * sigma_array_flat, int const_temp, const double * dlarray, const double * z,
     const double * dz, const double * Rsig, const double * Csig, const double ** X, const double * rho,
-    double Rp, double Rs, int linecount, int nlayers, int n_gas, int include_cld, const double cld_lowbound,
-    const double cld_upbound, const double * p_bar, const double * cld_sig, void * absorptionv) {
+    double Rp, double Rs, int linecount, const int nlayers, const int n_gas, const int n_sig_temp, int include_cld,
+    const double cld_lowbound, const double cld_upbound, const double * p_bar, const double * cld_sig,
+    void * absorptionv) {
+
 
     //output array to be passed back to python
     double * absorption = (double *) absorptionv;
@@ -73,6 +74,22 @@ void cpath_int(const double ** sigma_array, const double * dlarray, const double
     //double p
     double Rtau, Ctau, cld_tau;
     int count;
+    double ***sigma_array_3d = new double**[n_sig_temp];
+
+
+	//if T not constant with altitude, generating 3D sigma_array from flat 1D sigma_array_flat
+	//if T is constant, then use sigma_array (2d array)
+    if(const_temp==0){
+        for(int i =0; i<n_sig_temp; i++){
+            sigma_array_3d[i] = new double*[n_gas];
+           for(int j =0; j<n_gas; j++){
+               sigma_array_3d[i][j] = new double[linecount];
+               for(int k = 0; k<linecount;k++){
+                   sigma_array_3d[i][j][k] = sigma_array_flat[(i*n_gas*linecount)+(j*linecount)+k];
+               }
+           }
+        }
+    }
 
     // initialise cloud quantities
 	double bounds[3]={0.0}, cld_log_rho=0.0;
@@ -110,12 +127,12 @@ void cpath_int(const double ** sigma_array, const double * dlarray, const double
 			{
 			 /* Sum up taus for all gases for this path */
 				for(int l=0;l<n_gas;l++) {
-    			    tau[j] += (sigma_array[l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
+                    if(const_temp==0){
+    			        tau[j] += (sigma_array_3d[j][l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
+				    } else {
+    			        tau[j] += (sigma_array[l][wl] * X[l][k+j] * rho[k+j] * dlarray[count]);
+				    }
 				}
-
-
-
-
 
 				Rtau += Rsig[wl] * rho[j+k] * dlarray[count]; // calculating Rayleigh scattering optical depth
 				Ctau += Csig[wl] * rho[j+k] * rho[j+k] * dlarray[count]; // calculating CIA optical depth
@@ -159,6 +176,19 @@ void cpath_int(const double ** sigma_array, const double * dlarray, const double
 		absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
 
     }
+    if(const_temp==0){
+        for(int i =0; i<n_sig_temp; i++){
+            for(int j =0; j<n_gas; j++){
+    //			for(int k = 0; k<n_lambda;k++){
+    //		    	   delete sigma_array_3d[i][j][k];
+    //		       }
+                delete [] sigma_array_3d[i][j];
+               }
+            delete [] sigma_array_3d[i];
+         }
+    }
+	delete [] sigma_array_3d;
+
 
 
 }

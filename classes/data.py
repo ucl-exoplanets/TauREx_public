@@ -125,8 +125,8 @@ class data(base):
             self.rad = self.readfile(self.params.in_rad_file, interpolate=True)
         if params.in_include_cia:
             self.cia = self.readfile(self.params.in_cia_file, interpolate=True)
-        if params.in_include_cld:
-            self.cld = self.readfile(self.params.in_cld_file, interpolate=True)
+        # if params.in_include_cld:
+        #     self.cld = self.readfile(self.params.in_cld_file, interpolate=True)
 
         #reading in Phoenix stellar model library (if emission is calculated only)
         if self.params.gen_type == 'emission' or self.params.fit_emission:
