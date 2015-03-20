@@ -132,6 +132,16 @@ class emission(base):
         dz.append(dz[-1])
         
         return np.asarray(dz,dtype=self.DTYPE)
+    
+    def get_contribution_function(self):
+        '''
+        Function re-running forward model with current setup and
+        explicitely returning the path-integral byproducts: tau, tau_total, dtau
+        '''    
+        model = self.path_integral() #output not needed but needs running to set arrays
+    
+        return self.tau, self.tau_total, self.dtau
+        
         
 #     @profile #line-by-line profiling decorator
     def path_integral(self, X=None, rho=None,temperature=None):

@@ -1,5 +1,7 @@
 #loading libraries
-import numpy, pylab, sys, os, optparse, time
+import sys, os, optparse, time
+import numpy as np
+import pylab as pl
 from ConfigParser import SafeConfigParser
 
 #loading classes
@@ -67,6 +69,13 @@ if params.gen_type == 'emission' or params.fit_emission:
             if params.verbose or params.out_save_plots:
                 outputob.plot_all(save2pdf=params.out_save_plots)
             outputob.save_ascii_spectra()
+            # save and plot TP profile (plotting only if save2pdf=True)
+            outputob.save_TP_profile(save2pdf=True)  #saving TP profile
+            
+            #deleting objectes
+            dataob = None; atmosphereob = None; forwardmodelob = None; fittingob = None;
+            outputob = None
+
     
     
     
