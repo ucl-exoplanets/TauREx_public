@@ -655,7 +655,7 @@ class output(base):
 
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
-                filename = str(basename)+'/MCMC'+profilename+'_%i.dat' % (idx)
+                filename = str(basename)+'/MCMC'+profilename+'%i.dat' % (idx)
                 logging.info('Saving MCMC TP_profile to %s' % filename)
                 np.savetxt(filename,out)
 
@@ -682,7 +682,7 @@ class output(base):
             
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
-                filename = str(basename)+'/NEST'+profilename+'_%i.dat' % (idx)
+                filename = str(basename)+'/NEST'+profilename+'%i.dat' % (idx)
 
                 logging.info('Saving Nested Sampling TP profile for solution %i to %s' % (idx, filename))
                 np.savetxt(filename, out)              
@@ -703,7 +703,7 @@ class output(base):
         
         self.fitting.update_atmospheric_parameters(fit_params)
         tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()
-        np.savetxt(filename,tau)
+        np.savetxt(filename,tau_total)
 
     #
     #

@@ -11,13 +11,13 @@ type = emission
 #Observed spectrum to be fitted
 spectrum_file = Input/observations/55cnc_emission_r6060_55cnce_taurex_t100_new.dat
 
-use_ATMfile = True
-atm_file = Input/55cnc_tp_profile.txt
+use_ATMfile = False
+atm_file = TP_profile.txt
 abs_path = Input/crosssections/
 convert2microns = False
 __legacy__abs_files = h2o_1500K.abs
 tempres = 1.0
-star_path = Input/Star_spectra
+star_path = Input/star_spectra
 include_rad = False
 rad_file = Input/rad_star.rad
 include_cia = False
