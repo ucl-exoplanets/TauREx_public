@@ -35,6 +35,12 @@ try:
 except:
     multinest_import = False
 
+try: 
+    import pymc
+    pymc_import = True
+except:
+    pymc_import = False
+
 try:
     from mpi4py import MPI
     MPIimport = True
@@ -209,15 +215,15 @@ class fitting(base):
 
             self.fit_params_names.append('kappa_irr')
             self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('kappa_v1')
             self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('kappa_v2')
             self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('alpha')
             self.fit_bounds.append((0.0,1.0))
