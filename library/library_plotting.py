@@ -10,6 +10,7 @@ from numpy import array
 import scipy.ndimage as ndimage
 from matplotlib.ticker import FuncFormatter,ScalarFormatter
 from matplotlib import cm
+import matplotlib.colors as mplot_colors
 from matplotlib import mlab
 import matplotlib.patches
 import itertools
@@ -25,9 +26,9 @@ except:
 
 scale_pow = 0
 
-def plot_posteriors(fit_out, params_names=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='Blues'):
-
-        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, plot_contour=plot_contour, color=color)
+def plot_posteriors(fit_out, params_names=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='BuPu',log_cmap=False):
+        
+        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, plot_contour=plot_contour, color=color,log_cmap=log_cmap)
 
         if save2pdf:
                 filename1 = os.path.join(out_path, '%s_posteriors.pdf' % plot_name)
@@ -63,7 +64,7 @@ def plot_TP_profile(P, T_mean, T_sigma=None, fig=None, name=None, color='blue', 
 
     return fig
 
-def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=False,fontsize=30, color='Blues'):
+def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=False,fontsize=30, color='Blues',log_cmap=False):
 
     if params_names == None:
         params_names = fit_out[0]['fit_params'].keys()
@@ -81,7 +82,7 @@ def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=Fa
         seq +=1
 
         if plot_name == 'NEST' or plot_name == 'NEST_clrinv':
-            ax = NEST_plot_conditional(ax, fit_out, params_names, i, suppressAxes=False, plot_contour=plot_contour, color=color)
+            ax = NEST_plot_conditional(ax, fit_out, params_names, i, suppressAxes=False, plot_contour=plot_contour, color=color,log_cmap=log_cmap)
         else:
             ax = plot_1Dposterior(ax, fit_out, params_names, i, plot_contour)
 
@@ -117,9 +118,9 @@ def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=Fa
             seq += 1
             ax2.ticklabel_format(style='sci')
             if plot_name == 'NEST' or plot_name == 'NEST_clrinv':
-                NEST_plot_conditional(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color)
+                NEST_plot_conditional(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color,log_cmap=log_cmap)
             else:
-                plot_2Ddistribution(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color)
+                plot_2Ddistribution(ax2, fit_out, params_names, i, j, suppressAxes=True, plot_contour=plot_contour, color=color,log_cmap=log_cmap)
             for tick in ax2.xaxis.get_major_ticks():
                 tick.label.set_rotation(+30)
                 tick.label.set_fontsize(fontsize)
@@ -127,7 +128,7 @@ def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=Fa
     return fig
 
 
-def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None, plot_contour=False, suppressAxes=False,  color='Blues'):
+def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None, plot_contour=False, suppressAxes=False,  color='Blues',log_cmap=False):
 
     with_ellipses = True
     with_points = False
@@ -230,9 +231,17 @@ def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None
     ax.set_xlim((min1,max1))
     if param2_idx is not None:
 
+        #customising the colormap
+        new_cmap = pl.cm.get_cmap(color)
+        new_cmap.set_under('w')
+        if log_cmap is True:
+            cmap_norm = mplot_colors.LogNorm()
+        else:
+            cmap_norm = mplot_colors.Normalize()
+
         ax.set_ylim((min2,max2))
         ax.imshow(grid_z.transpose(), origin='lower', aspect='auto',
-                 cmap=cm.get_cmap('%s_r' % color), extent=(min1,max1,min2,max2))
+                 cmap=new_cmap,vmin=1e-10, norm=cmap_norm,extent=(min1,max1,min2,max2))
         #plt.colorbar()
     else:
 		ax.plot(grid_x, grid_z[:,0], '-', color='grey', drawstyle='steps')
@@ -277,7 +286,7 @@ def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None
 
     return ax
 
-def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_contour=False, suppressAxes=False, color='Blues'):
+def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_contour=False, suppressAxes=False, color='Blues',log_cmap=False):
 
     #old code
 
@@ -300,9 +309,17 @@ def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_
 
         allx = np.concatenate((solution['fit_params'][params_names[param1_idx]]['trace'], allx))
         ally = np.concatenate((solution['fit_params'][params_names[param2_idx]]['trace'], ally))
-
+    
+    #customising the colormap
+    new_cmap = pl.cm.get_cmap(color)
+    new_cmap.set_under('w')
+    if log_cmap is True:
+        cmap_norm = mplot_colors.LogNorm()
+    else:
+        cmap_norm = mplot_colors.Normalize()
+    
     zd = grid_density_boxsum(np.min(allx), np.min(ally), np.max(allx), np.max(ally), 256, 256, zip(allx, ally))
-    ax.imshow(zd, origin='lower', cmap=cm.get_cmap(color),
+    ax.imshow(zd, origin='lower', cmap=new_cmap,vmin=1e-10, norm=cmap_norm,
               extent=[np.min(allx), np.max(allx), np.min(ally), np.max(ally)])
 
      #plot 1,2,3 sigma contours

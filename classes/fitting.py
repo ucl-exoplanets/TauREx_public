@@ -526,7 +526,7 @@ class fitting(base):
         else:
             #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
             for i in range(self.fit_nparams):
-                param_range = (selffit_bounds[i][1] - self.fit_bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
+                param_range = (self.fit_bounds[i][1] - self.fit_bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
                 param_mean  = np.mean(self.fit_bounds[i])
                 param_rand  = random.uniform(low=param_mean-param_range,high=param_mean+param_range) #random parameter start
                 priors[i] = pymc.Uniform('PFIT_%i' % (i), self.fit_bounds[i][0],self.fit_bounds[i][1],value=param_rand)  # uniform prior
