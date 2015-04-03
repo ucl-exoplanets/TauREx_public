@@ -315,7 +315,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         else:
             self.forwardmodel.atmosphere.planet_mu = self.doubleSpinBox_planet_mu.value() * AMU
 
-        self.forwardmodel.atmosphere.planet_temp = self.spinBox_planet_T.value()
+        self.forwardmodel.atmosphere.T[:] = self.spinBox_planet_T.value()
         self.forwardmodel.atmosphere.planet_mass = self.doubleSpinBox_planet_mass.value() * MJUP
 
         self.forwardmodel.atmosphere.planet_radius = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL

@@ -357,11 +357,14 @@ class output(base):
         # if clr transform, store parameter names of transformed traces
         if self.params.fit_clr_trans:
 
-            # If clr inverse, write out parameter names with mixing ratio naems
-            f = open(os.path.join(self.out_path, 'parameters_clr_inv.txt'),'w')
-            for param in self.params_names:
-                f.write('%s\n' % param)
-            f.close()
+            try:
+                self.params_names
+                # If clr inverse, write out parameter names with mixing ratio naems
+                f = open(os.path.join(self.out_path, 'parameters_clr_inv.txt'),'w')
+                for param in self.params_names:
+                    f.write('%s\n' % param)
+                f.close()
+            except: pass
 
         if self.DOWN:
             pickle.dump(self.DOWN_out, open(os.path.join(self.out_path, 'DOWN_out.db'), 'wb'))
@@ -508,8 +511,12 @@ class output(base):
         logging.info('Plotting sampling distributions. Saving to %s' % self.out_path)
 
         if params_names is None:
+            try:
+                self.params_names
                 params_names = self.params_names
-                
+            except:
+                return
+
         if self.fitting.MCMC:
             plot_posteriors(self.MCMC_out,params_names=params_names,
                             save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',

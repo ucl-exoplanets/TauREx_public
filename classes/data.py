@@ -251,9 +251,11 @@ class data(base):
 
             logging.info('Load sigma array for molecule %s' % molecule)
 
+
+
             moldict[molecule] ={}
 
-            absfiles, templist = libgen.find_absfiles(self.params.in_abs_path,molecule)
+            absfiles, templist = libgen.find_absfiles(self.params.in_abs_path, molecule)
             tempmax.append(np.max(templist))
             tempmin.append(np.min(templist))
 

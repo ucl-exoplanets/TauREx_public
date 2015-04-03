@@ -114,9 +114,8 @@ class atmosphere(base):
                 self.TP_type = tp_profile_type
 
         elif self.params.gen_type == 'transmission':
-
             if tp_profile_type is None:
-                self.TP_type = 'isothermal'
+                self.TP_type = self.params.tp_type
             else:
                 self.TP_type = tp_profile_type
 
@@ -160,7 +159,12 @@ class atmosphere(base):
         if not mu:
             mu = self.planet_mu
 
-        return (KBOLTZ*T)/(mu*g)
+        if len(T) > 1:
+            Tavg = np.mean(T)
+        else:
+            Tavg = T
+
+        return (KBOLTZ*Tavg)/(mu*g)
 
     #@profile
     def get_surface_gravity(self, mass=None, radius=None):
@@ -214,7 +218,7 @@ class atmosphere(base):
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
 
-        max_z = n_scale * self.scaleheight[0]
+        max_z = n_scale * self.scaleheight
 
         #generatinng altitude-pressure array
         pta_arr = np.zeros((self.nlayers,3))
@@ -331,7 +335,7 @@ class atmosphere(base):
 
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        max_z = n_scale * self.scaleheight[0]
+        max_z = n_scale * self.scaleheight
 
 
         self.z = np.linspace(0, max_z, num=self.nlayers) # altitude
@@ -435,7 +439,11 @@ class atmosphere(base):
         '''
 
         #assigning fitting parameters
-        T_irr = TP_params[0]; kappa_ir = TP_params[1]; kappa_v1 = TP_params[2]; kappa_v2 = TP_params[3]; alpha = TP_params[4]
+        T_irr = TP_params[0];
+        kappa_ir = TP_params[1];
+        kappa_v1 = TP_params[2];
+        kappa_v2 = TP_params[3];
+        alpha = TP_params[4]
 
         gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir
         tau = kappa_ir * self.P / self.planet_grav

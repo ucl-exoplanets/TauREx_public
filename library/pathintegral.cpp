@@ -138,15 +138,15 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 				Ctau += Csig[wl] * rho[j+k] * rho[j+k] * dlarray[count]; // calculating CIA optical depth
 
                 //cout << dlarray[count] << endl;
-                
+
 //              Calculating cloud opacities if requested
                 if(include_cld==1){
                     if( (p_bar[k+j]<cld_upbound) && (p_bar[k+j]>cld_lowbound) ){ // then cloud exists in this layer [k+j]
-        
+
                         bounds[0]=log(cld_lowbound);
 						bounds[1]=log(cld_upbound);
 						bounds[2]=log(p_bar[k+j]);
-                        
+
                         cld_log_rho = interpolateValue(bounds,-6,-1);
                         // = log(cloud density), assuming linear decrease with decreasing log pressure
                         // following Ackerman & Marley (2001), Fig. 6

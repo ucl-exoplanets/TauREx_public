@@ -146,8 +146,6 @@ class parameters(base):
             pass
 
 
-
-
         self.tp_var_atm            = self.getpar('T-P profile','var_atm', 'bool')
         self.tp_num_scale          = self.getpar('T-P profile', 'num_scaleheights', 'int')
         self.tp_atm_levels         = self.getpar('T-P profile', 'atm_levels', 'int')

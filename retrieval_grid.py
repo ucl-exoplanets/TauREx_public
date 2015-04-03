@@ -36,6 +36,10 @@ from library_transmission import *
 from library_general import *
 from library_plotting import *
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pylab as plt
+
 ## Apply TP profile
 def movingaverage(values,window):
     weigths = np.repeat(1.0, window)/window
@@ -49,7 +53,31 @@ parser = optparse.OptionParser()
 parser.add_option('-p', '--parfile',
                   dest="param_filename",
                   help='Parameter filename')
+parser.add_option('-i', '--isothermal',
+                  dest="isothermal",
+                  default=0)
+parser.add_option('-g', '--gaussian_noise',
+                  dest="gaussian_noise",
+                  default=1)
+parser.add_option('-r', '--resolutions',
+                  dest="resolutions",
+                  default=False)
+parser.add_option('-e', '--errors',
+                  dest="errors",
+                  default=False)
+
 options, remainder = parser.parse_args()
+
+
+# get resolutions and snr (from arguments or par file)
+if options.resolutions:
+    resolutions = [int(m) for m in options.resolutions.split(',')]
+else:
+    resolutions = [300, 100, 50, 10]
+if options.errors:
+    errors = [int(m) for m in options.errors.split(',')]
+else:
+    errors = [50, 100, 300]
 
 #initialising parameters object
 params = parameters(options.param_filename)
@@ -57,12 +85,6 @@ params = parameters(options.param_filename)
 # set model resolution to 1000
 params.gen_spec_res = 1000
 params.gen_manual_waverange = True
-
-errors = [50, 100, 300]
-resolutions = [300, 100, 50, 10]
-
-#errors = [100]
-#resolutions = [100]
 
 out_path_orig = params.out_path
 
@@ -93,48 +115,63 @@ for error in errors:
 
             if MPIrank == 0:
 
-                logging.info('Creating custom TP profile')
-                MAX_P = atmosphereob.P[0]
-                MIN_P = atmosphereob.P[-1]
-                smooth_window = 5 #smoothing window size as percent of total data
-                Pnodes = [MAX_P, MAX_P, 0.65e4, MIN_P]
-                Tnodes = [1000,1000, 600,600]
-                TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
-                atmosphereob.T = TP[::-1]
-                atmosphereob.update_atmosphere()
+                if not os.path.isfile(os.path.join(params.out_path, 'observed_spectrum.dat')):
 
-                # save TP profile to file
-                out = np.zeros((len(atmosphereob.T),2))
-                out[:,0] = atmosphereob.T
-                out[:,1] = atmosphereob.P
-                np.savetxt(os.path.join(params.out_path, 'TP_profile.dat'), out)
+                    if int(options.isothermal) == 0:
 
-                print 'The mean molecular weight is', atmosphereob.planet_mu/AMU
+                        logging.info('Creating custom TP profile')
+                        MAX_P = atmosphereob.P[0]
+                        MIN_P = atmosphereob.P[-1]
+                        smooth_window = 5 #smoothing window size as percent of total data
+                        Pnodes = [MAX_P, MAX_P, 0.65e4, MIN_P]
+                        Tnodes = [1000,1000, 600,600]
+                        TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
+                        atmosphereob.T = TP[::-1]
+                        atmosphereob.update_atmosphere()
 
-                # save spectrum
+                        # save TP profile to file
+                        out = np.zeros((len(atmosphereob.T),2))
+                        out[:,0] = atmosphereob.T
+                        out[:,1] = atmosphereob.P
+                        np.savetxt(os.path.join(params.out_path, 'TP_profile.dat'), out)
+                    else:
+                        logging.info('Isothermal T profile')
 
-                #initialising transmission radiative transfer code object
-                forwardmodelob = transmission(atmosphereob)
+                    print 'The mean molecular weight is', atmosphereob.planet_mu/AMU
 
-                # bin down internal model to given resolution
-                wavegrid, dlamb_grid = dataob.get_specgrid(R=res,lambda_min=params.gen_wavemin,lambda_max=params.gen_wavemax)
-                spec_bin_grid, spec_bin_grid_idx = dataob.get_specbingrid(wavegrid, dataob.specgrid)
+                    # save spectrum
 
-                model = forwardmodelob.model()
-                model_binned = [np.mean(model[spec_bin_grid_idx == i]) for i in xrange(1,len(spec_bin_grid))]
+                    #initialising transmission radiative transfer code object
+                    forwardmodelob = transmission(atmosphereob)
 
-                out = np.zeros((len(wavegrid),3))
-                out[:,0] = wavegrid
-                out[:,1] = model_binned
-                out[:,2] += float(error) * 1e-6
-                out[:,1] += np.random.normal(0, float(error) * 1e-6, len(wavegrid))
+                    # bin down internal model to given resolution
+                    wavegrid, dlamb_grid = dataob.get_specgrid(R=res,lambda_min=params.gen_wavemin,lambda_max=params.gen_wavemax)
+                    spec_bin_grid, spec_bin_grid_idx = dataob.get_specbingrid(wavegrid, dataob.specgrid)
 
-                # remove nan values. Sometimes the last bin has a nan...
-                out = out[~np.isnan(out).any(axis=1)]
+                    model = forwardmodelob.model()
+                    model_binned = [np.mean(model[spec_bin_grid_idx == i]) for i in xrange(1,len(spec_bin_grid))]
 
-                #initiating output object with fitted data from fitting class
-                outputob = output(forwardmodel=forwardmodelob)
-                outputob.save_spectrum_to_file(spectrum=out, saveas='observed_spectrum.dat')
+                    out = np.zeros((len(wavegrid),3))
+                    out[:,0] = wavegrid
+                    out[:,1] = model_binned
+                    out[:,2] += float(error) * 1e-6
+
+                    if int(options.gaussian_noise) == 1:
+                        logging.info('Adding Gaussian noise')
+                        out[:,1] += np.random.normal(0, float(error) * 1e-6, len(wavegrid))
+
+                    # remove nan values. Sometimes the last bin has a nan...
+                    out = out[~np.isnan(out).any(axis=1)]
+
+                    #initiating output object with fitted data from fitting class
+                    outputob = output(forwardmodel=forwardmodelob)
+                    outputob.save_spectrum_to_file(spectrum=out, saveas='observed_spectrum.dat')
+
+                    plt.clf()
+                    plt.errorbar(out[:,0], out[:,1], out[:,2])
+                    plt.xlim(np.min(out[:,0]), np.max(out[:,0]))
+                    plt.xscale('log')
+                    plt.savefig(os.path.join(params.out_path, 'observed_spectrum.pdf'))
 
             params.in_spectrum_file = os.path.join(params.out_path, 'observed_spectrum.dat')
 

@@ -64,7 +64,8 @@ def find_absfiles(PATH, MOLNAME):
     #return: array of absfilenames and array of corresponding temperatures
     
     globlist = glob.glob(PATH+'*.abs')
-    
+
+
     absfilelist = []
     templist = []
 
@@ -75,13 +76,12 @@ def find_absfiles(PATH, MOLNAME):
         if splitname[0] == MOLNAME:
             absfilelist.append(fname)
             templist.append(float(splitname[2][:-1]))
-    
+
+
     templist = asarray(templist)
     absfilelist = asarray(absfilelist)
     
     sortidx = argsort(templist)
-    
-#     print absfilelist[sortidx], templist[sortidx]
     
     return absfilelist[sortidx], templist[sortidx]
 

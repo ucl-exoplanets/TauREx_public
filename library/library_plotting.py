@@ -8,6 +8,9 @@ import pylab as pl
 import numpy as np
 from numpy import array
 import scipy.ndimage as ndimage
+
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib.ticker import FuncFormatter,ScalarFormatter
 from matplotlib import cm
 from matplotlib import mlab

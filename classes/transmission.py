@@ -79,7 +79,6 @@ class transmission(base):
         else:
             self.Csig      = zeros((self.nlambda))
 
-
         if self.params.in_include_Rayleigh:
             self.Rsig = self.get_Rsig()
         else:
@@ -167,6 +166,14 @@ class transmission(base):
         sigma = self.cia[:,1] * (self.atmosphere.get_gas_fraction('H2')**2) * 1.385294e-49
         return sigma
 
+    # def cget_path_length(self):
+    #
+    #     nlayers = self.atmosphere.nlayers
+    #     czRp = cast2cpp(self.atmosphere.z + self.atmosphere.planet_radius)
+    #     dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
+    #     cpath_length = self.cpathlib.cpath_length
+    #     cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
+    #     return dlarray.reshape(nlayers, nlayers)
     def cget_path_length(self):
 
         nlayers = self.atmosphere.nlayers
@@ -174,7 +181,7 @@ class transmission(base):
         dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
         cpath_length = self.cpathlib.cpath_length
         cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
-        return dlarray.reshape(nlayers, nlayers)
+        return dlarray
 
     #@profile
     def cpath_integral(self, X=None, rho=None, temperature=None):
@@ -185,9 +192,9 @@ class transmission(base):
             rho = self.atmosphere.rho
         if temperature is None:
             temperature = self.atmosphere.T # todo careful assuming a isothermal TP profile!
-
         dz = self.get_dz()
         dlarray = self.cget_path_length()
+
 
         #selecting correct sigma_array for temperature array
         if len(np.unique(temperature)) == 1:
@@ -284,7 +291,7 @@ class transmission(base):
         dlarray = asarray(dlarray, dtype=np.float)
         return dlarray, iteridx
 
-    def _path_integral(self, X=None, rho=None, temperature=None):
+    def _path_integral(self, X=None, rho=None, temperature=None, rayleigh=True, absorption=True, clouds=True):
 
         if X is None:
             X = self.atmosphere.X
@@ -356,12 +363,3 @@ class transmission(base):
 
         return absorption
 
-    def cget_path_length(self):
-
-        nlayers = self.atmosphere.nlayers
-        czRp = cast2cpp(self.atmosphere.z + self.atmosphere.planet_radius)
-        dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
-        cpath_length = self.cpathlib.cpath_length
-        cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
-
-        return dlarray
