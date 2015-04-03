@@ -86,7 +86,7 @@ class emission(base):
         self.I_total    = np.zeros((self.nlambda),dtype=self.DTYPE)
         self.tau        = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE)
         self.dtau       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE)
-        self.tau_total  = np.zeros((self.nlambda),dtype=self.DTYPE)
+        self.tau_total  = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE)
 
         #loading c++ pathintegral library for faster computation
         if self.params.trans_cpp:
@@ -132,6 +132,16 @@ class emission(base):
         dz.append(dz[-1])
         
         return np.asarray(dz,dtype=self.DTYPE)
+    
+    def get_contribution_function(self):
+        '''
+        Function re-running forward model with current setup and
+        explicitely returning the path-integral byproducts: tau, tau_total, dtau
+        '''    
+        model = self.path_integral() #output not needed but needs running to set arrays
+    
+        return self.tau, self.tau_total, self.dtau
+        
         
 #     @profile #line-by-line profiling decorator
     def path_integral(self, X=None, rho=None,temperature=None):
@@ -190,7 +200,8 @@ class emission(base):
             exptau =  np.exp(-1.0*self.tau[j,:]) 
             
             if temperature[j] != temperature[j-1]: 
-                BB_layer = em.black_body(self.specgrid,temperature[j])           
+                BB_layer = em.black_body(self.specgrid,temperature[j])   
+            self.tau_total[j,:] = BB_layer*(exptau) * (self.dtau[j,:])
             self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
             
 

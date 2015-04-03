@@ -35,6 +35,12 @@ try:
 except:
     multinest_import = False
 
+try: 
+    import pymc
+    pymc_import = True
+except:
+    pymc_import = False
+
 try:
     from mpi4py import MPI
     MPIimport = True
@@ -209,15 +215,15 @@ class fitting(base):
 
             self.fit_params_names.append('kappa_irr')
             self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('kappa_v1')
             self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('kappa_v2')
             self.fit_bounds.append((0.0,0.1))
-            self.fit_params.append(np.mean((0.0,0.1)))
+            self.fit_params.append(np.mean((0.0,0.01)))
 
             self.fit_params_names.append('alpha')
             self.fit_bounds.append((0.0,1.0))
@@ -239,7 +245,7 @@ class fitting(base):
             self.fit_bounds.append((1.0,1e5))
             self.fit_params.append(np.mean((1.0,1e5)))
 
-        elif self.forwardmodel.atmosphere.sTP_type == '3point':
+        elif self.forwardmodel.atmosphere.TP_type == '3point':
 
             self.fit_TP_nparams = 5
 
@@ -249,19 +255,19 @@ class fitting(base):
 
             self.fit_params_names.append('T_point1') #point1 T difference (T_surface- Tdiff) = T_point1
             self.fit_bounds.append((0.0,500.0))
-            self.fit_params.append((0.0,500.0))
+            self.fit_params.append(np.mean((0.0,500.0)))
 
             self.fit_params_names.append('T_point2') #point2 T difference (T_point1- Tdiff) = T_point2
             self.fit_bounds.append((0.0,500.0))
-            self.fit_params.append((0.0,500.0))
+            self.fit_params.append(np.mean((0.0,500.0)))
 
             self.fit_params_names.append('P_point1')  #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
             self.fit_bounds.append((1.0,1e5))
-            self.fit_params.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
 
             self.fit_params_names.append('P_point2') #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
             self.fit_bounds.append((1.0,1e5))
-            self.fit_params.append((1.0,1e5))
+            self.fit_params.append(np.mean((1.0,1e5)))
 
         ##########################################################################
         # mean molecular weight. Only if we are not coupling mu to the mixing ratios
@@ -514,7 +520,7 @@ class fitting(base):
         else:
             #setting up other threads (if exist). Their initial starting positions will be randomly perturbed
             for i in range(self.fit_nparams):
-                param_range = (selffit_bounds[i][1] - self.fit_bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
+                param_range = (self.fit_bounds[i][1] - self.fit_bounds[i][0]) / 5.0 #range of parameter over which to perturb starting position
                 param_mean  = np.mean(self.fit_bounds[i])
                 param_rand  = random.uniform(low=param_mean-param_range,high=param_mean+param_range) #random parameter start
                 priors[i] = pymc.Uniform('PFIT_%i' % (i), self.fit_bounds[i][0],self.fit_bounds[i][1],value=param_rand)  # uniform prior

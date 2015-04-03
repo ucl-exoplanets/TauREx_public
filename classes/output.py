@@ -597,21 +597,23 @@ class output(base):
         save TP_profiles.
         '''
         profilename = '_TP_profile_'
-        basename = os.path.join(self.out_path, self.params.out_file_prefix + self.__MODEL_ID__)
+        basename = self.out_path 
 
         P = self.fitting.forwardmodel.atmosphere.P
 
         out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
         out[:,0] = P # pressure
+        
+        fit_TPparams_bounds = self.fitting.fit_bounds[self.fitting.fit_X_nparams:]
 
         if save_manual is not None:
             if len(FIT_params) > 0 and len(FIT_params_std) > 0:
-                T_mean, T_sigma, P = iterate_TP_profile(FIT_params, FIT_params_std,
+                T_mean, T_sigma, P = iterate_TP_profile(FIT_params, FIT_params_std,fit_TPparams_bounds,
                                                          self.fitting.forwardmodel.atmosphere.TP_profile)
 
                 out[:,1] = T_mean; out[:,2] = T_sigma
 
-                filename = str(basename)+profilename+'.dat'
+                filename = str(basename)+'MANUAL_'+profilename+'.dat'
                 logging.info('Saving manual TP_profile to %s' % filename)
                 np.savetxt(filename,out)
 
@@ -631,12 +633,18 @@ class output(base):
             T_sigma  = np.zeros_like(T_mean)
             out[:,1] = T_mean
             out[:,2] = T_sigma
-            filename = str(basename)+profilename+'down.dat'
+            filename = str(basename)+'/DOWN'+profilename+'.dat'
             logging.info('Saving MLE TP_profile to %s' % filename)
             np.savetxt(filename,out)
 
             if save2pdf:
                 plot_TP_profile(P, T_mean, name='DOWN', save2pdf=save2pdf, out_path=self.out_path)
+                
+            logging.info('Saving MCMC contribution function for solution %i to %s' % (idx, filename))
+        
+            fit_params = [self.DOWN_out['fit_params'][param]['value'] for param in self.params_names]
+            filename2  = str(basename)+'/DOWN_cont_func.dat'
+            self.save_contribution_function(fit_params, filename2)
 
         if self.MCMC:
 
@@ -650,17 +658,24 @@ class output(base):
 #                 fit_params = [self.MCMC_out[idx]['fit_params'][param]['value'] for param in self.params_names]
 
                 T_mean, T_sigma = iterate_TP_profile(self.MCMC_TP_params_values[idx], self.MCMC_TP_params_std[idx],
-                                                      self.fitting.forwardmodel.atmosphere.TP_profile)
+                                                     fit_TPparams_bounds, self.fitting.forwardmodel.atmosphere.TP_profile)
 
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
-                filename = str(basename)+profilename+'_mcmc.dat'
+                filename = str(basename)+'/MCMC'+profilename+'%i.dat' % (idx)
                 logging.info('Saving MCMC TP_profile to %s' % filename)
                 np.savetxt(filename,out)
 
                 if save2pdf:
                     plot_TP_profile(P, T_mean, T_sigma, name='MCMC_'+str(idx),
                                           save2pdf=save2pdf, out_path=self.out_path)
+                    
+                logging.info('Saving MCMC contribution function for solution %i to %s' % (idx, filename))
+        
+                fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
+                filename2  = str(basename)+'/MCMC_cont_func_%i.dat' % (idx)
+                self.save_contribution_function(fit_params, filename2)
+                
 
         if self.NEST:
 
@@ -670,19 +685,32 @@ class output(base):
             for idx, solution in enumerate(self.NEST_out):
 
                 T_mean, T_sigma = iterate_TP_profile(self.NEST_TP_params_values[idx], self.NEST_TP_params_std[idx],
-                                                      self.fitting.forwardmodel.atmosphere.TP_profile)
-
+                                                      fit_TPparams_bounds,self.fitting.forwardmodel.atmosphere.TP_profile)
+            
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
-                filename = str(basename)+profilename+'_spectrum_nest_%i.dat' % (idx)
+                filename = str(basename)+'/NEST'+profilename+'%i.dat' % (idx)
 
-                logging.info('Saving Nested Sampling spectrum for solution %i to %s' % (idx, filename))
-                np.savetxt(filename, out)
+                logging.info('Saving Nested Sampling TP profile for solution %i to %s' % (idx, filename))
+                np.savetxt(filename, out)              
 
                 if save2pdf:
                     plot_TP_profile(P, T_mean, T_sigma, name='NEST_'+str(idx),
                                           save2pdf=save2pdf, out_path=self.out_path)
 
+                logging.info('Saving Nested Sampling contribution function for solution %i to %s' % (idx, filename))
+        
+                fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
+                filename2  = str(basename)+'/NEST_cont_func_%i.dat' % (idx)
+                self.save_contribution_function(fit_params, filename2)
+                
+
+
+    def save_contribution_function(self, fit_params,filename):
+        
+        self.fitting.update_atmospheric_parameters(fit_params)
+        tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()
+        np.savetxt(filename,tau_total)
 
     #
     #
