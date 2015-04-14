@@ -121,8 +121,8 @@ if int(options.tp_profile) == 1:
     MAX_P = atmosphereob.P[0]
     MIN_P = atmosphereob.P[-1]
     smooth_window = 5 #smoothing window size as percent of total data
-    Pnodes = [MAX_P, 1e6, 1e4, MIN_P]
-    Tnodes = [800,800, 350,350]
+    Pnodes = [MAX_P,1e5, 500.0,MIN_P]
+    Tnodes = [2200,2200, 1700,1700]
     TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
     #smoothing T-P profile
     wsize = atmosphereob.nlayers*(smooth_window/100.0)
@@ -131,13 +131,25 @@ if int(options.tp_profile) == 1:
     TP_smooth = movingaverage(TP,wsize)
     border = np.int((len(TP) - len(TP_smooth))/2)
     atmosphereob.T = TP[::-1]
+    atmosphereob.T[border:-border] = TP_smooth[::-1]
 
     out = np.zeros((len(atmosphereob.T),2))
     out[:,0] = atmosphereob.T
     out[:,1] = atmosphereob.P
     np.savetxt(os.path.join(params.out_path, 'TP_profile.dat'), out)
+    
+    figure()
+    plot(atmosphereob.T, atmosphereob.P)
+    pl.plot(Tnodes,Pnodes, 'x')
+    pl.xlim(np.min(Tnodes)-np.min(Tnodes)*0.1,np.max(Tnodes)+np.max(Tnodes)*0.1)
+    pl.yscale('log')
+    pl.xlabel('Temperature')
+    pl.ylabel('Pressure (Pa)')
+    pl.gca().invert_yaxis()
 
 print 'The mean molecular weight is', atmosphereob.planet_mu/AMU
+
+
 
 #initialising transmission radiative transfer code object
 if params.gen_type == 'transmission':
