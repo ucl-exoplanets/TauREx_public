@@ -448,9 +448,9 @@ class fitting(base):
         res = (data - model_binned) / datastd
         res = sum(res*res)
         #
-        ion()
-        figure(1)
-        clf()
+        # ion()
+        # figure(1)
+        # clf()
         # plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
         # gca().invert_yaxis()
         # xlabel('Temperature')
@@ -475,7 +475,7 @@ class fitting(base):
         #     self.forwardmodel.atmosphere.absorbing_gases_X, \
         #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
         #
-        # return res
+        return res
 
     ###############################################################################
     #simplex downhill algorithm

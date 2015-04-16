@@ -224,6 +224,16 @@ class transmission(base):
                 ctemperature = C.c_double(temperature[0])
 
             else:
+
+                cpressure_broadening = C.c_int(0)
+                cflattened_sigma_arr =  cast2cpp(np.zeros(0))
+                csigma_templist = cast2cpp(np.zeros(0))
+                csigma_preslist = cast2cpp(np.zeros(0))
+                cnsigma_templist = C.c_int(0)
+                cnsigma_preslist = C.c_int(0)
+                cpressure_array = cast2cpp(np.zeros(0))
+                ctemperature = C.c_double(temperature[0])
+
                 sigma_array_2d = self.get_sigma_array(temperature[0])
                 sigma_array_3d = np.zeros(0)
                 cn_sig_temp= C.c_int(0)
