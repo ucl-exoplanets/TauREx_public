@@ -128,18 +128,18 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
     def connect_spinboxes(self):
 
-        self.doubleSpinBox_H2O.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_HCN.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_CH4.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_CO2.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_CO.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_NH3.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_SiO.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_TiO.valueChanged.connect(self.event_status_changed)
-        self.doubleSpinBox_VO.valueChanged.connect(self.event_status_changed)
-        #self.doubleSpinBox_NO.valueChanged.connect(self.event_status_changed)
-        #self.doubleSpinBox_H2S.valueChanged.connect(self.event_status_changed)
-        #self.doubleSpinBox_C2H2.valueChanged.connect(self.event_status_changed)
+        self.lineEdit_H2O.textChanged.connect(self.event_status_changed)
+        self.lineEdit_HCN.textChanged.connect(self.event_status_changed)
+        self.lineEdit_CH4.textChanged.connect(self.event_status_changed)
+        self.lineEdit_CO2.textChanged.connect(self.event_status_changed)
+        self.lineEdit_CO.textChanged.connect(self.event_status_changed)
+        self.lineEdit_NH3.textChanged.connect(self.event_status_changed)
+        self.lineEdit_SiO.textChanged.connect(self.event_status_changed)
+        self.lineEdit_TiO.textChanged.connect(self.event_status_changed)
+        self.lineEdit_VO.textChanged.connect(self.event_status_changed)
+        #self.lineEdit_NO.textChanged.connect(self.event_status_changed)
+        #self.lineEdit_H2S.textChanged.connect(self.event_status_changed)
+        #self.lineEdit_C2H2.textChanged.connect(self.event_status_changed)
 
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
@@ -154,21 +154,26 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.spinBox_star_T.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_star_radius.valueChanged.connect(self.event_status_changed)
         self.checkBox_rayleigh.stateChanged.connect(self.event_status_changed)
+        self.checkBox_clouds.stateChanged.connect(self.event_status_changed)
+        self.lineEdit_clouds_lower.textChanged.connect(self.event_status_changed)
+        self.lineEdit_clouds_upper.textChanged.connect(self.event_status_changed)
+
+
 
     def diconnect_spinboxes(self):
 
-        self.doubleSpinBox_H2O.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_HCN.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_CH4.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_CO2.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_CO.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_NH3.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_SiO.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_TiO.valueChanged.disconnect(self.event_status_changed)
-        self.doubleSpinBox_VO.valueChanged.disconnect(self.event_status_changed)
-        #self.doubleSpinBox_NO.valueChanged.disconnect(self.event_status_changed)
-        #self.doubleSpinBox_H2S.valueChanged.disconnect(self.event_status_changed)
-        #self.doubleSpinBox_C2H2.valueChanged.disconnect(self.event_status_changed)
+        self.lineEdit_H2O.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_HCN.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_CH4.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_CO2.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_CO.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_NH3.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_SiO.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_TiO.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_VO.textChanged.disconnect(self.event_status_changed)
+        #self.lineEdit_NO.textChanged.disconnect(self.event_status_changed)
+        #self.lineEdit_H2S.textChanged.disconnect(self.event_status_changed)
+        #self.lineEdit_C2H2.textChanged.disconnect(self.event_status_changed)
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
 
@@ -182,6 +187,9 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.spinBox_star_T.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_star_radius.valueChanged.disconnect(self.event_status_changed)
         self.checkBox_rayleigh.stateChanged.disconnect(self.event_status_changed)
+        self.checkBox_clouds.stateChanged.disconnect(self.event_status_changed)
+        self.lineEdit_clouds_lower.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_clouds_upper.textChanged.disconnect(self.event_status_changed)
 
     def load_par_file(self):
 
@@ -207,9 +215,6 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         out[:,0] = self.dataob.specgrid
         out[:,1] = self.forwardmodel.model()
         np.savetxt(str(filename), out)
-
-
-        self.aw.qmc.fig.savefig(str(filename), dpi=80,  bbox_inches='tight')
 
     def load_parameter_object(self, filename=None):
 
@@ -255,18 +260,18 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
     def set_params_values(self):
 
-        self.doubleSpinBox_H2O.setValue(self.forwardmodel.params.planet_mixing[0]*100.)
-        self.doubleSpinBox_HCN.setValue(self.forwardmodel.params.planet_mixing[1]*100.)
-        self.doubleSpinBox_CH4.setValue(self.forwardmodel.params.planet_mixing[2]*100.)
-        self.doubleSpinBox_CO2.setValue(self.forwardmodel.params.planet_mixing[3]*100.)
-        self.doubleSpinBox_CO.setValue(self.forwardmodel.params.planet_mixing[4]*100.)
-        self.doubleSpinBox_NH3.setValue(self.forwardmodel.params.planet_mixing[5]*100.)
-        self.doubleSpinBox_SiO.setValue(self.forwardmodel.params.planet_mixing[6]*100.)
-        self.doubleSpinBox_TiO.setValue(self.forwardmodel.params.planet_mixing[7]*100.)
-        self.doubleSpinBox_VO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
-        #self.doubleSpinBox_NO.setValue(self.forwardmodel.params.planet_mixing[8]*100.)
-#        self.doubleSpinBox_H2S.setValue(self.forwardmodel.params.planet_mixing[9]*100.)
-#        self.doubleSpinBox_C2H2.setValue(self.forwardmodel.params.planet_mixing[10]*100.)
+        self.lineEdit_H2O.setText(str(self.forwardmodel.params.planet_mixing[0]))
+        self.lineEdit_HCN.setText(str(self.forwardmodel.params.planet_mixing[1]))
+        self.lineEdit_CH4.setText(str(self.forwardmodel.params.planet_mixing[2]))
+        self.lineEdit_CO2.setText(str(self.forwardmodel.params.planet_mixing[3]))
+        self.lineEdit_CO.setText(str(self.forwardmodel.params.planet_mixing[4]))
+        self.lineEdit_NH3.setText(str(self.forwardmodel.params.planet_mixing[5]))
+        self.lineEdit_SiO.setText(str(self.forwardmodel.params.planet_mixing[6]))
+        self.lineEdit_TiO.setText(str(self.forwardmodel.params.planet_mixing[7]))
+        self.lineEdit_VO.setText(str(self.forwardmodel.params.planet_mixing[8]))
+        #self.lineEdit_NO.setText(str(self.forwardmodel.params.planet_mixing[8]))
+#        self.lineEdit_H2S.setText(str(self.forwardmodel.params.planet_mixing[9]))
+#        self.lineEdit_C2H2.setText(str(self.forwardmodel.params.planet_mixing[10]))
         self.doubleSpinBox_He.setValue(self.forwardmodel.atmosphere.inactive_gases_X[0]*100.)
         self.doubleSpinBox_H2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[1]*100.)
         self.doubleSpinBox_N2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[2]*100.)
@@ -279,30 +284,32 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.spinBox_planet_T.setValue(self.forwardmodel.params.planet_temp)
         self.doubleSpinBox_planet_mass.setValue(self.forwardmodel.params.planet_mass/MJUP)
         self.doubleSpinBox_planet_surf_pressure.setValue(self.forwardmodel.params.tp_max_pres/1.e6)
-        self.doubleSpinBox_clouds_lower.setValue(self.forwardmodel.params.in_cld_pressure[0])
-        self.doubleSpinBox_clouds_upper.setValue(self.forwardmodel.params.in_cld_pressure[1])
         self.doubleSpinBox_star_radius.setValue(self.forwardmodel.params.star_radius/RSOL)
         self.spinBox_star_T.setValue(self.forwardmodel.params.star_temp)
         self.doubleSpinBox_max_wav.setValue(self.params.gen_wavemax)
         self.doubleSpinBox_min_wav.setValue(self.params.gen_wavemin)
         self.spinBox_resolution.setValue(self.params.gen_spec_res)
-
         self.checkBox_induced_absorption.setCheckState(self.forwardmodel.params.in_include_cia)
+
+        self.checkBox_clouds.setCheckState(self.forwardmodel.params.in_include_cld)
+        self.lineEdit_clouds_lower.setText(str(self.forwardmodel.params.in_cld_pressure[0]))
+        self.lineEdit_clouds_upper.setText(str(self.forwardmodel.params.in_cld_pressure[1]))
+
 
     def event_status_changed(self):
 
-        self.forwardmodel.atmosphere.absorbing_gases_X[0] =  self.doubleSpinBox_H2O.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[1] = self.doubleSpinBox_HCN.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[2] = self.doubleSpinBox_CH4.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[3] = self.doubleSpinBox_CO2.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[4] = self.doubleSpinBox_CO.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[5] = self.doubleSpinBox_NH3.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[6] = self.doubleSpinBox_SiO.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[7] = self.doubleSpinBox_TiO.value() / 100.
-        self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_VO.value() / 100.
-        #self.forwardmodel.atmosphere.absorbing_gases_X[8] = self.doubleSpinBox_NO.value() / 100.
-        #self.forwardmodel.atmosphere.absorbing_gases_X[9] = self.doubleSpinBox_H2S.value() / 100.
-        #self.forwardmodel.atmosphere.absorbing_gases_X[10] = self.doubleSpinBox_C2H2.value() / 100.
+        self.forwardmodel.atmosphere.absorbing_gases_X[0] =  float(self.lineEdit_H2O.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[1] = float(self.lineEdit_HCN.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[2] = float(self.lineEdit_CH4.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[3] = float(self.lineEdit_CO2.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[4] = float(self.lineEdit_CO.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[5] = float(self.lineEdit_NH3.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[6] = float(self.lineEdit_SiO.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[7] = float(self.lineEdit_TiO.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[8] = float(self.lineEdit_VO.text())
+        #self.forwardmodel.atmosphere.absorbing_gases_X[8] = float(self.lineEdit_NO.text())
+        #self.forwardmodel.atmosphere.absorbing_gases_X[9] = float(self.lineEdit_H2S.text())
+        #self.forwardmodel.atmosphere.absorbing_gases_X[10] = float(self.lineEdit_C2H2.text())
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
         self.forwardmodel.atmosphere.inactive_gases_X[0] = self.doubleSpinBox_He.value() / 100.
         self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.
@@ -331,6 +338,17 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.rho = self.forwardmodel.atmosphere.get_rho()
         self.forwardmodel.params.star_radius = self.doubleSpinBox_star_radius.value() * RSOL
         self.forwardmodel.params.in_include_Rayleigh = self.checkBox_rayleigh.isChecked()
+
+        self.forwardmodel.params.in_include_cld = self.checkBox_clouds.isChecked()
+        if self.forwardmodel.params.in_include_cld:
+            self.forwardmodel.Cld_sig = self.forwardmodel.get_cloud_sig()
+        else:
+           self.forwardmodel.Cld_sig = zeros((self.forwardmodel.nlambda)) # unused but needed to cast to cpp code
+
+
+
+        self.forwardmodel.params.in_cld_pressure[0] = float(self.lineEdit_clouds_lower.text())
+        self.forwardmodel.params.in_cld_pressure[1] = float(self.lineEdit_clouds_upper.text())
 
         if self.checkBox_rayleigh.isChecked():
             self.forwardmodel.Rsig = self.forwardmodel.get_Rsig()

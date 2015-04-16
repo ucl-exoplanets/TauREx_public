@@ -98,13 +98,17 @@ class parameters(base):
             self.in_spectrum_file = False
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
-        self.in_use_TP_file         = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
-        self.in_TP_file             = self.getpar('Input','TP_file') # todo temporary param
+        self.in_use_TP_file        = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
+        self.in_TP_file            = self.getpar('Input','TP_file') # todo temporary param
+
         self.in_abs_path           = self.getpar('Input','abs_path')
+        self.in_use_P_broadening   = self.getpar('Input','use_P_broadening', 'bool')
+        self.in_abs_path_P         = self.getpar('Input','abs_path_P')
         self.in_convert2microns    = self.getpar('Input','convert2microns', 'bool')
         self.in_abs_files          = self.getpar('Input','__legacy__abs_files')
         
         self.in_tempres            = self.getpar('Input','tempres', 'float')
+        self.in_presres            = self.getpar('Input','presres', 'float')
         self.in_star_path          = self.getpar('Input','star_path')
         self.in_include_rad        = self.getpar('Input','include_rad', 'bool')
         self.in_rad_file           = self.getpar('Input','rad_file')
@@ -189,6 +193,7 @@ class parameters(base):
             self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
             self.fit_fix_inactive      = self.getpar('Fitting', 'fix_inactive', 'bool')
             self.fit_couple_mu         = self.getpar('Fitting', 'couple_mu', 'bool')
+            self.fit_X_log             = self.getpar('Fitting', 'X_log', 'bool')
             self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
             self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
             self.fit_radius_up         = self.getpar('Fitting','radius_up', 'float')  # in RJUP

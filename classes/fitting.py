@@ -120,7 +120,7 @@ class fitting(base):
         self.NEST = False
 
         #DEBUG COUNTER
-        self.db_count = 0
+        self.db_count = 1000000000
 
     ##@profile
     def build_fit_params(self):
@@ -153,19 +153,26 @@ class fitting(base):
 
             # always fit for absorbing gases
             for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-                self.fit_params.append(np.log10(self.forwardmodel.atmosphere.absorbing_gases_X[idx]))
-                self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
+                if self.params.fit_X_log: # fit in log space
+                    self.fit_params.append(np.log10(self.forwardmodel.atmosphere.absorbing_gases_X[idx]))
+                    self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
+                else: # fit in linear space
+                    self.fit_params.append(self.forwardmodel.atmosphere.absorbing_gases_X[idx])
+                    self.fit_bounds.append((self.params.fit_X_low, self.params.fit_X_up))
                 self.fit_params_names.append(gasname)
                 count_X += 1
             if not self.params.fit_fix_inactive: # inactive gases can be fixed
                 for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-                    self.fit_params.append(np.log10(self.forwardmodel.atmosphere.inactive_gases_X[idx]))
-                    self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
+                    if self.params.fit_X_log: # fit in log space
+                        self.fit_params.append(np.log10(self.forwardmodel.atmosphere.inactive_gases_X[idx]))
+                        self.fit_bounds.append((np.log10(self.params.fit_X_low), np.log10(self.params.fit_X_up)))
+                    else: # fit in linear space
+                        self.fit_params.append(self.forwardmodel.atmosphere.inactive_gases_X[idx])
+                        self.fit_bounds.append((self.params.fit_X_low, self.params.fit_X_up))
                     self.fit_params_names.append(gasname)
                     count_X += 1
 
         self.fit_X_nparams = count_X # set the number of fitted mixing ratios
-
 
         ##########################################################################
         # TP profile parameters
@@ -356,11 +363,17 @@ class fitting(base):
 
             # set mixing ratios of absorbing and inactive gases
             for idx, gasname in enumerate(self.forwardmodel.atmosphere.absorbing_gases):
-                self.forwardmodel.atmosphere.absorbing_gases_X[idx] = power(10, fit_params[count])
+                if self.params.fit_X_log: # fit in log space
+                    self.forwardmodel.atmosphere.absorbing_gases_X[idx] = power(10, fit_params[count])
+                else:
+                    self.forwardmodel.atmosphere.absorbing_gases_X[idx] = fit_params[count]
                 count += 1
             if not self.params.fit_fix_inactive:
                 for idx, gasname in enumerate(self.forwardmodel.atmosphere.inactive_gases):
-                    self.forwardmodel.atmosphere.inactive_gases_X[idx] = power(10, fit_params[count])
+                    if self.params.fit_X_log: # fit in log space
+                        self.forwardmodel.atmosphere.inactive_gases_X[idx] = power(10, fit_params[count])
+                    else:
+                        self.forwardmodel.atmosphere.inactive_gases_X[idx] = fit_params[count]
                     count += 1
 
         # @todo careful, next line won't work if preselector is running. Fix preselector!
@@ -435,9 +448,9 @@ class fitting(base):
         res = (data - model_binned) / datastd
         res = sum(res*res)
         #
-        # ion()
-        # figure(1)
-        # clf()
+        ion()
+        figure(1)
+        clf()
         # plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
         # gca().invert_yaxis()
         # xlabel('Temperature')
@@ -446,7 +459,7 @@ class fitting(base):
         # draw()
         # figure(2)
         # clf()
-        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        #errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
         # plot(self.data.spectrum[:,0], model_binned)
         # xlabel('Wavelength (micron)')
         # ylabel('Transit depth')
@@ -461,8 +474,8 @@ class fitting(base):
         #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
         #     self.forwardmodel.atmosphere.absorbing_gases_X, \
         #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
-
-        return res
+        #
+        # return res
 
     ###############################################################################
     #simplex downhill algorithm

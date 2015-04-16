@@ -4,14 +4,10 @@ import numpy as np
 from ConfigParser import SafeConfigParser
 import math
 
-AMU   = 1.660538921e-27 #atomic mass to kg
+sys.path.append('./classes')
+import parameters
+from parameters import *
 
-parser = optparse.OptionParser()
-parser.add_option('-i', '--input',
-                  dest="grid_folder",
-)
-
-options, remainder = parser.parse_args()
 
 def weighted_avg_and_std(values, weights):
     """
@@ -24,83 +20,128 @@ def weighted_avg_and_std(values, weights):
     return (average, math.sqrt(variance))
 
 
-params_clr = ['1H2-16O_CLR', '12C-1H4_CLR', '14N-1H3_CLR', '12C-16O2_CLR', 'H2_CLR', 'He_CLR', 'N2_CLR']
-params_gas = ['1H2-16O', '12C-1H4', '14N-1H3', '12C-16O2', 'H2', 'He', 'N2']
-params_others = ['T', 'P0', 'Radius', 'coupled_mu']
+RSOL  = 6.955e8         #stellar radius to m
+RJUP  = 6.9911e7        #jupiter radius to m
+MJUP  = 1.898e27        #jupiter mass to kg
+REARTH= 6.371e3         #earth radius to m
+AU    = 1.49e11         #semi-major axis (AU) to m
+AMU   = 1.660538921e-27 #atomic mass to kg
 
+parser = optparse.OptionParser()
+parser.add_option('-p', '--parfile',
+                  dest="param_filename",
+                  help='Parameter filename')
+options, remainder = parser.parse_args()
 
-print options.grid_folder
+#initialising parameters object
+params = parameters(options.param_filename)
 
-for res in os.listdir(options.grid_folder):
-    if os.path.isdir(os.path.join(options.grid_folder, res)):
-        for error in os.listdir(os.path.join(options.grid_folder, res)):
-            if os.path.isdir(os.path.join(options.grid_folder, res, error)):
-                filename = os.path.join(options.grid_folder, res, error, 'NEST_out.db')
+# load first NEST_out to get fit params
+for res in os.listdir(params.out_path):
+    if os.path.isdir(os.path.join(params.out_path, res)):
+        for error in os.listdir(os.path.join(params.out_path, res)):
+            if os.path.isdir(os.path.join(params.out_path, res, error)):
+                filename = os.path.join(params.out_path, res, error, 'NEST_out.db')
+                if os.path.isfile(filename):
+                    out = pickle.load(open(filename, 'rb'))
+                    break
+        break
+
+# load a few things
+fit_params = out[0]['fit_params']
+X_names = params.planet_molec
+X_in = params.planet_mixing
+params_others = ['T', 'P0', 'Radius', 'mu', 'coupled_mu']
+
+# print column labels
+string = 'Resolution	Error (ppm)	'
+for param in X_names:
+    string += '%s	E(%s)	' % (param, param)
+for param1 in X_names:
+    for param2 in X_names:
+        if param1 != param2:
+            string += '%s/%s	E(%s/%s)	' % (param1, param2, param1, param2)
+for param in out[0]['fit_params']:
+    if not param in X_names:
+        string += '%s	E(%s)	' % (param, param)
+
+print string
+
+# print input values
+string = '		'
+for idx, val in enumerate(X_names):
+    string += '%s		' % (X_in[idx])
+for idx1, val1 in enumerate(X_names):
+    for idx2, val2 in enumerate(X_names):
+        if val1 != val2:
+            string += '%.4e		' % (X_in[idx1]/X_in[idx2])
+for param in out[0]['fit_params']:
+    if not param in X_names:
+        if param == 'T':
+            string += '%s		' % (params.planet_temp)
+        if param == 'Radius':
+            string += '%s		' % (params.planet_radius/RJUP)
+        if param == 'P0':
+            string += '%s		' % (params.tp_max_pres)
+        if param == 'mu':
+            string += '%s		' % (params.planet_mu/AMU)
+print string
+
+# print retrieval solutions
+for res in os.listdir(params.out_path):
+    if os.path.isdir(os.path.join(params.out_path, res)):
+        for error in os.listdir(os.path.join(params.out_path, res)):
+            if os.path.isdir(os.path.join(params.out_path, res, error)):
+                filename = os.path.join(params.out_path, res, error, 'NEST_out.db')
                 if os.path.isfile(filename):
 
                     out = pickle.load(open(filename, 'rb'))
 
                     for solution in out:
-                        string = '%s	%s	' % (res, error)
 
-                        # for param in params_gas:
-                        #     value = solution['fit_params'][param]['value']
-                        #     std = weighted_avg_and_std(solution['fit_params'][param]['trace'], solution['weights'])
-                        #     string += '%.4e	%.4e	' % (value, std)
+                        weights = solution['weights']
 
-                        for param in params_gas:
-                            value = np.power(10, solution['fit_params'][param]['value'])
-                            std = weighted_avg_and_std(np.power(10,solution['fit_params'][param]['trace']), solution['weights'])[1]
-                            string += '%.4e	%.4e	' % (value*100, std*100)
+                        string = '%s	%s	' % (res[1:], error[1:])
 
-                        # H20/CH4
-                        value = np.power(10, solution['fit_params']['1H2-16O']['value']-solution['fit_params']['12C-1H4']['value'])
-                        std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']-solution['fit_params']['12C-1H4']['trace']),
-                                                   solution['weights'])[1]
-                        string += '%.4e	%.4e	' % (value, std)
-
-                        # H2O/NH3
-                        value = np.power(10, solution['fit_params']['1H2-16O']['value']-solution['fit_params']['14N-1H3']['value'])
-                        std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']-solution['fit_params']['14N-1H3']['trace']),
-                                                   solution['weights'])[1]
-                        string += '%.4e	%.4e	' % (value, std)
-
-                        # CH4/NH3
-                        value = np.power(10, solution['fit_params']['12C-1H4']['value']-solution['fit_params']['14N-1H3']['value'])
-                        std = weighted_avg_and_std(np.power(10, solution['fit_params']['12C-1H4']['trace']-solution['fit_params']['14N-1H3']['trace']),
-                                                   solution['weights'])[1]
-                        string += '%.4e	%.4e	' % (value, std)
-
-                        #He+H2+N2
-                        value = np.power(10, solution['fit_params']['He']['value'])+ np.power(10, solution['fit_params']['H2']['value']) + \
-                                np.power(10, solution['fit_params']['N2']['value'])
-                        std = weighted_avg_and_std(np.power(10, solution['fit_params']['He']['trace']) +
-                                                   np.power(10, solution['fit_params']['H2']['trace']) +
-                                                   np.power(10, solution['fit_params']['N2']['trace']),
-                                                   solution['weights'])[1]
-                        string += '%.4e	%.4e	' % (value*100, std*100)
-
-                        # sum X
-                        value = np.power(10, solution['fit_params']['1H2-16O']['value']) + \
-                                np.power(10, solution['fit_params']['12C-1H4']['value']) + \
-                                np.power(10, solution['fit_params']['14N-1H3']['value']) + \
-                                np.power(10, solution['fit_params']['12C-16O2']['value'])
-                        std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']) +
-                                                   np.power(10, solution['fit_params']['12C-1H4']['trace']) +
-                                                   np.power(10, solution['fit_params']['14N-1H3']['trace']) +
-                                                   np.power(10, solution['fit_params']['12C-16O2']['trace']),
-                                                   solution['weights'])[1]
-                        string += '%.4e	%.4e	' % (value*100, std*100)
-
-                        for param in params_others:
-                            if not param in solution['fit_params']:
-                                string += 'fix	fix	'
+                        # print molecules absolute abundances
+                        for param in X_names:
+                            if params.fit_X_log:
+                                value = np.power(10, solution['fit_params'][param]['value'])
+                                std = np.log(10) * value * solution['fit_params'][param]['std']
                             else:
-                                if param == 'coupled_mu':
+                                value = solution['fit_params'][param]['value']
+                                std = solution['fit_params'][param]['std']
+                            string += '%.4e	%.4e	' % (value, std)
+
+                        # print molecules abundance ratios
+                        for param1 in X_names:
+                            for param2 in X_names:
+                                if param1 != param2:
+                                    if params.fit_X_log:
+                                        value1 = np.power(10, solution['fit_params'][param1]['value'])
+                                        value2 = np.power(10, solution['fit_params'][param2]['value'])
+                                        std1 = np.log(10) * value1 * solution['fit_params'][param1]['std']
+                                        std2 = np.log(10) * value2 * solution['fit_params'][param2]['std']
+                                    else:
+                                        value1 = solution['fit_params'][param1]['value']
+                                        value2 = solution['fit_params'][param2]['value']
+                                        std1 = solution['fit_params'][param1]['std']
+                                        std2 = solution['fit_params'][param2]['std']
+
+                                    value = value1/value2
+                                    std = value * np.sqrt((std1/value1)**2.+(std2/value2)**2.)
+
+                                    string += '%.4e	%.4e	' % (value, std)
+
+                        # print other params
+                        for param in solution['fit_params']:
+                            if not param in X_names:
+                                if param == 'mu':
                                     value = solution['fit_params'][param]['value']/AMU
-                                    std = weighted_avg_and_std(solution['fit_params'][param]['trace'], solution['weights'])[1]/AMU
+                                    std = solution['fit_params'][param]['std']/AMU
                                 else:
                                     value = solution['fit_params'][param]['value']
-                                    std = weighted_avg_and_std(solution['fit_params'][param]['trace'], solution['weights'])[1]
+                                    std = solution['fit_params'][param]['std']
                                 string += '%.4e	%.4e	' % (value, std)
+
                         print string

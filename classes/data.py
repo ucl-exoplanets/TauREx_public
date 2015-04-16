@@ -24,6 +24,8 @@ from numpy import *
 from pylab import *
 from StringIO import StringIO
 from scipy.interpolate import interp1d
+from scipy import interpolate
+
 import library_general as libgen
 import library_emission as libem
 import logging
@@ -50,7 +52,8 @@ class data(base):
 
         #converting absorption cross-sectinos from cm^-1 to microns
         if params.in_convert2microns:
-            libgen.convert2microns(params.in_abs_path+'*')
+            libgen.convert2microns(params.in_abs_path)
+            libgen.convert2microns(params.in_abs_path_P)
 
         #reading in spectrum data to be fitted
         if isinstance(spectrum, (np.ndarray, np.generic)):
@@ -118,7 +121,11 @@ class data(base):
 
         else: # not running in GUI mode
             #reading in absorption coefficient data
-            self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
+
+            if self.params.in_use_P_broadening:
+                self.sigma_dict_pres, self.sigma_templist, self.sigma_preslist  = self.build_sigma_dic_pressure()
+            else:
+                self.sigma_dict  = self.build_sigma_dic(tempstep=params.in_tempres)
 
         # #reading in other files if specified in parameter file
         if params.in_include_rad:
@@ -228,10 +235,15 @@ class data(base):
         #sorting data along ascending first column
         out = out[argsort(out[:,0]),:]
 
-        #interpolating to specgrid
+        #bin to specgrid
         if interpolate:
             interpflux = interp(self.specgrid, out[:,0], out[:,1])
             out = transpose(vstack((self.specgrid, interpflux)))
+
+            # bin_grid, bin_grid_idx = self.get_specbingrid(self.specgrid, out[:,0])
+            # binnedvalues = np.asarray([out[:,1][bin_grid_idx == i].mean() for i in xrange(1,len(bin_grid))])
+            # binnedvalues[np.isnan(binnedvalues)] = 0
+            # out = transpose(vstack((self.specgrid, binnedvalues)))
 
         return out
 
@@ -250,8 +262,6 @@ class data(base):
         for molecule in mollist:
 
             logging.info('Load sigma array for molecule %s' % molecule)
-
-
 
             moldict[molecule] ={}
 
@@ -300,6 +310,84 @@ class data(base):
 
         return sigma_dict
 
+
+    def build_sigma_dic_pressure(self, tempstep=50, presstep=0.1):
+
+        # building temperature and pressure dependent sigma_array
+        # pressstep in bar
+        # assume uniform temperature pressure grids for each molecule
+        # (each temperature has the same pressures, and viceversa)
+
+        import pickle
+        #
+        # mollist = self.params.planet_molec
+        # moldict = {}
+        #
+        # # initialise pressure and temperature lists
+        # templist = None
+        # preslist = None
+        #
+        # for molecule in mollist:
+        #
+        #     logging.info('Load sigma array for molecule %s' % molecule)
+        #     molpath = os.path.join(self.params.in_abs_path_P, molecule)
+        #     absfilelist, templist_tmp, preslist_tmp = libgen.find_absfiles_pressure(molpath, molecule)
+        #
+        #     if (templist == None or templist == templist_tmp) and (preslist == None or preslist == preslist_tmp):
+        #         templist = templist_tmp
+        #         preslist = preslist_tmp
+        #     else:
+        #         logging.error('Cannot build sigma array. The cross sections are not computed for uniform grid of '
+        #                       'pressures and temperatures')
+        #         exit()
+        #
+        #     sigma_3d = np.zeros((len(templist), len(preslist), self.nspecgrid))
+        #     for idxtemp, valtemp in enumerate(templist):
+        #         for idxpres, valpres in enumerate(preslist):
+        #             sigma_3d[idxtemp,idxpres,:] = self.readABSfiles(extfilelist=[absfilelist[valtemp][valpres]], # load only one file
+        #                                                             extpath=molpath,
+        #                                                             interpolate2grid=True,
+        #                                                             outputwavegrid = False)[0]
+        #
+        #
+        #     # todo interpolation happens during fitting
+        #     #build new temperature and pressure grids
+        #     # tempgrid = np.arange(np.min(templist), np.max(templist), tempstep).tolist()
+        #     # tempgrid.append(np.max(templist))
+        #     # presgrid = np.arange(np.min(preslist), np.max(preslist), presstep).tolist()
+        #     # presgrid.append(np.max(preslist))
+        #     #
+        #     # sigma_3d_reinterp = np.zeros((len(tempgrid), len(presgrid), self.nspecgrid))
+        #     # for i in range(self.nspecgrid): # loop  wavelengths
+        #     #     sigmainterp = interpolate.interp2d(preslist, templist, sigma_3d[:,:,i], kind='linear')
+        #     #     sigma_3d_reinterp[:,:,i] = sigmainterp(tempgrid, presgrid).transpose()
+        #     # moldict[molecule] = sigma_3d_reinterp
+        #
+        #     moldict[molecule] = sigma_3d
+        #
+        # # build sigma dictionary (temperature and pressure)
+        # sigma_dict = {}
+        # # sigma_dict['tempgrid'] = tempgrid
+        # # sigma_dict['presgrid'] = presgrid
+        # tempgrid = np.sort(templist)
+        # presgrid = np.sort(preslist)
+        #
+        # for idxtemp, valtemp in enumerate(tempgrid):
+        #     if not valtemp in sigma_dict:
+        #         sigma_dict[valtemp] = {}
+        #     for idxpres, valpres in enumerate(presgrid):
+        #         if not valpres in sigma_dict[valtemp]:
+        #             sigma_dict[valtemp][valpres] = np.zeros((len(mollist), self.nspecgrid))
+        #         j = 0
+        #         for molecule in mollist:
+        #             sigma_dict[valtemp][valpres][j,:] = moldict[molecule][idxtemp,idxpres,:]
+        #             j += 1
+
+        sigma_dict, tempgrid, presgrid = pickle.load(open('/data/sigma_dict.db'))
+        # dump = sigma_dict, templist, preslist
+        # pickle.dump(dump, open('/data/sigma_dict.db', 'wb'))
+        return sigma_dict, np.sort(tempgrid), np.sort(presgrid)
+
     #@profile
     def readABSfiles(self,extfilelist=None, extpath= None,interpolate2grid=True,outputwavegrid=False):
     #reading in all absorption coefficient files and interpolating them to wavelength grid
@@ -327,10 +415,12 @@ class data(base):
                 raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
                 exit()
 
-            out, wave = self.__readABSfiles_sub(path=self.params.in_abs_path,filelist=abslist, interpolate2grid=interpolate2grid,num=self.ngas)
+            out, wave = self.__readABSfiles_sub(path=self.params.in_abs_path, filelist=abslist,
+                                                interpolate2grid=interpolate2grid, num=self.ngas)
 
         else:
-            out, wave = self.__readABSfiles_sub(path=extpath,filelist=extfilelist, interpolate2grid=interpolate2grid,num=len(extfilelist))
+            out, wave = self.__readABSfiles_sub(path=extpath, filelist=extfilelist,
+                                                interpolate2grid=interpolate2grid,num=len(extfilelist))
 
         if outputwavegrid:
             return out, wave
@@ -339,19 +429,20 @@ class data(base):
 
 
     #@profile
-    def __readABSfiles_sub(self, path, filelist, interpolate2grid,num):
+    def __readABSfiles_sub(self, path, filelist, interpolate2grid, num):
+
         if interpolate2grid:
             out = np.zeros((num,self.nspecgrid))
-            wave = np.transpose(self.readfile(path+filelist[0], interpolate=True)[:,0])
+            wave = np.transpose(self.readfile(os.path.join(path, filelist[0]), interpolate=True)[:,0])
         else:
-            tmp = self.readfile(path+filelist[0], interpolate=False)
+            tmp = self.readfile(os.path.join(path, filelist[0]), interpolate=False)
             ABSsize = len(tmp[:,0])
             out = np.zeros((num,ABSsize))
             wave = np.transpose(tmp[:,0])
 
         for i in range(num):
             # print filelist[i]
-            out[i,:] = np.transpose(self.readfile(path+filelist[i], interpolate=interpolate2grid)[:,1])* 1e-4 #converting cm^2 to m^2
+            out[i,:] = np.transpose(self.readfile(os.path.join(path, filelist[i]), interpolate=interpolate2grid)[:,1])* 1e-4 #converting cm^2 to m^2
 
         return out, wave
 

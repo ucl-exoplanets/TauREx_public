@@ -52,13 +52,6 @@ class transmission(base):
 
         self.atmosphere = atmosphere
 
-        #cloud specific parameters
-        if self.params.in_include_cld:
-            self.cld_m = self.params.in_cld_m #refractive index for cloud cross sections
-            self.cld_a = self.params.in_cld_a #cloud particle size (microns)
-            self.cld_upbound = self.params.in_cld_pressure[1] #pressure (in bar) of upper pressure/lower altitude cloud bound
-            self.cld_lowbound = self.params.in_cld_pressure[0] #pressure (in bar) of lower pressure/upper altitude cloud bound
-        
         if usedatagrid:
             #use wavelengthgrid of data or internal specgrid defined in data class
             self.lambdagrid = self.data.wavegrid
@@ -123,17 +116,32 @@ class transmission(base):
     def get_cloud_sig(self):
 
         #calculating could cross sections
-        a = (128.0* pi**5 * self.cld_a**6)
+        a = (128.0* pi**5 * self.params.in_cld_a**6)
         b = (3.0 * self.lambdagrid**4)
-        c = ((self.cld_m**2 -1.0)/(self.cld_m**2 +2.0))**2
+        c = ((self.params.in_cld_m**2 -1.0)/(self.params.in_cld_m**2 +2.0))**2
 
         return a / b * c
 
-    #@profile
     def get_sigma_array(self, temperature):
         # getting sigma array from sigma_dic for given temperature
-
         return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
+
+    def get_sigma_array_pressure(self):
+
+        # returns flatteened sigma array from sigma_dict for all temperatures, pressures, molecules.
+
+        sigma_dict_arr = np.zeros((len(self.data.sigma_templist),
+                                   len(self.data.sigma_preslist),
+                                   len(self.params.planet_molec),
+                                   self.nlambda))
+
+        for idxtemp, valtemp in enumerate(self.data.sigma_templist):
+            for idxpres, valpres in enumerate(self.data.sigma_preslist):
+                for idxmol, valmol in enumerate(self.params.planet_molec):
+                    sigma_dict_arr[idxtemp, idxpres, idxmol, :] = \
+                        self.data.sigma_dict_pres[valtemp][valpres][idxmol]
+
+        return sigma_dict_arr.flatten()
 
     def get_sigma_array_c(self):
 
@@ -199,12 +207,28 @@ class transmission(base):
         #selecting correct sigma_array for temperature array
         if len(np.unique(temperature)) == 1:
             # constant T with altitude
-            sigma_array_2d = self.get_sigma_array(temperature[0])
-            sigma_array_3d = np.zeros(0)
-            cn_sig_temp= C.c_int(0)
             cconst_temp = C.c_int(1)
+            if self.params.in_use_P_broadening:
+
+                sigma_array_2d = np.zeros(0)
+                sigma_array_3d = np.zeros(0)
+                cn_sig_temp= C.c_int(0)
+
+                cpressure_broadening = C.c_int(1)
+                cflattened_sigma_arr =  cast2cpp(self.get_sigma_array_pressure())
+                csigma_templist = cast2cpp(self.data.sigma_templist)
+                csigma_preslist = cast2cpp(self.data.sigma_preslist)
+                cnsigma_templist = C.c_int(len(self.data.sigma_templist))
+                cnsigma_preslist = C.c_int(len(self.data.sigma_preslist))
+                cpressure_array = cast2cpp(self.atmosphere.P)
+                ctemperature = C.c_double(temperature[0])
+
+            else:
+                sigma_array_2d = self.get_sigma_array(temperature[0])
+                sigma_array_3d = np.zeros(0)
+                cn_sig_temp= C.c_int(0)
         else:
-            # varuable T with altitude. Get 3d sigma array
+            # variable T with altitude. Get 3d sigma array
             sigma_array_3d, tempgrid = self.get_sigma_array_c()
             sigma_array_3d = sigma_array_3d.flatten()
             cn_sig_temp= C.c_int(len(tempgrid))
@@ -239,8 +263,8 @@ class transmission(base):
         cCld_sig = cast2cpp(self.Cld_sig)
         if self.params.in_include_cld:
             cInclude_cld = C.c_int(1)
-            cCld_lowbound = C.c_double(self.cld_lowbound)
-            cCld_upbound = C.c_double(self.cld_upbound)
+            cCld_lowbound = C.c_double(self.params.in_cld_pressure[0])
+            cCld_upbound = C.c_double(self.params.in_cld_pressure[1])
         else:
             cInclude_cld = C.c_int(0)
             cCld_lowbound = C.c_double(0)
@@ -255,7 +279,10 @@ class transmission(base):
         #running c++ path integral
         cpath_int(csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
                   clinecount,cnlayers,cn_gas,cn_sig_temp,cInclude_cld,cCld_lowbound,\
-                  cCld_upbound,cP_bar,cCld_sig,C.c_void_p(absorption.ctypes.data))
+                  cCld_upbound,cP_bar,cCld_sig,\
+                  cpressure_broadening, cflattened_sigma_arr, csigma_templist, csigma_preslist,\
+                  cnsigma_templist, cnsigma_preslist, cpressure_array, ctemperature,\
+                  C.c_void_p(absorption.ctypes.data))
 
         out = zeros((self.nlambda))
         out[:] = absorption
@@ -345,10 +372,10 @@ class transmission(base):
 
                 #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
                 if self.params.in_include_cld:
-                    if P_bar[k+j] < self.cld_upbound and P_bar[k+j] > self.cld_lowbound:
+                    if P_bar[k+j] < self.params.in_cld_pressure[1] and P_bar[k+j] > self.params.in_cld_pressure[0]:
                         # = log(cloud density), assuming linear decrease with decreasing log pressure
                         # following Ackerman & Marley (2001), Fig. 6
-                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.cld_lowbound),np.log(self.cld_upbound),-6.0,-1.0)
+                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.params.in_cld_pressure[0]),np.log(self.params.in_cld_pressure[1]),-6.0,-1.0)
                         cld_tau[j] += ( self.Cld_sig[wl] * (dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
 
                 #adding all taus together

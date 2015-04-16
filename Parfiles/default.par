@@ -41,6 +41,9 @@ TP_file = None
 #Path of ExoMol cross section files folder
 abs_path = Input/crosssections/
 
+use_P_broadening = False
+abs_path_P = Input/crosssections_pressure/
+
 #run ExoMol cross section conversion from wavenumbers to microns
 convert2microns = True
 
@@ -50,7 +53,10 @@ convert2microns = True
 __legacy__abs_files = h2o_1500K.abs
 
 #temperature grid resolution (K)
-tempres = 1.0
+tempres = 100
+
+#pressure grid resolution (bar)
+presres = 0.1
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
 star_path = Input/Star_spectra
@@ -227,7 +233,7 @@ var_mix = True
 
 #TP profile type to be selected (only sets for emission, tranmission = isothermal)
 #available profiles are: isothermal, guillot, hybrid, 2point, 3point
-profile_type = guillot
+profile_type = isothermal
 
 #Correlation length of TP profile for Rodgers2000 and Hybrid 
 corr_length = 5.0
@@ -261,6 +267,8 @@ fix_mu = False
 fix_P0 = False
 fix_inactive = True
 
+# fit mixing ratios in log space
+X_log = True
 
 # if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
 # if False, mu is either fitted (if fix_mu = False) or kept fixed (see Planet > mu)

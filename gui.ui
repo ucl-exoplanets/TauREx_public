@@ -64,7 +64,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Atmospheric composition (in %)</string>
+      <string>Atmospheric composition</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -108,45 +108,10 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_H2O">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_CH4">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_CO">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_CO2">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
       <item row="4" column="0">
        <widget class="QLabel" name="label_36">
         <property name="text">
          <string>NH3</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_NH3">
-        <property name="decimals">
-         <number>4</number>
         </property>
        </widget>
       </item>
@@ -157,12 +122,23 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lineEdit_H2O"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="lineEdit_CH4"/>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEdit_CO"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEdit_CO2"/>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="lineEdit_NH3"/>
+      </item>
       <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_H2S">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
+       <widget class="QLineEdit" name="lineEdit_H2S"/>
       </item>
      </layout>
     </widget>
@@ -207,44 +183,6 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_SiO">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_VO">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_NO">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_HCN">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_TiO">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label_8">
         <property name="text">
@@ -259,12 +197,23 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lineEdit_TiO"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="lineEdit_SiO"/>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEdit_VO"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEdit_NO"/>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="lineEdit_HCN"/>
+      </item>
       <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_C2H2">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-       </widget>
+       <widget class="QLineEdit" name="lineEdit_C2H2"/>
       </item>
      </layout>
     </widget>
@@ -550,24 +499,10 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_clouds_lower">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-        <property name="maximum">
-         <double>1000.000000000000000</double>
-        </property>
-       </widget>
+       <widget class="QLineEdit" name="lineEdit_clouds_lower"/>
       </item>
       <item row="1" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_clouds_upper">
-        <property name="decimals">
-         <number>4</number>
-        </property>
-        <property name="maximum">
-         <double>1000.000000000000000</double>
-        </property>
-       </widget>
+       <widget class="QLineEdit" name="lineEdit_clouds_upper"/>
       </item>
      </layout>
     </widget>

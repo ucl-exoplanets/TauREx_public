@@ -22,200 +22,216 @@
 #       
 ###########################################################
 
+
 #loading libraries     
-import numpy, pylab, sys, os, optparse, time
-from numpy import * #nummerical array library 
-from pylab import * #science and plotting library for python
+import sys, os, optparse, time
+import numpy as np #nummerical array library 
+import pylab as pl#science and plotting library for python
 from ConfigParser import SafeConfigParser
-
-###start of profiling code
-# import cProfile, pstats, StringIO
-# pr = cProfile.Profile()
-# pr.enable()
-# starttime = time.clock()
-
-
-#checking for multinest library
-global multinest_import 
-try: 
-    with os.devnull as sys.stdout: 
-        import pymultinest
-        multinest_import = True
-except:
-    multinest_import = False
 
 #loading classes
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,output,fitting,atmosphere,data,preselector
+import parameters,emission,transmission,fitting,atmosphere,data,preselector
 from parameters import *
 from emission import *
 from transmission import *
-from output import *
 from fitting import *
 from atmosphere import *
 from data import *
-from preselector import *
+
 
 #loading libraries
-import library_emission, library_transmission, library_general, library_plotting
+import library_emission, library_transmission, library_general
 from library_emission import *
 from library_transmission import *
 from library_general import *
-from library_plotting import *
-
-AMU   = 1.660538921e-27 #atomic mass to kg
-
-parser = optparse.OptionParser()
-parser.add_option('-p', '--parfile',
-                  dest="param_filename",
-                  default="exonest.par",
-)
-parser.add_option('-r', '--res',
-                  dest="resolution",
-                  default=1000,
-)
-parser.add_option('-n', '--noise',
-                  dest="noise",
-                  default=0,
-)
-parser.add_option('-e', '--error',
-                  dest="error",
-                  default=50,
-)
-parser.add_option('-T', '--T_profile',
-                  dest="tp_profile",
-                  default=0,
-)
-parser.add_option('-v', '--verbose',
-                  dest="verbose",
-                  default=True,
-                  action="store_true",
-)
-options, remainder = parser.parse_args()
-
-#####################################################################
-
-#initialising parameters object
-params = parameters(options.param_filename)
-
-# set model resolution to 1000
-params.gen_spec_res = 1000
-params.gen_manual_waverange = True
-
-#initialising data object
-dataob = data(params)
-
-#initialising TP profile object
-atmosphereob = atmosphere(dataob)
-
-## Apply TP profile
-def movingaverage(values,window):
-    weigths = np.repeat(1.0, window)/window
-    smas = np.convolve(values, weigths, 'valid')
-#     smas2 = np.convolve(smas[::-1],weigths,'valid')
-    return smas #smas2[::-1] # as a numpy array
-if int(options.tp_profile) == 1:
-    logging.info('Applying custom TP profile')
-    MAX_P = atmosphereob.P[0]
-    MIN_P = atmosphereob.P[-1]
-    smooth_window = 5 #smoothing window size as percent of total data
-    Pnodes = [MAX_P, 1e6, 1e4, MIN_P]
-    Tnodes = [800,800, 350,350]
-    TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
-    #smoothing T-P profile
-    wsize = atmosphereob.nlayers*(smooth_window/100.0)
-    if (wsize %2 == 0):
-        wsize += 1
-    TP_smooth = movingaverage(TP,wsize)
-    border = np.int((len(TP) - len(TP_smooth))/2)
-    atmosphereob.T = TP[::-1]
-
-    out = np.zeros((len(atmosphereob.T),2))
-    out[:,0] = atmosphereob.T
-    out[:,1] = atmosphereob.P
-    np.savetxt(os.path.join(params.out_path, 'TP_profile.dat'), out)
-
-print 'The mean molecular weight is', atmosphereob.planet_mu/AMU
-
-#initialising transmission radiative transfer code object
-if params.gen_type == 'transmission':
-    forwardmodelob = transmission(atmosphereob)
-elif params.gen_type == 'emission':
-    forwardmodelob = emission(atmosphereob)
-
-# bin down internal model to given resolution (default = 1000)
-wavegrid, dlamb_grid = dataob.get_specgrid(R=int(options.resolution),lambda_min=params.gen_wavemin,lambda_max=params.gen_wavemax)
-spec_bin_grid, spec_bin_grid_idx = dataob.get_specbingrid(wavegrid, dataob.specgrid)
-model = forwardmodelob.model()
-model_binned = [model[spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
-
-out = np.zeros((len(wavegrid),3))
-out[:,0] = wavegrid
-out[:,1] = model_binned
-out[:,2] += float(options.error) * 1e-6
-
-if int(options.noise) == 1:
-    out[:,1] += np.random.normal(0, float(options.error) * 1e-6, len(wavegrid))
 
 
-#initiating output object with fitted data from fitting class
-outputob = output(forwardmodel=forwardmodelob)
+class create_spectrum(object):
+    '''
+    Create_spectrum class allows you to generate transmission/emission forward spectra with custom TP-profiles.
+    Several support functions exist like plotting and saving to ascii. 
+    create_spectrum.py can be run like usually from the command line: python create_spectrum.py [options]
+    but can also be imported to other codes as library. This allows EChOSim, TauNet, etc to have direct 
+    access to TauREx forward spectra. 
+    '''
 
-#plotting fits and data
-outputob.plot_manual(out, save2pdf=params.out_save_plots)
+    def __init__(self,options, params=None):
+        
+        self.options = options
+        if params is None:
+            #initialising parameters object
+            self.params = parameters(options.param_filename)
+        else:
+            self.params = params
 
-if params.out_dump_internal:
-    #saving models to ascii
-    outputob.save_spectrum_to_file(spectrum=out, saveas=params.out_internal_name)
+        # set model resolution to 1000
+        self.params.gen_spec_res = 1000
+        self.params.gen_manual_waverange = True
+
+        #initialising data object
+        self.dataob = data(self.params)
+
+        #initialising TP profile object
+        self.atmosphereob = atmosphere(self.dataob)
+        
+        #set forward model
+        if self.params.gen_type == 'transmission':
+            self.fmob = transmission(self.atmosphereob)
+        elif self.params.gen_type == 'emission':
+            self.fmob = emission(self.atmosphereob)
+        
+        #TP-profile stuff
+        self.MAX_P = self.atmosphereob.P[0]
+        self.MIN_P = self.atmosphereob.P[-1]
+    
+        
+        #get grids
+        self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
+        self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+   
+        
+    def generate_spectrum(self):
+        #run forward model and bin it down 
+        model = self.fmob.model()
+        model_binned = [model[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
+        
+        #saving binned model to array: wavelength, flux, errorbar 
+        self.spectrum = np.zeros((len(self.wavegrid),3))
+        self.spectrum[:,0] = self.wavegrid
+        self.spectrum[:,1] = model_binned
+        self.spectrum[:,2] += float(self.options.error) * 1e-6
+
+        #add noise to flux values
+        if int(options.noise) == 1:
+            self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
+        
+        return self.spectrum
+    
+    
+    def generate_tp_profile_1(self,Pnodes, Tnodes,smooth_window=5):
+        #generates ad-hoc TP profile given pressure and temperature nodes
+    
+        TP = np.interp((np.log(self.atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
+        #smoothing T-P profile
+        wsize = self.atmosphereob.nlayers*(smooth_window/100.0)
+        if (wsize %2 == 0):
+            wsize += 1
+        TP_smooth = self.movingaverage(TP,wsize)
+        border = np.int((len(TP) - len(TP_smooth))/2)
+        
+        #set atmosphere object 
+        self.fmob.atmosphere.T = TP[::-1]
+        self.fmob.atmosphere.T[border:-border] = TP_smooth[::-1]   
+            
+        
+    def generate_tp_profile_2(self,tp_params,tp_type='2point'):
+        #generates tp profile from functions available in atmosphere class
+        self.fmob.atmosphere.set_TP_profile(profile=tp_type)
+        self.fmob.atmosphere.T = self.atmosphereob.TP_profile(fit_params=tp_params)
+      
+        
+    def save_tp_profile(self,filename='TP_profile.dat'):
+        #saves TP profile currently held in atmosphere object 
+        out = np.zeros((len(self.fmob.atmosphere.T),2))
+        out[:,0] = self.fmob.atmosphere.T
+        out[:,1] = self.fmob.atmosphere.P
+        np.savetxt(filename,out)
+        
+    def save_spectrum(self,filename='spectrum.dat'):
+        #saves spectrum to ascii file 
+        np.savetxt(filename, self.spectrum)
+        
+    def plot_tp_profile(self):
+        #plotting TP-profile
+        T = self.fmob.atmosphere.T
+        P = self.fmob.atmosphere.P
+        pl.figure()
+        pl.plot(T, P)
+        pl.xlim(np.min(T)-np.min(T)*0.1,np.max(T)+np.max(T)*0.1)
+        pl.yscale('log')
+        pl.xlabel('Temperature')
+        pl.ylabel('Pressure (Pa)')
+        pl.gca().invert_yaxis()
+    
+    def plot_spectrum(self):
+        #plotting spectrum
+        pl.figure()
+        pl.errorbar(self.spectrum[:,0],self.spectrum[:,1],self.spectrum[:,2])
+        pl.xlabel(r'Wavelength $\mu$m')
+        if self.params.gen_type == 'transmission':
+            pl.ylabel(r'$(R_{p}/R_{\ast})^2$')
+        elif self.params.gen_type == 'emission':
+            pl.ylabel(r'$F_{p}/F_{\ast}$')
+        
+        
+    def movingaverage(self,values,window):
+        weigths = np.repeat(1.0, window)/window
+        smas = np.convolve(values, weigths, 'valid')
+        return smas #smas2[::-1] # as a numpy array
 
 
-#end of main code
-#####################################################################
 
-
-
-###profiling code
-# pr.disable()
-# 
-# PROFDIR = 'Profiling/'
-# if not os.path.isdir(PROFDIR):
-#         os.mkdir(PROFDIR)
-# 
-# # s = StringIO.StringIO()
-# sortby = 'cumulative'
-# # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-# 
-# #printing to terminal
-# # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
-# # globalstats.print_stats()
-# 
-# #redirecting output to files
-# sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
-# globalstats.print_stats()
-
-# ps.print_stats()
-# print s.getvalue()
-
-
-#last line. displays any diagrams generated. must be run after profiling
-if params.verbose:
-    show()
+#gets called when running from command line 
+if __name__ == '__main__':
+    
+    parser = optparse.OptionParser()
+    parser.add_option('-p', '--parfile',
+                      dest="param_filename",
+                      default="exonest.par",
+    )
+    parser.add_option('-r', '--res',
+                      dest="resolution",
+                      default=1000,
+    )
+    parser.add_option('-n', '--noise',
+                      dest="noise",
+                      default=0,
+    )
+    parser.add_option('-e', '--error',
+                      dest="error",
+                      default=50,
+    )
+    parser.add_option('-T', '--T_profile',
+                      dest="tp_profile",
+                      default=False,
+                      action="store_true",
+    )
+    parser.add_option('-v', '--verbose',
+                      dest="verbose",
+                      default=True,
+                      action="store_true",
+    )
+    parser.add_option('-s', '--spectrum_filename',
+                      dest='specfilename',
+                      default='spectrum.dat'
+    )
+    parser.add_option('-t', '--tp_filename',
+                      dest='tpfilename',
+                      default='TP_profile.dat'
+    )
+    options, remainder = parser.parse_args()
+    
+    
+    #loading object
+    createob = create_spectrum(options)
+    #setup TP profile 
+    if options.tp_profile:
+        Pnodes = [createob.MAX_P,1e4, 100.0,createob.MIN_P]
+        Tnodes = [2200,2200, 1700,1700]
+        createob.generate_tp_profile_1(Pnodes, Tnodes)
+    #generating spectrum
+    createob.generate_spectrum()
+    #saving spectrum
+    createob.save_spectrum(filename=options.specfilename)
+    #saving TP profile
+    if options.tp_profile:
+        createob.save_tp_profile(filename=options.tpfilename)
+    
+    if options.verbose:
+        createob.plot_spectrum()
+        if options.tp_profile:
+            createob.plot_tp_profile()
+        pl.show()

@@ -265,7 +265,7 @@ class output(base):
 
                 coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
 
-                # convert mixing means to log space
+                # convert mixing means to log space # todo consider new parameter X_log
                 mixing_means = np.log10(mixing_means)
 
                 # set new list of params names, including the clr inv mixing ratios
@@ -403,10 +403,20 @@ class output(base):
             f.write('%s solution %i\n' % (type, idx))
 
             for param in solution['fit_params'].keys():
-                if param in self.params.all_absorbing_gases or param in self.params.all_inactive_gases or param == 'P0':
+
+                if param in self.params.all_absorbing_gases or param in self.params.all_inactive_gases:
+                    if self.params.fit_X_log:
+                        f.write('log(%s)	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
+                                                         solution['fit_params'][param]['std']))
+                        f.write('%s	%f	%f\n' %  (param, np.power(10, solution['fit_params'][param]['value']),
+                                                  np.power(10, solution['fit_params'][param]['value'])*np.log(10)*solution['fit_params'][param]['std'] ))
+                    else:
+                        f.write('%s	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
+                                                         solution['fit_params'][param]['std']))
+
+                if param == 'P0':
                     f.write('log(%s)	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
                                                      solution['fit_params'][param]['std']))
-
                     f.write('%s	%f	%f\n' %  (param, np.power(10, solution['fit_params'][param]['value']),
                                               np.power(10, solution['fit_params'][param]['value'])*np.log(10)*solution['fit_params'][param]['std'] ))
                 elif param == 'mu' or param == 'coupled_mu':
@@ -415,7 +425,6 @@ class output(base):
                 else:
                     f.write('%s	%.3e	%.3e\n' %  (param, solution['fit_params'][param]['value'],
                             solution['fit_params'][param]['std']))
-
 
             f.write('\n')
 

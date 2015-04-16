@@ -55,10 +55,10 @@ parser.add_option('-p', '--parfile',
                   help='Parameter filename')
 parser.add_option('-i', '--isothermal',
                   dest="isothermal",
-                  default=0)
+                  default=1)
 parser.add_option('-g', '--gaussian_noise',
                   dest="gaussian_noise",
-                  default=1)
+                  default=0)
 parser.add_option('-r', '--resolutions',
                   dest="resolutions",
                   default=False)
@@ -118,17 +118,14 @@ for error in errors:
                 if not os.path.isfile(os.path.join(params.out_path, 'observed_spectrum.dat')):
 
                     if int(options.isothermal) == 0:
-
                         logging.info('Creating custom TP profile')
                         MAX_P = atmosphereob.P[0]
                         MIN_P = atmosphereob.P[-1]
-                        smooth_window = 5 #smoothing window size as percent of total data
                         Pnodes = [MAX_P, MAX_P, 0.65e4, MIN_P]
                         Tnodes = [1000,1000, 600,600]
                         TP = np.interp((np.log(atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
                         atmosphereob.T = TP[::-1]
                         atmosphereob.update_atmosphere()
-
                         # save TP profile to file
                         out = np.zeros((len(atmosphereob.T),2))
                         out[:,0] = atmosphereob.T
