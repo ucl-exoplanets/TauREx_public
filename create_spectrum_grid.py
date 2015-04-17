@@ -65,7 +65,7 @@ parser.add_option('-s', '--save',
 )
 parser.add_option('-p', '--processes',
                   dest="Nproc",
-                  default="4"
+                  default=4
 )
 
 options, remainder = parser.parse_args()
