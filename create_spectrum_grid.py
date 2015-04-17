@@ -12,7 +12,7 @@ from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
 
 from multiprocessing import Pool
-from itertools import product
+# from itertools import product
 from functools import partial
 
 import cPickle as pickle
@@ -81,7 +81,7 @@ AU    = 1.49e11         #semi-major axis (AU) to m
 AMU   = 1.660538921e-27 #atomic mass to kg
 
 #parameters
-N_processes =  options.Nproc  #number of cores on which to run this
+N_processes =  int(options.Nproc)  #number of cores on which to run this
 N_xsteps    = 5         #number of steps in X grid
 N_tpsteps   = 7         #number of steps in TP grid
 
@@ -104,10 +104,9 @@ TP_bounds = [(1000.0,2500.0), (100.0,700.0),(1e2,1e3)]
 #doing this manually now since I only want a few
 bulk.append([1.138,1.138,4800.0,0.8])  #hd 189733b type
 bulk.append([0.24,0.020,3026.0,0.216]) #gj 1214b type
-
-# bulk.append([1.736,1.404,6300.0,1.6])  #wasp 12b type
-# bulk.append([0.422,0.082,4750.0,0.81]) #hat-p-11b type
-# bulk.append([1.38,0.69,6000.0,1.203])  #hd 209458b type
+bulk.append([1.736,1.404,6300.0,1.6])  #wasp 12b type
+bulk.append([0.422,0.082,4750.0,0.81]) #hat-p-11b type
+bulk.append([1.38,0.69,6000.0,1.203])  #hd 209458b type
 
 
 
@@ -120,7 +119,7 @@ for bound in TP_bounds:
     tpparlist.append(np.linspace(bound[0], bound[1], N_tpsteps))
 
 #calculating possible TP parameter permutations
-tp_variations = np.array([x for x in product(*tpparlist)])
+tp_variations = np.array([x for x in itertools.product(*tpparlist)])
 N_tpvar = np.shape(tp_variations)[0]    #number of permutations 
 
 
@@ -177,7 +176,7 @@ def populate_model_array(p,idx):
     #setting TP profile 
     createob.generate_tp_profile_2(Pardic[p][idx]['TP']) #set TP-profile
     #generating spectrum
-    model = createob.generate_spectrum() #generating spectrum
+    model = createob.generate_spectrum()    #generating spectrum
     model_wave = model[:,0] 
     model_norm = model[:,1]/max(model[:,1]) #normalising spectrum
     return model_wave, model[:,1], model_norm #returns: wavelength grid, spectrum, normalised spectrum
@@ -222,7 +221,7 @@ for p in range(N_planets):
 #saving dictionary
 with open(options.save_name+'.pkl', 'wb') as handle:
     pickle.dump(Pardic, handle)
-np.save(options.save_name,modelarray)
+np.savetxt(options.save_name+'.gz',modelarray)
 
 
 # figure()

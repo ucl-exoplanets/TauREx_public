@@ -66,7 +66,6 @@ class create_spectrum(object):
             self.params = parameters(options.param_filename)
         else:
             self.params = params
-            print 'BLLEEEEEEEEEEEEEEEEEEEEEEEE'
 
         # set model resolution to 1000
         self.params.gen_spec_res = 1000
