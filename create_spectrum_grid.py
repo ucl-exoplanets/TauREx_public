@@ -63,7 +63,7 @@ parser.add_option('-s', '--save',
                   dest="save_name",
                   default="spectrum_grid"
 )
-parser.add_option('-p', '--processes',
+parser.add_option('-n', '--n_processes',
                   dest="Nproc",
                   default=4
 )
