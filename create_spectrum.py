@@ -66,6 +66,7 @@ class create_spectrum(object):
             self.params = parameters(options.param_filename)
         else:
             self.params = params
+            print 'BLLEEEEEEEEEEEEEEEEEEEEEEEE'
 
         # set model resolution to 1000
         self.params.gen_spec_res = 1000
@@ -86,15 +87,21 @@ class create_spectrum(object):
         #TP-profile stuff
         self.MAX_P = self.atmosphereob.P[0]
         self.MIN_P = self.atmosphereob.P[-1]
+        self.Pnodes = [self.MAX_P,1e4, 100.0,self.MIN_P]
     
-        
         #get grids
         self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
         self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
    
+   
+    def reset(self,options,params=None):
+        #allows to reset the original instance to reflect changes in the data instance
+        #this avoids an initialisation of a separate instance.
+        self.__init__(options,params)
         
     def generate_spectrum(self):
         #run forward model and bin it down 
+        self.fmob.atmosphere.update_atmosphere()
         model = self.fmob.model()
         model_binned = [model[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
         
@@ -105,14 +112,16 @@ class create_spectrum(object):
         self.spectrum[:,2] += float(self.options.error) * 1e-6
 
         #add noise to flux values
-        if int(options.noise) == 1:
+        if int(self.options.noise) == 1:
             self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
         
         return self.spectrum
     
     
-    def generate_tp_profile_1(self,Pnodes, Tnodes,smooth_window=5):
+    def generate_tp_profile_1(self,Tnodes,Pnodes=None,smooth_window=5):
         #generates ad-hoc TP profile given pressure and temperature nodes
+        if Pnodes is None:
+            Pnodes = self.Pnodes
     
         TP = np.interp((np.log(self.atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
         #smoothing T-P profile
@@ -180,7 +189,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-p', '--parfile',
                       dest="param_filename",
-                      default="exonest.par",
+                      default="Parfiles/default.par",
     )
     parser.add_option('-r', '--res',
                       dest="resolution",
@@ -221,7 +230,7 @@ if __name__ == '__main__':
     if options.tp_profile:
         Pnodes = [createob.MAX_P,1e4, 100.0,createob.MIN_P]
         Tnodes = [2200,2200, 1700,1700]
-        createob.generate_tp_profile_1(Pnodes, Tnodes)
+        createob.generate_tp_profile_1(Tnodes,Pnodes)
     #generating spectrum
     createob.generate_spectrum()
     #saving spectrum
