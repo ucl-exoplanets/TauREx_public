@@ -63,6 +63,10 @@ parser.add_option('-s', '--save',
                   dest="save_name",
                   default="spectrum_grid"
 )
+parser.add_option('-p', '--processes',
+                  dest="Nproc",
+                  default="4"
+)
 
 options, remainder = parser.parse_args()
 
@@ -77,7 +81,7 @@ AU    = 1.49e11         #semi-major axis (AU) to m
 AMU   = 1.660538921e-27 #atomic mass to kg
 
 #parameters
-N_processes = 2         #number of cores on which to run this
+N_processes =  options.Nproc  #number of cores on which to run this
 N_xsteps    = 5         #number of steps in X grid
 N_tpsteps   = 7         #number of steps in TP grid
 
