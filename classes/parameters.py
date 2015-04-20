@@ -85,7 +85,7 @@ class parameters(base):
         self.all_inactive_gases = ['He', 'H2', 'N2']
 
         self.trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
-        
+        self.gen_abs_wavegrid      = self.getpar('General','abs_wavegrid', 'bool')
         self.gen_manual_waverange  = self.getpar('General','manual_waverange', 'bool')
         self.gen_wavemin           = self.getpar('General','wavemin', 'float')
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')

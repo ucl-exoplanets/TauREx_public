@@ -459,7 +459,11 @@ class fitting(base):
         # draw()
         # figure(2)
         # clf()
-        #errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        #
+        # ion()
+        # figure(1)
+        # clf()
+        # # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
         # plot(self.data.spectrum[:,0], model_binned)
         # xlabel('Wavelength (micron)')
         # ylabel('Transit depth')
@@ -474,7 +478,7 @@ class fitting(base):
         #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
         #     self.forwardmodel.atmosphere.absorbing_gases_X, \
         #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
-        #
+
         return res
 
     ###############################################################################

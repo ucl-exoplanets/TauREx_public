@@ -69,7 +69,6 @@ def find_absfiles(PATH, MOLNAME):
     
     globlist = glob.glob(PATH+'*.abs')
 
-
     absfilelist = []
     templist = []
 

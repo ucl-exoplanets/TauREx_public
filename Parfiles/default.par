@@ -11,6 +11,9 @@ trans_cpp = True
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
 
+# use wavelength grid of cross sections
+abs_wavegrid = False
+
 #short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.4
 

@@ -74,17 +74,31 @@ class data(base):
         #calculating wavelength grids
         if params.gen_manual_waverange:
             # manual wavelength range provided in parameter file
-            self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                                               lambda_min=self.params.gen_wavemin,
-                                                               lambda_max=self.params.gen_wavemax)
+            if not self.params.gen_abs_wavegrid:
+                # generate wavelength grid with uniform binning in log(lambda)
+                self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
+                                                                   lambda_min=self.params.gen_wavemin,
+                                                                   lambda_max=self.params.gen_wavemax)
+            else:
+                # use the wavelength grid of the cross sections
+                self.specgrid, self.dlamb_grid = self.get_specgrid_from_crosssections(lambda_min=self.params.gen_wavemin,
+                                                                                      lambda_max=self.params.gen_wavemax)
+
         else:
             # user wavelength range from observed spectrum, but increase model wavelength range by one data spectral bin
             # in blue and red. This ensures correct model binning at the edges
             bin_up = self.wavegrid[-1]-self.wavegrid[-2]
             bin_low = self.wavegrid[1]-self.wavegrid[0]
-            self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                                               lambda_min=self.wavegrid[0]-bin_low,
-                                                               lambda_max=self.wavegrid[-1]+bin_up)
+            if not self.params.gen_abs_wavegrid:
+            # generate wavelength grid with uniform binning in log(lambda)
+                self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
+                                                                   lambda_min=self.wavegrid[0]-bin_low,
+                                                                   lambda_max=self.wavegrid[-1]+bin_up)
+            else:
+                # use the wavelength grid of the cross sections
+                self.specgrid, self.dlamb_grid = self.get_specgrid_from_crosssections(lambda_min=self.wavegrid[0]-bin_low,
+                                                                                      lambda_max=self.wavegrid[-1]+bin_up)
+
         self.nspecgrid = len(self.specgrid)
 
         if isinstance(self.spectrum, (np.ndarray, np.generic)):
@@ -176,10 +190,29 @@ class data(base):
         bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
         
         bingrid_idx = numpy.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
-        
 
         return bingrid, bingrid_idx 
 
+    def get_specgrid_from_crosssections(self, lambda_min=0.1, lambda_max=20.0):
+        # return the wavelength grid of the absorbion cross sections
+        # assume that the cross sections have a uniform wl grid
+
+        if self.params.in_use_P_broadening:
+            path = self.params.in_abs_path_P
+        else:
+            path = self.params.in_abs_path
+
+        files = glob.glob(os.path.join(path, '*.abs'))
+        out = self.readfile(files[0])
+        wlgrid = out[:,0]
+
+        # get only values between lambda_min and lambda_max
+        specgrid = wlgrid[np.logical_and(wlgrid>lambda_min, wlgrid<lambda_max)]
+        # todo: add one bin on either side of specgrid
+
+        dlamb_grid = np.diff(specgrid)
+
+        return specgrid, dlamb_grid
 
 
     #@profile
@@ -384,7 +417,7 @@ class data(base):
         #             j += 1
 
         sigma_dict, tempgrid, presgrid = pickle.load(open('/data/sigma_dict.db'))
-        # dump = sigma_dict, templist, preslist
+        # dump = sigma_dict, tempgrid, presgrid
         # pickle.dump(dump, open('/data/sigma_dict.db', 'wb'))
         return sigma_dict, np.sort(tempgrid), np.sort(presgrid)
 

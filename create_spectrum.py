@@ -86,28 +86,39 @@ class create_spectrum(object):
         #TP-profile stuff
         self.MAX_P = self.atmosphereob.P[0]
         self.MIN_P = self.atmosphereob.P[-1]
-    
-        
-        #get grids
-        self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-        self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
-   
+
+        if options.bin:
+            #get grids
+            self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+        else:
+            self.wavegrid = self.dataob.specgrid
         
     def generate_spectrum(self):
         #run forward model and bin it down 
-        model = self.fmob.model()
-        model_binned = [model[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
-        
-        #saving binned model to array: wavelength, flux, errorbar 
-        self.spectrum = np.zeros((len(self.wavegrid),3))
-        self.spectrum[:,0] = self.wavegrid
-        self.spectrum[:,1] = model_binned
-        self.spectrum[:,2] += float(self.options.error) * 1e-6
+        model_int = self.fmob.model()
 
-        #add noise to flux values
-        if int(options.noise) == 1:
-            self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
-        
+        if options.bin:
+            model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
+        else:
+            model = model_int
+
+
+        if self.options.error == 0:
+            #saving binned model to array: wavelength, flux
+            self.spectrum = np.zeros((len(model),2))
+            self.spectrum[:,0] = self.wavegrid
+            self.spectrum[:,1] = model
+        else:
+            #saving binned model to array: wavelength, flux, errorbar
+            self.spectrum = np.zeros((len(model),3))
+            self.spectrum[:,0] = self.wavegrid
+            self.spectrum[:,1] = model
+            self.spectrum[:,2] += float(self.options.error) * 1e-6
+            #add noise to flux values
+            if int(self.options.noise) == True:
+                self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
+
         return self.spectrum
     
     
@@ -159,7 +170,12 @@ class create_spectrum(object):
     def plot_spectrum(self):
         #plotting spectrum
         pl.figure()
-        pl.errorbar(self.spectrum[:,0],self.spectrum[:,1],self.spectrum[:,2])
+
+        if self.options.error == 0:
+            pl.plot(self.spectrum[:,0],self.spectrum[:,1])
+        else:
+            pl.errorbar(self.spectrum[:,0],self.spectrum[:,1],self.spectrum[:,2])
+
         pl.xlabel(r'Wavelength $\mu$m')
         if self.params.gen_type == 'transmission':
             pl.ylabel(r'$(R_{p}/R_{\ast})^2$')
@@ -186,13 +202,17 @@ if __name__ == '__main__':
                       dest="resolution",
                       default=1000,
     )
+    parser.add_option('-b', '--bin', # bin to given resolution (option -r). If False, it uses the internal model wl grid
+                      dest="bin",
+                      default=False,
+    )
     parser.add_option('-n', '--noise',
                       dest="noise",
-                      default=0,
+                      default=False,
     )
     parser.add_option('-e', '--error',
                       dest="error",
-                      default=50,
+                      default=0,
     )
     parser.add_option('-T', '--T_profile',
                       dest="tp_profile",
@@ -217,15 +237,19 @@ if __name__ == '__main__':
     
     #loading object
     createob = create_spectrum(options)
+
     #setup TP profile 
     if options.tp_profile:
         Pnodes = [createob.MAX_P,1e4, 100.0,createob.MIN_P]
         Tnodes = [2200,2200, 1700,1700]
         createob.generate_tp_profile_1(Pnodes, Tnodes)
+
     #generating spectrum
     createob.generate_spectrum()
+
     #saving spectrum
     createob.save_spectrum(filename=options.specfilename)
+
     #saving TP profile
     if options.tp_profile:
         createob.save_tp_profile(filename=options.tpfilename)
