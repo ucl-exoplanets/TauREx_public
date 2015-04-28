@@ -6,7 +6,7 @@
 ###########################################################
 
 #loading libraries     
-import numpy, pylab, sys, os, optparse, time,logging,itertools
+import numpy, pylab, sys, os, optparse, time,logging,itertools,gzip
 from numpy import * #nummerical array library 
 from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
@@ -82,7 +82,7 @@ AMU   = 1.660538921e-27 #atomic mass to kg
 
 #parameters
 N_processes =  int(options.Nproc)  #number of cores on which to run this
-N_xsteps    = 5         #number of steps in X grid
+N_xsteps    = 7         #number of steps in X grid
 N_tpsteps   = 7         #number of steps in TP grid
 
 
@@ -129,6 +129,8 @@ N_gas     = len(X_bounds)               #number of gases
 N_tpvar   = np.shape(tp_variations)[0]  #number of permutations 
 
 
+#timing 
+start_time = time.clock()
 
 #generating Pardic: [planet index][spectrum index][content]
 count = 0
@@ -219,10 +221,14 @@ for p in range(N_planets):
 
 
 #saving dictionary
-with open(options.save_name+'.pkl', 'wb') as handle:
+with gzip.open(options.save_name+'.pkl.gz', 'wb') as handle:
     pickle.dump(Pardic, handle)
 np.savetxt(options.save_name+'.gz',modelarray)
 
+end_time = time.clock()
+
+print 'Total number of spectra: ', N_iter_total
+print 'Total runtime: %.2fm' % ((end_time - start_time)/ 60.)
 
 # figure()
 # for i in range(200):
