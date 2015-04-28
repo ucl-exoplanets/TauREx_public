@@ -15,6 +15,7 @@
 
 
 
+
 using namespace std;
 
 /* Function to interpolate single values */
@@ -62,7 +63,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
  void cpath_int(
     const double ** sigma_array, const double * sigma_array_flat, int const_temp, const double * dlarray,
     const double * z, const double * dz, const double * Rsig, const double * Csig, const double ** X, const double * rho,
-    double Rp, double Rs, int linecount, const int nlayers, const int n_gas, const int n_sig_temp, int include_cld,
+    double Rp, double Rs, int nlambda, const int nlayers, const int n_gas, const int n_sig_temp, int include_cld,
     const double cld_lowbound, const double cld_upbound, const double * p_bar, const double * cld_sig,
 
     const int pressure_broadening, const double * flattened_sigma_arr,
@@ -71,6 +72,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     const double * pressure_array, const double temperature,
 
     void * absorptionv) {
+
 
     //output array to be passed back to python
     double * absorption = (double *) absorptionv;
@@ -85,7 +87,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     int count;
 
     int t1, t2, p1[nlayers], p2[nlayers]; // temperature and pressure bounds idx for 2D interpolation of sigma array
-    double F11, F12, F21, F22;
+    double F11, F12, F21, F22, F1, F2;
     double x, y, x1, x2, y1, y2;
     double sigma;
     int t;
@@ -98,9 +100,9 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
         for(int i =0; i<n_sig_temp; i++){
             sigma_array_3d[i] = new double*[n_gas];
            for(int j =0; j<n_gas; j++){
-               sigma_array_3d[i][j] = new double[linecount];
-               for(int k = 0; k<linecount;k++){
-                   sigma_array_3d[i][j][k] = sigma_array_flat[(i*n_gas*linecount)+(j*linecount)+k];
+               sigma_array_3d[i][j] = new double[nlambda];
+               for(int k = 0; k<nlambda;k++){
+                   sigma_array_3d[i][j][k] = sigma_array_flat[(i*n_gas*nlambda)+(j*nlambda)+k];
                }
            }
         }
@@ -125,25 +127,32 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
         if (const_temp==1) {
             // temperature is constant through the atmosphere (doesn't change with j)
             // find closest temperature indexes in sigma_templist
-            for(int t=0;t<nsigma_templist;t++) {
-                if ((temperature > sigma_templist[t]) && (temperature < sigma_templist[t+1])) {
-                    t1 = t;
-                    t2 = t+1;
+            if (nsigma_templist == 1) {
+                t1 = 0;
+                t2 = 0;
+            } else {
+
+                for(int t=0;t<nsigma_templist;t++) {
+                    if ((temperature >= sigma_templist[t]) && (temperature < sigma_templist[t+1])) {
+                        t1 = t;
+                        t2 = t+1;
+                    }
                 }
             }
         }
+
         // precalculate closest pressure indexes in sigma_preslist for all levels
         for (int j=0; j<(nlayers); j++) {
-            for(int p=0; p<nsigma_preslist-1;p++) {
+            for(int p=0; p<nsigma_preslist;p++) {
                 if (p == 0 && (pressure_array[j] < sigma_preslist[p]*1e5)) {
                     // if pressure is < min(preslist), assume  p1 = p2 = min(preslist)
                     p1[j] = 0;
                     p2[j] = 1;
                     break;
-                } else if ((p == nsigma_preslist-2) && (pressure_array[j] > sigma_preslist[p+1]*1e5)) {
+                } else if ((p == nsigma_preslist-1) && (pressure_array[j] > sigma_preslist[p]*1e5)) {
                     // if pressure is > max(preslist), assume  p1 = p2 = max(preslist)
-                    p1[j] = p;
-                    p2[j] = p+1;
+                    p1[j] = p-1;
+                    p2[j] = p;
                     break;
                 } else if ((pressure_array[j] >= sigma_preslist[p]*1e5) && (pressure_array[j] <= sigma_preslist[p+1]*1e5)) {
                     p1[j] = p;
@@ -155,7 +164,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     }
 
     //beginning calculations
-    for (int wl=0;wl < linecount; wl++) {
+    for (int wl=0;wl < nlambda; wl++) {
         count = 0;
 		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
 
@@ -184,10 +193,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                         // follow wikipedia Bilinear interpolation: http://en.wikipedia.org/wiki/Bilinear_interpolation
                         // to be changed to Hills method....
 
-                        F11 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlayers+p1[j]*n_gas*nlayers+l*nlayers+wl];
-                        F12 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlayers+p2[j]*n_gas*nlayers+l*nlayers+wl];
-                        F21 = flattened_sigma_arr[t2*nsigma_preslist*n_gas*nlayers+p1[j]*n_gas*nlayers+l*nlayers+wl];
-                        F22 = flattened_sigma_arr[t2*nsigma_preslist*n_gas*nlayers+p2[j]*n_gas*nlayers+l*nlayers+wl];
+
 
                         if (temperature > sigma_templist[nsigma_templist-1]) {
                             x = sigma_templist[nsigma_templist-1]; // if T is > max(sigma_templist) set T to max(sigma_templist)
@@ -197,21 +203,67 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                             x = temperature;
                         }
 
-                        if (pressure_array[k] > sigma_preslist[nsigma_preslist-1]) {
+                        if (pressure_array[k]*1.0e-5 > sigma_preslist[nsigma_preslist-1]) {
                             y = sigma_preslist[nsigma_preslist-1]; // if P is > max(sigma_preslist) set it to max(sigma_preslist)
-                        } else if (pressure_array[k] < sigma_preslist[0]) {
+                        } else if (pressure_array[k]*1.0e-5 < sigma_preslist[0]) {
                             y = sigma_preslist[0]; // if P is < min(sigma_preslist) set it to to min(sigma_preslist)
                         } else {
-                            y = pressure_array[k];
+                            y = pressure_array[k]*1.0e-5;
+
                         }
 
-                        x1 = sigma_templist[t1];
-                        x2 = sigma_templist[t2];
-                        y1 = sigma_preslist[p1[j]];
-                        y2 = sigma_preslist[p2[j]];
-                        sigma =  (1/((x2-x1)*(y2-y1))) * ( F11*(x2-x)*(y2-y)+ F21*(x-x1)*(y2-y) + F12*(x2-x)*(y-y1) + F22*(x-x1)*(y-y1));
+                        //apply linear or bilinear interpolation:
 
-                        // cout  << sigma << " " << F11 << " " << F12 << " " << F21 << " " << F22 << " " << x << " " << y << " " << x1 << " " << x2 << " " << y1 << " " << y2 << endl;
+                        if (t1 == t2) {
+                            // no interpolation in temperature needed
+                            if (p1[k] == p2[l]) {
+                                // no interpolation needed
+                                sigma = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+                            } else {
+                                // interpolate in P
+                                F1 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+                                F2 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p2[k]*n_gas*nlambda+l*nlambda+wl];
+                                x1 = sigma_preslist[p1[k]];
+                                x2 = sigma_preslist[p2[k]];
+                                x = pressure_array[k]*1.0e-5;
+                                sigma = F1 + (F2-F1)*(x-x1)/(x2-x1);
+                                cout << k << " interpolate in P " << sigma << " F1 " << F1 << " F2 " << F2 << " x1 " << x1 << " x2 " << x2 << " x " << x << endl;
+
+                                cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
+                                     <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
+                                     <<  " P "  << y <<  " T "  << x << endl;;
+
+                                cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
+                            }
+                        } else {
+                            if (p1[k] == p2[l]) {
+                                // linear interpolation in T
+                                F1 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+                                F2 = flattened_sigma_arr[t2*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+                                x1 = sigma_templist[t1];
+                                x2 = sigma_templist[t2];
+                                x = sigma_templist[k];
+                                sigma = F1 + (F2-F1)*(x-x1)/(x2-x1);
+                            } else {
+                                // bilinear interpolation in both T and P
+                                x1 = sigma_templist[t1];
+                                x2 = sigma_templist[t2];
+                                y1 = sigma_preslist[p1[k]];
+                                y2 = sigma_preslist[p2[k]];
+                                F11 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+                                F12 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p2[k]*n_gas*nlambda+l*nlambda+wl];
+                                F21 = flattened_sigma_arr[t2*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+                                F22 = flattened_sigma_arr[t2*nsigma_preslist*n_gas*nlambda+p2[k]*n_gas*nlambda+l*nlambda+wl];
+                                sigma =  (1/((x2-x1)*(y2-y1))) * ( F11*(x2-x)*(y2-y)+ F21*(x-x1)*(y2-y) + F12*(x2-x)*(y-y1) + F22*(x-x1)*(y-y1));
+                            }
+                        }
+
+//                        cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
+//                             <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
+//                             <<  " P "  << y <<  " T "  << x << endl;;
+
+//                        cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
+
                         if (sigma != sigma) { // check for nans
                             sigma = 0;
                         }
@@ -268,6 +320,9 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 		integral*=2.0;
 
 		absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
+
+        // cout  << absorption[wl] << endl;
+
 
     }
     if(const_temp==0){

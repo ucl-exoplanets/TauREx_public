@@ -344,7 +344,7 @@ class data(base):
         return sigma_dict
 
 
-    def build_sigma_dic_pressure(self, tempstep=50, presstep=0.1):
+    def build_sigma_dic_pressure(self):
 
         # building temperature and pressure dependent sigma_array
         # pressstep in bar
@@ -352,73 +352,73 @@ class data(base):
         # (each temperature has the same pressures, and viceversa)
 
         import pickle
-        #
-        # mollist = self.params.planet_molec
-        # moldict = {}
-        #
-        # # initialise pressure and temperature lists
-        # templist = None
-        # preslist = None
-        #
-        # for molecule in mollist:
-        #
-        #     logging.info('Load sigma array for molecule %s' % molecule)
-        #     molpath = os.path.join(self.params.in_abs_path_P, molecule)
-        #     absfilelist, templist_tmp, preslist_tmp = libgen.find_absfiles_pressure(molpath, molecule)
-        #
-        #     if (templist == None or templist == templist_tmp) and (preslist == None or preslist == preslist_tmp):
-        #         templist = templist_tmp
-        #         preslist = preslist_tmp
-        #     else:
-        #         logging.error('Cannot build sigma array. The cross sections are not computed for uniform grid of '
-        #                       'pressures and temperatures')
-        #         exit()
-        #
-        #     sigma_3d = np.zeros((len(templist), len(preslist), self.nspecgrid))
-        #     for idxtemp, valtemp in enumerate(templist):
-        #         for idxpres, valpres in enumerate(preslist):
-        #             sigma_3d[idxtemp,idxpres,:] = self.readABSfiles(extfilelist=[absfilelist[valtemp][valpres]], # load only one file
-        #                                                             extpath=molpath,
-        #                                                             interpolate2grid=True,
-        #                                                             outputwavegrid = False)[0]
-        #
-        #
-        #     # todo interpolation happens during fitting
-        #     #build new temperature and pressure grids
-        #     # tempgrid = np.arange(np.min(templist), np.max(templist), tempstep).tolist()
-        #     # tempgrid.append(np.max(templist))
-        #     # presgrid = np.arange(np.min(preslist), np.max(preslist), presstep).tolist()
-        #     # presgrid.append(np.max(preslist))
-        #     #
-        #     # sigma_3d_reinterp = np.zeros((len(tempgrid), len(presgrid), self.nspecgrid))
-        #     # for i in range(self.nspecgrid): # loop  wavelengths
-        #     #     sigmainterp = interpolate.interp2d(preslist, templist, sigma_3d[:,:,i], kind='linear')
-        #     #     sigma_3d_reinterp[:,:,i] = sigmainterp(tempgrid, presgrid).transpose()
-        #     # moldict[molecule] = sigma_3d_reinterp
-        #
-        #     moldict[molecule] = sigma_3d
-        #
-        # # build sigma dictionary (temperature and pressure)
-        # sigma_dict = {}
-        # # sigma_dict['tempgrid'] = tempgrid
-        # # sigma_dict['presgrid'] = presgrid
-        # tempgrid = np.sort(templist)
-        # presgrid = np.sort(preslist)
-        #
-        # for idxtemp, valtemp in enumerate(tempgrid):
-        #     if not valtemp in sigma_dict:
-        #         sigma_dict[valtemp] = {}
-        #     for idxpres, valpres in enumerate(presgrid):
-        #         if not valpres in sigma_dict[valtemp]:
-        #             sigma_dict[valtemp][valpres] = np.zeros((len(mollist), self.nspecgrid))
-        #         j = 0
-        #         for molecule in mollist:
-        #             sigma_dict[valtemp][valpres][j,:] = moldict[molecule][idxtemp,idxpres,:]
-        #             j += 1
 
-        sigma_dict, tempgrid, presgrid = pickle.load(open('/data/sigma_dict.db'))
-        # dump = sigma_dict, tempgrid, presgrid
-        # pickle.dump(dump, open('/data/sigma_dict.db', 'wb'))
+        mollist = self.params.planet_molec
+        moldict = {}
+
+        # initialise pressure and temperature lists
+        templist = None
+        preslist = None
+
+        for molecule in mollist:
+
+            logging.info('Load sigma array for molecule %s' % molecule)
+            molpath = os.path.join(self.params.in_abs_path_P, molecule)
+            absfilelist, templist_tmp, preslist_tmp = libgen.find_absfiles_pressure(molpath, molecule)
+
+            if (templist == None or templist == templist_tmp) and (preslist == None or preslist == preslist_tmp):
+                templist = templist_tmp
+                preslist = preslist_tmp
+            else:
+                logging.error('Cannot build sigma array. The cross sections are not computed for uniform grid of '
+                              'pressures and temperatures')
+                exit()
+
+            sigma_3d = np.zeros((len(templist), len(preslist), self.nspecgrid))
+            for idxtemp, valtemp in enumerate(templist):
+                for idxpres, valpres in enumerate(preslist):
+                    sigma_3d[idxtemp,idxpres,:] = self.readABSfiles(extfilelist=[absfilelist[valtemp][valpres]], # load only one file
+                                                                    extpath=molpath,
+                                                                    interpolate2grid=True,
+                                                                    outputwavegrid = False)[0]
+
+
+            # todo interpolation happens during fitting
+            #build new temperature and pressure grids
+            # tempgrid = np.arange(np.min(templist), np.max(templist), tempstep).tolist()
+            # tempgrid.append(np.max(templist))
+            # presgrid = np.arange(np.min(preslist), np.max(preslist), presstep).tolist()
+            # presgrid.append(np.max(preslist))
+            #
+            # sigma_3d_reinterp = np.zeros((len(tempgrid), len(presgrid), self.nspecgrid))
+            # for i in range(self.nspecgrid): # loop  wavelengths
+            #     sigmainterp = interpolate.interp2d(preslist, templist, sigma_3d[:,:,i], kind='linear')
+            #     sigma_3d_reinterp[:,:,i] = sigmainterp(tempgrid, presgrid).transpose()
+            # moldict[molecule] = sigma_3d_reinterp
+
+            moldict[molecule] = sigma_3d
+
+        # build sigma dictionary (temperature and pressure)
+        sigma_dict = {}
+        # sigma_dict['tempgrid'] = tempgrid
+        # sigma_dict['presgrid'] = presgrid
+        tempgrid = np.sort(templist)
+        presgrid = np.sort(preslist)
+
+        for idxtemp, valtemp in enumerate(tempgrid):
+            if not valtemp in sigma_dict:
+                sigma_dict[valtemp] = {}
+            for idxpres, valpres in enumerate(presgrid):
+                if not valpres in sigma_dict[valtemp]:
+                    sigma_dict[valtemp][valpres] = np.zeros((len(mollist), self.nspecgrid))
+                j = 0
+                for molecule in mollist:
+                    sigma_dict[valtemp][valpres][j,:] = moldict[molecule][idxtemp,idxpres,:]
+                    j += 1
+
+        # sigma_dict, tempgrid, presgrid = pickle.load(open('/data/sigma_dict.db'))
+        dump = sigma_dict, tempgrid, presgrid
+        pickle.dump(dump, open('/data/sigma_dict.db', 'wb'))
         return sigma_dict, np.sort(tempgrid), np.sort(presgrid)
 
     #@profile

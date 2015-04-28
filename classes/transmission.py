@@ -141,7 +141,7 @@ class transmission(base):
                     sigma_dict_arr[idxtemp, idxpres, idxmol, :] = \
                         self.data.sigma_dict_pres[valtemp][valpres][idxmol]
 
-        return sigma_dict_arr.flatten()
+        return sigma_dict_arr
 
     def get_sigma_array_c(self):
 
@@ -206,6 +206,7 @@ class transmission(base):
 
         #selecting correct sigma_array for temperature array
         if len(np.unique(temperature)) == 1:
+
             # constant T with altitude
             cconst_temp = C.c_int(1)
             if self.params.in_use_P_broadening:
@@ -213,9 +214,8 @@ class transmission(base):
                 sigma_array_2d = np.zeros(0)
                 sigma_array_3d = np.zeros(0)
                 cn_sig_temp= C.c_int(0)
-
                 cpressure_broadening = C.c_int(1)
-                cflattened_sigma_arr =  cast2cpp(self.get_sigma_array_pressure())
+                cflattened_sigma_arr =  cast2cpp(self.get_sigma_array_pressure().flatten())
                 csigma_templist = cast2cpp(self.data.sigma_templist)
                 csigma_preslist = cast2cpp(self.data.sigma_preslist)
                 cnsigma_templist = C.c_int(len(self.data.sigma_templist))
@@ -223,8 +223,16 @@ class transmission(base):
                 cpressure_array = cast2cpp(self.atmosphere.P)
                 ctemperature = C.c_double(temperature[0])
 
-            else:
+                dump = (self.get_sigma_array_pressure(), self.get_sigma_array_pressure().flatten(),
+                       len(self.data.sigma_templist), len(self.data.sigma_preslist), self.atmosphere.nlayers,
+                       len(X[:,0]), self.nlambda)
 
+                import pickle
+                pickle.dump(dump, open('/data/transmission.db', 'wb'))
+
+
+
+            else:
                 cpressure_broadening = C.c_int(0)
                 cflattened_sigma_arr =  cast2cpp(np.zeros(0))
                 csigma_templist = cast2cpp(np.zeros(0))
@@ -286,6 +294,7 @@ class transmission(base):
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int
 
+
         #running c++ path integral
         cpath_int(csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
                   clinecount,cnlayers,cn_gas,cn_sig_temp,cInclude_cld,cCld_lowbound,\
@@ -296,6 +305,7 @@ class transmission(base):
 
         out = zeros((self.nlambda))
         out[:] = absorption
+
 
         del(absorption)
 

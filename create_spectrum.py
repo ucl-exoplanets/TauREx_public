@@ -67,7 +67,7 @@ class create_spectrum(object):
         else:
             self.params = params
 
-        # set model resolution to 1000
+        #set model resolution to 1000
         self.params.gen_spec_res = 1000
         self.params.gen_manual_waverange = True
 
@@ -87,22 +87,28 @@ class create_spectrum(object):
         self.MAX_P = self.atmosphereob.P[0]
         self.MIN_P = self.atmosphereob.P[-1]
 
-        if options.bin:
+        if options.bin == 'resolution':
             #get grids
             self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+        elif options.bin == 'dlambda':
+            self.wavegrid = np.arange(self.params.gen_wavemin, self.params.gen_wavemax, float(options.dlambda))
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+        elif options.bin == 'spectrum':
+            self.wavegrid = self.dataob.wavegrid
             self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
         else:
             self.wavegrid = self.dataob.specgrid
         
     def generate_spectrum(self):
-        #run forward model and bin it down 
+        #run forward model and bin it down
+
         model_int = self.fmob.model()
 
-        if options.bin:
+        if options.bin == 'resolution' or options.bin == 'dlambda' or options.bin == 'spectrum':
             model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
         else:
             model = model_int
-
 
         if self.options.error == 0:
             #saving binned model to array: wavelength, flux
@@ -198,13 +204,22 @@ if __name__ == '__main__':
                       dest="param_filename",
                       default="exonest.par",
     )
-    parser.add_option('-r', '--res',
+
+    # binning type, it can be:
+    #  - 'resolution': bin to given resolution. See opt -r
+    #  - 'dlambda': bin to fixed delta lambda. See opt -d
+    #  - 'none': no binning
+    parser.add_option('-b', '--bin',
+                      dest="bin",
+                      default='resolution',
+    )
+    parser.add_option('-r', '--res',    # binning resolution
                       dest="resolution",
                       default=1000,
     )
-    parser.add_option('-b', '--bin', # bin to given resolution (option -r). If False, it uses the internal model wl grid
-                      dest="bin",
-                      default=False,
+    parser.add_option('-d', '--dlambda', # delta lambda for binning in micron
+                      dest="dlambda",
+                      default=0.005,
     )
     parser.add_option('-n', '--noise',
                       dest="noise",
