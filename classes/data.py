@@ -382,7 +382,6 @@ class data(base):
                                                                     interpolate2grid=True,
                                                                     outputwavegrid = False)[0]
 
-
             # todo interpolation happens during fitting
             #build new temperature and pressure grids
             # tempgrid = np.arange(np.min(templist), np.max(templist), tempstep).tolist()
@@ -398,17 +397,16 @@ class data(base):
 
             moldict[molecule] = sigma_3d
 
-        # build sigma dictionary (temperature and pressure)
-        sigma_dict = {}
-        # sigma_dict['tempgrid'] = tempgrid
-        # sigma_dict['presgrid'] = presgrid
-        tempgrid = np.sort(templist)
-        presgrid = np.sort(preslist)
+        # sort lists
+        templist = np.sort(templist)
+        preslist = np.sort(preslist)
 
-        for idxtemp, valtemp in enumerate(tempgrid):
+        # build sigma dictionary (in temperature and pressure)
+        sigma_dict = {}
+        for idxtemp, valtemp in enumerate(templist):
             if not valtemp in sigma_dict:
                 sigma_dict[valtemp] = {}
-            for idxpres, valpres in enumerate(presgrid):
+            for idxpres, valpres in enumerate(preslist):
                 if not valpres in sigma_dict[valtemp]:
                     sigma_dict[valtemp][valpres] = np.zeros((len(mollist), self.nspecgrid))
                 j = 0
@@ -416,10 +414,7 @@ class data(base):
                     sigma_dict[valtemp][valpres][j,:] = moldict[molecule][idxtemp,idxpres,:]
                     j += 1
 
-        # sigma_dict, tempgrid, presgrid = pickle.load(open('/data/sigma_dict.db'))
-        dump = sigma_dict, tempgrid, presgrid
-        pickle.dump(dump, open('/data/sigma_dict.db', 'wb'))
-        return sigma_dict, np.sort(tempgrid), np.sort(presgrid)
+        return sigma_dict, templist, preslist
 
     #@profile
     def readABSfiles(self,extfilelist=None, extpath= None,interpolate2grid=True,outputwavegrid=False):

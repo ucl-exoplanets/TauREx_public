@@ -128,7 +128,7 @@ class transmission(base):
 
     def get_sigma_array_pressure(self):
 
-        # returns flatteened sigma array from sigma_dict for all temperatures, pressures, molecules.
+        # returns  sigma array from sigma_dict for all temperatures, pressures, molecules.
 
         sigma_dict_arr = np.zeros((len(self.data.sigma_templist),
                                    len(self.data.sigma_preslist),
@@ -140,7 +140,6 @@ class transmission(base):
                 for idxmol, valmol in enumerate(self.params.planet_molec):
                     sigma_dict_arr[idxtemp, idxpres, idxmol, :] = \
                         self.data.sigma_dict_pres[valtemp][valpres][idxmol]
-
         return sigma_dict_arr
 
     def get_sigma_array_c(self):
@@ -222,15 +221,6 @@ class transmission(base):
                 cnsigma_preslist = C.c_int(len(self.data.sigma_preslist))
                 cpressure_array = cast2cpp(self.atmosphere.P)
                 ctemperature = C.c_double(temperature[0])
-
-                dump = (self.get_sigma_array_pressure(), self.get_sigma_array_pressure().flatten(),
-                       len(self.data.sigma_templist), len(self.data.sigma_preslist), self.atmosphere.nlayers,
-                       len(X[:,0]), self.nlambda)
-
-                import pickle
-                pickle.dump(dump, open('/data/transmission.db', 'wb'))
-
-
 
             else:
                 cpressure_broadening = C.c_int(0)

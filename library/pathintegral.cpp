@@ -227,13 +227,13 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                                 x2 = sigma_preslist[p2[k]];
                                 x = pressure_array[k]*1.0e-5;
                                 sigma = F1 + (F2-F1)*(x-x1)/(x2-x1);
-                                cout << k << " interpolate in P " << sigma << " F1 " << F1 << " F2 " << F2 << " x1 " << x1 << " x2 " << x2 << " x " << x << endl;
-
-                                cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
-                                     <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
-                                     <<  " P "  << y <<  " T "  << x << endl;;
-
-                                cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
+//                                cout << k << " interpolate in P " << sigma << " F1 " << F1 << " F2 " << F2 << " x1 " << x1 << " x2 " << x2 << " x " << x << endl;
+//
+//                                cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
+//                                     <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
+//                                     <<  " P "  << y <<  " T "  << x << endl;;
+//
+//                                cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
                             }
                         } else {
                             if (p1[k] == p2[l]) {
