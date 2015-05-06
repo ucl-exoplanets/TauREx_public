@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib as mpl
 from matplotlib import rc
-matplotlib.use('Qt4Agg')
+matplotlib.use('Qt4Agg',warn=False)
 mpl.rcParams['axes.linewidth'] = 2 #set the value globally
 mpl.rcParams['text.antialiased'] = True
 rc('text', usetex=True) # use tex in plots
