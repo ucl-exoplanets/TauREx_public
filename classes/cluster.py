@@ -110,8 +110,9 @@ class cluster(object):
             h.write('mkdir -p '+SCRATCHDIR+'\n')                   #make tmp folder on scratch
             h.write('cp -rf '+DATADIR+'/* '+SCRATCHDIR+'\n')       #copying everything over to scratch
             h.write('cd '+SCRATCHDIR+'\n')                         #we are going places
-            h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
-            h.write('mpirun -np {0} -machinefile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
+#             h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
+#             h.write('mpirun -np {0} -machinefile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
+            h.write('mpirun -np {0} /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
             h.write('mkdir -p '+OUTDIR+'\n')                       #make output dir
             h.write('cp -rf '+SCRATCHDIR+'/* '+OUTDIR+'/'+'\n')    #copy all the stuff back
             

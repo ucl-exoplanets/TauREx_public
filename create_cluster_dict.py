@@ -33,12 +33,12 @@ sys.path.append('./classes')
 from cluster import cluster
 
 
-#defining number of runs 
+#defining number of iteration per parameter in this case 
 RNUM = 5
 
 #parameter values for individual runs 
-alpha = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
-
+alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
+alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
 
 #defining general run parameters
@@ -54,11 +54,22 @@ GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex'
 DICT = {}
 
 #filling dict with parameter values per run
-for ID in range(RNUM): #this may be changed with a more informative ID... e.g. date
+ID = 0
+for i in range(RNUM): #this may be changed with a more informative ID... e.g. date
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
     DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']+'/'+str(ID)
-    DICT[ID]['fit_hybrid_alpha_l'] = alpha[ID]  #setting parameter for run
+    DICT[ID]['fit_hybrid_alpha_l'] = alpha_l[i]  #setting parameter for run
+    ID += 1
+
+for i in range(RNUM):
+    DICT[ID] = {}
+    DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
+    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']+'/'+str(ID)
+    DICT[ID]['fit_hybrid_alpha_h'] = alpha_h[i]  #setting parameter for run
+    ID += 1
+
+
 
 
 #writing dictionary to ascii. Use function provided by cluster for compatibility reasons. 

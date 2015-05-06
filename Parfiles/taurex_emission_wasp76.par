@@ -1,0 +1,209 @@
+[General]
+#verbose or not 
+verbose = True
+
+#use c++ path_integral version for transmission
+#True: c++ version, False: python version
+trans_cpp = False
+
+#manually set wavelength range (if False, range taken from input data)
+manual_waverange = False
+
+#short wavelength cut-off (in microns) if manual_waverange = True
+wavemin = 0.8
+
+#long wavelength cut-off (in microns) if manual_waverange = True
+wavemax = 12.0
+
+#resolution of internal model runs (R)
+spec_res = 1000
+
+#specturm type (emission/transmission), for create_spectrum.py
+type = emission 
+
+
+[Input]
+#Observed spectrum to be fitted
+spectrum_file = Input/observations/wasp76_emission_r100100_static_t1+photo.txt
+
+#use T-P profile and mixing ratios ATM file
+use_ATMfile = False
+
+#file containing pre-determined T-P profile and mixing ratios
+atm_file = Input/TP_profile_wasp76.txt
+
+#Path of ExoMol cross section files folder
+abs_path = Input/crosssections/
+
+#run ExoMol cross section conversion from wavenumbers to microns
+convert2microns = True
+
+#files containing absorption cores-sections 
+#you can specify several file names separated by commas
+#WARNING: parameter is legacy input. Not used by code, define abs_path and planet_molec parameters instead.
+__legacy__abs_files = h2o_1500K.abs
+
+#temperature grid resolution (K)
+tempres = 1
+
+#Path to Phoenix/Atlas stellar models (required by emission code)
+star_path = Input/Star_spectra 
+
+#include varying stellar radii file. True/False 
+include_rad = False 
+
+#file from which to read stellar radius R*(lambda)
+rad_file = Input/rad_star.rad
+
+#include H2-H2 collision induced absorption. True/False 
+include_cia = False 
+
+#file from which to read CIA coefficients
+cia_file = Input/h2_h2_1000K.cia
+
+
+
+[Output]
+#path for output files
+path = Output/
+
+#output file prefix
+file_prefix = test
+
+#save internal model to file. Useful for when only creating transmission/emisison model
+dump_internal = True
+
+#internal model name save as
+internal_name = wasp76_ariel.txt
+
+#save plots to .pdf 
+save_plots = True
+
+
+[Star]
+#defines stellar specific (fixed or starting) parameters:
+
+#Stellar radius (R_sun)
+radius = 1.73
+
+#Stellar temperature (K)
+temp   = 6250
+
+
+
+[Planet]
+#defines planetary specific (fixed or starting) parameters:
+
+#Planetary radius (R_jupiter)
+radius = 1.83
+
+#Planetary mass (M_jupiter)
+mass = 0.92
+
+#Orbital semi-major axis (AU)
+sma = 0.033
+
+#Planetary bond albedo (0-1)
+albedo = 0.2
+
+#Planetary temperature (K)
+temp = 2200
+
+#molecular weight of atmosphere 
+mu = 2.3
+
+#molecules considered
+#molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3, 1H-12C-14N, 1H3-p, 14N-16O, 28Si-16O, 48Ti-16O, 51V-16O
+#molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3, 1H-12C-14N
+molecules = 1H2-16O, 12C-16O, 12C-16O2
+
+
+#initial mixing ratios (starting point for minimisation) 
+#and used for model only mode (create_spectrum.py). Must have as
+#many mixing ratios as molecules above. Comma separated list. 
+#mixing_ratios = 2.0e-3,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+mixing_ratios = 1.0e-5, 1.0e-6, 1.0e-6
+
+
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#cloud refractive index (m) and particle size (a) in microns. Comma separated
+cld_params = 1.5, 1.0
+
+#cloud pressure (in bar) lower and upper bounds. Comma separated
+cld_pressure = 1.0e-3, 0.1
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+#parameter not in use but placeholder for implementation if needed
+cld_file = Input/cloud1.cld
+
+
+
+
+[T-P profile]
+var_atm = True
+num_scaleheights = 20
+atm_levels = 80
+var_temp = True
+var_pres = True
+atm_max_pressure = 1e6
+var_mix = True
+corr_length = 5.0
+
+
+[Fitting]
+transmission = False
+emission     = True
+emission_stage2 = False
+hybrid_alpha_low  = 0.0 
+hybrid_alpha_high = 1.0
+
+fix_radius = True
+fix_temp = False
+fix_mu = True
+fix_P0 = True
+couple_mu = False
+T_up  = 500
+T_low = 1000
+mu_up = 40
+mu_low = 0
+radius_up  = 0.05
+radius_low = 0.05
+P0_up = 1.e8
+P0_low = 1.e2
+X_up  = 5e-4
+X_low = 1.e-8
+X_inactive_up  = 1.0
+X_inactive_low = 0.0
+clr_trans = False
+
+
+[Downhill]
+run = False
+#type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
+type = Nelder-Mead
+options = “{‘verbose’:False}”
+
+
+[MCMC]
+run = False
+iter = 300
+burn = 10
+
+[MultiNest]
+run = True
+resume = True
+verbose = True
+nest_path = chains/
+sampling_eff = parameter
+n_live_points = 1000
+max_iter = 0
+multimodes = True
+max_modes = 100
+const_eff = False
+imp_sampling = False
+cluster_analysis = False
+
+
