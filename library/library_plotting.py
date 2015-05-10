@@ -10,7 +10,7 @@ from numpy import array
 import scipy.ndimage as ndimage
 
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg',warn=False)
 from matplotlib.ticker import FuncFormatter,ScalarFormatter
 from matplotlib import cm
 import matplotlib.colors as mplot_colors

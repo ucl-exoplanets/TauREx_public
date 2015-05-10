@@ -27,10 +27,18 @@ parser.add_option('-v', '--verbose',
                   default=True,
                   action="store_true",
 )
+parser.add_option('-d', '--dir',
+                  dest="path",
+                  default="params",
+)
+
 options, remainder = parser.parse_args()
 params = parameters(options.param_filename)
 
-out_path_orig = params.out_path
+if options.path is "params":
+    out_path_orig = params.out_path
+else:
+    out_path_orig = options.path
 
 if params.gen_type == 'transmission' or params.fit_transmission:
     if os.path.isdir(os.path.join(out_path_orig, 'stage_0')):

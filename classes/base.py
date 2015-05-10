@@ -18,7 +18,7 @@ class base(object):
 
     def list(self,name=None):
         if name is None:
-            return dir(self)[2:-1]
+            return dir(self)
         else:
             lst = dir(self)
             return filter(lambda k: name in k, lst)

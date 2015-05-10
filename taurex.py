@@ -89,13 +89,27 @@ from library_general import house_keeping
 parser = optparse.OptionParser()
 parser.add_option('-p', '--parfile',
                   dest="param_filename",
-                  default="Parfiles/exonest.par",
-)
+                  default="Parfiles/exonest.par"
+                  )
 parser.add_option('-v', '--verbose',
                   dest="verbose",
                   default=False,
-                  action="store_true",
-)
+                  action="store_true"
+                  )
+                  
+parser.add_option('-c', '--cluster',
+                  dest="cluster_dictionary",
+                  default="None",
+                  type = "string",
+                  action="store"         
+                  )
+parser.add_option('-i', '--cluster_index',
+                  dest="cluster_procid",
+                  default="None",
+                  type = "string",
+                  action="store"         
+                  )
+
 options, remainder = parser.parse_args()
 
 #Initialise parameters instance
@@ -107,6 +121,12 @@ if MPIimport:
 else:
     logging.info('MPI disabled')
 
+#modifying parameters object if running in cluster mode (see cluster class for docu)
+if options.cluster_dictionary is not "None":
+    from cluster import cluster
+    c = cluster()
+    c.read_dict(dict_name=options.cluster_dictionary)
+    params = c.modify_params(params,options.cluster_procid)
 
 if params.gen_type == 'transmission' or params.fit_transmission:
     from taurex_transmission import run
@@ -117,6 +137,7 @@ else:
     logging.info('Check \'type\' and \'fit_emission\', \'fit_transmission\' parameters')
     logging.info('PS: you suck at this... ')
     exit()
+
 
 #running Tau-REx
 run(params)

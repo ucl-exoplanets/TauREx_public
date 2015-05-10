@@ -2,7 +2,7 @@
 # TauREx emission execution code.     
 ###########################################################
 #loading libraries     
-import pylab,sys,os, logging
+import sys,os, logging
 import numpy as np #nummerical array library 
 import pylab as pl #science and plotting library for python
 
