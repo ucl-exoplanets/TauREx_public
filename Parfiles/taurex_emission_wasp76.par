@@ -1,6 +1,6 @@
 [General]
 #verbose or not 
-verbose = True
+verbose = False
 
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
@@ -24,7 +24,7 @@ type = emission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/wasp76_emission_r100100_static_t1+photo.txt
+spectrum_file = Input/observations/wasp76_emission_paper.dat
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -47,7 +47,7 @@ __legacy__abs_files = h2o_1500K.abs
 tempres = 1
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
-star_path = Input/Star_spectra 
+star_path = Input/star_spectra 
 
 #include varying stellar radii file. True/False 
 include_rad = False 
@@ -151,12 +151,12 @@ var_pres = True
 atm_max_pressure = 1e6
 var_mix = True
 corr_length = 5.0
-
+profile_type = guillot 
 
 [Fitting]
 transmission = False
 emission     = True
-emission_stage2 = False
+emission_stage2 = True
 hybrid_alpha_low  = 0.0 
 hybrid_alpha_high = 1.0
 
@@ -198,7 +198,7 @@ resume = True
 verbose = True
 nest_path = chains/
 sampling_eff = parameter
-n_live_points = 1000
+n_live_points = 10000
 max_iter = 0
 multimodes = True
 max_modes = 100
