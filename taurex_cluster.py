@@ -35,12 +35,16 @@ parser.add_option('-d', '--dictname',
                   )
 parser.add_option('-i', '--datadir',
                   dest="datadir",
-                  default="/share/data/",
+                  default="pwd",
                   action="store"
                   )
                   
 
 options, remainder = parser.parse_args()
+
+if options.datadir is "pwd":
+    options.datadir = os.getcwd()
+
 
 #loading cluster object
 c = cluster(options=options)
