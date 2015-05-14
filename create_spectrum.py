@@ -101,16 +101,16 @@ class create_spectrum(object):
         else:
             self.wavegrid = self.dataob.specgrid
         
-    def generate_spectrum(self):
+    def generate_spectrum(self,**kwarg):
         #run forward model and bin it down
-
-        model_int = self.fmob.model()
-
-        if options.bin == 'resolution' or options.bin == 'dlambda' or options.bin == 'spectrum':
+        self.fmob.atmosphere.update_atmosphere()
+        model_int = self.fmob.model(**kwarg)
+ 
+        if self.options.bin == 'resolution' or self.options.bin == 'dlambda' or self.options.bin == 'spectrum':
             model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
         else:
             model = model_int
-
+ 
         if self.options.error == 0:
             #saving binned model to array: wavelength, flux
             self.spectrum = np.zeros((len(model),2))
@@ -125,39 +125,44 @@ class create_spectrum(object):
             #add noise to flux values
             if int(self.options.noise) == True:
                 self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
-
-
-        self.Pnodes = [self.MAX_P,1e4, 100.0,self.MIN_P]
+ 
+        
+#         self.Pnodes = [self.MAX_P,1e4, 100.0,self.MIN_P]
+        
+#         #get grids
+#         self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(self.options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
+#         self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+        return self.spectrum
     
-        #get grids
-        self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-        self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
-   
+    
    
     def reset(self,options,params=None):
         #allows to reset the original instance to reflect changes in the data instance
         #this avoids an initialisation of a separate instance.
         self.__init__(options,params)
         
-    def generate_spectrum(self):
-        #run forward model and bin it down 
-        self.fmob.atmosphere.update_atmosphere()
-        model = self.fmob.model()
-        model_binned = [model[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
-        
-        #saving binned model to array: wavelength, flux, errorbar 
-        self.spectrum = np.zeros((len(self.wavegrid),3))
-        self.spectrum[:,0] = self.wavegrid
-        self.spectrum[:,1] = model_binned
-        self.spectrum[:,2] += float(self.options.error) * 1e-6
-
-        #add noise to flux values
-        if int(self.options.noise) == 1:
-            self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
-        
-
-        return self.spectrum
-    
+#     def generate_spectrum(self):
+#         #run forward model and bin it down 
+#         self.fmob.atmosphere.update_atmosphere()
+#         model = self.fmob.model()
+#         model_binned = [model[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
+#         
+#         #saving binned model to array: wavelength, flux, errorbar 
+#         self.spectrum = np.zeros((len(self.wavegrid),3))
+#         self.spectrum[:,0] = self.wavegrid
+#         self.spectrum[:,1] = model_binned
+#         self.spectrum[:,2] += float(self.options.error) * 1e-6
+# 
+#         #add noise to flux values
+#         if int(self.options.noise) == 1:
+#             self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
+#         
+# 
+#         return self.spectrum
+    def set_mixing_ratios(self,X):
+        #wrapper to set absorbing_gases_X in atmosphere object and update it.
+        self.fmob.atmosphere.absorbing_gases_X = X
+        self.fmob.atmosphere.set_mixing_ratios()
     
     def generate_tp_profile_1(self,Tnodes,Pnodes=None,smooth_window=5):
         #generates ad-hoc TP profile given pressure and temperature nodes

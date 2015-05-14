@@ -144,8 +144,8 @@ cld_file = Input/cloud1.cld
 
 [T-P profile]
 var_atm = True
-num_scaleheights = 20
-atm_levels = 80
+num_scaleheights = 30
+atm_levels = 200
 var_temp = True
 var_pres = True
 atm_max_pressure = 1e6

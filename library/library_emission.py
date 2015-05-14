@@ -22,6 +22,24 @@ def black_body(lamb, temp):
     
     return BB * 1e-6
 
+def black_body_to_temp(wave,flux):
+    '''
+    Does the opposite to black_body. Converts flux to temperature. 
+    Input: wavelength grid, flux grid 
+    Output: tempeatrure grid
+    @todo check if conversion is correct. There is probably a /m^2/micron offset 
+    '''
+    h = 6.62606957e-34
+    c = 299792458
+    k = 1.3806488e-23
+    pi= 3.14159265359
+    
+    wave *= 1e-6
+    
+    logpart = np.log(((2.0*h*c**2)/(flux*wave**5))+1.0)
+    T = (h*c)/(wave*k) * 1.0/ logpart
+    return T
+
 
 def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function):
     '''

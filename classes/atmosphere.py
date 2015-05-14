@@ -75,8 +75,7 @@ class atmosphere(base):
         self.T = np.zeros((self.nlayers))
         self.T[:] = self.planet_temp
         self.scaleheight = self.get_scaleheight()
-
-
+        
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
         if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
@@ -324,6 +323,7 @@ class atmosphere(base):
             # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
             for i in range(self.ngas):
                 X[i,:] += float(mixing[i])
+        self.X = X
         return X
 
 
@@ -332,6 +332,7 @@ class atmosphere(base):
         # update surface gravity and scale height
         self.planet_grav = self.get_surface_gravity()
         self.scaleheight = self.get_scaleheight()
+        print self.scaleheight
 
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
