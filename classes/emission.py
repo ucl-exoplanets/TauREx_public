@@ -183,32 +183,32 @@ class emission(base):
             
         #other layers
         BB_layer = BB_surf
-        sigma_array = self.get_sigma_array(temperature[0])
-        
+        sigma_array1 = self.get_sigma_array(temperature[0])       
         for j in xrange(1,self.nlayers):
             if temperature[j] != temperature[j-1]:
-                    sigma_array = self.get_sigma_array(temperature[j])
+                    sigma_array1 = self.get_sigma_array(temperature[j])
             for i in xrange(self.n_gas):
-                self.dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
+                self.dtau[j,:] += (sigma_array1[i,:] * X[i,j] * rho[j] * self.dzarray[j])
         
+        sigma_array2 = self.get_sigma_array(temperature[0])
         for j in xrange(1,self.nlayers):               
             for k in xrange(j,self.nlayers):
                 if temperature[k] != temperature[k-1]:
-                    sigma_array = self.get_sigma_array(temperature[k])
-                     
+                    sigma_array2 = self.get_sigma_array(temperature[k])  
                 for i in xrange(self.n_gas):
-                    self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
+                    self.tau[j,:] += (sigma_array2[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
             
             exptau =  np.exp(-1.0*self.tau[j,:]) 
              
             if temperature[j] != temperature[j-1]: 
                 BB_layer = em.black_body(self.specgrid,temperature[j])   
+            
             self.tau_total[j,:] = BB_layer*(exptau) * (self.dtau[j,:])
             self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
 
 
         self.FpFs = (self.I_total/ BB_star) *(self.Rp/self.Rs)**2
-        return self.FpFs
+        return self.I_total
     
     def cpath_integral(self, X = None, rho = None, temperature= None):
         if X is None:
