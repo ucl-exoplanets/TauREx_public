@@ -332,8 +332,6 @@ class atmosphere(base):
         # update surface gravity and scale height
         self.planet_grav = self.get_surface_gravity()
         self.scaleheight = self.get_scaleheight()
-        print self.scaleheight
-
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
         max_z = n_scale * self.scaleheight
