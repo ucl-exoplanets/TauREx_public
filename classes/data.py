@@ -250,6 +250,7 @@ class data(base):
             #reading in correct file and interpolating it onto self.specgrid
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane 
+#             SED_raw[:,1] *= self.params.star_radius**2 * np.pi * 4. 
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         return SED
 

@@ -15,7 +15,7 @@ def black_body(lamb, temp):
     pi= 3.14159265359
     
     exponent = np.exp((h * c) / (lamb *1e-6 * k * temp))
-    BB = (pi* (2.0*h*c**2)/(lamb*1e-6)**5) * (1.0/(exponent -1))
+    BB = (pi* (4.0*h*c**2)/(lamb*1e-6)**5) * (1.0/(exponent -1))
     
 #     exponent = np.exp((con.h * con.c) / (lamb *1e-6 * con.k * temp))
 #     BB = (np.pi* (2.0*con.h*con.c**2)/(lamb*1e-6)**5) * (1.0/(exponent -1))
