@@ -208,7 +208,7 @@ class emission(base):
 
 
         self.FpFs = (self.I_total/ BB_star) *(self.Rp/self.Rs)**2
-        return self.I_total
+        return self.FpFs
     
     def cpath_integral(self, X = None, rho = None, temperature= None):
         if X is None:
