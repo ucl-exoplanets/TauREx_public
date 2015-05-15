@@ -161,8 +161,9 @@ N_iter_total = N_iter*N_planets       #total iterations
            
 #loading create_spectrum            
 #defining options for create_spectrum
-options.param_filename = 'Parfiles/taurex_emission_wasp76.par' #needs to be a valid parameter file but not important which
+options.param_filename = 'Parfiles/taurex_emission_wasp76_grid.par' #needs to be a valid parameter file but not important which
 options.error = 0.0
+options.bin = "resolution"
 options.resolution = 100
 options.noise = 0.0
 #loading object
@@ -174,19 +175,46 @@ params = createob.params              #making a copy of params object
 #function called by pool.map() to compute spectrum, normalise spectrum and return 
 def populate_model_array(p,idx): 
     #setting bulk parameters
-    createob.params.planet_temp   = Pardic[p][idx]['T_planet'] #set bulk planetary temperature from 10bar temperature 
+    createob.fmob.atmosphere.T[:] = Pardic[p][idx]['T_planet'] #set bulk planetary temperature from 10bar temperature 
+    #setting abundances
+    createob.set_mixing_ratios(Pardic[p][idx]['X'])
     #setting TP profile 
     createob.generate_tp_profile_2(Pardic[p][idx]['TP']) #set TP-profile
     #generating spectrum
+    
     model = createob.generate_spectrum()    #generating spectrum
+    model = model[~np.isnan(model).any(1)]
+    tp_profile = createob.fmob.atmosphere.T
     model_wave = model[:,0] 
-    model_norm = model[:,1]/max(model[:,1]) #normalising spectrum
-    return model_wave, model[:,1], model_norm #returns: wavelength grid, spectrum, normalised spectrum
+    
+    bb_planet_l = black_body(model[:,0],np.min(tp_profile))#*0.88
+    bb_planet_h = black_body(model[:,0],np.max(tp_profile))
+    bb_star     = black_body(model[:,0],Pardic[p][idx]['T_star'])
+    
+    F_star = createob.fmob.F_star    
+    FpFs_l = bb_planet_l/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
+    FpFs_h = bb_planet_h/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
+    
+#     figure()
+#     plot(model_wave,model[:,1])
+#     plot(model_wave,FpFs_l,'g')
+#     plot(model_wave,FpFs_h,'r')  
+
+    #normalising with blackbodies
+    norm1 = model[:,1] - FpFs_l
+    norm1 /= (FpFs_h-FpFs_l)
+    
+    #normalising first and second moment
+    norm2 = norm1 - np.mean(norm1)
+    norm2 /= np.std(norm2)
+    
+    return model_wave, model[:,1], norm2 #returns: wavelength grid, spectrum, normalised spectrum
 
 
 #setting up additional output arrays
-testwave,test,test_norm = populate_model_array(0,0) #just getting array sizes
+testwave,test,norm_test = populate_model_array(0,0) #just getting array sizes
 modelarray = np.zeros((len(testwave),N_iter_total)) #non dictionary output array containing the normalised model
+
 
 
 #do not delete following line. useful some day. some fine day. 
@@ -212,11 +240,11 @@ for p in range(N_planets):
     
     #collecting results and sorting them into dictionary and modelarray
     for idx, result in enumerate(pool_result):
-        wave,model,model_norm = result 
+        wave,model,norm = result 
         Pardic[p][idx]['wave']        = wave
         Pardic[p][idx]['model']       = model
-        Pardic[p][idx]['model_norm']  = model_norm
-        modelarray[:,idx+(N_iter*p)]  = model_norm
+        Pardic[p][idx]['norm']        = norm
+        modelarray[:,idx+(N_iter*p)]  = norm
 
 
 
