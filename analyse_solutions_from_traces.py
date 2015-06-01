@@ -43,6 +43,8 @@ else:
 if params.gen_type == 'transmission' or params.fit_transmission:
     if os.path.isdir(os.path.join(out_path_orig, 'stage_0')):
         params.out_path = os.path.join(out_path_orig, 'stage_0')
+    else:
+        params.out_path = out_path_orig
             
     dataob = data(params)
     atmosphereob = atmosphere(dataob)

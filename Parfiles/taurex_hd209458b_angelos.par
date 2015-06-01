@@ -1,0 +1,282 @@
+[General]
+#verbose or not 
+verbose = True
+
+#use c++ path_integral version for transmission
+#True: c++ version, False: python version
+trans_cpp = True
+
+#specturm type (emission/transmission), for create_spectrum.py
+type = transmission 
+
+
+[Input]
+#Observed spectrum to be fitted
+spectrum_file = Input/observations/hd209_angelos_20150528_microns.txt
+
+#temperature grid resolution (K)
+tempres = 1
+
+
+
+[Output]
+
+#output file prefix
+file_prefix = hd209_
+
+#save internal model to file. Useful for when only creating transmission/emisison model
+dump_internal = True
+
+#internal model name save as
+internal_name = hd209_angelos.dat
+
+#save plots to .pdf 
+save_plots = True
+
+
+
+[Star]
+#defines stellar specific (fixed or starting) parameters:
+
+#Stellar radius (R_sun)
+radius = 1.148
+
+#Stellar temperature (K)
+temp   = 6075
+
+
+
+[Planet]
+#defines planetary specific (fixed or starting) parameters:
+
+#Planetary radius (R_jupiter)
+radius = 1.38
+
+#Planetary mass (M_jupiter)
+mass = 0.69
+
+#Orbital semi-major axis (AU)
+sma = 0.04747
+
+#Planetary bond albedo (0-1)
+albedo = 0.2
+
+#Planetary temperature (K)
+temp = 1450
+
+#molecular weight of atmosphere 
+mu = 2.3
+
+#molecules considered
+#molecules = 12C-1H4,1H2-16O,14N-1H3,12C-16O2,12C-16O
+molecules = 1H2-16O, 12C-1H4,14N-1H3,12C-16O2,12C-16O
+
+#initial mixing ratios (starting point for minimisation) 
+#and used for model only mode (create_spectrum.py). Must have as
+#many mixing ratios as molecules above. Comma separated list. 
+#mixing_ratios = 0.0, 0.0,2.0e-3,0.0,0.0
+mixing_ratios = 1e-4, 1e-4, 1e-4, 1e-4, 1e-4
+
+#include cloud opacities. True/False 
+include_cld = False
+
+#cloud refractive index (m) and particle size (a) in microns. Comma separated
+cld_params = 1.5, 1.0
+
+#cloud pressure (in bar) lower and upper bounds. Comma separated
+cld_pressure = 1.0e-3, 0.1
+
+#file from which to read optical depths for extra opacities (e.g. clouds)
+#parameter not in use but placeholder for implementation if needed
+cld_file = Input/cloud1.cld
+
+# include Ryleigh scattering opacities
+include_Rayleigh = True
+
+
+[T-P profile]
+#let mixing ratios and T-P profile vary
+#True: free parameters allowed and lower/upper limits taken from .atm, 
+#False: all fixed to input .atm file
+var_atm = True
+
+#thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
+num_scaleheights = 20
+
+#number of atmospheric levels. 
+#If var_atm = False, atm_levels is taken from .atm file
+atm_levels = 100
+
+#set temperature as variables
+var_temp = True
+
+#set pressure as variable
+var_pres = True
+
+#set maximum pressure level (if set variable) (Pa)
+atm_max_pressure = 1e6
+
+#set mixing ratios as variables
+var_mix = True
+
+
+[Fitting]
+#defines general fittings parameters, independent of method
+
+#fit transmission model
+transmission = True
+
+#fit emission model
+emission     = False
+
+#fit emission in 2 stage mode 
+emission_stage2 = True
+
+#lower and upper bounds for TP-profile hybrid alpha parameter 
+hybrid_alpha_low  = 0.0 
+hybrid_alpha_high = 1.0
+
+
+# turn on/off free parameters. True means the parameter is fixed
+fix_radius = False
+fix_temp = False
+fix_mu = False
+fix_P0 = False
+fix_inactive = True
+
+# fit mixing ratios in log space
+X_log = True
+
+# if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
+# if False, mu is either fitted (if fix_mu = False) or kept fixed (see Planet > mu)
+couple_mu = False
+
+#Upper and lower bounds for temperature (equilibrium +- value)
+T_up  = 300
+T_low = 300
+
+#upper and lower bounds for mean molecular weight (in atomic mass units)
+mu_up = 40
+mu_low = 0
+
+#Upper and lower bounds for planet radius (radius +- value), in RJUP
+radius_up  = 1.398
+radius_low = 1.362
+
+#Upper and lower bounds for surface pressure
+P0_up = 1.e8
+P0_low = 1.e2
+
+#Upper and lower bounds for absorbers mixing ratios. IMPORTANT: never set X_low to zero, as  take logs
+X_up  = 1.0
+X_low = 1.0e-8
+
+#Upper and lower bounds for inactive gases mixing ratios
+X_inactive_up  = 1.0
+X_inactive_low = 0.0
+
+# clr transformation
+clr_trans = True
+
+
+
+[Downhill]
+#defines parameters for minimisation
+
+#run minimisation routine on data
+run = False
+
+#type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
+#see scipy.optimize.minimize documentation
+type = L-BFGS-B
+
+#Supply extra parameters using options parameter. See scipy docu
+options = {‘verbose’:False}
+
+
+
+[MCMC]
+#defines MCMC specific parameters
+
+#run MCMC analysis on data
+run = False
+
+#update data standard deviation from dynamic fit.
+update_std = True
+
+
+#MCMC number of total iterations
+iter = 10000
+
+#MCMC burn in period
+burn = 1000
+
+#MCMC thinning factor
+thin = 1
+
+#toggle verbose
+verbose = True
+
+#show progress bar
+progressbar = True
+
+
+
+
+[MultiNest]
+#defines MultiNest specific parameters
+
+#run Nested Sampling analysis on data
+run = True
+
+#resume from previous run
+resume = False
+
+#verbose
+verbose = True
+
+#sampling chains directory
+nest_path = chains/
+
+#sampling efficiency (parameter, ...)
+sampling_eff = parameter
+
+#number of live points
+n_live_points = 2000
+
+#maximum no. of iterations (0=inf)
+max_iter = 0
+
+#search for multiple modes
+multimodes = True
+
+#maximum number of modes
+max_modes = 100
+
+#run in constant efficiency mode
+const_eff = False
+
+#set log likelihood tolerance. If change is smaller, multinest will have converged
+evidence_tolerance = 0.5
+mode_tolerance = -1e90
+
+#importance nested sampling
+imp_sampling = False
+
+# detect different modes in multinest output using clustering algorithm. It overrides detected modes if multimodes=True
+cluster_analysis = False
+
+
+[Housekeeping]
+#lets you run an external script (py or sh) in subshell at
+#the end of TauREx. Usefull to automatically transfer data or
+#delete tmp files
+
+#run housekeeping
+run = False
+
+#Name of script in TauREx base dir
+script_name = transfer2home.py
+
+#Save used parameter file to Output
+save_used_params = True
