@@ -6,13 +6,13 @@ import os, glob
 import numpy as np
 
 
-path = '/Volumes/DATA_PINGU/ingo/cobweb/tests/emission_alpha'
-parfile = 'Parfiles/taurex_emission_wasp76.par'
+path = '/Volumes/DATA_PINGU/ingo/angelos_hd209'
+parfile = 'taurex_hd209458b_angelos.par'
 
 list = glob.glob(path+'/*')
 
 for folder in list:
     if os.path.isdir(folder):
         print 'Plotting: ', folder
-        os.system('python analyse_solutions_from_traces.py -p '+parfile+' -d '+folder)
+        os.system('python analyse_solutions_from_traces.py -p '+folder+'/'+parfile+' -d '+folder)
 #     exit()
