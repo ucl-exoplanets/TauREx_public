@@ -122,7 +122,7 @@ molecules = 1H2-16O, 12C-16O, 12C-16O2, 12C-1H4
 #and used for model only mode (create_spectrum.py). Must have as
 #many mixing ratios as molecules above. Comma separated list. 
 #mixing_ratios = 2.0e-3,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-mixing_ratios = 1.0e-5, 1.0e-6, 1.0e-6
+mixing_ratios = 1.0e-5, 1.0e-6, 1.0e-6,1.0e-6
 
 
 
