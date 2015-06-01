@@ -19,8 +19,23 @@ def black_body(lamb, temp):
     
 #     exponent = np.exp((con.h * con.c) / (lamb *1e-6 * con.k * temp))
 #     BB = (np.pi* (2.0*con.h*con.c**2)/(lamb*1e-6)**5) * (1.0/(exponent -1))
-    
     return BB * 1e-6
+
+def fit_brightness_temp(wave,flux):
+    '''
+    function fitting a black body to given flux-wavelength 
+    value. 
+    Input: Flux at wavelength (microns)
+    Output: brightness temperature.
+    '''
+    
+    def chi(temp,flux,wave):
+        model = black_body(wave, temp)
+        res = flux - model
+        return res**2
+    
+    tempfit = scipy.optimize.fmin(chi,1000,args=(flux,wave),maxiter=1000,disp=0)
+    return tempfit
 
 def black_body_to_temp(wave,flux):
     '''

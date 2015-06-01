@@ -231,7 +231,7 @@ class data(base):
         
         if self.params.star_temp > max(tmpind) or self.params.star_temp < min(tmpind):
             if self.params.verbose:
-                logging.warning('WARNING: Stellar temp. in .par file exceeds range %.1f - %.1f K. '
+                logging.warning('Stellar temp. in .par file exceeds range %.1f - %.1f K. '
                                 'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
             self.star_blackbody = True
             SED = libem.black_body(self.specgrid,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
@@ -246,12 +246,19 @@ class data(base):
             for file in fileindex: #this search is explicit due to compatibility issues with Mac and Linux sorting
                 if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
                     self.SED_filename = file
+                    print file
 
             #reading in correct file and interpolating it onto self.specgrid
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane 
 #             SED_raw[:,1] *= self.params.star_radius**2 * np.pi * 4. 
+            
+#             digitized = np.digitize(SED_raw[:,0],self.specgrid)
+#             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.specgrid))])
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
+        
+        print self.params.star_temp
+        SED = libem.black_body(self.specgrid,self.params.star_temp)
         return SED
 
     #@profile

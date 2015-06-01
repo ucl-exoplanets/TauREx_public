@@ -16,6 +16,7 @@ from multiprocessing import Pool
 from functools import partial
 
 import cPickle as pickle
+from library.library_emission import fit_brightness_temp
 
 #checking for multinest library
 # global multinest_import 
@@ -174,6 +175,8 @@ params = createob.params              #making a copy of params object
 
 #function called by pool.map() to compute spectrum, normalise spectrum and return 
 def populate_model_array(p,idx): 
+    print Pardic[p][idx]
+    
     #setting bulk parameters
     createob.fmob.atmosphere.T[:] = Pardic[p][idx]['T_planet'] #set bulk planetary temperature from 10bar temperature 
     #setting abundances
@@ -187,9 +190,14 @@ def populate_model_array(p,idx):
     tp_profile = createob.fmob.atmosphere.T
     model_wave = model[:,0] 
     
+    print np.min(tp_profile),np.max(tp_profile)
+    
     bb_planet_l = black_body(model[:,0],np.min(tp_profile))#*0.88
     bb_planet_h = black_body(model[:,0],np.max(tp_profile))
     bb_star     = black_body(model[:,0],Pardic[p][idx]['T_star'])
+#     bb_star     = black_body(model[:,0],4800)
+    
+#     bb_star *= (Pardic[p][idx]['R_star']**2*4.0*np.pi)
     
     F_star = createob.fmob.F_star    
     FpFs_l = bb_planet_l/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
@@ -208,19 +216,35 @@ def populate_model_array(p,idx):
     norm2 = norm1 - np.mean(norm1)
     norm2 /= np.std(norm2)
     
+#     #fitting for brightness temperature 
+#     tempgrid = np.zeros_like(model[:,1])
+#     
+#     for i in xrange(len(tempgrid)):
+#         tempgrid[i] = fit_brightness_temp(model[i,0],model[i,1])
     
-    figure()
-    plot(model_wave,norm2)
+#     figure()
+#     plot(bb_planet_l,'g')
+#     plot(bb_planet_h,'r')
+
+#     figure()
+#     plot(createob.fmob.specgrid,F_star,'r')
+#     plot(model_wave,bb_star,'k')
+#     
+#     figure()
+#     plot(model_wave,norm2)
+    
+#     figure()
+#     plot(model_wave,tempgrid)
     
     return model_wave, model[:,1], norm2 #returns: wavelength grid, spectrum, normalised spectrum
 
 
 #setting up additional output arrays
-testwave,test,norm_test = populate_model_array(2,0) #just getting array sizes
+testwave,test,norm_test = populate_model_array(0,0) #just getting array sizes
 modelarray = np.zeros((len(testwave),N_iter_total)) #non dictionary output array containing the normalised model
 
-show()
-exit()
+# show()
+# exit()
 
 
 #do not delete following line. useful some day. some fine day. 
