@@ -246,7 +246,6 @@ class data(base):
             for file in fileindex: #this search is explicit due to compatibility issues with Mac and Linux sorting
                 if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
                     self.SED_filename = file
-                    print file
 
             #reading in correct file and interpolating it onto self.specgrid
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
@@ -255,9 +254,8 @@ class data(base):
             
 #             digitized = np.digitize(SED_raw[:,0],self.specgrid)
 #             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.specgrid))])
-            SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
-        
-        print self.params.star_temp
+#            SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
+
         SED = libem.black_body(self.specgrid,self.params.star_temp)
         return SED
 
