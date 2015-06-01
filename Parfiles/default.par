@@ -62,7 +62,7 @@ tempres = 100
 presres = 0.1
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
-star_path = Input/Star_spectra
+star_path = Input/star_spectra
 
 #include varying stellar radii file. True/False
 include_rad = False

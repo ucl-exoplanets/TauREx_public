@@ -41,6 +41,7 @@ alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 
 alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
 
+
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
@@ -62,6 +63,7 @@ for i in range(RNUM): #this may be changed with a more informative ID... e.g. da
     DICT[ID]['fit_hybrid_alpha_l'] = alpha_l[i]  #setting parameter for run
     ID += 1
 
+ID = 0
 for i in range(RNUM):
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here

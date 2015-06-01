@@ -195,10 +195,10 @@ def populate_model_array(p,idx):
     FpFs_l = bb_planet_l/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
     FpFs_h = bb_planet_h/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
     
-#     figure()
-#     plot(model_wave,model[:,1])
-#     plot(model_wave,FpFs_l,'g')
-#     plot(model_wave,FpFs_h,'r')  
+    figure()
+    plot(model_wave,model[:,1])
+    plot(model_wave,FpFs_l,'g')
+    plot(model_wave,FpFs_h,'r')  
 
     #normalising with blackbodies
     norm1 = model[:,1] - FpFs_l
@@ -208,13 +208,19 @@ def populate_model_array(p,idx):
     norm2 = norm1 - np.mean(norm1)
     norm2 /= np.std(norm2)
     
+    
+    figure()
+    plot(model_wave,norm2)
+    
     return model_wave, model[:,1], norm2 #returns: wavelength grid, spectrum, normalised spectrum
 
 
 #setting up additional output arrays
-testwave,test,norm_test = populate_model_array(0,0) #just getting array sizes
+testwave,test,norm_test = populate_model_array(2,0) #just getting array sizes
 modelarray = np.zeros((len(testwave),N_iter_total)) #non dictionary output array containing the normalised model
 
+show()
+exit()
 
 
 #do not delete following line. useful some day. some fine day. 

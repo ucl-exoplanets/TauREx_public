@@ -164,7 +164,7 @@ class create_spectrum(object):
         self.fmob.atmosphere.absorbing_gases_X = X
         self.fmob.atmosphere.set_mixing_ratios()
     
-    def generate_tp_profile_1(self,Tnodes,Pnodes=None,smooth_window=5):
+    def generate_tp_profile_1(self,Tnodes,Pnodes=None,smooth_window=10):
         #generates ad-hoc TP profile given pressure and temperature nodes
         if Pnodes is None:
             Pnodes = self.Pnodes
