@@ -343,6 +343,32 @@ class output(base):
             out[:,0] = self.data.specgrid
             out[:,1] = model
             fitting_out[idx]['highres_spectrum'] = out
+            
+            #individual molecules plotted @todo may need some cleaning 
+            fit_params2 = fit_params           
+            fitting_out[idx]['components'] ={}
+            for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
+                fit_params2 = np.copy(fit_params)
+                if self.params.fit_X_log:
+                    fit_params2[:self.fitting.fit_X_nparams] = [-20.0]*self.fitting.fit_X_nparams 
+                else:
+                    fit_params2[:self.fitting.fit_X_nparams] = [0.0]*self.fitting.fit_X_nparams
+                fit_params2[idx2] = solution['fit_params'][param]['value']
+#                 fit_params2[idx2] = 0.0
+           
+                
+                self.fitting.update_atmospheric_parameters(fit_params2)
+                model2 = self.fitting.forwardmodel.model()
+                out2 = np.zeros((len(self.data.specgrid), 2))
+                out2[:,0] = self.data.specgrid
+                out2[:,1] = model2
+                out3 = np.zeros((len(self.data.spectrum[:,0]), 2))
+                out3[:,0] = self.data.spectrum[:,0]
+                out3[:,1] = [model2[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
+                
+                fitting_out[idx]['components'][param] ={}
+                fitting_out[idx]['components'][param]['highres_spectrum'] = out2
+                fitting_out[idx]['components'][param]['spectrum'] = out3
 
         return fitting_out
 
@@ -428,12 +454,19 @@ class output(base):
 
             f.write('\n')
 
+    def save_fig(self,fig,FNAME):
+            filename = os.path.join(self.out_path,FNAME)
+            fig.savefig(filename)
+            logging.info('Plot saved in %s' % filename)
+
     def plot_all(self, save2pdf=False,params_names=None):
 
         logging.info('Plotting absolutely everything')
 
-        self.plot_spectrum(save2pdf=save2pdf)
-        self.plot_fit(save2pdf=save2pdf)
+#         self.plot_spectrum(save2pdf=save2pdf)
+        self.plot_fit(save2pdf=save2pdf,resolution='low')
+        self.plot_fit(save2pdf=save2pdf,resolution='high')
+        self.plot_absorbers(save2pdf=save2pdf,resolution='high')
         self.plot_distributions(save2pdf=save2pdf, params_names=params_names)
 
     def plot_spectrum(self,save2pdf=False,linewidth=2.0):
@@ -466,40 +499,123 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.out_path, 'spectrum_data.pdf')
-            fig.savefig(filename)
-            logging.info('Plot saved in %s' % filename)
+            self.save_fig(fig, 'spectrum_data.pdf')
+        
+            
 
-    def plot_fit(self,save2pdf=False,linewidth=2.0):
+    def plot_fit(self,save2pdf=False,resolution='low',linewidth=2.0):
 
         logging.info('Plotting observed and fitted spectra')
 
-        fig = py.figure()
+        if resolution is 'low':
+            res = 'spectrum'
+        elif resolution is 'high':
+            res = 'highres_spectrum'
 
+        fig = py.figure()
         # plot observed spectrum
         py.errorbar(self.data.spectrum[:,0],
+                        self.data.spectrum[:,1],
+                        self.data.spectrum[:,2],
+                        color=[0.7,0.7,0.7],linewidth=linewidth)
+        py.plot(self.data.spectrum[:,0], # todo why again? - it looks prettier!
                     self.data.spectrum[:,1],
-                    self.data.spectrum[:,2],
-                    color=[0.7,0.7,0.7],linewidth=linewidth)
-        py.plot(self.data.spectrum[:,0], # todo why again?
-                self.data.spectrum[:,1],
-                color=[0.3,0.3,0.3],
-                linewidth=linewidth,label='DATA')
+                    color=[0.3,0.3,0.3],
+                    linewidth=linewidth,label='DATA')
 
-        # plot models
+        # plot models       
         if self.fitting.DOWN:
-            py.plot(self.DOWN_out[0]['spectrum'][:,0], self.DOWN_out[0]['spectrum'][:,1],
-                    c='b',label='DOWNHILL',linewidth=linewidth)
+            fig = self.__plot_fit__(self.DOWN_out[0][res], 'DOWNHILL', 
+                                    fig=fig, linewidth=linewidth)
         if self.fitting.MCMC:
             for idx, solution in enumerate(self.MCMC_out):
-                py.plot(solution['spectrum'][:,0], solution['spectrum'][:,1],
-                        label='MCMC %i' % idx, linewidth=linewidth)
+                fig = self.__plot_fit__(solution[res], 'MCMC %i' % idx,
+                                        fig=fig, linewidth=linewidth)
         if self.fitting.NEST:
             for idx, solution in enumerate(self.NEST_out):
-                py.plot(solution['spectrum'][:,0], solution['spectrum'][:,1],
-                        label='NESTED %i' % idx, linewidth=linewidth)
+                fig = self.__plot_fit__(solution[res], 'NESTED %i' % idx,
+                                        fig=fig, linewidth=linewidth)
+                
+        if save2pdf:
+            self.save_fig(fig,'model_fit_{0}_res.pdf'.format(resolution))
+           
 
-        py.legend()
+
+    def plot_absorbers(self,save2pdf=False,params_names=None,resolution='low',linewidth=2.0):
+        #routine plotting individual components 
+        logging.info('Plotting individual absorbers.')
+        if params_names is None:
+            try:
+                self.params_names
+                params_names = self.params_names
+            except:
+                return
+        
+        if resolution is 'low':
+            res = 'spectrum'
+        elif resolution is 'high':
+            res = 'highres_spectrum'
+        
+        
+        # plot models
+        if self.fitting.DOWN:
+            fig = py.figure()
+#             plot_observed = True
+            fig = self.__plot_fit__(self.DOWN_out[0][res], 'MODEL', fig=fig, plot_observed = True,linewidth=linewidth)
+            for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
+#                 if idx2 == 1: plot_observed = False
+                fig = self.__plot_fit__(self.DOWN_out[0]['components'][param][res], param, 
+                                        fig=fig,plot_observed=False,linewidth=linewidth)
+            if save2pdf:
+                self.save_fig(fig, 'downhill_components_{}_res.pdf'.format(resolution))
+            
+        if self.fitting.MCMC:
+            for idx, solution in enumerate(self.MCMC_out):
+                fig = py.figure()
+#                 plot_observed=True
+                fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
+                for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
+#                     if idx2 == 1: plot_observed = False
+                    fig = self.__plot_fit__(solution['components'][param][res],param,
+                                        fig=fig,plot_observed=False,linewidth=linewidth)
+                    
+                if save2pdf:
+                    self.save_fig(fig, 'mcmc_components_{0}_{1}_res.pdf'.format(idx,resolution))
+                
+        if self.fitting.NEST:
+            for idx, solution in enumerate(self.NEST_out):
+                fig = py.figure()
+#                 plot_observed=True
+                fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
+                for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
+#                     if idx2 == 1: plot_observed = False
+                    fig = self.__plot_fit__(solution['components'][param][res],param,
+                                        fig=fig,plot_observed=False,linewidth=linewidth)
+                    
+                if save2pdf:
+                    self.save_fig(fig, 'nested_components_{0}_{1}_res.pdf'.format(idx,resolution))
+                
+    
+    def __plot_fit__(self,MODEL,LABEL,fig=None,plot_observed=False, linewidth=2.0):
+        
+        if fig is None:
+            fig = py.figure()
+
+        if plot_observed:
+            # plot observed spectrum
+            py.errorbar(self.data.spectrum[:,0],
+                        self.data.spectrum[:,1],
+                        self.data.spectrum[:,2],
+                        color=[0.7,0.7,0.7],linewidth=linewidth,label='DATA')
+#             py.plot(self.data.spectrum[:,0], # todo why again? - it looks prettier!
+#                     self.data.spectrum[:,1],
+#                     color=[0.3,0.3,0.3],
+#                     linewidth=linewidth,label='DATA')
+
+        # plot models
+        py.plot(MODEL[:,0], MODEL[:,1],label=LABEL,linewidth=linewidth)
+        
+        py.legend(loc=0)
         py.title('Data and Model')
         py.xlabel('Wavelength ($\mu m$)')
         py.xscale('log')
@@ -510,10 +626,8 @@ class output(base):
         elif self.__MODEL_ID__ == 'emission':
             py.ylabel('$F_p/F_s$')
 
-        if save2pdf:
-            filename = os.path.join(self.out_path, 'model_fit.pdf')
-            fig.savefig(filename)
-            logging.info('Plot saved in %s' % filename)
+        return fig
+          
 
     def plot_distributions(self, save2pdf=False, params_names=None):
 
@@ -558,9 +672,7 @@ class output(base):
             py.ylabel('$F_p/F_s$')
 
         if save2pdf:
-            filename = os.path.join(self.out_path, 'spectrum.pdf')
-            fig.savefig(filename)
-            logging.info('Plot saved in %s' % filename)
+            self.save_fig(fig, 'spectrum.pdf')
 
 
     def save_ascii_spectra(self):

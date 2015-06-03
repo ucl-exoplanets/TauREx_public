@@ -175,7 +175,6 @@ params = createob.params              #making a copy of params object
 
 #function called by pool.map() to compute spectrum, normalise spectrum and return 
 def populate_model_array(p,idx): 
-    print Pardic[p][idx]
     
     #setting bulk parameters
     createob.fmob.atmosphere.T[:] = Pardic[p][idx]['T_planet'] #set bulk planetary temperature from 10bar temperature 

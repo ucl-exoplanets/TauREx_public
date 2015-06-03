@@ -19,7 +19,7 @@
 ###########################################################
 
 #loading libraries     
-import  sys, os, optparse, time
+import  sys, os, optparse, time,pylab
 # from numpy import * #nummerical array library 
 # from pylab import * #science and plotting library for python
 from ConfigParser import SafeConfigParser
@@ -191,5 +191,5 @@ if params.clean_run:
 # # print s.getvalue()
 
 #last line. displays any diagrams generated. must be run after profiling
-# if params.verbose:
-#     show()
+if params.verbose:
+    pylab.show()

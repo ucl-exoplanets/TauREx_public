@@ -257,8 +257,8 @@ class data(base):
 #             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.specgrid))])
             SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
         
-        print self.params.star_temp
-        SED = libem.black_body(self.specgrid,self.params.star_temp)
+#         print self.params.star_temp
+#         SED = libem.black_body(self.specgrid,self.params.star_temp)
         return SED
 
     #@profile
