@@ -189,8 +189,8 @@ def populate_model_array(p,idx):
     tp_profile = createob.fmob.atmosphere.T
     model_wave = model[:,0] 
     
-    print np.min(tp_profile),np.max(tp_profile)
-    
+#    print np.min(tp_profile),np.max(tp_profile)
+
     bb_planet_l = black_body(model[:,0],np.min(tp_profile))#*0.88
     bb_planet_h = black_body(model[:,0],np.max(tp_profile))
     bb_star     = black_body(model[:,0],Pardic[p][idx]['T_star'])
@@ -202,10 +202,10 @@ def populate_model_array(p,idx):
     FpFs_l = bb_planet_l/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
     FpFs_h = bb_planet_h/bb_star *(Pardic[p][idx]['R_planet']/Pardic[p][idx]['R_star'])**2
     
-    figure()
-    plot(model_wave,model[:,1])
-    plot(model_wave,FpFs_l,'g')
-    plot(model_wave,FpFs_h,'r')  
+#    figure()
+#    plot(model_wave,model[:,1])
+#    plot(model_wave,FpFs_l,'g')
+#    plot(model_wave,FpFs_h,'r')  
 
     #normalising with blackbodies
     norm1 = model[:,1] - FpFs_l

@@ -246,7 +246,6 @@ class data(base):
             for file in fileindex: #this search is explicit due to compatibility issues with Mac and Linux sorting
                 if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
                     self.SED_filename = file
-                    print file
 
             #reading in correct file and interpolating it onto self.specgrid
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
