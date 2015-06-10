@@ -34,6 +34,13 @@ import logging
 import license
 from license import *
 
+try:
+    from mpi4py import MPI
+    MPIrank = MPI.COMM_WORLD.Get_rank()
+except:
+    MPIrank = 0
+    pass
+
 # some constants
 KBOLTZ = 1.380648813e-23
 G = 6.67384e-11
@@ -113,7 +120,7 @@ class data(base):
             self.ngas = len(self.X[:,0])
 
         # Rayleigh scattering
-        if self.params.in_create_sigma_rayleigh:
+        if MPIrank == 0 and self.params.in_create_sigma_rayleigh:
             # compute cross sections and save them to a file
             self.build_rayleigh_sigma()
         self.sigma_R = self.get_rayleigh_sigma() # load Rayleigh scattering cross sections from file
@@ -533,7 +540,7 @@ class data(base):
             n_formula = True # assume we have a formula for the refractive index of gasname
             king = 1 # King correction factor
             ns = 0   # refractive index
-            wl = np.linspace(0.3, 30, 1000) # wavelengths in micron
+            wl = np.linspace(0.1, 50, 1000) # wavelengths in micron
 
             if gasname == 'He':
                 ns = 1 + 0.01470091/(423.98-wl**-2) # C. R. Mansfield and E. R. Peck. Dispersion of helium, J. Opt. Soc. Am. 59, 199-203 (1969)
