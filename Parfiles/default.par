@@ -26,6 +26,8 @@ spec_res = 1000
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
 
+#recompile cpp code
+compile_cpp = False
 
 [Input]
 #Observed spectrum to be fitted
@@ -84,13 +86,13 @@ create_sigma_rayleigh = False
 path = Output/
 
 #output file prefix
-file_prefix = test_
+file_prefix =
 
 #save internal model to file. Useful for when only creating transmission/emisison model
 dump_internal = False
 
 #internal model name save as
-internal_name = transmissionspec.dat
+internal_name = internal_model.dat
 
 #save plots to .pdf
 save_plots = True

@@ -129,7 +129,13 @@ if options.cluster_dictionary is not "None":
     params = c.modify_params(params,options.cluster_procid)
 
 if params.gen_type == 'transmission' or params.fit_transmission:
+    # compile transmission cpp code if needed
+    if params.gen_compile_cpp or not os.path.isfile('library/pathintegral.so'):
+        os.system('rm library/pathintegral.so')
+        os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
+
     from taurex_transmission import run
+
 elif params.gen_type == 'emission' or params.fit_emission:
     from taurex_emission import run
 else:

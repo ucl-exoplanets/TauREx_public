@@ -91,6 +91,7 @@ class parameters(base):
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')
         self.gen_spec_res          = self.getpar('General','spec_res', 'float')
         self.gen_type              = self.getpar('General','type')
+        self.gen_compile_cpp       = self.getpar('General','compile_cpp', 'bool')
         self.gen_run_gui           = False
 
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')

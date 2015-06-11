@@ -2,6 +2,7 @@
 *.lprofile
 *.profile
 *.pyc
+library/*.so
 rawfiles/
 compiledcode/
 setup.sh

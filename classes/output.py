@@ -439,18 +439,18 @@ class output(base):
                     else:
                         f.write('%s	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
                                                          solution['fit_params'][param]['std']))
-
-                if param == 'P0':
-                    f.write('log(%s)	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
-                                                     solution['fit_params'][param]['std']))
-                    f.write('%s	%f	%f\n' %  (param, np.power(10, solution['fit_params'][param]['value']),
-                                              np.power(10, solution['fit_params'][param]['value'])*np.log(10)*solution['fit_params'][param]['std'] ))
-                elif param == 'mu' or param == 'coupled_mu':
-                    f.write('%s (AMU)	%f	%f\n' %  (param, solution['fit_params'][param]['value']/AMU,
-                                                      solution['fit_params'][param]['std']/AMU))
                 else:
-                    f.write('%s	%.3e	%.3e\n' %  (param, solution['fit_params'][param]['value'],
-                            solution['fit_params'][param]['std']))
+                    if param == 'P0':
+                        f.write('log(%s)	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
+                                                         solution['fit_params'][param]['std']))
+                        f.write('%s	%f	%f\n' %  (param, np.power(10, solution['fit_params'][param]['value']),
+                                                  np.power(10, solution['fit_params'][param]['value'])*np.log(10)*solution['fit_params'][param]['std'] ))
+                    elif param == 'mu' or param == 'coupled_mu':
+                        f.write('%s (AMU)	%f	%f\n' %  (param, solution['fit_params'][param]['value'],
+                                                          solution['fit_params'][param]['std']))
+                    else:
+                        f.write('%s	%.3e	%.3e\n' %  (param, solution['fit_params'][param]['value'],
+                                solution['fit_params'][param]['std']))
 
             f.write('\n')
 
