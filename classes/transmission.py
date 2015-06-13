@@ -116,9 +116,9 @@ class transmission(base):
     def get_cloud_sig(self):
 
         #calculating could cross sections
-        a = (128.0* pi**5 * self.params.in_cld_a**6)
+        a = (128.0* pi**5 * self.atmosphere.clouds_a**6)
         b = (3.0 * self.lambdagrid**4)
-        c = ((self.params.in_cld_m**2 -1.0)/(self.params.in_cld_m**2 +2.0))**2
+        c = ((self.atmosphere.clouds_m**2 -1.0)/(self.atmosphere.clouds_m**2 +2.0))**2
 
         return a / b * c
 
@@ -271,8 +271,9 @@ class transmission(base):
         cCld_sig = cast2cpp(self.Cld_sig)
         if self.params.in_include_cld:
             cInclude_cld = C.c_int(1)
-            cCld_lowbound = C.c_double(self.params.in_cld_pressure[0])
-            cCld_upbound = C.c_double(self.params.in_cld_pressure[1])
+            cCld_lowbound = C.c_double(self.atmosphere.clouds_lower_P)
+            cCld_upbound = C.c_double(self.atmosphere.clouds_upper_P)
+
         else:
             cInclude_cld = C.c_int(0)
             cCld_lowbound = C.c_double(0)
@@ -382,10 +383,10 @@ class transmission(base):
 
                 #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
                 if self.params.in_include_cld:
-                    if P_bar[k+j] < self.params.in_cld_pressure[1] and P_bar[k+j] > self.params.in_cld_pressure[0]:
+                    if P_bar[k+j] < self.atmosphere.clouds_upper_P and P_bar[k+j] > self.atmosphere.clouds_lower_P:
                         # = log(cloud density), assuming linear decrease with decreasing log pressure
                         # following Ackerman & Marley (2001), Fig. 6
-                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.params.in_cld_pressure[0]),np.log(self.params.in_cld_pressure[1]),-6.0,-1.0)
+                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.atmosphere.clouds_lower_P),np.log(self.atmosphere.clouds_upper_P),-6.0,-1.0)
                         cld_tau[j] += ( self.Cld_sig[wl] * (dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
 
                 #adding all taus together

@@ -11,8 +11,6 @@ trans_cpp = True
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
 
-# use wavelength grid of cross sections
-abs_wavegrid = False
 
 #short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.4
@@ -23,6 +21,9 @@ wavemax = 20.0
 #resolution of internal model runs (R)
 spec_res = 1000
 
+# use wavelength grid of cross sections for internal model (override spec_res)
+abs_wavegrid = False
+
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
 
@@ -30,8 +31,12 @@ type = transmission
 compile_cpp = False
 
 [Input]
-#Observed spectrum to be fitted
+#Observed spectrum to be fitted (three columns: wavelength (micron), (Rp/R*)^2, error
 spectrum_file = False
+
+# use bin widths from observed spectrum (bin width provided as a fourth column in spectrum_file)
+use_spectrum_bins = False
+
 
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
@@ -201,7 +206,7 @@ include_cld = False
 #cloud refractive index (m) and particle size (a) in microns. Comma separated
 cld_params = 1.5, 1.0
 
-#cloud pressure (in bar) lower and upper bounds. Comma separated
+#cloud pressure in bar, lower and upper bounds. Comma separated
 cld_pressure = 1.0e-3, 0.1
 
 #file from which to read optical depths for extra opacities (e.g. clouds)
@@ -223,12 +228,6 @@ num_scaleheights = 20
 #number of atmospheric levels.
 #If var_atm = False, atm_levels is taken from .atm file
 atm_levels = 80
-
-#set temperature as variables todo not used. Moved to Fitting : fix_temp
-var_temp = True
-
-#set pressure as variable todo not used. Moved to Fitting : fix_P0
-var_pres = True
 
 #set maximum pressure level (if set variable) (Pa)
 atm_max_pressure = 1e6
@@ -260,24 +259,38 @@ emission_stage2 = True
 hybrid_alpha_low  = 0.0 
 hybrid_alpha_high = 1.0
 
+# turn on/off free parameters. True means the parameter is fixed, False the parameter is fitted
 
-
-#free parameters, temperature, abundance. Currently not used. not sure whether should be implemented and in what form
-param_free = 1,42
-
-# turn on/off free parameters. True means the parameter is fixed
-fix_radius = False
-fix_temp = False
-fix_mu = False
-fix_P0 = False
+# fix the inactive gases mixing ratios, defined in Planet > inactive_gases
 fix_inactive = True
+# fix the temperature (defined in Planet > temp. Not working if TP profile is not isothermal)
+fix_temp = False
+# fix the mean molecular weight (defined in Planet > mu. Careful: can be overidden by fit_couple_mu)
+fix_mu = False
+# fix radius at atm_max_pressure (defined in Planet > radius)
+fix_radius = False
+# fix maximum pressure at surface (defined in T-P Profile > atm_max_pressure). Fit is in log space
+fix_P0 = False
+# fix cloud parameters. Only working if Planet > include_cld is True
+# clouds upper and lower pressure (defined in Planet > cld_pressure
+fix_clouds_lower_P = True
+fix_clouds_upper_P = True
+# cloud particle refractive index (m) and particle size (a) (defined in Planet > cld_params)
+fix_clouds_m = True
+fix_clouds_a = True
+
 
 # fit mixing ratios in log space
 X_log = True
 
-# if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
-# if False, mu is either fitted (if fix_mu = False) or kept fixed (see Planet > mu)
-couple_mu = False
+#Upper and lower bounds for inactive gases mixing ratios
+X_inactive_up  = 1.0
+X_inactive_low = 0.0
+
+#Upper and lower bounds for absorbers mixing ratios. IMPORTANT: never set X_low to zero, as  take logs
+X_up  = 1.0
+X_low = 1.0e-8
+
 
 #Upper and lower bounds for temperature (equilibrium +- value)
 T_up  = 200
@@ -295,15 +308,19 @@ radius_low = 0.2210
 P0_up = 1.e8
 P0_low = 1.e2
 
-#Upper and lower bounds for absorbers mixing ratios. IMPORTANT: never set X_low to zero, as  take logs
-X_up  = 1.0
-X_low = 1.0e-8
+# cloud lower and upper pressure bounds ( in log(bar) ). Fit is in log space
+clouds_lower_P_bounds = -5, -2
+clouds_upper_P_bounds = -2, 0
 
-#Upper and lower bounds for inactive gases mixing ratios
-X_inactive_up  = 1.0
-X_inactive_low = 0.0
+# cloud refractive index and particle size (micron) bounds
+clouds_m_bounds = 0.8, 1.2
+clouds_a_bounds = 1.3, 1.7
 
-# clr transformation
+# if True mu is not fitted, but derived from the bulk composition of the atmosphere + absorbers
+# if False, mu is either fitted (if fix_mu = False) or kept fixed (see Planet > mu)
+couple_mu = False
+
+# centered log ratio transformation
 clr_trans = False
 
 

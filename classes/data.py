@@ -77,6 +77,16 @@ class data(base):
             # set observed spectrum specific variables (only if spectrum is provided)
             self.nwave = len(self.spectrum[:,0])
             self.wavegrid = self.spectrum[:,0]
+            if self.params.in_use_spectrum_bins:
+                print 'shape', shape(self.spectrum)
+                if shape(self.spectrum)[1] == 4:
+                    self.binwidths = self.spectrum[:,3]
+                    print self.binwidths
+                else:
+                    logging.error('Bin width missing in input spectrum')
+                    sys.exit()
+            else:
+                self.binwidths = None
 
         #calculating wavelength grids
         if params.gen_manual_waverange:
@@ -94,24 +104,36 @@ class data(base):
         else:
             # user wavelength range from observed spectrum, but increase model wavelength range by one data spectral bin
             # in blue and red. This ensures correct model binning at the edges
-            bin_up = self.wavegrid[-1]-self.wavegrid[-2]
-            bin_low = self.wavegrid[1]-self.wavegrid[0]
+            if not self.params.in_use_spectrum_bins:
+                # if bin widths are not provided (assuming uniform binning)
+                bin_up = (self.wavegrid[-1]-self.wavegrid[-2])/2.
+                bin_low = (self.wavegrid[1]-self.wavegrid[0])/2.
+            else:
+                # if bin widths are provided in input spectrum
+                bin_up = self.binwidths[-1]/2.
+                bin_low = self.binwidths[0]/2.
+
+            logging.info('Expand wavelength range of spectrum by one bin up and down: %f, %f' % (self.wavegrid[0]-bin_low,
+                                                                                                 self.wavegrid[-1]+bin_up))
+
             if not self.params.gen_abs_wavegrid:
-            # generate wavelength grid with uniform binning in log(lambda)
+                logging.info('Generate wavelength grid with uniform binning in log(lambda)')
                 self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
                                                                    lambda_min=self.wavegrid[0]-bin_low,
                                                                    lambda_max=self.wavegrid[-1]+bin_up)
             else:
-                # use the wavelength grid of the cross sections
+                #
+                logging.info('Use the wavelength grid of the cross sections')
                 self.specgrid, self.dlamb_grid = self.get_specgrid_from_crosssections(lambda_min=self.wavegrid[0]-bin_low,
                                                                                       lambda_max=self.wavegrid[-1]+bin_up)
 
         self.nspecgrid = len(self.specgrid)
 
         if isinstance(self.spectrum, (np.ndarray, np.generic)):
-            #calculating spectral binning grid, only if observed spectrum is provided
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid, self.specgrid)
-            self.n_spec_bin_grid= len(self.spec_bin_grid)
+            logging.info('Calculating spectral binning grid')
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid, self.specgrid, self.binwidths)
+            #self.n_spec_bin_grid= len(self.spec_bin_grid)
+            self.n_spec_bin_grid = len(self.wavegrid)
 
         #reading in atmospheric profile file
         if self.params.in_use_ATMfile:
@@ -186,19 +208,36 @@ class data(base):
         return np.asarray(specgrid),np.asarray(delta_lambda)
     
     #@profile
-    def get_specbingrid(self,wavegrid, specgrid):
+    def get_specbingrid(self, wavegrid, specgrid, binwidths=None):
         #function calculating the bin boundaries for the data 
         #this is used to bin the internal spectrum to the data in fitting module
-        
-        bingrid =[]
-        bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
-        for i in range(len(wavegrid)-1):
-            bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
-        bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
-        
-        bingrid_idx = numpy.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
 
-        return bingrid, bingrid_idx 
+        if binwidths == None:
+            bingrid =[]
+            bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
+            for i in range(len(wavegrid)-1):
+                bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
+            bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
+            bingrid_idx = numpy.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
+        else:
+            # this bingrid is actually useless, as it doesn't allow for gaps in the data
+            bingrid = []
+            for i in range(len(wavegrid)):
+                bingrid.append(wavegrid[i]-binwidths[i]/2.)
+                bingrid.append(wavegrid[i]+binwidths[i]/2.)
+
+            # build bin grid index array (an index for each model datapoint. If the point is outside the input
+            # spectrum bins, the idx is -99999 (invalid integer...)
+            bingrid_idx = np.empty(len(specgrid))
+            bingrid_idx[:] = np.NaN
+
+            for i in range(len(specgrid)):
+                for j in range(len(wavegrid)):
+                    if specgrid[i] >= (wavegrid[j]-binwidths[j]/2.) and specgrid[i] < (wavegrid[j]+binwidths[j]/2.):
+                        bingrid_idx[i] = j+1
+                        break
+
+        return bingrid, bingrid_idx
 
     def get_specgrid_from_crosssections(self, lambda_min=0.1, lambda_max=20.0):
         # return the wavelength grid of the absorbion cross sections

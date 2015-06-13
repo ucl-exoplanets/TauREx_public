@@ -97,6 +97,9 @@ class parameters(base):
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
         if self.in_spectrum_file == 'False':
             self.in_spectrum_file = False
+        else:
+            self.in_use_spectrum_bins  = self.getpar('Input','use_spectrum_bins', 'bool')
+
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
         self.in_use_TP_file        = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
@@ -134,17 +137,19 @@ class parameters(base):
         self.planet_albedo         = self.getpar('Planet','albedo', 'float')
         self.planet_temp           = self.getpar('Planet', 'temp', 'float')
         self.planet_mu             = self.getpar('Planet', 'mu', 'float')      *AMU
-        self.planet_molec          = self.getpar('Planet','molecules', 'list-str')  #genfromtxt(StringIO(self.getpar('Planet','molecules')),delimiter = ',',dtype='str',autostrip=True)
-        self.planet_mixing         = self.getpar('Planet','mixing_ratios', 'list-float') #genfromtxt(StringIO(self.getpar('Planet','mixing_ratios')),delimiter = ',',dtype='str',autostrip=True)
+        self.planet_molec          = self.getpar('Planet','molecules', 'list-str')
+        self.planet_mixing         = self.getpar('Planet','mixing_ratios', 'list-float')
         self.planet_inactive_gases     = self.getpar('Planet', 'inactive_gases', 'list-str')
         self.planet_inactive_gases_X   = self.getpar('Planet', 'inactive_gases_X', 'list-float')
         self.in_include_Rayleigh       = self.getpar('Planet','include_Rayleigh', 'bool')
         try:
             self.in_include_cld        = self.getpar('Planet','include_cld', 'bool')
-            self.in_cld_params         = self.getpar('Planet','cld_params', 'list-float') #genfromtxt(StringIO(self.getpar('Planet','cld_params')),delimiter = ',',dtype='str',autostrip=True)
+            self.in_cld_params         = self.getpar('Planet','cld_params', 'list-float')
             self.in_cld_m              = np.float(self.in_cld_params[0])
             self.in_cld_a              = np.float(self.in_cld_params[1])
-            self.in_cld_pressure       = self.getpar('Planet','cld_pressure', 'list-float') #np.float(genfromtxt(StringIO(self.getpar('Planet','cld_pressure')),delimiter = ',',dtype='str',autostrip=True))
+            self.in_cld_pressure       = self.getpar('Planet','cld_pressure', 'list-float')
+            self.in_cld_lower_P        = self.in_cld_pressure[0]
+            self.in_cld_upper_P        = self.in_cld_pressure[1]
             self.in_cld_file           = self.getpar('Planet','cld_file')
         except:
             self.in_include_cld        = False
@@ -186,15 +191,21 @@ class parameters(base):
             self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
             self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
             self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
-            self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
-            self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)
-            self.fit_fix_temp          = self.getpar('Fitting', 'fix_temp', 'bool')
-            self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
-            self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
-            self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
+            #self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
+            #self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)
             self.fit_fix_inactive      = self.getpar('Fitting', 'fix_inactive', 'bool')
+            self.fit_fix_temp          = self.getpar('Fitting', 'fix_temp', 'bool')
+            self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
+            self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
+            self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
+            self.fit_fix_clouds_lower_P  = self.getpar('Fitting', 'fix_clouds_lower_P', 'bool')
+            self.fit_fix_clouds_upper_P  = self.getpar('Fitting', 'fix_clouds_upper_P', 'bool')
+            self.fit_fix_clouds_m      = self.getpar('Fitting', 'fix_clouds_m', 'bool')
+            self.fit_fix_clouds_a      = self.getpar('Fitting', 'fix_clouds_a', 'bool')
+
             self.fit_couple_mu         = self.getpar('Fitting', 'couple_mu', 'bool')
             self.fit_X_log             = self.getpar('Fitting', 'X_log', 'bool')
+
             self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
             self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
             self.fit_radius_up         = self.getpar('Fitting','radius_up', 'float')  # in RJUP
@@ -207,6 +218,12 @@ class parameters(base):
             self.fit_X_low             = self.getpar('Fitting','X_low', 'float')
             self.fit_X_inactive_up     = self.getpar('Fitting','X_inactive_up', 'float')
             self.fit_X_inactive_low    = self.getpar('Fitting','X_inactive_low', 'float')
+
+            self.fit_clouds_lower_P_bounds = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
+            self.fit_clouds_upper_P_bounds = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
+            self.fit_clouds_a_bounds = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
+            self.fit_clouds_m_bounds = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+
             self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
         except:
             self.fit_transmission      = False

@@ -191,6 +191,9 @@ class fitting(base):
                 self.fit_bounds.append((T_bounds[0],T_bounds[1])) #isothermal T
                 self.fit_params.append(T_mean)
 
+        # todo: it looks like the parameter fit_fix_temp is ignored for other TP profiles
+        # todo: if TP profile != isothermal, we always fit... Should check for fit_fix_temp
+
         elif self.forwardmodel.atmosphere.TP_type == 'rodgers':
 
             self.fit_TP_nparams = self.forwardmodel.atmosphere.nlayers
@@ -291,6 +294,7 @@ class fitting(base):
             self.fit_params.append(self.forwardmodel.atmosphere.planet_radius/RJUP)
             self.fit_bounds.append((self.forwardmodel.atmosphere.planet_radius/RJUP - self.params.fit_radius_low,
                                     self.forwardmodel.atmosphere.planet_radius/RJUP + self.params.fit_radius_up))
+
         ##########################################################################
         # surface pressure
         if not self.params.fit_fix_P0:
@@ -298,9 +302,38 @@ class fitting(base):
             self.fit_params.append(np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up))))
             self.fit_bounds.append((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up)))
 
-        # print 'params names', self.fit_params_names, len(self.fit_params_names)
-        # print 'params fit_params', self.fit_params, len(self.fit_params)
-        # print 'params fit_bounds', self.fit_bounds, len(self.fit_bounds)
+
+        ##########################################################################
+        # Cloud parameters. Only if include_clouds = True
+        if self.params.in_include_cld:
+            if not self.params.fit_fix_clouds_lower_P:
+                self.fit_params_names.append('clouds_lower_P')
+                self.fit_params.append(np.mean((self.params.fit_clouds_lower_P_bounds[0],
+                                                self.params.fit_clouds_lower_P_bounds[1])))
+                self.fit_bounds.append((self.params.fit_clouds_lower_P_bounds[0],
+                                        self.params.fit_clouds_lower_P_bounds[1]))
+
+            if not self.params.fit_fix_clouds_upper_P:
+                self.fit_params_names.append('clouds_upper_P')
+                self.fit_params.append(np.mean((self.params.fit_clouds_upper_P_bounds[0],
+                                                self.params.fit_clouds_upper_P_bounds[1])))
+                self.fit_bounds.append((self.params.fit_clouds_upper_P_bounds[0],
+                                        self.params.fit_clouds_upper_P_bounds[1]))
+
+            if not self.params.fit_fix_clouds_a:
+                self.fit_params_names.append('clouds_a')
+                self.fit_params.append(np.mean((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1])))
+                self.fit_bounds.append((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1]))
+
+            if not self.params.fit_fix_clouds_m:
+                self.fit_params_names.append('clouds_m')
+                self.fit_params.append(np.mean((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1])))
+                self.fit_bounds.append((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1]))
+
+        print 'params names', self.fit_params_names, len(self.fit_params_names)
+        print 'params fit_params', self.fit_params, len(self.fit_params)
+        print 'params fit_bounds', self.fit_bounds, len(self.fit_bounds)
+
 
         # define total number of parameters to be fitted
         self.fit_nparams = len(self.fit_params)
@@ -386,7 +419,6 @@ class fitting(base):
 
         #####################################################
         # Pressure profile
-
         # get TP profile fitted parameters. Number of parameter is profile dependent, and defined by self.fit_TP_nparams
         if self.fit_TP_nparams > 0:
 
@@ -400,28 +432,43 @@ class fitting(base):
         #
         #    If coupling, then we just derive mu from the mixing ratios.
         #    If we're fitting, get it from fit_params
-        
+
         #@todo same as above, may be implicit not explicit in future
+        #@todo what?? I wrote it, but I don't get it...?????
         if self.params.fit_couple_mu:
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
-        if not self.params.fit_couple_mu:
+        else:
             if not self.params.fit_fix_mu:
                 self.forwardmodel.atmosphere.planet_mu = fit_params[count]*AMU
                 count += 1
 
         #####################################################
         # Radius
-
         if not self.params.fit_fix_radius:
             self.forwardmodel.atmosphere.planet_radius = fit_params[count]*RJUP
             count += 1
 
         #####################################################
         # Surface pressure
-
         if not self.params.fit_fix_P0:
             self.forwardmodel.atmosphere.max_pressure = power(10, fit_params[count])
             count += 1
+
+        ##########################################################################
+        # Cloud parameters. Only if include_clouds = True
+        if self.params.in_include_cld:
+            if not self.params.fit_fix_clouds_lower_P:
+                self.forwardmodel.atmosphere.clouds_lower_P = power(10, fit_params[count])
+                count += 1
+            if not self.params.fit_fix_clouds_upper_P:
+                self.forwardmodel.atmosphere.clouds_upper_P = power(10, fit_params[count])
+                count += 1
+            if not self.params.fit_fix_clouds_a:
+                self.forwardmodel.atmosphere.clouds_a = fit_params[count]
+                count += 1
+            if not self.params.fit_fix_clouds_m:
+                self.forwardmodel.atmosphere.clouds_m = fit_params[count]
+                count += 1
 
         # Update surface gravity, scale height, density bla bla
         self.forwardmodel.atmosphere.update_atmosphere()
@@ -442,7 +489,9 @@ class fitting(base):
 
         # get forward model and bin
         model = self.forwardmodel.model()
-        model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
+
+        for i in xrange(1,self.data.n_spec_bin_grid):
+            model_binned = [model[self.data.spec_bin_grid_idx == float(i)].mean() for i in xrange(1, self.data.n_spec_bin_grid+1)]
 
         # get residuals
         res = (data - model_binned) / datastd
@@ -460,24 +509,24 @@ class fitting(base):
         # figure(2)
         # clf()
         #
-        # ion()
-        # figure(1)
-        # clf()
-        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-        # plot(self.data.spectrum[:,0], model_binned)
-        # xlabel('Wavelength (micron)')
-        # ylabel('Transit depth')
-        # xscale('log')
-        # xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-        # draw()
-        # pause(0.0001)
-        #
-        # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
-        #     self.forwardmodel.atmosphere.planet_mu/AMU, \
-        #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
-        #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
-        #     self.forwardmodel.atmosphere.absorbing_gases_X, \
-        #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
+        ion()
+        figure(1)
+        clf()
+        errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        plot(self.data.spectrum[:,0], model_binned)
+        xlabel('Wavelength (micron)')
+        ylabel('Transit depth')
+        xscale('log')
+        xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
+        draw()
+        pause(0.0001)
+
+        print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
+            self.forwardmodel.atmosphere.planet_mu/AMU, \
+            self.forwardmodel.atmosphere.planet_radius/RJUP, \
+            self.forwardmodel.atmosphere.max_pressure/1.e5), \
+            self.forwardmodel.atmosphere.absorbing_gases_X, \
+            self.forwardmodel.atmosphere.inactive_gases_X, fit_params
 
         return res
 

@@ -32,6 +32,7 @@ parser.add_option('-d', '--dir',
                   default="params",
 )
 
+
 options, remainder = parser.parse_args()
 params = parameters(options.param_filename)
 
@@ -39,6 +40,8 @@ if options.path is "params":
     out_path_orig = params.out_path
 else:
     out_path_orig = options.path
+
+params.out_save_plots = True
 
 if params.gen_type == 'transmission' or params.fit_transmission:
     if os.path.isdir(os.path.join(out_path_orig, 'stage_0')):

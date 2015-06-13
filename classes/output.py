@@ -503,7 +503,7 @@ class output(base):
         
             
 
-    def plot_fit(self,save2pdf=False,resolution='low',linewidth=2.0):
+    def plot_fit(self,save2pdf=False,resolution='low',linewidth=1.0):
 
         logging.info('Plotting observed and fitted spectra')
 
@@ -513,15 +513,6 @@ class output(base):
             res = 'highres_spectrum'
 
         fig = py.figure()
-        # plot observed spectrum
-        py.errorbar(self.data.spectrum[:,0],
-                        self.data.spectrum[:,1],
-                        self.data.spectrum[:,2],
-                        color=[0.7,0.7,0.7],linewidth=linewidth)
-        py.plot(self.data.spectrum[:,0], # todo why again? - it looks prettier!
-                    self.data.spectrum[:,1],
-                    color=[0.3,0.3,0.3],
-                    linewidth=linewidth,label='DATA')
 
         # plot models       
         if self.fitting.DOWN:
@@ -535,14 +526,24 @@ class output(base):
             for idx, solution in enumerate(self.NEST_out):
                 fig = self.__plot_fit__(solution[res], 'NESTED %i' % idx,
                                         fig=fig, linewidth=linewidth)
-                
+
+        # plot observed spectrum
+        py.errorbar(self.data.spectrum[:,0],
+                        self.data.spectrum[:,1],
+                        self.data.spectrum[:,2],
+                        color=[0.4,0.4,0.4], mec=[0.5,0.5,0.5], fmt='', marker='o', linewidth=2, linestyle='None')
+        # py.plot(self.data.spectrum[:,0], # todo why again? - it looks prettier! Ah ok :)
+        #             self.data.spectrum[:,1],
+        #             color=[0.3,0.3,0.3],
+        #             linewidth=0,label='DATA')
+
         if save2pdf:
             self.save_fig(fig,'model_fit_{0}_res.pdf'.format(resolution))
            
 
 
     def plot_absorbers(self,save2pdf=False,params_names=None,resolution='low',linewidth=2.0):
-        #routine plotting individual components 
+        #routine plotting individual components
         logging.info('Plotting individual absorbers.')
         if params_names is None:
             try:
@@ -613,7 +614,7 @@ class output(base):
 #                     linewidth=linewidth,label='DATA')
 
         # plot models
-        py.plot(MODEL[:,0], MODEL[:,1],label=LABEL,linewidth=linewidth)
+        py.plot(MODEL[:,0], MODEL[:,1],label=LABEL,linewidth=linewidth, zorder=-32)
         
         py.legend(loc=0)
         py.title('Data and Model')
