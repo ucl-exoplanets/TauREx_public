@@ -329,10 +329,10 @@ class fitting(base):
                 self.fit_params_names.append('clouds_m')
                 self.fit_params.append(np.mean((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1])))
                 self.fit_bounds.append((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1]))
-
-        print 'params names', self.fit_params_names, len(self.fit_params_names)
-        print 'params fit_params', self.fit_params, len(self.fit_params)
-        print 'params fit_bounds', self.fit_bounds, len(self.fit_bounds)
+        #
+        # print 'params names', self.fit_params_names, len(self.fit_params_names)
+        # print 'params fit_params', self.fit_params, len(self.fit_params)
+        # print 'params fit_bounds', self.fit_bounds, len(self.fit_bounds)
 
 
         # define total number of parameters to be fitted
@@ -509,24 +509,24 @@ class fitting(base):
         # figure(2)
         # clf()
         #
-        ion()
-        figure(1)
-        clf()
-        errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-        plot(self.data.spectrum[:,0], model_binned)
-        xlabel('Wavelength (micron)')
-        ylabel('Transit depth')
-        xscale('log')
-        xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-        draw()
-        pause(0.0001)
-
-        print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
-            self.forwardmodel.atmosphere.planet_mu/AMU, \
-            self.forwardmodel.atmosphere.planet_radius/RJUP, \
-            self.forwardmodel.atmosphere.max_pressure/1.e5), \
-            self.forwardmodel.atmosphere.absorbing_gases_X, \
-            self.forwardmodel.atmosphere.inactive_gases_X, fit_params
+        # ion()
+        # figure(1)
+        # clf()
+        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        # plot(self.data.spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
+        # draw()
+        # pause(0.0001)
+        #
+        # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
+        #     self.forwardmodel.atmosphere.planet_mu/AMU, \
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
+        #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
+        #     self.forwardmodel.atmosphere.absorbing_gases_X, \
+        #     self.forwardmodel.atmosphere.inactive_gases_X, fit_params
 
         return res
 
