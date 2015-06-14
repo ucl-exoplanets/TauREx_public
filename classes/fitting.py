@@ -292,8 +292,8 @@ class fitting(base):
         if not self.params.fit_fix_radius:
             self.fit_params_names.append('Radius')
             self.fit_params.append(self.forwardmodel.atmosphere.planet_radius/RJUP)
-            self.fit_bounds.append((self.forwardmodel.atmosphere.planet_radius/RJUP - self.params.fit_radius_low,
-                                    self.forwardmodel.atmosphere.planet_radius/RJUP + self.params.fit_radius_up))
+            self.fit_bounds.append((self.params.fit_radius_low,
+                                    self.params.fit_radius_up))
 
         ##########################################################################
         # surface pressure
@@ -329,11 +329,12 @@ class fitting(base):
                 self.fit_params_names.append('clouds_m')
                 self.fit_params.append(np.mean((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1])))
                 self.fit_bounds.append((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1]))
-        #
-        # print 'params names', self.fit_params_names, len(self.fit_params_names)
-        # print 'params fit_params', self.fit_params, len(self.fit_params)
-        # print 'params fit_bounds', self.fit_bounds, len(self.fit_bounds)
 
+
+        logging.info('Dimensionality: %i' % len(self.fit_params_names))
+        logging.info('Fitted parameters name: %s' % self.fit_params_names)
+        logging.info('Fitted parameters value: %s' % self.fit_params)
+        logging.info('Fitted parameters bound: %s' % self.fit_bounds)
 
         # define total number of parameters to be fitted
         self.fit_nparams = len(self.fit_params)
