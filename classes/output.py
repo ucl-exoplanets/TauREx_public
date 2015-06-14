@@ -330,7 +330,7 @@ class output(base):
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
             self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
-            model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
+            model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid+1)]
 
             # model spectrum binned to observed spectrum
             out = np.zeros((len(self.data.spectrum[:,0]), 2))
@@ -364,7 +364,7 @@ class output(base):
                 out2[:,1] = model2
                 out3 = np.zeros((len(self.data.spectrum[:,0]), 2))
                 out3[:,0] = self.data.spectrum[:,0]
-                out3[:,1] = [model2[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid)]
+                out3[:,1] = [model2[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid+1)]
                 
                 fitting_out[idx]['components'][param] ={}
                 fitting_out[idx]['components'][param]['highres_spectrum'] = out2
