@@ -131,8 +131,9 @@ if options.cluster_dictionary is not "None":
 if params.gen_type == 'transmission' or params.fit_transmission:
     # compile transmission cpp code if needed
     if params.gen_compile_cpp or not os.path.isfile('library/pathintegral.so'):
-        os.system('rm library/pathintegral.so')
-        os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
+        if MPIrank == 0:
+            os.system('rm library/pathintegral.so')
+            os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
 
     from taurex_transmission import run
 
@@ -144,6 +145,7 @@ else:
     logging.info('PS: you suck at this... ')
     exit()
 
+MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 #running Tau-REx
 run(params)
