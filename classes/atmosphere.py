@@ -77,11 +77,10 @@ class atmosphere(base):
         self.scaleheight = self.get_scaleheight()
 
         # set cloud parameters
-        if self.params.in_include_cld:
-            self.clouds_lower_P = self.params.in_cld_lower_P
-            self.clouds_upper_P = self.params.in_cld_upper_P
-            self.clouds_m = self.params.in_cld_m
-            self.clouds_a = self.params.in_cld_a
+        self.clouds_lower_P = self.params.in_cld_lower_P
+        self.clouds_upper_P = self.params.in_cld_upper_P
+        self.clouds_m = self.params.in_cld_m
+        self.clouds_a = self.params.in_cld_a
 
         # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
         if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.

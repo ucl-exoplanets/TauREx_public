@@ -249,7 +249,7 @@
        <x>10</x>
        <y>360</y>
        <width>211</width>
-       <height>51</height>
+       <height>65</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -341,12 +341,12 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label_15">
         <property name="text">
-         <string>Rp/Rstar</string>
+         <string>Planet radius</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_Rp_Rstar">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_planet_radius">
         <property name="decimals">
          <number>6</number>
         </property>
@@ -462,7 +462,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>100</y>
+       <y>80</y>
        <width>108</width>
        <height>18</height>
       </rect>
@@ -475,9 +475,9 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>130</y>
+       <y>100</y>
        <width>231</width>
-       <height>61</height>
+       <height>121</height>
       </rect>
      </property>
      <layout class="QFormLayout" name="formLayout_4">
@@ -504,6 +504,26 @@
       <item row="1" column="1">
        <widget class="QLineEdit" name="lineEdit_clouds_upper"/>
       </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_22">
+        <property name="text">
+         <string>Particle size (micron)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_23">
+        <property name="text">
+         <string>Refractive index</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEdit_clouds_a"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEdit_clouds_m"/>
+      </item>
      </layout>
     </widget>
     <widget class="QWidget" name="formLayoutWidget_5">
@@ -512,7 +532,7 @@
        <x>10</x>
        <y>10</y>
        <width>231</width>
-       <height>80</height>
+       <height>61</height>
       </rect>
      </property>
      <layout class="QFormLayout" name="formLayout_5">

@@ -98,9 +98,9 @@ def find_absfiles_pressure(path, molname):
     presslist = []
     for file in glob.glob(os.path.join(path, '%s*.abs' % molname)):
         fname = os.path.basename(file)
-        splitname = string.split(fname,'_',4)
-        temp = float(splitname[1][:-1])
-        pres = float(splitname[2][:-3])
+        splitname = string.split(fname,'_',5)
+        temp = float(splitname[3][:-1])
+        pres = float(splitname[4][:-3])
         templist.append(temp)
         presslist.append(pres)
         if not temp in absfilelist:

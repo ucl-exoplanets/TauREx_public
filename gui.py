@@ -144,7 +144,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
 
-        self.doubleSpinBox_Rp_Rstar.valueChanged.connect(self.event_status_changed)
+        self.doubleSpinBox_planet_radius.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_planet_surf_pressure.valueChanged.connect(self.event_status_changed)
         self.doubleSpinBox_planet_mass.valueChanged.connect(self.event_status_changed)
         self.spinBox_planet_T.valueChanged.connect(self.event_status_changed)
@@ -157,6 +157,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.checkBox_clouds.stateChanged.connect(self.event_status_changed)
         self.lineEdit_clouds_lower.textChanged.connect(self.event_status_changed)
         self.lineEdit_clouds_upper.textChanged.connect(self.event_status_changed)
+        self.lineEdit_clouds_a.textChanged.connect(self.event_status_changed)
+        self.lineEdit_clouds_m.textChanged.connect(self.event_status_changed)
 
 
 
@@ -177,7 +179,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
 
-        self.doubleSpinBox_Rp_Rstar.valueChanged.disconnect(self.event_status_changed)
+        self.doubleSpinBox_planet_radius.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_planet_surf_pressure.valueChanged.disconnect(self.event_status_changed)
         self.doubleSpinBox_planet_mass.valueChanged.disconnect(self.event_status_changed)
         self.spinBox_planet_T.valueChanged.disconnect(self.event_status_changed)
@@ -190,6 +192,8 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.checkBox_clouds.stateChanged.disconnect(self.event_status_changed)
         self.lineEdit_clouds_lower.textChanged.disconnect(self.event_status_changed)
         self.lineEdit_clouds_upper.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_clouds_m.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_clouds_a.textChanged.disconnect(self.event_status_changed)
 
     def load_par_file(self):
 
@@ -280,7 +284,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         if not self.params.fit_couple_mu:
             self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.params.planet_mu/AMU)
 
-        self.doubleSpinBox_Rp_Rstar.setValue(self.forwardmodel.params.planet_radius/self.forwardmodel.params.star_radius)
+        self.doubleSpinBox_planet_radius.setValue(self.forwardmodel.params.planet_radius/RJUP)
         self.spinBox_planet_T.setValue(self.forwardmodel.params.planet_temp)
         self.doubleSpinBox_planet_mass.setValue(self.forwardmodel.params.planet_mass/MJUP)
         self.doubleSpinBox_planet_surf_pressure.setValue(self.forwardmodel.params.tp_max_pres/1.e6)
@@ -292,8 +296,10 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.checkBox_induced_absorption.setCheckState(self.forwardmodel.params.in_include_cia)
 
         self.checkBox_clouds.setCheckState(self.forwardmodel.params.in_include_cld)
-        self.lineEdit_clouds_lower.setText(str(self.forwardmodel.params.in_cld_pressure[0]))
-        self.lineEdit_clouds_upper.setText(str(self.forwardmodel.params.in_cld_pressure[1]))
+        self.lineEdit_clouds_lower.setText(str(self.forwardmodel.atmosphere.clouds_lower_P))
+        self.lineEdit_clouds_upper.setText(str(self.forwardmodel.atmosphere.clouds_upper_P))
+        self.lineEdit_clouds_a.setText(str(self.forwardmodel.atmosphere.clouds_a))
+        self.lineEdit_clouds_m.setText(str(self.forwardmodel.atmosphere.clouds_m))
 
 
     def event_status_changed(self):
@@ -325,7 +331,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.T[:] = self.spinBox_planet_T.value()
         self.forwardmodel.atmosphere.planet_mass = self.doubleSpinBox_planet_mass.value() * MJUP
 
-        self.forwardmodel.atmosphere.planet_radius = self.doubleSpinBox_Rp_Rstar.value()*self.doubleSpinBox_star_radius.value()*RSOL
+        self.forwardmodel.atmosphere.planet_radius = self.doubleSpinBox_planet_radius.value()*RJUP
         self.forwardmodel.atmosphere.planet_grav = self.forwardmodel.atmosphere.get_surface_gravity()
         self.forwardmodel.atmosphere.scaleheight = self.forwardmodel.atmosphere.get_scaleheight()
         self.forwardmodel.atmosphere.max_pressure = self.doubleSpinBox_planet_surf_pressure.value() * 1.e6
@@ -345,10 +351,10 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         else:
            self.forwardmodel.Cld_sig = zeros((self.forwardmodel.nlambda)) # unused but needed to cast to cpp code
 
-
-
-        self.forwardmodel.params.in_cld_pressure[0] = float(self.lineEdit_clouds_lower.text())
-        self.forwardmodel.params.in_cld_pressure[1] = float(self.lineEdit_clouds_upper.text())
+        self.forwardmodel.atmosphere.clouds_lower_P = float(self.lineEdit_clouds_lower.text())
+        self.forwardmodel.atmosphere.clouds_upper_P = float(self.lineEdit_clouds_upper.text())
+        self.forwardmodel.atmosphere.clouds_m = float(self.lineEdit_clouds_m.text())
+        self.forwardmodel.atmosphere.clouds_a = float(self.lineEdit_clouds_a.text())
 
         if self.checkBox_rayleigh.isChecked():
             self.forwardmodel.Rsig = self.forwardmodel.get_Rsig()
@@ -410,7 +416,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
     def plot_observations(self):
 
         if isinstance(self.observations, (np.ndarray, np.generic)):
-            if np.shape(self.observations)[1] == 3:
+            if np.shape(self.observations)[1] == 3 or np.shape(self.observations)[1] == 4:
                 self.aw.qmc.axes.errorbar(self.observations[:,0], self.observations[:,1]*1.e6, yerr=self.observations[:,2]*1.e6,)
             elif np.shape(self.observations)[1] == 2:
                 self.aw.qmc.axes.plot(self.observations[:,0], self.observations[:,1]*1.e6,)
