@@ -85,8 +85,8 @@ class emission(base):
         #setting up static arrays for path_integral
         self.I_total    = np.zeros((self.nlambda),dtype=self.DTYPE)
         self.tau        = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE)
-        self.dtau       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE)
-        self.dtau2       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE)
+        self.dtau       = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE)
+#         self.dtau2       = np.zeros((self.nlambda,self.nlambda),dtype=self.DTYPE)
         self.tau_total  = np.zeros((self.nlayers,self.nlambda),dtype=self.DTYPE)
 
         #loading c++ pathintegral library for faster computation
@@ -145,7 +145,7 @@ class emission(base):
         
         
         
-#     @profile #line-by-line profiling decorator
+    @profile #line-by-line profiling decorator
     def path_integral(self, X=None, rho=None,temperature=None):
         
         if X is None:
@@ -190,11 +190,11 @@ class emission(base):
 #             for i in xrange(self.n_gas):
 #                 self.dtau[j,:] += (sigma_array1[i,:] * X[i,j] * rho[j] * self.dzarray[j])
         
-#         sigma_array1 = self.get_sigma_array(temperature[0])
+        sigma_array1 = self.get_sigma_array(temperature[0])
         sigma_array2 = self.get_sigma_array(temperature[0])
         for j in xrange(1,self.nlayers):   
             if temperature[j] != temperature[j-1]: 
-#                 sigma_array1 = self.get_sigma_array(temperature[j])
+                sigma_array1 = self.get_sigma_array(temperature[j])
                 BB_layer = em.black_body(self.specgrid,temperature[j]) 
                             
             for k in xrange(j,self.nlayers):
@@ -203,9 +203,9 @@ class emission(base):
                     
                 if j is k:
                     for i in xrange(self.n_gas):
-                        tmp = (sigma_array2[i,:] * X[i,j] * rho[j] * self.dzarray[j])
-                        self.tau[j,:] += tmp  
-                        self.dtau[j,:] += tmp
+#                         tmp = (sigma_array2[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                        self.tau[j,:] += (sigma_array2[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                        self.dtau[j,:] += (sigma_array1[i,:] * X[i,j] * rho[j] * self.dzarray[j])
                 else:
                     for i in xrange(self.n_gas):
                         self.tau[j,:] += (sigma_array2[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
