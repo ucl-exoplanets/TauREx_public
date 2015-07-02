@@ -55,7 +55,11 @@ c.read_dict()
 #writing run script and submitting to queue
 for IDs in c.IDs:
     scriptname = c.generate_script(IDs)
-    os.system('qsub {}'.format(scriptname))
+#    os.system('qsub {}'.format(scriptname))  #script submit command for cobweb/legion
 
+#   the equivalent if to be run on pingu
+    os.system('mpirun -np 12 python taurex.py -p Parfiles/taurex_emission_wasp76.par -c run_taurex.dict -i '+str(IDs))
+    os.system('mkdir -p /Volumes/DATA_PINGU/ingo/cobweb/tests/pingu_wasp76paper_10000/'+str(IDs))
+    os.system('cp -rf /Users/ingo/repos/taurex/Output/* /Volumes/DATA_PINGU/ingo/cobweb/tests/pingu_wasp76paper_10000/'+str(IDs))
 
 

@@ -12,7 +12,7 @@ type = transmission
 
 [Input]
 #Observed spectrum to be fitted
-spectrum_file = Input/observations/hd209_angelos_20150528_microns.txt
+spectrum_file = Input/observations/HD209_angelos_oversampled_250A_microns.dat
 
 #temperature grid resolution (K)
 tempres = 1
@@ -69,7 +69,7 @@ mu = 2.3
 
 #molecules considered
 #molecules = 12C-1H4,1H2-16O,14N-1H3,12C-16O2,12C-16O
-molecules = 1H2-16O, 12C-1H4,14N-1H3,12C-16O2,12C-16O
+molecules =  1H2-16O,14N-1H3,1H-12C-14N,12C-16O,48Ti-16O
 
 #initial mixing ratios (starting point for minimisation) 
 #and used for model only mode (create_spectrum.py). Must have as
@@ -78,7 +78,7 @@ molecules = 1H2-16O, 12C-1H4,14N-1H3,12C-16O2,12C-16O
 mixing_ratios = 1e-4, 1e-4, 1e-4, 1e-4, 1e-4
 
 #include cloud opacities. True/False 
-include_cld = False
+include_cld = True
 
 #cloud refractive index (m) and particle size (a) in microns. Comma separated
 cld_params = 1.5, 1.0
@@ -176,7 +176,7 @@ X_inactive_up  = 1.0
 X_inactive_low = 0.0
 
 # clr transformation
-clr_trans = True
+clr_trans = False
 
 
 
