@@ -11,11 +11,12 @@ from Cython.Build import cythonize
 
 classlist = glob.glob('classes/*.py')
 librarylist = glob.glob('library/*.py')
+cythonliblist = glob.glob('library/*.pyx')
 
 print 'Compiling code...'
 
 setup(
-    ext_modules = cythonize(classlist+librarylist),
+    ext_modules = cythonize(classlist+librarylist+cythonliblist),
     include_dirs=[numpy.get_include()]
 )
 
