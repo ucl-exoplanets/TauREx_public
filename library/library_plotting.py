@@ -247,7 +247,7 @@ def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None
                  cmap=new_cmap,vmin=1e-10, norm=cmap_norm,extent=(min1,max1,min2,max2))
         #plt.colorbar()
     else:
-		ax.plot(grid_x, grid_z[:,0], '-', color='grey', drawstyle='steps')
+        ax.plot(grid_x, grid_z[:,0], '-', color='grey', drawstyle='steps')
 
     if use_log_values:
         levels = [maxvalue, maxvalue - .5, maxvalue - 1.0, maxvalue - 2.0]
@@ -257,7 +257,7 @@ def NEST_plot_conditional(ax, fit_out, params_names, param1_idx, param2_idx=None
     #ax.contour(grid_x, grid_y, grid_z, levels, linewidths=0.5, colors='k')
 
     if with_points and param2_idx is not None:
-	    ax.scatter(dim1_column, dim2_column, marker='+', color='black', s=1, alpha=0.3)
+        ax.scatter(dim1_column, dim2_column, marker='+', color='black', s=1, alpha=0.3)
 
 
 

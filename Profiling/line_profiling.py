@@ -19,15 +19,15 @@
 
 import os, sys
 
-PROFNAME = 'exonest'
+PROFNAME = 'taurex_emission'
 PROFDIR  = 'Profiling/'
 
 print 'Running line-by-line runtime profiling:'
 print '-----------------------------------------'
 
 os.chdir('../')
-os.system('./'+PROFDIR+'kernprof.py -l -v taurex.py -p Parfiles/taurex_superearth.par')
-# os.system('./'+PROFDIR+'kernprof.py -l -v create_spectrum.py -p Parfiles/exonest_minimal_hotjupiter_emission.par')
+# os.system('./'+PROFDIR+'kernprof.py -l -v taurex.py -p Parfiles/taurex_superearth.par')
+os.system('./'+PROFDIR+'kernprof.py -l -v create_spectrum.py -p  Parfiles/taurex_emission_55cnc.par -T')
 
 print '-----------------------------------------'
 print 'Finished profiling'
@@ -35,7 +35,7 @@ print''
 print 'coallating results into '+PROFNAME+'.lprofile'
 
 # sys.stdout = open(PROFDIR+PROFNAME+'.lprofile','wb')
-os.system('python -m line_profiler taurex.py.lprof > '+PROFDIR+PROFNAME+'.lprofile')
+os.system('python -m line_profiler create_spectrum.py.lprof > '+PROFDIR+PROFNAME+'.lprofile')
 # os.system('rm exonest.py.lprof')
 
 

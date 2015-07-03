@@ -762,7 +762,7 @@ class output(base):
             if save2pdf:
                 plot_TP_profile(P, T_mean, name='DOWN', save2pdf=save2pdf, out_path=self.out_path)
                 
-            logging.info('Saving MCMC contribution function for solution %i to %s' % (idx, filename))
+            logging.info('Saving MLE contribution function to %s' % (filename))
         
             fit_params = [self.DOWN_out['fit_params'][param]['value'] for param in self.params_names]
             filename2  = str(basename)+'/DOWN_cont_func.dat'
