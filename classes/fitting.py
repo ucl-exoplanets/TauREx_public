@@ -20,7 +20,7 @@
 
 #loading libraries     
 from base import base
-import numpy, pylab, os, sys, math, pymc, warnings, threading, subprocess, gzip, pickle, shutil, logging
+import numpy, pylab, os, sys, math, pymc, warnings, threading, subprocess, gzip, pickle, shutil, logging, time
 from pylab import *
 from numpy import *
 import numpy as np
@@ -28,6 +28,8 @@ from StringIO import StringIO
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 from scipy.optimize import minimize
+
+
 
 try: 
     import pymultinest
@@ -47,6 +49,15 @@ try:
 except ImportError:
     MPIimport = False
     pass
+
+try:
+    import library_cythonised_functions as cy_fun
+    cythonised = True
+except ImportError:
+    cythonised = False
+
+cythonised = False #currently disabelling cythonised functions 
+
 
 #conversion constants
 RSOL  = 6.955e8         #stellar radius to m
@@ -486,14 +497,22 @@ class fitting(base):
     def chisq_trans(self, fit_params, data, datastd):
 
         # update atmospheric parameters with fit_params values
+        
+        
         self.update_atmospheric_parameters(fit_params)
-
+        
         # get forward model and bin
         model = self.forwardmodel.model()
 
-        for i in xrange(1,self.data.n_spec_bin_grid):
-            model_binned = [model[self.data.spec_bin_grid_idx == float(i)].mean() for i in xrange(1, self.data.n_spec_bin_grid+1)]
+#         print len(model), len(self.data.spec_bin_grid_idx),self.data.n_spec_bin_grid,self.data.nwave
+#         exit()
 
+        #runnning fast cythonised function or slower python depending on import
+        if cythonised:
+            model_binned = cy_fun.runtime_bin_spectrum(model,self.data.spec_bin_grid_idx,self.data.n_spec_bin_grid)     
+        else:      
+            model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1, self.data.n_spec_bin_grid+1)]
+            
         # get residuals
         res = (data - model_binned) / datastd
         res = sum(res*res)
