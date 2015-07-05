@@ -23,7 +23,14 @@ import pylab as pl
 import ctypes as C
 import library_emission as em
 import library_general as gen
-from cy_pathintegral_emission import path_integral as cython_path_integral
+
+try:
+    import cy_pathintegral_emission
+    from cy_pathintegral_emission import path_integral as cython_path_integral
+    cythonised = True
+except ImportError:
+    cythonised = False
+
 # from library_general import *
 import time
 import logging
@@ -91,7 +98,10 @@ class emission(base):
             self.sigma_array_c, self.sig_tempgrid = self.get_sigma_array_c()
 
         # set forward model function
-        self.model = self.cy_path_integral
+        if cythonised:
+            self.model = self.cy_path_integral
+        else:
+            self.model = self.path_integral
 
 
     #class methods
