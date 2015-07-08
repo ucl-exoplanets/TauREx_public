@@ -78,10 +78,10 @@ class data(base):
             self.nwave = len(self.spectrum[:,0])
             self.wavegrid = self.spectrum[:,0]
             if self.params.in_use_spectrum_bins:
-                print 'shape', shape(self.spectrum)
+#                 print 'shape', shape(self.spectrum)
                 if shape(self.spectrum)[1] == 4:
                     self.binwidths = self.spectrum[:,3]
-                    print self.binwidths
+#                     print self.binwidths
                 else:
                     logging.error('Bin width missing in input spectrum')
                     sys.exit()
