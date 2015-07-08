@@ -51,6 +51,7 @@ cat $PBS_NODEFILE > nodes
 mpirun -np $NP -hostfile nodes /share/apps/anaconda/2.2.0/bin/python taurex.py -p Parfiles/taurex_emission_wasp76.par
 
 ##copy stuff from scratch to /share/data
-cp -rf $SCRATCHDIR/* $OUTDIR
+mkdir -p $OUTDIR
+cp -rf $SCRATCHDIR/Output/* $OUTDIR
 rm -rf $SCRATCHDIR
 
