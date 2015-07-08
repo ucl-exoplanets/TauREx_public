@@ -141,7 +141,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         #self.lineEdit_H2S.textChanged.connect(self.event_status_changed)
         #self.lineEdit_C2H2.textChanged.connect(self.event_status_changed)
 
-        if not self.params.fit_couple_mu:
+        if not self.params.tp_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.connect(self.event_status_changed)
 
         self.doubleSpinBox_planet_radius.valueChanged.connect(self.event_status_changed)
@@ -176,7 +176,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         #self.lineEdit_NO.textChanged.disconnect(self.event_status_changed)
         #self.lineEdit_H2S.textChanged.disconnect(self.event_status_changed)
         #self.lineEdit_C2H2.textChanged.disconnect(self.event_status_changed)
-        if not self.params.fit_couple_mu:
+        if not self.params.tp_couple_mu:
             self.doubleSpinBox_planet_mu.valueChanged.disconnect(self.event_status_changed)
 
         self.doubleSpinBox_planet_radius.valueChanged.disconnect(self.event_status_changed)
@@ -281,7 +281,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.doubleSpinBox_N2.setValue(self.forwardmodel.atmosphere.inactive_gases_X[2]*100.)
         self.doubleSpinBox_planet_albedo.setValue(self.forwardmodel.params.planet_albedo)
 
-        if not self.params.fit_couple_mu:
+        if not self.params.tp_couple_mu:
             self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.params.planet_mu/AMU)
 
         self.doubleSpinBox_planet_radius.setValue(self.forwardmodel.params.planet_radius/RJUP)
@@ -321,7 +321,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.
         self.forwardmodel.atmosphere.inactive_gases_X[2] = self.doubleSpinBox_N2.value() / 100.
 
-        if self.params.fit_couple_mu:
+        if self.params.tp_couple_mu:
             # get couple mu
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
             self.doubleSpinBox_planet_mu.setValue(self.forwardmodel.atmosphere.planet_mu/AMU)

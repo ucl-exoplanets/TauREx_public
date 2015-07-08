@@ -48,64 +48,55 @@ class atmosphere(base):
         self.fit_transmission = self.params.fit_transmission
         self.fit_emission     = self.params.fit_emission
 
-
         # set mixing ratios
         self.absorbing_gases = self.params.planet_molec
-        self.absorbing_gases_X = self.params.planet_mixing
         self.inactive_gases = self.params.planet_inactive_gases
         self.inactive_gases_X = self.params.planet_inactive_gases_X
         self.nallgases = len(self.absorbing_gases) + len(self.inactive_gases)
 
-        if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
-            self.nlayers  = self.data.nlayers
-        elif self.params.tp_var_atm:
-            self.nlayers  = int(self.params.tp_atm_levels)
+        # set values for parameter files
+        self.planet_temp = self.params.planet_temp
+        self.max_pressure = self.params.tp_max_pres
+        self.planet_radius = self.params.planet_radius
+        self.planet_mass = self.params.planet_mass
 
-        if self.params.fit_couple_mu:
+        self.nlayers  = self.data.nlayers
+        self.ngas     = self.data.ngas
+
+        if self.params.in_use_ATMfile:
+            # build PTA profile and mixing ratio array from .atm file
+            logging.info('Reading atmospheric profile from .atm file')
+            self.X = self.data.X
+            self.pta = self.data.pta
+        else:
+            self.absorbing_gases_X = self.params.planet_mixing # mixing ratios are read from parameter file
+            self.X = self.set_mixing_ratios()
+
+        self.absorbing_gases_X = self.X[:,0] # assume X from lowest layer. This will be used to calculate mu, if couple_mu is True
+
+        # set mu, planet grav and scaleheight
+        if self.params.tp_couple_mu:
             self.planet_mu = self.get_coupled_planet_mu()
         else:
             self.planet_mu = self.params.planet_mu
 
-        # set other atmosphere specific parameters
-        self.max_pressure = self.params.tp_max_pres
-        self.planet_radius = self.params.planet_radius
-        self.planet_mass = self.params.planet_mass
         self.planet_grav = self.get_surface_gravity()
-        self.planet_temp = self.params.planet_temp
-        self.T = np.zeros((self.nlayers))
-        self.T[:] = self.planet_temp
-        self.scaleheight = self.get_scaleheight()
+        self.scaleheight = self.get_scaleheight(T = self.planet_temp)
+
+        if not self.params.in_use_ATMfile:
+            self.pta      = self.setup_pta_grid()
+
+        self.P        = self.pta[:,0] # pressure array
+        self.P_bar    = self.P * 1.0e-5 #convert pressure from Pa to bar
+        self.T        = self.pta[:,1] # temperature array
+        self.z        = self.pta[:,2] # altitude array
+        self.rho        = self.get_rho() # assume self.T, self.P
 
         # set cloud parameters
         self.clouds_lower_P = self.params.in_cld_lower_P
         self.clouds_upper_P = self.params.in_cld_upper_P
         self.clouds_m = self.params.in_cld_m
         self.clouds_a = self.params.in_cld_a
-
-        # build PTA profile and mixing ratio array (pta = pressure, temp, alt; X = mixing ratios of molecules)
-        if self.params.in_use_ATMfile: #@ambiguous statement. both tp_var_atm and in_use_ATMfile can be false.
-
-            # reading atmospheric profile from .atm file
-            self.nlayers  = self.data.nlayers
-            self.ngas     = self.data.ngas
-            self.X        = self.data.X
-            self.pta      = self.data.pta
-
-        elif self.params.tp_var_atm:
-
-            # atmospheric profile is fitted
-            self.nlayers  = int(self.params.tp_atm_levels)
-            self.ngas     = int(len(self.params.planet_molec))
-            self.X        = self.set_mixing_ratios() # mixing ratios are read from parameter file or set to 1e-4 if preselector = True
-            self.pta      = self.setup_pta_grid()
-
-        # @todo this needs revision. Do we really need setup_pta_grid? Maybe not, but we need compatibility with .atm files
-
-        self.P          = self.pta[:,0] # pressure array
-        self.P_bar      = self.P * 1.0e-5 #convert pressure from Pa to bar
-        self.T          = self.pta[:,1] # temperature array
-        self.z          = self.pta[:,2] # altitude array
-        self.rho        = self.get_rho() # assume self.T, self.P
 
         if self.params.in_use_TP_file == True: # todo temporary. Just to feed a given T profile.
             self.T = np.loadtxt(self.params.in_TP_file)[:,0]
@@ -163,10 +154,7 @@ class atmosphere(base):
         if not mu:
             mu = self.planet_mu
 
-        if len(T) > 1:
-            Tavg = np.mean(T)
-        else:
-            Tavg = T
+        Tavg = np.average(T)
 
         return (KBOLTZ*Tavg)/(mu*g)
 
@@ -236,6 +224,7 @@ class atmosphere(base):
     def get_gas_fraction(self, gasname):
 
         # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
+        # careful that this returns the gas mixing ratio at the zeroth level.
         if gasname in self.params.all_absorbing_gases:
             if gasname in self.params.planet_molec:
                 index = self.params.planet_molec.index(gasname)
@@ -329,6 +318,7 @@ class atmosphere(base):
             for i in range(self.ngas):
                 X[i,:] += float(mixing[i])
         self.X = X
+
         return X
 
 
@@ -340,7 +330,6 @@ class atmosphere(base):
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
         max_z = n_scale * self.scaleheight
-
 
         self.z = np.linspace(0, max_z, num=self.nlayers) # altitude
         self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)

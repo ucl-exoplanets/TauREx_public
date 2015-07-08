@@ -78,10 +78,8 @@ class data(base):
             self.nwave = len(self.spectrum[:,0])
             self.wavegrid = self.spectrum[:,0]
             if self.params.in_use_spectrum_bins:
-                print 'shape', shape(self.spectrum)
                 if shape(self.spectrum)[1] == 4:
                     self.binwidths = self.spectrum[:,3]
-                    print self.binwidths
                 else:
                     logging.error('Bin width missing in input spectrum')
                     sys.exit()
@@ -89,7 +87,7 @@ class data(base):
                 self.binwidths = None
 
         #calculating wavelength grids
-        if params.gen_manual_waverange:
+        if params.gen_manual_waverange or not isinstance(self.spectrum, (np.ndarray, np.generic)):
             # manual wavelength range provided in parameter file
             if not self.params.gen_abs_wavegrid:
                 # generate wavelength grid with uniform binning in log(lambda)
@@ -137,9 +135,13 @@ class data(base):
 
         #reading in atmospheric profile file
         if self.params.in_use_ATMfile:
+            logging.info('Using .atm file to generate atmospheric TP profile')
             self.pta, self.X = self.readATMfile() # pta = pressure, temp, alt; X = mixing ratios of molecules
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
+        else:
+            self.nlayers  = int(self.params.tp_atm_levels)
+            self.ngas     = int(len(self.params.planet_molec))
 
         # Rayleigh scattering
         if MPIrank == 0 and self.params.in_create_sigma_rayleigh:
@@ -212,7 +214,7 @@ class data(base):
         #function calculating the bin boundaries for the data 
         #this is used to bin the internal spectrum to the data in fitting module
 
-        if binwidths == None:
+        if not isinstance(binwidths, (np.ndarray, np.generic)):
             bingrid =[]
             bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
             for i in range(len(wavegrid)-1):
@@ -386,7 +388,6 @@ class data(base):
         sigma_dict['tempgrid'] = tempgrid
         for i in range(len(tempgrid)):
             sigma_dict[tempgrid[i]] = {}
-
             sigma_array = np.zeros((len(mollist),sigshape[1]))
             j = 0
             for molecule in mollist:
@@ -556,7 +557,7 @@ class data(base):
             out = np.loadtxt(self.params.in_atm_file)
         except ValueError:
             out = np.loadtxt(self.params.in_atm_file,comments='*',skiprows=10)
-#         OUT[:,2] *= 1000. #converting from km to m
+        out[:,2] *= 1000. #converting from km to m
 
         out = out[np.argsort(out[:,2]),:]
 

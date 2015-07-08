@@ -107,6 +107,10 @@ class fitting(base):
             self.MPIrank     = 0
             self.MPIsize     = 0
 
+        if not isinstance(self.data.spectrum, (np.ndarray, np.generic)):
+            logging.error('You have not provided an input observed spectrum. Cannot continue with fitting.')
+            sys.exit()
+
         # set some folder names, create some folders
 
         self.dir_mcmc = os.path.join(self.params.out_path, 'MCMC')
@@ -292,7 +296,7 @@ class fitting(base):
 
         ##########################################################################
         # mean molecular weight. Only if we are not coupling mu to the mixing ratios
-        if not self.params.fit_couple_mu:
+        if not self.params.tp_couple_mu:
             if not self.params.fit_fix_mu:
                 self.fit_params_names.append('mu')
                 self.fit_params.append(self.forwardmodel.atmosphere.planet_mu/AMU) #in AMU
@@ -435,7 +439,7 @@ class fitting(base):
         if self.fit_TP_nparams > 0:
 
             TP_params = fit_params[count:count+self.fit_TP_nparams]
-            #@todo same as above, may be implicit not explicit in future
+            #@todo same as above, may be implicit not explicit in future (???)
             self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params)
             count += self.fit_TP_nparams
 
@@ -447,7 +451,7 @@ class fitting(base):
 
         #@todo same as above, may be implicit not explicit in future
         #@todo what?? I wrote it, but I don't get it...?????
-        if self.params.fit_couple_mu:
+        if self.params.tp_couple_mu:
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
         else:
             if not self.params.fit_fix_mu:
@@ -530,16 +534,16 @@ class fitting(base):
         # figure(2)
         # clf()
         #
-#         ion()
-#         figure(1)
-#         clf()
-#         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-#         plot(self.data.spectrum[:,0], model_binned)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         xscale('log')
-#         xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-#         draw()
+        # ion()
+        # figure(1)
+        # clf()
+        # errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
+        # plot(self.data.spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
+        # draw()
         # pause(0.0001)
         #
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
