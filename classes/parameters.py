@@ -79,7 +79,7 @@ class parameters(base):
 
         # list of all molecules for which we have cross sections
         self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
-                                    '28Si-16O', '48Ti-16O', '51V-16O'] #, '1H2-32S', 'C2H2'] # VO removed due to lowest T = 1000 in cross sections
+                                    '14N-16O', '28Si-16O', '48Ti-16O', '51V-16O'] #, '1H2-32S', 'C2H2']
 
         # list of all inactive gases we take care of
         self.all_inactive_gases = ['He', 'H2', 'N2']
@@ -97,8 +97,8 @@ class parameters(base):
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
         if self.in_spectrum_file == 'False':
             self.in_spectrum_file = False
-        else:
-            self.in_use_spectrum_bins  = self.getpar('Input','use_spectrum_bins', 'bool')
+
+        self.in_use_spectrum_bins  = self.getpar('Input','use_spectrum_bins', 'bool')
 
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
@@ -156,17 +156,15 @@ class parameters(base):
             pass
 
 
-        self.tp_var_atm            = self.getpar('T-P profile','var_atm', 'bool')
         self.tp_num_scale          = self.getpar('T-P profile', 'num_scaleheights', 'int')
         self.tp_atm_levels         = self.getpar('T-P profile', 'atm_levels', 'int')
-        #self.tp_num_gas           = self.getpar('T-P profile', 'num_gas', 'int') # deprecated
-        self.tp_var_temp           = self.getpar('T-P profile', 'var_temp', 'bool')
-        self.tp_var_pres           = self.getpar('T-P profile', 'var_pres', 'bool')
+        #self.tp_var_temp           = self.getpar('T-P profile', 'var_temp', 'bool') # DEPRECATED. See fit_fix_temp
+        #self.tp_var_pres           = self.getpar('T-P profile', 'var_pres', 'bool') # DEPRECATED. See fit_fix_P0
         self.tp_max_pres           = self.getpar('T-P profile', 'atm_max_pressure', 'float')
-        self.tp_var_mix            = self.getpar('T-P profile', 'var_mix', 'bool')
+        # self.tp_var_mix            = self.getpar('T-P profile', 'var_mix', 'bool')  # DEPRECATED. Replace with fit_fix_X
         self.tp_type               = self.getpar('T-P profile', 'profile_type')
         self.tp_corrlength         = self.getpar('T-P profile', 'corr_length','float')
-
+        self.tp_couple_mu         = self.getpar('T-P profile', 'couple_mu', 'bool')
 
         try:
             self.pre_run               = self.getpar('Preselector','run_pre', 'bool')
@@ -203,7 +201,6 @@ class parameters(base):
             self.fit_fix_clouds_m      = self.getpar('Fitting', 'fix_clouds_m', 'bool')
             self.fit_fix_clouds_a      = self.getpar('Fitting', 'fix_clouds_a', 'bool')
 
-            self.fit_couple_mu         = self.getpar('Fitting', 'couple_mu', 'bool')
             self.fit_X_log             = self.getpar('Fitting', 'X_log', 'bool')
 
             self.fit_T_up              = self.getpar('Fitting','T_up', 'float')

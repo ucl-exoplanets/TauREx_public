@@ -198,21 +198,37 @@ class transmission(base):
         if rho is None:
             rho = self.atmosphere.rho
         if temperature is None:
-            temperature = self.atmosphere.T # todo careful assuming a isothermal TP profile!
+            temperature = self.atmosphere.T
+
         dz = self.get_dz()
         dlarray = self.cget_path_length()
 
-
         #selecting correct sigma_array for temperature array
-        if len(np.unique(temperature)) == 1:
+        cpressure_broadening = C.c_int(0)
 
+        cflattened_sigma_arr =  cast2cpp(np.zeros(0))
+        csigma_templist = cast2cpp(np.zeros(0))
+        csigma_preslist = cast2cpp(np.zeros(0))
+        cnsigma_templist = C.c_int(0)
+        cnsigma_preslist = C.c_int(0)
+        cpressure_array = cast2cpp(np.zeros(0))
+
+        ctemperature = C.c_double(temperature[0])
+        ctemperature_array = cast2cpp(np.zeros(0))
+
+        sigma_array_3d = np.zeros(0)
+        sigma_array_2d = np.zeros(0)
+        cn_sig_temp= C.c_int()
+        cconst_temp = C.c_int(0)
+
+        if len(np.unique(temperature)) == 1:
             # constant T with altitude
             cconst_temp = C.c_int(1)
-            if self.params.in_use_P_broadening:
+            # cast first value of T profile (it's isothermal..)
+            ctemperature = C.c_double(temperature[0])
 
-                sigma_array_2d = np.zeros(0)
-                sigma_array_3d = np.zeros(0)
-                cn_sig_temp= C.c_int(0)
+            if self.params.in_use_P_broadening:
+                
                 cpressure_broadening = C.c_int(1)
                 cflattened_sigma_arr =  cast2cpp(self.get_sigma_array_pressure().flatten())
                 csigma_templist = cast2cpp(self.data.sigma_templist)
@@ -221,27 +237,20 @@ class transmission(base):
                 cnsigma_preslist = C.c_int(len(self.data.sigma_preslist))
                 cpressure_array = cast2cpp(self.atmosphere.P)
                 ctemperature = C.c_double(temperature[0])
-
+                
+                
             else:
-                cpressure_broadening = C.c_int(0)
-                cflattened_sigma_arr =  cast2cpp(np.zeros(0))
-                csigma_templist = cast2cpp(np.zeros(0))
-                csigma_preslist = cast2cpp(np.zeros(0))
-                cnsigma_templist = C.c_int(0)
-                cnsigma_preslist = C.c_int(0)
-                cpressure_array = cast2cpp(np.zeros(0))
-                ctemperature = C.c_double(temperature[0])
-
                 sigma_array_2d = self.get_sigma_array(temperature[0])
-                sigma_array_3d = np.zeros(0)
-                cn_sig_temp= C.c_int(0)
         else:
-            # variable T with altitude. Get 3d sigma array
+            # variable T with altitude. Get 3d sigma array and set other variables
+            # note this does not include pressure broadening
             sigma_array_3d, tempgrid = self.get_sigma_array_c()
             sigma_array_3d = sigma_array_3d.flatten()
-            cn_sig_temp= C.c_int(len(tempgrid))
-            sigma_array_2d = np.zeros(0)
-            cconst_temp = C.c_int(0)
+            ctemperature_array = (C.c_double * len(self.atmosphere.T.tolist()))(*self.atmosphere.T.tolist())
+            #ctemperature_array = cast2cpp(self.atmosphere.T) # crazy stuff, here cast2cpp doesn't work !!!
+            csigma_templist = cast2cpp(tempgrid) # temperature grid of cross sections
+            cnsigma_templist= C.c_int(len(tempgrid))
+            cn_sig_temp= C.c_int(len(tempgrid)) # legacy???
 
         #casting to c++ pointers
         csigma_array_2d = cast2cpp(sigma_array_2d)
@@ -285,18 +294,17 @@ class transmission(base):
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int
 
-
         #running c++ path integral
         cpath_int(csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
+
                   clinecount,cnlayers,cn_gas,cn_sig_temp,cInclude_cld,cCld_lowbound,\
                   cCld_upbound,cP_bar,cCld_sig,\
                   cpressure_broadening, cflattened_sigma_arr, csigma_templist, csigma_preslist,\
-                  cnsigma_templist, cnsigma_preslist, cpressure_array, ctemperature,\
+                  cnsigma_templist, cnsigma_preslist, cpressure_array, ctemperature_array, ctemperature,  \
                   C.c_void_p(absorption.ctypes.data))
 
         out = zeros((self.nlambda))
         out[:] = absorption
-
 
         del(absorption)
 

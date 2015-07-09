@@ -79,7 +79,15 @@ class create_spectrum(object):
         
         #set forward model
         if self.params.gen_type == 'transmission':
+            # compile transmission cpp code if needed
+            if self.params.gen_compile_cpp or not os.path.isfile('library/pathintegral.so'):
+                if MPIrank == 0 or not MPIrank:
+                    os.system('rm library/pathintegral.so')
+                    os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
+
             self.fmob = transmission(self.atmosphereob)
+
+
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
         
@@ -197,7 +205,7 @@ class create_spectrum(object):
         
     def save_spectrum(self,filename='spectrum.dat'):
         #saves spectrum to ascii file 
-        np.savetxt(filename, self.spectrum)
+        np.savetxt(os.path.join(self.params.out_path, filename),  self.spectrum)
         
     def plot_tp_profile(self):
         #plotting TP-profile
@@ -219,7 +227,8 @@ class create_spectrum(object):
             pl.plot(self.spectrum[:,0],self.spectrum[:,1])
         else:
             pl.errorbar(self.spectrum[:,0],self.spectrum[:,1],self.spectrum[:,2])
-
+        pl.xscale('log')
+        plt.xlim(np.min(self.spectrum[:,0]), np.max(self.spectrum[:,0]))
         pl.xlabel(r'Wavelength $\mu$m')
         if self.params.gen_type == 'transmission':
             pl.ylabel(r'$(R_{p}/R_{\ast})^2$')

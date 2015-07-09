@@ -69,13 +69,16 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     const int pressure_broadening, const double * flattened_sigma_arr,
     const double * sigma_templist, const double * sigma_preslist,
     const int nsigma_templist, const int nsigma_preslist,
-    const double * pressure_array, const double temperature,
+    const double * pressure_array, const double * temperature_array,
+
+    const double temperature,
 
     void * absorptionv) {
 
 
     //output array to be passed back to python
     double * absorption = (double *) absorptionv;
+
 
 
    // setting up arrays and variables
@@ -86,7 +89,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     double Rtau, Ctau, cld_tau;
     int count;
 
-    int t1, t2, p1[nlayers], p2[nlayers]; // temperature and pressure bounds idx for 2D interpolation of sigma array
+    int t0[nlayers], t1, t2, p1[nlayers], p2[nlayers]; // temperature and pressure bounds idx for 2D interpolation of sigma array
     double F11, F12, F21, F22, F1, F2;
     double x, y, x1, x2, y1, y2;
     double sigma;
@@ -108,6 +111,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
         }
     }
 
+
     // initialise cloud quantities
 	double bounds[3]={0.0}, cld_log_rho=0.0;
 
@@ -125,8 +129,9 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 
     if (pressure_broadening == 1) {
         if (const_temp==1) {
+
             // temperature is constant through the atmosphere (doesn't change with j)
-            // find closest temperature indexes in sigma_templist
+            // precalculate closest temperature indexes in sigma_templist
             if (nsigma_templist == 1) {
                 t1 = 0;
                 t2 = 0;
@@ -158,6 +163,31 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                     p1[j] = p;
                     p2[j] = p+1;
                     break;
+                }
+            }
+        }
+    } else {
+        // pressure broadening is off
+
+
+        if (const_temp==0) {
+            // variable T profile. Precalculate T indexes in sigma_array for each layer
+
+
+            for (int j=0; j<(nlayers); j++) { // loop through layers
+                for(int t=0; t<nsigma_templist;t++) { // loop through sigma T grid
+
+//                    cout << " temp t " << temperature_array[j] << endl;
+
+                    if ((temperature_array[j] >= sigma_templist[t]) && (temperature_array[j] <= sigma_templist[t+1])) {
+                        // find closest temperatures (upper and lower) for T in layer in sigma T grid
+                        if ((temperature_array[j]-sigma_templist[t]) < (sigma_templist[t+1]-temperature_array[j])) {
+                            // set idx to closest temperature between upper/lower bounds
+                            t0[j] = t;
+
+//                            cout << " t0 j " << j << " " << t << endl;
+                        }
+                    }
                 }
             }
         }
@@ -269,21 +299,31 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                         }
                     } else {
                         if(const_temp==0){
-                            sigma = sigma_array_3d[j][l][wl];
+
+                            // temperature is temperature_array[k]
+
+                            // l is the molecule number, OK --> second array
+                            // need to find closest temperature id to tempgrid for j
+
+                            // get T profile first
+                            // then get T for layer j
+                            // then find closest sigma array to T, using tempgrid
+
+                            // temperature idx for layer j
+
+//                            cout << "wl" << wl << " t " << t0[j] << endl;
+
+                            sigma = sigma_array_3d[t0[j]][l][wl];
+
                         } else {
                             sigma = sigma_array[l][wl];
                         }
-
-
                     }
-                    // cout << "sigma is " << sigma << endl;
                     tau[j] += (sigma * X[l][k+j] * rho[k+j] * dlarray[count]);
 				}
 
 				Rtau += Rsig[wl] * rho[j+k] * dlarray[count]; // calculating Rayleigh scattering optical depth
 				Ctau += Csig[wl] * rho[j+k] * rho[j+k] * dlarray[count]; // calculating CIA optical depth
-
-                //cout << dlarray[count] << endl;
 
 //              Calculating cloud opacities if requested
                 if(include_cld==1){
@@ -306,22 +346,23 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
             tau[j] += cld_tau; //adding cloud tau to gas tau
 
             exptau[j]= exp(-tau[j]);
-
+//            cout << " exptau " << exptau[j] << endl;
 		}
+
+
 
 		double integral = 0.0;
 		for(int j=0; j<nlayers; j++){
 		  //HOTFIX TO EQUAL TAU.CPP. TAU.CPP does not calculate the upper layer correctly
 //		  if (j == nlayers-1) exptau[j] = 0.0;
 		  // END OF HOTFIX
+
 		   integral += ((Rp+z[j])*(1.0-exptau[j])*dz[j]);
-		   //cout << "int" << integral << " j " << j << " dz " << dz[j] << " z " << z[j] << " exptau "  << exptau[j] << endl;
+//		   cout << "int " << integral << " j " << j << " dz " << dz[j] << " z " << z[j] << " exptau "  << exptau[j] << endl;
 		}
 		integral*=2.0;
 
 		absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
-
-        // cout  << absorption[wl] << endl;
 
 
     }
