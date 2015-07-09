@@ -44,7 +44,7 @@ def run(params):
 
     #initialising fitting object
     fittingob = fitting(forwardmodelob)
-
+    
     #fit data for stage 1
     if params.downhill_run:
         fittingob.downhill_fit()    #simplex downhill fit
@@ -81,11 +81,11 @@ def run(params):
         params.out_path = os.path.join(out_path_orig, 'stage_1')
     
         #setting up objects for stage 2 fitting
-        dataob2 = data(params) 
+        dataob1 = data(params) 
     
         #setting stage 2 atmosphere object
-        atmosphereob1 = atmosphere(dataob2, tp_profile_type='hybrid', covariance=Cov_array)
-    
+        atmosphereob1 = atmosphere(dataob1, tp_profile_type='hybrid', covariance=Cov_array)
+                
         #setting stage 2 forward model 
         forwardmodelob1 = emission(atmosphereob1)
             

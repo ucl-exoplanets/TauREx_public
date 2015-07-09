@@ -268,7 +268,7 @@ class atmosphere(base):
         '''
         Setting up the parameter grid (variable in length depending on TP-profile model selected)
 
-        fit_params    [abundances (ngas), TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for differnt models
+        fit_params    [abundances (ngas), TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for different models
         fit_count     [no. abundances, no. TP parameters]
         fit_index     index to fitparams for slicing
         '''
