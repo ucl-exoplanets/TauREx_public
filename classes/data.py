@@ -59,6 +59,7 @@ class data(base):
 
         #converting absorption cross-sectinos from cm^-1 to microns
         if params.in_convert2microns:
+            logging.info('Converting cross sections from cm-1 to microns')
             libgen.convert2microns(params.in_abs_path)
             libgen.convert2microns(params.in_abs_path_P)
 

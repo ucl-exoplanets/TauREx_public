@@ -22,7 +22,7 @@ import numpy as np
 import scipy.special as spe
 import pylab as pl
 import logging
-
+import sys
 import library_general as libgen
 
 
@@ -65,9 +65,13 @@ class atmosphere(base):
 
         if self.params.in_use_ATMfile:
             # build PTA profile and mixing ratio array from .atm file
-            logging.info('Reading atmospheric profile from .atm file')
+            logging.info('Atmospheric PTA grid has been set by .atm file')
             self.X = self.data.X
             self.pta = self.data.pta
+            if len(self.X) <> len(self.absorbing_gases):
+                logging.error('The number of molecules specified in the .par file is not consistent with'
+                             'the mixing ratios in the .atm file %s ' % self.params.in_atm_file)
+                sys.exit()
         else:
             self.absorbing_gases_X = self.params.planet_mixing # mixing ratios are read from parameter file
             self.X = self.set_mixing_ratios()

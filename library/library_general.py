@@ -36,24 +36,25 @@ def weighted_avg_and_std(values, weights):
 def convert2microns(path, upcut=25):
 #Function converting ExoMol cross section files in dir:PATH from wavenumbers to microns and sorting
 #with ascending wavelength
-#output: .abs files
+#input: .txt files in wavenumbers
+#output: .abs files in microns
 
     for path, subdirs, files in os.walk(path):
         # list files in all subdirectories recursively
         for name in files:
             filename = os.path.join(path, name)
-            if filename[-3:] ==  'abs':
+            if filename[-3:] ==  'txt':
                 if os.path.isfile(filename[:-3] + 'abs'):
                     # skip file if it already exists
                     pass
                 else:
                     print 'Converting: %s' % filename
-                    tmp = loadtxt(f, dtype=float32)[1:,:]
+                    tmp = loadtxt(filename, dtype=float32)[1:,:]
                     tmp[:,0] = 10000.0/tmp[:,0]
                     idx = argsort(tmp[:,0],axis=-1)
                     tmp2 = tmp[idx,:][where(tmp[idx,0] < upcut)]
                     tmp2 = tmp2.astype(float32, copy=False)
-                    savetxt(f[:-3]+'abs', tmp2, fmt="%.6e,%.8e")
+                    savetxt(filename[:-3]+'abs', tmp2, fmt="%.6e,%.8e")
 
 def find_nearest(arr, value):
     # find nearest value in array
