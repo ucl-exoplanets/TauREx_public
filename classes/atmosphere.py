@@ -272,7 +272,7 @@ class atmosphere(base):
         '''
         Setting up the parameter grid (variable in length depending on TP-profile model selected)
 
-        fit_params    [abundances (ngas), TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for differnt models
+        fit_params    [abundances (ngas), TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for different models
         fit_count     [no. abundances, no. TP parameters]
         fit_index     index to fitparams for slicing
         '''
@@ -442,7 +442,7 @@ class atmosphere(base):
         kappa_v2 = TP_params[3];
         alpha = TP_params[4]
 
-        gamma_1 = kappa_v1/kappa_ir; gamma_2 = kappa_v2/kappa_ir
+        gamma_1 = kappa_v1/(kappa_ir + 1e-10); gamma_2 = kappa_v2/(kappa_ir + 1e-10)
         tau = kappa_ir * self.P / self.planet_grav
 
         T_int = 200 #@todo internal heat parameter looks suspicious... needs looking at.

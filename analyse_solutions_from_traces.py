@@ -64,14 +64,18 @@ if params.gen_type == 'transmission' or params.fit_transmission:
     
     
 if params.gen_type == 'emission' or params.fit_emission:
-        
-    folders = [os.path.join(out_path_orig, 'stage_0'),os.path.join(out_path_orig, 'stage_1')]
+    
+    folders = ['stage_0', 'stage_1']
     for f in folders:
-        if os.path.isdir(f):
-            params.out_path = f
-            
+        dir = os.path.join(out_path_orig, f)
+        if os.path.isdir(dir):
+            params.out_path = dir
             dataob = data(params)
-            atmosphereob = atmosphere(dataob)
+            if f is 'stage_1':
+                Cov_array = np.loadtxt(os.path.join(out_path_orig, 'stage_0/tp_covariance.dat'))
+                atmosphereob = atmosphere(dataob, tp_profile_type='hybrid', covariance=Cov_array)
+            else:
+                atmosphereob = atmosphere(dataob) 
             forwardmodelob = emission(atmosphereob)
             fittingob = fitting(forwardmodelob)
             if params.mcmc_run and pymc_import:
@@ -79,6 +83,8 @@ if params.gen_type == 'emission' or params.fit_emission:
             if params.nest_run and multinest_import:
                 fittingob.NEST = True
             outputob = output(fittingob)
+            outputob.plot_all(save2pdf=params.out_save_plots,
+                               params_names=fittingob.fit_params_names[:fittingob.fit_X_nparams])
             if params.verbose or params.out_save_plots:
                 outputob.plot_all(save2pdf=params.out_save_plots)
             outputob.save_ascii_spectra()
@@ -88,6 +94,7 @@ if params.gen_type == 'emission' or params.fit_emission:
             #deleting objectes
             dataob = None; atmosphereob = None; forwardmodelob = None; fittingob = None;
             outputob = None
+            del dataob; del atmosphereob; del forwardmodelob; del fittingob; del outputob;
 
     
     

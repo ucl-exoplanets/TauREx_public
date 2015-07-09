@@ -646,10 +646,6 @@ class output(base):
                             save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',
                             plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour)
         if self.fitting.NEST:
-
-            if params_names is None:
-                params_names = self.params_names
-
             plot_posteriors(self.NEST_out, params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
                             plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
 
