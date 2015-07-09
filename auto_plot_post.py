@@ -6,12 +6,16 @@
 import os, glob, optparse
 import numpy as np
 import multiprocessing as mp
+from create_spectrum_grid import N_processes
 
 path = '/Volumes/DATA_CALIMERO/ingo/taurex2_paper/revised'
 parser = optparse.OptionParser()
 parser.add_option('-d', '--dir',
                   dest="path",
                   default="Output",
+parser.add_option('-n', '--nprocess',
+                  dest="max_nprocesses",
+                  default="6",
 )
 
 
@@ -30,6 +34,8 @@ if N_folder >= N_cpu:
 else:
     N_processes = N_folder
 
+if N_processes > options.max_nprocesses:
+    N_processes = options.max_nprocesses
 
 print 'Starting plotting... '
 
