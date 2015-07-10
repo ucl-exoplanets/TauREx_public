@@ -775,8 +775,14 @@ class output(base):
                 #iterate through all upper/lower bounds of parameters to find function minimum and maximum
 #                 fit_params = [self.MCMC_out[idx]['fit_params'][param]['value'] for param in self.params_names]
 
+                tp_profile_type = self.atmosphere.TP_type
+                if tp_profile_type is 'hybrid' or tp_profile_type is 'rodgers' or tp_profile_type is 'isothermal':
+                    tp_iterate = False
+                else:
+                    tp_iterate = True
+
                 T_mean, T_sigma = iterate_TP_profile(self.MCMC_TP_params_values[idx], self.MCMC_TP_params_std[idx],
-                                                     fit_TPparams_bounds, self.fitting.forwardmodel.atmosphere.TP_profile)
+                                                     fit_TPparams_bounds, self.fitting.forwardmodel.atmosphere.TP_profile,iterate=tp_iterate)
 
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma
@@ -802,8 +808,14 @@ class output(base):
 
             for idx, solution in enumerate(self.NEST_out):
 
+                tp_profile_type = self.atmosphere.TP_type
+                if tp_profile_type is 'hybrid' or tp_profile_type is 'rodgers' or tp_profile_type is 'isothermal':
+                    tp_iterate = False
+                else:
+                    tp_iterate = True
+                    
                 T_mean, T_sigma = iterate_TP_profile(self.NEST_TP_params_values[idx], self.NEST_TP_params_std[idx],
-                                                      fit_TPparams_bounds,self.fitting.forwardmodel.atmosphere.TP_profile)
+                                                      fit_TPparams_bounds,self.fitting.forwardmodel.atmosphere.TP_profile,iterate=tp_iterate)
             
                 out[:,1] = T_mean;
                 out[:,2] = T_sigma

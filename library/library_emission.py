@@ -2,6 +2,7 @@ import scipy,itertools,sys,os,time,logging
 import scipy.constants as con
 import numpy as np
 import ctypes as C
+from scipy.stats.mstats_basic import tmean
 
 
 def black_body(lamb, temp):
@@ -56,7 +57,7 @@ def black_body_to_temp(wave,flux):
     return T
 
 
-def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function):
+def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function,iterate=True):
     '''
     function iterating through all lower and upper bounds of parameters
     to determine which combination gives the lowest/highest attainable 
@@ -65,35 +66,49 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function):
 
     Tmean = TP_function(TP_params)
 
-#     print 'Tmean', Tmean
 
     bounds = [] #list of lower and upper parameter bounds 
+    lowpar = []
+    highpar= []
     for i in xrange(len(TP_params)):
         low = TP_params[i]-TP_params_std[i]
         high = TP_params[i]+TP_params_std[i]
+        lowpar.append(low)
+        highpar.append(high)
         if low < TP_bounds[i][0]:
             low = TP_bounds[i][0]+1e-10
         if high > TP_bounds[i][1]:
             high = TP_bounds[i][1]-1e-10
             
-        
         bounds.append((low,high))
     
     
-    iterlist = list(itertools.product(*bounds))
-    iter_num = np.shape(iterlist)[0] #number of possible combinations
+    if iterate:
+        iterlist = list(itertools.product(*bounds))
+        iter_num = np.shape(iterlist)[0] #number of possible combinations
+        
+        T_iter   = np.zeros((len(Tmean), iter_num))
+        T_minmax = np.zeros((len(Tmean), 2))
+        
+        for i in range(iter_num):
+            T_iter[:,i]  = TP_function(iterlist[i])
     
-    T_iter   = np.zeros((len(Tmean), iter_num))
-    T_minmax = np.zeros((len(Tmean), 2))
-    
-    for i in range(iter_num):
-        T_iter[:,i]  = TP_function(iterlist[i])
-
-    Tmean = np.mean(T_iter,1)
-    T_minmax[:,0] = np.min(T_iter,1)
-    T_minmax[:,1] = np.max(T_iter,1)
-#     T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
-    T_sigma = np.std(T_iter,1)
+        Tmean = np.mean(T_iter,1)
+        T_minmax[:,0] = np.min(T_iter,1)
+        T_minmax[:,1] = np.max(T_iter,1)
+    #     T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+        T_sigma = np.std(T_iter,1)
+        
+    else:
+        Tmin = TP_function(lowpar)
+        Tmax = TP_function(highpar)
+        T_sigma = Tmax-Tmin
+        T_sigma /= 2.0
+   
+        print Tmean
+        print Tmin
+        print Tmax
+        print T_sigma
    
     return Tmean, T_sigma
 
