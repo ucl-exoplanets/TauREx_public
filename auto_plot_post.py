@@ -21,7 +21,7 @@ parser.add_option('-n', '--nprocess',
 options, remainder = parser.parse_args()
 # options.path = '/Volumes/DATA_CALIMERO/ingo/taurex2_paper/revised'
 
-folder_list = glob.glob(path+'/*')
+folder_list = glob.glob(options.path+'/*')
 N_folder = len(folder_list)
 
 N_cpu = mp.cpu_count()
