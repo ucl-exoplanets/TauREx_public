@@ -99,7 +99,7 @@ class emission(base):
 
         # set forward model function
         if cythonised:
-            self.model = self.path_integral
+            self.model = self.cy_path_integral
         else:
             self.model = self.path_integral
 
@@ -183,58 +183,58 @@ class emission(base):
         self.I_total += BB_surf*(exptau)
             
         #other layers
-        BB_layer = BB_surf
-        sigma_array1 = self.get_sigma_array(temperature[0])       
-        for j in xrange(1,self.nlayers):
-            if temperature[j] != temperature[j-1]:
-                    sigma_array1 = self.get_sigma_array(temperature[j])
-            for i in xrange(self.n_gas):
-                self.dtau[j,:] += (sigma_array1[i,:] * X[i,j] * rho[j] * self.dzarray[j])
-        
-        sigma_array2 = self.get_sigma_array(temperature[0])
-        for j in xrange(1,self.nlayers):               
-            for k in xrange(j,self.nlayers):
-                if temperature[k] != temperature[k-1]:
-                    sigma_array2 = self.get_sigma_array(temperature[k])  
-                for i in xrange(self.n_gas):
-                    self.tau[j,:] += (sigma_array2[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
-            
-            exptau =  np.exp(-1.0*self.tau[j,:]) 
-             
-            if temperature[j] != temperature[j-1]: 
-                BB_layer = em.black_body(self.specgrid,temperature[j])   
-            
-            self.tau_total[j,:] = BB_layer*(exptau) * (self.dtau[j,:])
-            self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
-        
 #         BB_layer = BB_surf
-#         sigma_array = self.get_sigma_array(temperature[0])
-#         for j in xrange(1,self.nlayers):   
-#             if temperature[j] != temperature[j-1]: 
-#                 BB_layer = em.black_body(self.specgrid,temperature[j]) 
-#                             
+#         sigma_array1 = self.get_sigma_array(temperature[0])       
+#         for j in xrange(1,self.nlayers):
+#             if temperature[j] != temperature[j-1]:
+#                     sigma_array1 = self.get_sigma_array(temperature[j])
+#             for i in xrange(self.n_gas):
+#                 self.dtau[j,:] += (sigma_array1[i,:] * X[i,j] * rho[j] * self.dzarray[j])
+#          
+#         sigma_array2 = self.get_sigma_array(temperature[0])
+#         for j in xrange(1,self.nlayers):               
 #             for k in xrange(j,self.nlayers):
 #                 if temperature[k] != temperature[k-1]:
-#                     sigma_array = self.get_sigma_array(temperature[k])  
-#                     
-#                 if j is k:
-#                     for i in xrange(self.n_gas):
-#                         self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
-#                         self.dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
-#                 else:
-#                     for i in xrange(self.n_gas):
-#                         self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
-#             
-#             exptau =  np.exp(-1.0*self.tau[j,:]) 
+#                     sigma_array2 = self.get_sigma_array(temperature[k])  
+#                 for i in xrange(self.n_gas):
+#                     self.tau[j,:] += (sigma_array2[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
 #              
+#             exptau =  np.exp(-1.0*self.tau[j,:]) 
 #               
-#             
+#             if temperature[j] != temperature[j-1]: 
+#                 BB_layer = em.black_body(self.specgrid,temperature[j])   
+#              
 #             self.tau_total[j,:] = BB_layer*(exptau) * (self.dtau[j,:])
 #             self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
+        
+        BB_layer = BB_surf
+        sigma_array = self.get_sigma_array(temperature[0])
+        for j in xrange(1,self.nlayers):   
+            if temperature[j] != temperature[j-1]: 
+                BB_layer = em.black_body(self.specgrid,temperature[j]) 
+                              
+            for k in xrange(j,self.nlayers):
+                if temperature[k] != temperature[k-1]:
+                    sigma_array = self.get_sigma_array(temperature[k])  
+                      
+                if j is k:
+                    for i in xrange(self.n_gas):
+                        self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])
+                        self.dtau[j,:] += (sigma_array[i,:] * X[i,j] * rho[j] * self.dzarray[j])
+                else:
+                    for i in xrange(self.n_gas):
+                        self.tau[j,:] += (sigma_array[i,:] * X[i,k] * rho[k] * self.dzarray[k])  
+              
+            exptau =  np.exp(-1.0*self.tau[j,:]) 
+               
+                
+              
+            self.tau_total[j,:] = BB_layer*(exptau) * (self.dtau[j,:])
+            self.I_total += BB_layer*(exptau) * (self.dtau[j,:])
 
 
         self.FpFs = (self.I_total/ BB_star) *(self.Rp/self.Rs)**2
-        return self.I_total
+        return self.FpFs
     
     
     
