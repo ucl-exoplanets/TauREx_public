@@ -29,7 +29,7 @@ cdef black_body(np.ndarray[DTYPE_t,ndim=1] lamb, int nlambda, np.float_t temp):
     pi= 3.14159265359
     
 
-    BB = 1e-6 * (pi* (4.0*h*c**2)/(lamb*1e-6)**5) * (1.0/(np.exp((h * c) / (lamb *1e-6 * k * temp)) -1))
+    BB = 1e-6 * (pi* (2.0*h*c**2)/(lamb*1e-6)**5) * (1.0/(np.exp((h * c) / (lamb *1e-6 * k * temp)) -1))
     return BB
 
 @cython.boundscheck(False) # turn of bounds-checking for entire function
