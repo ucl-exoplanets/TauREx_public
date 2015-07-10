@@ -95,7 +95,6 @@ class create_spectrum(object):
         self.MAX_P = self.atmosphereob.P[0]
         self.MIN_P = self.atmosphereob.P[-1]
 
-
         if options.bin == 'resolution':
             #get grids
             self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
@@ -108,7 +107,7 @@ class create_spectrum(object):
             self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
         else:
             self.wavegrid = self.dataob.specgrid
-        
+
     def generate_spectrum(self,**kwarg):
         #run forward model and bin it down
         self.fmob.atmosphere.update_atmosphere()
@@ -204,6 +203,7 @@ class create_spectrum(object):
         np.savetxt(filename,out)
         
     def save_spectrum(self,filename='spectrum.dat'):
+
         #saves spectrum to ascii file 
         np.savetxt(os.path.join(self.params.out_path, filename),  self.spectrum)
         
