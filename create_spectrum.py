@@ -105,16 +105,25 @@ class create_spectrum(object):
         elif options.bin == 'spectrum':
             self.wavegrid = self.dataob.wavegrid
             self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+        elif options.bin == 'file':
+            self.wavegrid = np.loadtxt(options.bin_file)[:,0]
+            self.binwidths = np.loadtxt(options.bin_file)[:,1]
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid, self.binwidths)
+
+
         else:
+
             self.wavegrid = self.dataob.specgrid
+
+        self.n_spec_bin_grid = len(self.wavegrid)
 
     def generate_spectrum(self,**kwarg):
         #run forward model and bin it down
         self.fmob.atmosphere.update_atmosphere()
         model_int = self.fmob.model(**kwarg)
  
-        if self.options.bin == 'resolution' or self.options.bin == 'dlambda' or self.options.bin == 'spectrum':
-            model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
+        if self.options.bin == 'resolution' or self.options.bin == 'dlambda' or self.options.bin == 'spectrum' or self.options.bin == 'file':
+            model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,self.n_spec_bin_grid+1)]
         else:
             model = model_int
  
@@ -128,12 +137,16 @@ class create_spectrum(object):
             self.spectrum = np.zeros((len(model),3))
             self.spectrum[:,0] = self.wavegrid
             self.spectrum[:,1] = model
-            self.spectrum[:,2] += float(self.options.error) * 1e-6
+
+            if self.options.error == 'file':
+                self.spectrum[:,2] += np.loadtxt(options.bin_file)[:,2]
+            else:
+                self.spectrum[:,2] += float(self.options.error) * 1e-6
+
             #add noise to flux values
             if int(self.options.noise) == True:
                 self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
- 
-        
+
 #         self.Pnodes = [self.MAX_P,1e4, 100.0,self.MIN_P]
         
 #         #get grids
@@ -228,7 +241,7 @@ class create_spectrum(object):
         else:
             pl.errorbar(self.spectrum[:,0],self.spectrum[:,1],self.spectrum[:,2])
         pl.xscale('log')
-        plt.xlim(np.min(self.spectrum[:,0]), np.max(self.spectrum[:,0]))
+        plt.xlim(np.min(self.spectrum[:,0])-0.1, np.max(self.spectrum[:,0])+1)
         pl.xlabel(r'Wavelength $\mu$m')
         if self.params.gen_type == 'transmission':
             pl.ylabel(r'$(R_{p}/R_{\ast})^2$')
@@ -255,6 +268,7 @@ if __name__ == '__main__':
     # binning type, it can be:
     #  - 'resolution': bin to given resolution. See opt -r
     #  - 'dlambda': bin to fixed delta lambda. See opt -d
+    #  - 'file': bin to external file. See opt -f
     #  - 'none': no binning
     parser.add_option('-b', '--bin',
                       dest="bin",
@@ -272,10 +286,19 @@ if __name__ == '__main__':
                       dest="noise",
                       default=False,
     )
+
+    # Can be 'file' or integer value (error in ppm). If 'file' see option -f
     parser.add_option('-e', '--error',
                       dest="error",
                       default=0,
     )
+
+    # input file for wavelength grid (1st column), bin widths (2nd column) and errors (3rd column)
+    parser.add_option('-f', '--file',
+                      dest="bin_file",
+                      default='Input/wavelength_grid.dat',
+    )
+
     parser.add_option('-T', '--T_profile',
                       dest="tp_profile",
                       default=False,

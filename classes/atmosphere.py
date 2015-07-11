@@ -81,6 +81,8 @@ class atmosphere(base):
         # set mu, planet grav and scaleheight
         if self.params.tp_couple_mu:
             self.planet_mu = self.get_coupled_planet_mu()
+            logging.info('Coupling mu to composition. mu = ' + str(self.planet_mu/AMU))
+
         else:
             self.planet_mu = self.params.planet_mu
 
