@@ -6,23 +6,22 @@
 import os, glob, optparse
 import numpy as np
 import multiprocessing as mp
-from create_spectrum_grid import N_processes
 
-path = '/Volumes/DATA_CALIMERO/ingo/taurex2_paper/revised'
 parser = optparse.OptionParser()
 parser.add_option('-d', '--dir',
                   dest="path",
                   default="Output",
+                  )
 parser.add_option('-n', '--nprocess',
                   dest="max_nprocesses",
-                  default="6",
-)
+                  default=6,
+                  )
 
 
 options, remainder = parser.parse_args()
 # options.path = '/Volumes/DATA_CALIMERO/ingo/taurex2_paper/revised'
 
-folder_list = glob.glob(path+'/*')
+folder_list = glob.glob(options.path+'/*')
 N_folder = len(folder_list)
 
 N_cpu = mp.cpu_count()
