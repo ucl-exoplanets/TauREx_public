@@ -25,8 +25,8 @@ def weighted_avg_and_std(values, weights):
     return (average, math.sqrt(variance))
 
 
-params_clr = ['1H2-16O_CLR', '12C-1H4_CLR', '14N-1H3_CLR', '12C-16O2_CLR', 'H2_CLR', 'He_CLR', 'N2_CLR']
-params_gas = ['1H2-16O', '12C-1H4', '14N-1H3', '12C-16O2', 'H2', 'He', 'N2']
+params_clr = ['14N-1H3_CLR', '1H2-16O_CLR', '12C-16O2_CLR', '12C-1H4_CLR', '1H2-32S_CLR', '14N-1H3_CLR', 'H2_CLR', 'N2_CLR']
+params_gas = ['14N-1H3', '1H2-16O', '12C-16O2', '12C-1H4', '1H2-32S', '14N-1H3', 'H2', 'N2']
 params_others = ['T', 'P0', 'Radius', 'coupled_mu']
 
 for solution in out:
@@ -40,46 +40,46 @@ for solution in out:
     for param in params_gas:
         value = np.power(10, solution['fit_params'][param]['value'])
         std = weighted_avg_and_std(np.power(10,solution['fit_params'][param]['trace']), solution['weights'])[1]
-        string += '%.4e	%.4e	' % (value*100, std*100)
+        string += '%s	%.4e	%.4e	' % (param, value, std)
 
-    # H20/CH4
-    value = np.power(10, solution['fit_params']['1H2-16O']['value']-solution['fit_params']['12C-1H4']['value'])
-    std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']-solution['fit_params']['12C-1H4']['trace']),
-                               solution['weights'])[1]
-    string += '%.4e	%.4e	' % (value, std)
+    # # H20/CH4
+    # value = np.power(10, solution['fit_params']['1H2-16O']['value']-solution['fit_params']['12C-1H4']['value'])
+    # std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']-solution['fit_params']['12C-1H4']['trace']),
+    #                            solution['weights'])[1]
+    # string += '%.4e	%.4e	' % (value, std)
+    #
+    # # H2O/NH3
+    # value = np.power(10, solution['fit_params']['1H2-16O']['value']-solution['fit_params']['14N-1H3']['value'])
+    # std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']-solution['fit_params']['14N-1H3']['trace']),
+    #                            solution['weights'])[1]
+    # string += '%.4e	%.4e	' % (value, std)
+    #
+    # # CH4/NH3
+    # value = np.power(10, solution['fit_params']['12C-1H4']['value']-solution['fit_params']['14N-1H3']['value'])
+    # std = weighted_avg_and_std(np.power(10, solution['fit_params']['12C-1H4']['trace']-solution['fit_params']['14N-1H3']['trace']),
+    #                            solution['weights'])[1]
+    # string += '%.4e	%.4e	' % (value, std)
 
-    # H2O/NH3
-    value = np.power(10, solution['fit_params']['1H2-16O']['value']-solution['fit_params']['14N-1H3']['value'])
-    std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']-solution['fit_params']['14N-1H3']['trace']),
-                               solution['weights'])[1]
-    string += '%.4e	%.4e	' % (value, std)
-
-    # CH4/NH3
-    value = np.power(10, solution['fit_params']['12C-1H4']['value']-solution['fit_params']['14N-1H3']['value'])
-    std = weighted_avg_and_std(np.power(10, solution['fit_params']['12C-1H4']['trace']-solution['fit_params']['14N-1H3']['trace']),
-                               solution['weights'])[1]
-    string += '%.4e	%.4e	' % (value, std)
-
-    #He+H2+N2
-    value = np.power(10, solution['fit_params']['He']['value'])+ np.power(10, solution['fit_params']['H2']['value']) + \
-            np.power(10, solution['fit_params']['N2']['value'])
-    std = weighted_avg_and_std(np.power(10, solution['fit_params']['He']['trace']) +
-                               np.power(10, solution['fit_params']['H2']['trace']) +
-                               np.power(10, solution['fit_params']['N2']['trace']),
-                               solution['weights'])[1]
-    string += '%.4e	%.4e	' % (value*100, std*100)
-
-    # sum X
-    value = np.power(10, solution['fit_params']['1H2-16O']['value']) + \
-            np.power(10, solution['fit_params']['12C-1H4']['value']) + \
-            np.power(10, solution['fit_params']['14N-1H3']['value']) + \
-            np.power(10, solution['fit_params']['12C-16O2']['value'])
-    std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']) +
-                               np.power(10, solution['fit_params']['12C-1H4']['trace']) +
-                               np.power(10, solution['fit_params']['14N-1H3']['trace']) +
-                               np.power(10, solution['fit_params']['12C-16O2']['trace']),
-                               solution['weights'])[1]
-    string += '%.4e	%.4e	' % (value*100, std*100)
+    # #He+H2+N2
+    # value = np.power(10, solution['fit_params']['He']['value'])+ np.power(10, solution['fit_params']['H2']['value']) + \
+    #         np.power(10, solution['fit_params']['N2']['value'])
+    # std = weighted_avg_and_std(np.power(10, solution['fit_params']['He']['trace']) +
+    #                            np.power(10, solution['fit_params']['H2']['trace']) +
+    #                            np.power(10, solution['fit_params']['N2']['trace']),
+    #                            solution['weights'])[1]
+    # string += '%.4e	%.4e	' % (value*100, std*100)
+    #
+    # # sum X
+    # value = np.power(10, solution['fit_params']['1H2-16O']['value']) + \
+    #         np.power(10, solution['fit_params']['12C-1H4']['value']) + \
+    #         np.power(10, solution['fit_params']['14N-1H3']['value']) + \
+    #         np.power(10, solution['fit_params']['12C-16O2']['value'])
+    # std = weighted_avg_and_std(np.power(10, solution['fit_params']['1H2-16O']['trace']) +
+    #                            np.power(10, solution['fit_params']['12C-1H4']['trace']) +
+    #                            np.power(10, solution['fit_params']['14N-1H3']['trace']) +
+    #                            np.power(10, solution['fit_params']['12C-16O2']['trace']),
+    #                            solution['weights'])[1]
+    # string += '%.4e	%.4e	' % (value*100, std*100)
 
     for param in params_others:
         if not param in solution['fit_params']:
@@ -91,5 +91,5 @@ for solution in out:
             else:
                 value = solution['fit_params'][param]['value']
                 std = weighted_avg_and_std(solution['fit_params'][param]['trace'], solution['weights'])[1]
-            string += '%.4e	%.4e	' % (value, std)
+            string += '%s   %.4e	%.4e	' % (param, value, std)
     print string
