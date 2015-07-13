@@ -199,5 +199,5 @@ if params.clean_run:
 # # print s.getvalue()
 
 #last line. displays any diagrams generated. must be run after profiling
-if params.verbose:
-    pylab.show()
+# if params.verbose:
+#     pylab.show()

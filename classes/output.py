@@ -839,8 +839,11 @@ class output(base):
     def save_contribution_function(self, fit_params,filename):
         
         self.fitting.update_atmospheric_parameters(fit_params)
-        tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()
-        np.savetxt(filename,tau_total)
+        tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()   
+            
+        np.save(filename,tau_total)
+
+
 
     #
     #
