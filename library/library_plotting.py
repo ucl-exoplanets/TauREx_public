@@ -356,6 +356,8 @@ def plot_2Ddistribution(ax, fit_out, params_names, param1_idx, param2_idx, plot_
 
 def plot_1Dposterior(ax, fit_out, params_names, param_idx, plot_contour=False):
 
+    # todo I think this is wrong, we should use weighted histogram!!!!
+
     allchains = np.zeros(0)
     for solution in fit_out:
         if plot_contour:
