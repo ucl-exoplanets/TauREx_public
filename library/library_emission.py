@@ -97,20 +97,15 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function,iterate=
         Tmean = np.mean(T_iter,1)
         T_minmax[:,0] = np.min(T_iter,1)
         T_minmax[:,1] = np.max(T_iter,1)
-    #     T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
-        T_sigma = np.std(T_iter,1)
+        T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
+#         T_sigma = np.std(T_iter,1)
         
     else:
         Tmin = TP_function(lowpar)
         Tmax = TP_function(highpar)
         T_sigma = Tmax-Tmin
         T_sigma /= 2.0
-   
-        print Tmean
-        print Tmin
-        print Tmax
-        print T_sigma
-   
+      
     return Tmean, T_sigma
 
 
