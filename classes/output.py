@@ -644,15 +644,15 @@ class output(base):
         if self.fitting.MCMC:
             plot_posteriors(self.MCMC_out,params_names=params_names,
                             save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',
-                            plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour)
+                            plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour,loglabel=self.params.fit_X_log)
         if self.fitting.NEST:
             plot_posteriors(self.NEST_out, params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
-                            plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
+                            plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour,loglabel=self.params.fit_X_log)
 
             if self.params.fit_clr_trans == True:
                 params_names = self.clrinv_params_names
                 plot_posteriors(self.NEST_out,params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
-                                plot_name = 'NEST_clrinv',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour)
+                                plot_name = 'NEST_clrinv',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour,loglabel=self.params.fit_X_log)
 
     def plot_manual(self,model,save2pdf=False,linewidth=2.0):
 

@@ -29,9 +29,9 @@ except:
 
 scale_pow = 0
 
-def plot_posteriors(fit_out, params_names=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='BuPu',log_cmap=False):
+def plot_posteriors(fit_out, params_names=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='BuPu',log_cmap=False,loglabel=False):
         
-        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, plot_contour=plot_contour, color=color,log_cmap=log_cmap)
+        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, plot_contour=plot_contour, color=color,log_cmap=log_cmap,loglabel=loglabel)
 
         if save2pdf:
                 filename1 = os.path.join(out_path, '%s_posteriors.pdf' % plot_name)
@@ -67,7 +67,42 @@ def plot_TP_profile(P, T_mean, T_sigma=None, fig=None, name=None, color='blue', 
 
     return fig
 
-def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=False,fontsize=30, color='Blues',log_cmap=False):
+def _fancy_param_name(param_name,log=False):
+    #small function returning more fancy latex string
+    
+    
+    if param_name == '1H2-16O':
+        NAME = 'H_{2}O'
+    elif param_name == '12C-1H4':
+        NAME = 'CH_{4}'
+    elif param_name == '12C-16O':
+        NAME = 'CO'
+    elif param_name == '12C-16O2':
+        NAME = 'CO_{2}'
+    elif param_name == '1H-12C-14N':
+        NAME = 'HCN'
+    elif param_name =='1H2-32S':
+        NAME = 'H_{2}S'
+    elif param_name =='14N-1H3':
+        NAME = 'NH_{3}'
+    elif param_name =='14N-16O':
+        NAME = 'NO'
+    elif param_name =='28Si-16O':
+        NAME = 'SiO'
+    elif param_name =='48Ti-16O':
+        NAME = 'TiO'
+    elif param_name =='51V-16O':
+        NAME = 'VO'
+    else:
+        NAME = param_name
+    
+    if log:
+        return r'log$({0})$'.format(NAME)
+    else:
+        return r'${0}$'.format(NAME)
+    
+
+def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=False,fontsize=30, color='Blues',log_cmap=False,loglabel=False):
 
     if params_names == None:
         params_names = fit_out[0]['fit_params'].keys()
@@ -91,7 +126,7 @@ def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=Fa
 
         if i == 0:
             pl.ylabel("Prob. density",fontsize=fontsize)
-        pl.xlabel(param_name, x=0.6, ha='right', fontsize=fontsize)
+        pl.xlabel(_fancy_param_name(param_name,log=loglabel), x=0.6, ha='right', fontsize=fontsize)
         globalxlims= ax.get_xlim()
 
         #scaling axis labels @todo labels can be improved but works now at least
