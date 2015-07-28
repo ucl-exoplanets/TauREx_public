@@ -242,6 +242,9 @@ class transmission(base):
             else:
                 sigma_array_2d = self.get_sigma_array(temperature[0])
         else:
+
+            logging.debug('Variable T with altitude. Get 3d sigma array and set other variables')
+
             # variable T with altitude. Get 3d sigma array and set other variables
             # note this does not include pressure broadening
             sigma_array_3d, tempgrid = self.get_sigma_array_c()
@@ -268,7 +271,9 @@ class transmission(base):
         cz = cast2cpp(znew)
         cdz = cast2cpp(dz)
         cRsig = cast2cpp(self.Rsig)
+
         cCsig = cast2cpp(self.Csig)
+
         cRp = C.c_double(self.atmosphere.planet_radius)
         cRs = C.c_double(self.params.star_radius)
         clinecount = C.c_int(self.nlambda)

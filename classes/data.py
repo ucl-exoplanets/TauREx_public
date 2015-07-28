@@ -148,12 +148,11 @@ class data(base):
         if MPIrank == 0 and self.params.in_create_sigma_rayleigh:
             # compute cross sections and save them to a file
             self.build_rayleigh_sigma()
-        self.sigma_R = self.get_rayleigh_sigma() # load Rayleigh scattering cross sections from file
+        self.sigma_R = self.get_rayleigh_sigma() # load Rayleigh scattering cross sections
 
         # Absorption cross sections
         if self.params.gen_run_gui:
             # if running in GUI mode, the dictionary is loaded from a file
-            # todo add a param to rebuild sigma_array even in GUI mode
             import pickle
             filename = 'Input/sigma_dict.pickle'
             if os.path.isfile(filename):

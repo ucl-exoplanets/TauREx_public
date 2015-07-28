@@ -81,7 +81,7 @@ class atmosphere(base):
         # set mu, planet grav and scaleheight
         if self.params.tp_couple_mu:
             self.planet_mu = self.get_coupled_planet_mu()
-            logging.info('Coupling mu to composition. mu = ' + str(self.planet_mu/AMU))
+            logging.info('Coupling mu to composition. Average mu = ' + str(np.average(self.planet_mu)/AMU))
 
         else:
             self.planet_mu = self.params.planet_mu
@@ -137,16 +137,23 @@ class atmosphere(base):
         Get the mean molecular weight (mu) from atmospheric composition
         '''
 
-        if absorbing_gases_X == '':
-            absorbing_gases_X = self.absorbing_gases_X
+        # if absorbing_gases_X == '':
+        #     absorbing_gases_X = self.absorbing_gases_X
+
         if inactive_gases_X == '':
             inactive_gases_X = self.inactive_gases_X
 
-        mu = 0
-        for idx, gasname in enumerate(self.absorbing_gases):
-            mu += absorbing_gases_X[idx] * self.data.get_molecular_weight(gasname)
-        for idx, gasname in enumerate(self.inactive_gases):
-            mu += inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
+        # get mu for each layer
+        mu = np.zeros(self.nlayers)
+
+        for i in range(self.nlayers):
+            for idx, gasname in enumerate(self.absorbing_gases):
+                mu[i] += self.X[idx, i] * self.data.get_molecular_weight(gasname)
+
+            for idx, gasname in enumerate(self.inactive_gases):
+                mu[i] += inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
+
+            logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
 
         return mu
 
@@ -160,9 +167,9 @@ class atmosphere(base):
         if not mu:
             mu = self.planet_mu
 
-        Tavg = np.average(T)
+        #Tavg = np.average(T)
 
-        return (KBOLTZ*Tavg)/(mu*g)
+        return (KBOLTZ*T)/(mu*g)
 
     #@profile
     def get_surface_gravity(self, mass=None, radius=None):
@@ -172,6 +179,11 @@ class atmosphere(base):
             mass = self.planet_mass
         if not radius:
             radius = self.planet_radius
+
+        try:
+            radius = radius+self.z
+        except:
+            pass
 
         return (G * mass) / (radius**2)
 
@@ -215,8 +227,7 @@ class atmosphere(base):
             T = T[0]
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-
-        max_z = n_scale * self.scaleheight
+        max_z = n_scale * np.average(self.scaleheight)
 
         #generatinng altitude-pressure array
         pta_arr = np.zeros((self.nlayers,3))
@@ -335,25 +346,24 @@ class atmosphere(base):
         self.scaleheight = self.get_scaleheight()
 
         n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        max_z = n_scale * self.scaleheight
+        if isinstance(self.scaleheight, float):
+            max_z = n_scale * self.scaleheight
+        else:
+            max_z = n_scale * np.average(self.scaleheight)
 
-        self.z = np.linspace(0, max_z, num=self.nlayers) # altitude
+        # set altitude array
+        if self.params.in_use_ATMfile:
+            self.z = self.pta[:,2]
+        else:
+            self.z = np.linspace(0, max_z, num=self.nlayers)
+
         self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.rho = self.get_rho() # update density
 
 
-        # # update TP profile
-        # self.pta = self.setup_pta_grid()
-        # self.P = self.pta[:,0] # pressure array
-        # self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
-        # self.T = self.pta[:,1] # temperature array
-        # self.z = self.pta[:,2] # altitude array
-        # self.rho = self.get_rho() # update density
-
     #####################
     # Everything below is related to Temperature Pressure Profiles
-
 
     def set_TP_profile(self, profile=None):
         '''
@@ -532,7 +542,7 @@ class atmosphere(base):
         '''
         if h is None:
             h = self.params.tp_corrlength
-            
+
         #if self.TP_setup:
         T = np.zeros((self.nlayers)) #temperature array
 
