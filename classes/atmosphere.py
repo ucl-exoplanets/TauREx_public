@@ -86,8 +86,13 @@ class atmosphere(base):
         else:
             self.planet_mu = self.params.planet_mu
 
+
+
         self.planet_grav = self.get_surface_gravity()
         self.scaleheight = self.get_scaleheight(T = self.planet_temp)
+
+        # determine height of atmosphere using original scale height & planet gravity
+        self.max_z = self.params.tp_num_scale * np.average(self.scaleheight)
 
         if not self.params.in_use_ATMfile:
             self.pta      = self.setup_pta_grid()
@@ -226,12 +231,9 @@ class atmosphere(base):
         else:
             T = T[0]
 
-        n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        max_z = n_scale * np.average(self.scaleheight)
-
         #generatinng altitude-pressure array
         pta_arr = np.zeros((self.nlayers,3))
-        pta_arr[:,2] = np.linspace(0,max_z,num=self.nlayers) # altitude
+        pta_arr[:,2] = np.linspace(0, self.max_z, num=self.nlayers) # altitude
         pta_arr[:,0] = self.max_pressure * np.exp(-pta_arr[:,2]/self.scaleheight)
         pta_arr[:,1] = T
 
@@ -345,17 +347,11 @@ class atmosphere(base):
         self.planet_grav = self.get_surface_gravity()
         self.scaleheight = self.get_scaleheight()
 
-        n_scale  = self.params.tp_num_scale # thickness of atmosphere in number of atmospheric scale heights
-        if isinstance(self.scaleheight, float):
-            max_z = n_scale * self.scaleheight
-        else:
-            max_z = n_scale * np.average(self.scaleheight)
-
         # set altitude array
         if self.params.in_use_ATMfile:
             self.z = self.pta[:,2]
         else:
-            self.z = np.linspace(0, max_z, num=self.nlayers)
+            self.z = np.linspace(0, self.max_z, num=self.nlayers)
 
         self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar

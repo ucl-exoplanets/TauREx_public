@@ -354,6 +354,7 @@ class data(base):
             moldict[molecule] ={}
 
             absfiles, templist = libgen.find_absfiles(self.params.in_abs_path, molecule)
+
             tempmax.append(np.max(templist))
             tempmin.append(np.min(templist))
 

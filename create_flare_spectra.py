@@ -93,8 +93,11 @@ if __name__ == '__main__':
 
 
     # loop through flare files
-    for file in [os.path.join(flaredir, 'fractions_molaires_steady_ADLeo_%sK.dat' % options.flare_temp)] + glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_renorm_entete_*.dat')):
+    for file in [os.path.join(flaredir, 'fractions_molaires_retour_ADLeo_%sK.dat' % options.flare_temp)] + [os.path.join(flaredir, 'fractions_molaires_steady_ADLeo_%sK.dat' % options.flare_temp)] + glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_renorm_entete_*.dat')):
+    #+ glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_renorm_entete_*.dat')):
+    #for file in [os.path.join(flaredir, 'fractions_molaires_retour_ADLeo_%sK.dat' % options.flare_temp)]:
 
+        logging.info('Processing %s' % file)
         filename, file_extension = os.path.splitext(os.path.basename(file))
 
         try:
@@ -175,8 +178,12 @@ if __name__ == '__main__':
         createob = create_spectrum(options, params=params)
 
         # set mean molecular weight for each level, based on all 105 molecules
-        createob.atmosphereob.planet_mu =  mu
 
+        createob.atmosphereob.planet_mu =  mu
+        # if options.flare_temp == 1303:
+        #     createob.atmosphereob.planet_mu = 2.748*AMU
+        # elif options.flare_temp == 412:
+        #     createob.atmosphereob.planet_mu = 3.15*AMU
 
         #generating spectrum
         createob.generate_spectrum()
