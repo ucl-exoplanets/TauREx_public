@@ -87,8 +87,7 @@ class atmosphere(base):
             self.planet_mu = self.params.planet_mu
 
 
-
-        self.planet_grav = self.get_surface_gravity()
+        self.planet_grav = self.get_surface_gravity() # planet gravity at the surface
         self.scaleheight = self.get_scaleheight(T = self.planet_temp)
 
         # determine height of atmosphere using original scale height & planet gravity
@@ -105,6 +104,8 @@ class atmosphere(base):
         self.T        = self.pta[:,1] # temperature array
         self.z        = self.pta[:,2] # altitude array
         self.rho        = self.get_rho() # assume self.T, self.P
+
+        # reset atmosphere using scale height ang gravity calculated as a function of altitude
 
         # set cloud parameters
         self.clouds_lower_P = self.params.in_cld_lower_P
@@ -188,10 +189,10 @@ class atmosphere(base):
         if not radius:
             radius = self.planet_radius
 
-        try:
-            radius = radius+self.z
-        except:
-            pass
+        # try:
+        #     radius = radius+self.z
+        # except:
+        #     pass
 
         return (G * mass) / (radius**2)
 
@@ -357,11 +358,9 @@ class atmosphere(base):
         else:
             self.z = np.linspace(0, self.max_z, num=self.nlayers)
 
-
         self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
         self.rho = self.get_rho() # update density
-
 
     #####################
     # Everything below is related to Temperature Pressure Profiles

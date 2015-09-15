@@ -135,7 +135,7 @@ class fitting(base):
         self.NEST = False
 
         #DEBUG COUNTER
-        self.db_count = 1000000000
+        self.db_count = 10000000001
 
     ##@profile
     def build_fit_params(self):
