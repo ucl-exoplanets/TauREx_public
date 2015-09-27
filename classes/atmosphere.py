@@ -189,11 +189,6 @@ class atmosphere(base):
         if not radius:
             radius = self.planet_radius
 
-        try:
-            radius = radius+self.z
-        except:
-            pass
-
         return (G * mass) / (radius**2)
 
     #@profile
