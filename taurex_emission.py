@@ -133,8 +133,8 @@ def run(params):
         outputob1.save_ascii_spectra()       #saving models to ascii
 
     # save and plot TP profile (plotting only if save2pdf=True)
-    outputob.save_TP_profile(save2pdf=True)  #saving TP profile
+    outputob.save_TP_profile(save2pdf=params.out_save_plots)  #saving TP profile
     if params.fit_emission_stage2:
-        outputob1.save_TP_profile(save2pdf=True)
+        outputob1.save_TP_profile(save2pdf=params.out_save_plots)
 
 

@@ -76,7 +76,7 @@ class create_spectrum(object):
 
         #initialising TP profile object
         self.atmosphereob = atmosphere(self.dataob)
-        
+
         #set forward model
         if self.params.gen_type == 'transmission':
             # compile transmission cpp code if needed
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     )
     parser.add_option('-t', '--tp_filename',
                       dest='tpfilename',
-                      default='TP_profile.dat'
+                      default=None
     )
     options, remainder = parser.parse_args()
     
@@ -326,9 +326,8 @@ if __name__ == '__main__':
 
     #setup TP profile 
     if options.tp_profile:
-        Pnodes = [createob.MAX_P,1e4, 100.0,createob.MIN_P]
+        Pnodes = [createob.MAX_P, 1e4, 100.0, createob.MIN_P]
         Tnodes = [1550,1550, 700,700]
-
         createob.generate_tp_profile_1(Tnodes,Pnodes)
 
     #generating spectrum
