@@ -54,8 +54,7 @@ def convert2microns(path, upcut=30):
                     idx = argsort(tmp[:,0],axis=-1)
                     tmp2 = tmp[idx,:][where(tmp[idx,0] < upcut)]
                     tmp2 = tmp2.astype(float32, copy=False)
-                    tmp2[:,1] *= 1.0 / tmp2[:,0]**2
-                    savetxt(filename[:-3]+'abs', tmp2, fmt="%.6e,%.8e")
+                    savetxt(filename[:-3]+'abs', tmp2, fmt="%.6e %.8e")
 
 def find_nearest(arr, value):
     # find nearest value in array
