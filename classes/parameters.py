@@ -155,16 +155,13 @@ class parameters(base):
             self.in_include_cld        = False
             pass
 
-
         self.tp_num_scale          = self.getpar('T-P profile', 'num_scaleheights', 'int')
         self.tp_atm_levels         = self.getpar('T-P profile', 'atm_levels', 'int')
-        #self.tp_var_temp           = self.getpar('T-P profile', 'var_temp', 'bool') # DEPRECATED. See fit_fix_temp
-        #self.tp_var_pres           = self.getpar('T-P profile', 'var_pres', 'bool') # DEPRECATED. See fit_fix_P0
+        self.atm_step_size         = self.getpar('T-P profile', 'atm_step_size', 'float')
         self.tp_max_pres           = self.getpar('T-P profile', 'atm_max_pressure', 'float')
-        # self.tp_var_mix            = self.getpar('T-P profile', 'var_mix', 'bool')  # DEPRECATED. Replace with fit_fix_X
         self.tp_type               = self.getpar('T-P profile', 'profile_type')
         self.tp_corrlength         = self.getpar('T-P profile', 'corr_length','float')
-        self.tp_couple_mu         = self.getpar('T-P profile', 'couple_mu', 'bool')
+        self.tp_couple_mu          = self.getpar('T-P profile', 'couple_mu', 'bool')
 
         try:
             self.pre_run               = self.getpar('Preselector','run_pre', 'bool')

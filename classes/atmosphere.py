@@ -60,9 +60,16 @@ class atmosphere(base):
         self.planet_radius = self.params.planet_radius
         self.planet_mass = self.params.planet_mass
 
-        self.nlayers  = self.data.nlayers
-        self.ngas     = self.data.ngas
+        # set altitude grid. Use mu from param. file, calculate scaleheight, then set maximum altitude
+        planet_mu_tmp = self.params.planet_mu
+        planet_grav_tmp = self.get_surface_gravity()
+        planet_temp_tmp = self.params.planet_temp
+        scaleheight_tmp = self.get_scaleheight(g=planet_grav_tmp, mu=planet_mu_tmp, T=planet_temp_tmp)
+        self.max_z = self.params.tp_num_scale * scaleheight_tmp
+        self.alt_grid = np.arange(0., self.max_z, step=self.params.atm_step_size*1000.)
+        self.nlayers = len(self.alt_grid)
 
+        self.ngas     = self.data.ngas
         if self.params.in_use_ATMfile:
             # build PTA profile and mixing ratio array from .atm file
             logging.info('Atmospheric PTA grid has been set by .atm file')
@@ -75,26 +82,21 @@ class atmosphere(base):
         else:
             self.absorbing_gases_X = self.params.planet_mixing # mixing ratios are read from parameter file
             self.X = self.set_mixing_ratios()
-
         self.absorbing_gases_X = self.X[:,0] # assume X from lowest layer. This will be used to calculate mu, if couple_mu is True
 
-        # set mu, planet grav and scaleheight
+        # set mean molecular weight
         if self.params.tp_couple_mu:
+            # coupling to molecular composition
             self.planet_mu = self.get_coupled_planet_mu()
             logging.info('Coupling mu to composition. Average mu = ' + str(np.average(self.planet_mu)/AMU))
-
         else:
+            # from param file
             self.planet_mu = self.params.planet_mu
-
 
         self.planet_grav = self.get_surface_gravity() # planet gravity at the surface
         self.scaleheight = self.get_scaleheight(T = self.planet_temp)
-
-        # determine height of atmosphere using original scale height & planet gravity
-        if isinstance(self.scaleheight, float):
-            self.max_z = self.params.tp_num_scale * self.scaleheight
-        else:
-            self.max_z = self.params.tp_num_scale * np.average(self.scaleheight)
+        logging.info('Altitude grid step size is %.1f km. Max altitude is %i km. There are %i layers.' %
+                     (self.params.atm_step_size, self.max_z/1000., self.nlayers))
 
         if not self.params.in_use_ATMfile:
             self.pta      = self.setup_pta_grid()
@@ -146,24 +148,17 @@ class atmosphere(base):
         Get the mean molecular weight (mu) from atmospheric composition
         '''
 
-        # if absorbing_gases_X == '':
-        #     absorbing_gases_X = self.absorbing_gases_X
-
         if inactive_gases_X == '':
             inactive_gases_X = self.inactive_gases_X
 
         # get mu for each layer
         mu = np.zeros(self.nlayers)
-
         for i in range(self.nlayers):
             for idx, gasname in enumerate(self.absorbing_gases):
                 mu[i] += self.X[idx, i] * self.data.get_molecular_weight(gasname)
-
             for idx, gasname in enumerate(self.inactive_gases):
                 mu[i] += inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
-
             logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
-
         return mu
 
     #@profile
@@ -227,12 +222,10 @@ class atmosphere(base):
 
         if T is None:
             T = self.params.planet_temp
-        else:
-            T = T[0]
 
         #generatinng altitude-pressure array
-        pta_arr = np.zeros((self.nlayers,3))
-        pta_arr[:,2] = np.linspace(0, self.max_z, num=self.nlayers) # altitude
+        pta_arr = np.zeros((self.nlayers, 3))
+        pta_arr[:,2] = self.alt_grid # altitude grid
         pta_arr[:,0] = self.max_pressure * np.exp(-pta_arr[:,2]/self.scaleheight)
         pta_arr[:,1] = T
 
@@ -346,12 +339,11 @@ class atmosphere(base):
         self.planet_grav = self.get_surface_gravity()
         self.scaleheight = self.get_scaleheight()
 
-
         # set altitude array
         if self.params.in_use_ATMfile:
             self.z = self.pta[:,2]
         else:
-            self.z = np.linspace(0, self.max_z, num=self.nlayers)
+            self.z = self.alt_grid
 
         self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
         self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar

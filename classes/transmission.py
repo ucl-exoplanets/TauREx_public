@@ -301,7 +301,6 @@ class transmission(base):
 
         #running c++ path integral
         cpath_int(csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
-
                   clinecount,cnlayers,cn_gas,cn_sig_temp,cInclude_cld,cCld_lowbound,\
                   cCld_upbound,cP_bar,cCld_sig,\
                   cpressure_broadening, cflattened_sigma_arr, csigma_templist, csigma_preslist,\
