@@ -225,9 +225,12 @@ var_atm = True
 #thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
 num_scaleheights = 20
 
-#number of atmospheric levels.
-#If var_atm = False, atm_levels is taken from .atm file
+#DEPRECATED, see atm_step_size
+#number of atmospheric levels
 atm_levels = 80
+
+# altitude grid step size in km
+atm_step_size = 50
 
 #set maximum pressure level (if set variable) (Pa)
 atm_max_pressure = 1e6
@@ -241,7 +244,6 @@ profile_type = isothermal
 
 #Correlation length of TP profile for Rodgers2000 and Hybrid 
 corr_length = 5.0
-
 
 [Fitting]
 #defines general fittings parameters, independent of method
