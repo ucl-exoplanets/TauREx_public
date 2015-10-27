@@ -68,7 +68,7 @@ def find_absfiles(PATH, MOLNAME):
     # filename convection follows that of zero pressure ExoMol cross sections
     # return: array of absfilenames and array of corresponding temperatures and pressures
     
-    globlist = glob.glob(PATH+'*.abs')
+    globlist = glob.glob(PATH+'*.txt')
 
     absfilelist = []
     templist = []

@@ -54,9 +54,9 @@ class transmission(base):
 
         if usedatagrid:
             #use wavelengthgrid of data or internal specgrid defined in data class
-            self.lambdagrid = self.data.wavegrid
+            self.lambdagrid = self.data.obs_wlgrid
         else:
-            self.lambdagrid = self.data.specgrid
+            self.lambdagrid = self.data.xs_wngrid
         self.nlambda = len(self.lambdagrid)
 
         # preload Rayleigh for all gases and the given wavelengths (lambdagrid)
@@ -146,7 +146,7 @@ class transmission(base):
 
         #generating 3D sigma_array from sigma_dict for c++ path integral
         tempgrid = self.data.sigma_dict['tempgrid']
-        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases),len(self.data.specgrid)), dtype=np.float64)
+        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases),len(self.data.xs_wngrid)), dtype=np.float64)
 
         c=0
         for t in tempgrid:

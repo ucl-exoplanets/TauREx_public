@@ -58,81 +58,63 @@ class data(base):
         self.params = params
 
         #converting absorption cross-sectinos from cm^-1 to microns
-        if params.in_convert2microns:
-            logging.info('Converting cross sections from cm-1 to microns')
-            libgen.convert2microns(params.in_abs_path)
-            libgen.convert2microns(params.in_abs_path_P)
+        # if params.in_convert2microns:
+        #     logging.info('Converting cross sections from cm-1 to microns')
+        #     libgen.convert2microns(params.in_abs_path)
+        #     libgen.convert2microns(params.in_abs_path_P)
 
         #reading in spectrum data to be fitted
         if isinstance(spectrum, (np.ndarray, np.generic)):
             # read spectrum from argument
-            self.spectrum = spectrum
+            self.obs_spectrum = spectrum
         elif params.in_spectrum_file:
             # read spectrum from file
-            self.spectrum = self.readfile(params.in_spectrum_file)
+            self.obs_spectrum = self.readfile(params.in_spectrum_file)
         else:
             # if running only forward model, input spectrum can be omitted
-            self.spectrum = False
+            self.obs_spectrum = False
 
-        if isinstance(self.spectrum, (np.ndarray, np.generic)):
+        if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             # set observed spectrum specific variables (only if spectrum is provided)
-            self.nwave = len(self.spectrum[:,0])
-            self.wavegrid = self.spectrum[:,0]
-            if self.params.in_use_spectrum_bins:
-                if shape(self.spectrum)[1] == 4:
-                    self.binwidths = self.spectrum[:,3]
-                else:
-                    logging.error('Bin width missing in input spectrum')
-                    sys.exit()
+            self.obs_nwlgrid = len(self.obs_spectrum[:,0])
+            self.obs_wlgrid = self.obs_spectrum[:,0] # wavegrid in micron
+            # bin widths
+            if shape(self.obs_spectrum)[1] == 4:
+                self.obs_binwidths = self.obs_spectrum[:,3] # binwidths in micron
             else:
-                self.binwidths = None
+                self.obs_binwidths = None
 
-        #calculating wavelength grids
-        if params.gen_manual_waverange or not isinstance(self.spectrum, (np.ndarray, np.generic)):
-            # manual wavelength range provided in parameter file
-            if not self.params.gen_abs_wavegrid:
-                # generate wavelength grid with uniform binning in log(lambda)
-                self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                                                   lambda_min=self.params.gen_wavemin,
-                                                                   lambda_max=self.params.gen_wavemax)
-            else:
-                # use the wavelength grid of the cross sections
-                self.specgrid, self.dlamb_grid = self.get_specgrid_from_crosssections(lambda_min=self.params.gen_wavemin,
-                                                                                      lambda_max=self.params.gen_wavemax)
-
+        # cross section wavenumber grids
+        if params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
+            numin = 10000./self.params.gen_wavemax
+            numax = 10000./self.params.gen_wavemin
         else:
-            # user wavelength range from observed spectrum, but increase model wavelength range by one data spectral bin
-            # in blue and red. This ensures correct model binning at the edges
-            if not self.params.in_use_spectrum_bins:
-                # if bin widths are not provided (assuming uniform binning)
-                bin_up = (self.wavegrid[-1]-self.wavegrid[-2])/2.
-                bin_low = (self.wavegrid[1]-self.wavegrid[0])/2.
+            lamdamin = self.obs_wlgrid[0]
+            lamdamax = self.obs_wlgrid[-1]
+            if self.obs_binwdiths == None:
+                bin_up -=  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
+                bin_low = (self.obs_wlgrid[1]-self.obs_wlgrid[0])/2.
             else:
                 # if bin widths are provided in input spectrum
-                bin_up = self.binwidths[-1]/2.
-                bin_low = self.binwidths[0]/2.
+                bin_up = self.obs_binwidths[-1]/2.
+                bin_low = self.obs_binwidths[0]/2.
+            lambdamin = self.obs_wlgrid[0] - bin_low
+            lambdamax = self.obs_wlgrid[-1] + bin_up
+            numin = 10000./lamdamax
+            numax = 10000./lamdamin
 
-            logging.info('Expand wavelength range of spectrum by one bin up and down: %f, %f' % (self.wavegrid[0]-bin_low,
-                                                                                                 self.wavegrid[-1]+bin_up))
+        files = glob.glob(os.path.join(self.params.in_abs_path, '*.txt'))
+        out = self.readfile(files[0])
+        xs_wngrid_full = out[:,0]
 
-            if not self.params.gen_abs_wavegrid:
-                logging.info('Generate wavelength grid with uniform binning in log(lambda)')
-                self.specgrid, self.dlamb_grid = self.get_specgrid(R=self.params.gen_spec_res,
-                                                                   lambda_min=self.wavegrid[0]-bin_low,
-                                                                   lambda_max=self.wavegrid[-1]+bin_up)
-            else:
-                #
-                logging.info('Use the wavelength grid of the cross sections')
-                self.specgrid, self.dlamb_grid = self.get_specgrid_from_crosssections(lambda_min=self.wavegrid[0]-bin_low,
-                                                                                      lambda_max=self.wavegrid[-1]+bin_up)
+        self.xs_wngrid = xs_wngrid_full[np.logical_and(xs_wngrid_full>numin, xs_wngrid_full<numax)]
+        self.xs_dwngrid = np.diff(self.xs_wngrid)
+        self.xs_nwngrid = len(self.xs_dwngrid)
 
-        self.nspecgrid = len(self.specgrid)
-
-        if isinstance(self.spectrum, (np.ndarray, np.generic)):
+        if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             logging.info('Calculating spectral binning grid')
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.get_specbingrid(self.wavegrid, self.specgrid, self.binwidths)
-            #self.n_spec_bin_grid= len(self.spec_bin_grid)
-            self.n_spec_bin_grid = len(self.wavegrid)
+            self.obs_wngrid = 10000./self.obs_wlgrid
+            self.intsp_bingrid, self.intsp_bingrididx = self.get_specbingrid(self.obs_wlgrid, self.xs_wngrid, self.obs_binwidths)
 
         #reading in atmospheric profile file
         if self.params.in_use_ATMfile:
@@ -140,15 +122,15 @@ class data(base):
             self.pta, self.X = self.readATMfile() # pta = pressure, temp, alt; X = mixing ratios of molecules
             self.nlayers = len(self.pta[:,0])
             self.ngas = len(self.X[:,0])
-        else:
+        else: # todo not needed?
             self.nlayers  = int(self.params.tp_atm_levels)
             self.ngas     = int(len(self.params.planet_molec))
 
-        # Rayleigh scattering
-        if MPIrank == 0 and self.params.in_create_sigma_rayleigh:
-            # compute cross sections and save them to a file
+        if MPIrank == 0:
+            # compute rayleigh scattering cross sections and save them to a file
             self.build_rayleigh_sigma()
         self.sigma_R = self.get_rayleigh_sigma() # load Rayleigh scattering cross sections
+
 
         # Absorption cross sections
         if self.params.gen_run_gui:
@@ -228,11 +210,9 @@ class data(base):
                 bingrid.append(wavegrid[i]-binwidths[i]/2.)
                 bingrid.append(wavegrid[i]+binwidths[i]/2.)
 
-            # build bin grid index array (an index for each model datapoint. If the point is outside the input
-            # spectrum bins, the idx is -99999 (invalid integer...)
+            # build bin grid index array (an index for each model datapoint)
             bingrid_idx = np.empty(len(specgrid))
             bingrid_idx[:] = np.NaN
-
             for i in range(len(specgrid)):
                 for j in range(len(wavegrid)):
                     if specgrid[i] >= (wavegrid[j]-binwidths[j]/2.) and specgrid[i] < (wavegrid[j]+binwidths[j]/2.):
@@ -250,7 +230,7 @@ class data(base):
         else:
             path = self.params.in_abs_path
 
-        files = glob.glob(os.path.join(path, '*.abs'))
+        files = glob.glob(os.path.join(path, '*.txt'))
         out = self.readfile(files[0])
         wlgrid = out[:,0]
 
@@ -282,7 +262,7 @@ class data(base):
                 logging.warning('Stellar temp. in .par file exceeds range %.1f - %.1f K. '
                                 'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
             self.star_blackbody = True
-            SED = libem.black_body(self.specgrid,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
+            SED = libem.black_body(self.xs_wngrid,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
 #             SED *= self.params.star_radius**2 * np.pi * 4.
 
 #             SED *= self.params.star_radius**2 * np.pi * 4.
@@ -295,17 +275,17 @@ class data(base):
                 if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
                     self.SED_filename = file
 
-            #reading in correct file and interpolating it onto self.specgrid
+            #reading in correct file and interpolating it onto self.xs_wngrid
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane 
 #             SED_raw[:,1] *= self.params.star_radius**2 * np.pi * 4. 
             
-#             digitized = np.digitize(SED_raw[:,0],self.specgrid)
-#             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.specgrid))])
-            SED = np.interp(self.specgrid, SED_raw[:,0], SED_raw[:,1])
+#             digitized = np.digitize(SED_raw[:,0],self.xs_wngrid)
+#             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.xs_wngrid))])
+            SED = np.interp(self.xs_wngrid, SED_raw[:,0], SED_raw[:,1])
         
 #         print self.params.star_temp
-#         SED = libem.black_body(self.specgrid,self.params.star_temp)
+#         SED = libem.black_body(self.xs_wngrid,self.params.star_temp)
         return SED
 
     #@profile
@@ -325,13 +305,13 @@ class data(base):
 
         #bin to specgrid
         if interpolate:
-            interpflux = interp(self.specgrid, out[:,0], out[:,1])
-            out = transpose(vstack((self.specgrid, interpflux)))
+            # interpflux = interp(self.xs_wngrid, out[:,0], out[:,1])
+            # out = transpose(vstack((self.xs_wngrid, interpflux)))
 
-            # bin_grid, bin_grid_idx = self.get_specbingrid(self.specgrid, out[:,0])
-            # binnedvalues = np.asarray([out[:,1][bin_grid_idx == i].mean() for i in xrange(1,len(bin_grid))])
-            # binnedvalues[np.isnan(binnedvalues)] = 0
-            # out = transpose(vstack((self.specgrid, binnedvalues)))
+            bin_grid, bin_grid_idx = self.get_specbingrid(self.xs_wngrid, out[:,0])
+            binnedvalues = np.asarray([out[:,1][bin_grid_idx == i].mean() for i in xrange(1,len(bin_grid))])
+            binnedvalues[np.isnan(binnedvalues)] = 0
+            out = transpose(vstack((self.xs_wngrid, binnedvalues)))
 
         return out
 
@@ -348,22 +328,16 @@ class data(base):
         moldict = {}
 
         for molecule in mollist:
-
             logging.info('Load sigma array for molecule %s' % molecule)
-
             moldict[molecule] ={}
-
             absfiles, templist = libgen.find_absfiles(self.params.in_abs_path, molecule)
-
             tempmax.append(np.max(templist))
             tempmin.append(np.min(templist))
-
-            sigtmp = self.readABSfiles(extfilelist=absfiles,
-                                       extpath=self.params.in_abs_path,
-                                       interpolate2grid=True,
-                                       outputwavegrid = False)
+            sigtmp = np.zeros((len(absfiles),self.xs_nwngrid-1))
+            for i in range(len(absfiles)):
+                xsec = self.readfile(os.path.join(self.params.in_abs_path, absfiles[i]))
+                sigtmp[i,:] =  xsec[:,1][np.logical_and(xsec[:,0]>np.min(self.xs_wngrid), xsec[:,0]<(np.max(self.xs_wngrid)))] * 1e-4 #converting cm^2 to m^2
             sigshape = np.shape(sigtmp)
-
             moldict[molecule]['sigma'] = sigtmp
             moldict[molecule]['templist'] = templist
             moldict[molecule]['tempmin'] = tempmin
@@ -429,7 +403,7 @@ class data(base):
                               'pressures and temperatures')
                 exit()
 
-            sigma_3d = np.zeros((len(templist), len(preslist), self.nspecgrid))
+            sigma_3d = np.zeros((len(templist), len(preslist), self.xs_nwngrid))
             for idxtemp, valtemp in enumerate(templist):
                 for idxpres, valpres in enumerate(preslist):
                     sigma_3d[idxtemp,idxpres,:] = self.readABSfiles(extfilelist=[absfilelist[valtemp][valpres]], # load only one file
@@ -444,8 +418,8 @@ class data(base):
             # presgrid = np.arange(np.min(preslist), np.max(preslist), presstep).tolist()
             # presgrid.append(np.max(preslist))
             #
-            # sigma_3d_reinterp = np.zeros((len(tempgrid), len(presgrid), self.nspecgrid))
-            # for i in range(self.nspecgrid): # loop  wavelengths
+            # sigma_3d_reinterp = np.zeros((len(tempgrid), len(presgrid), self.xs_nwngrid))
+            # for i in range(self.xs_nwngrid): # loop  wavelengths
             #     sigmainterp = interpolate.interp2d(preslist, templist, sigma_3d[:,:,i], kind='linear')
             #     sigma_3d_reinterp[:,:,i] = sigmainterp(tempgrid, presgrid).transpose()
             # moldict[molecule] = sigma_3d_reinterp
@@ -463,7 +437,7 @@ class data(base):
                 sigma_dict[valtemp] = {}
             for idxpres, valpres in enumerate(preslist):
                 if not valpres in sigma_dict[valtemp]:
-                    sigma_dict[valtemp][valpres] = np.zeros((len(mollist), self.nspecgrid))
+                    sigma_dict[valtemp][valpres] = np.zeros((len(mollist), self.xs_nwngrid))
                 j = 0
                 for molecule in mollist:
                     sigma_dict[valtemp][valpres][j,:] = moldict[molecule][idxtemp,idxpres,:]
@@ -481,22 +455,6 @@ class data(base):
 
 
         if extfilelist is None:
-            #reading in list of abs files from parameter file
-            if isinstance(self.params.in_abs_files,str):
-                absfiles = genfromtxt(StringIO(self.params.in_abs_files),delimiter=",",dtype="S")
-                try:
-                    abslist = [absfiles.item()] #necessary for 0d numpy arrays
-                except ValueError:
-                    abslist = absfiles
-            else:
-                abslist = self.params.in_abs_files
-
-            #checking if number of gasses in parameters file is consistent with gass columns in atm file
-            if self.params.in_use_ATMfile and len(abslist) != self.ngas:
-                # print len(abslist)
-                # print self.ngas
-                raise IOError('Number of gasses in .atm file incompatible with number of .abs files specified in parameters file')
-                exit()
 
             out, wave = self.__readABSfiles_sub(path=self.params.in_abs_path, filelist=abslist,
                                                 interpolate2grid=interpolate2grid, num=self.ngas)
@@ -515,7 +473,7 @@ class data(base):
     def __readABSfiles_sub(self, path, filelist, interpolate2grid, num):
 
         if interpolate2grid:
-            out = np.zeros((num,self.nspecgrid))
+            out = np.zeros((num,self.xs_nwngrid))
             wave = np.transpose(self.readfile(os.path.join(path, filelist[0]), interpolate=True)[:,0])
         else:
             tmp = self.readfile(os.path.join(path, filelist[0]), interpolate=False)
@@ -541,16 +499,16 @@ class data(base):
             raise IOError('No input ABS file specified')
         if temperature is None:
             temperature = self.params.planet_temp
-        sigma_array,self.specgrid = self.readABSfiles(extpath=path,
+        sigma_array,self.xs_wngrid = self.readABSfiles(extpath=path,
                                                       extfilelist=filelist,
                                                       interpolate2grid=interpolate,
                                                       outputwavegrid=True)
         self.sigma_dict = {}
         self.sigma_dict['tempgrid'] = [int(temperature)]
         self.sigma_dict[int(temperature)] = sigma_array
-        self.nspecgrid = len(self.specgrid)
-        
-        
+        self.xs_nwngrid = len(self.xs_wngrid)
+
+
     #@profile
     def readATMfile(self):
     #reads in .atm file
@@ -575,55 +533,58 @@ class data(base):
 
         for gasname in gases:
 
-        # get the refractive index of a given gas gasname at a specific wavelength wl
-        # Formulae taken from Allen Astrophysical Quantities if not otherwise specified
+            filename = os.path.join('Input', 'rayleigh', '%s.rayleigh' % gasname)
 
-            n_formula = True # assume we have a formula for the refractive index of gasname
-            king = 1 # King correction factor
-            ns = 0   # refractive index
-            wl = np.linspace(0.1, 50, 1000) # wavelengths in micron
+            if not os.path.isfile(filename):
 
-            if gasname == 'He':
-                ns = 1 + 0.01470091/(423.98-wl**-2) # C. R. Mansfield and E. R. Peck. Dispersion of helium, J. Opt. Soc. Am. 59, 199-203 (1969)
-                # king is one for He
-            elif gasname == 'H2':
-                ns = 1 + 13.58e-5 * (1. + 7.52e-3 / wl**2)
-                delta = 0.035 # from Morgan old code..
-                king = (6.+3.*delta)/(6.-7.*delta) # Bates (1984)
-            elif gasname == 'N2':
-                ns = 1. + (6498.2 + (307.43305e12)/(14.4e9 - (1/(wl*1.e-4))**2))/1.e8
-                #ns = 1 + 29.06e-5 * (1. + 7.7e-3 / wl**2)
-                king = 1.034  #  Bates (1984)
-            elif gasname == 'O2':
-                ns = 1 + 1.181494e-4 + 9.708931e-3/(75.4-wl**-2) #  J. Zhang, Z. H. Lu, and L. J. Wang. Appl. Opt. 47, 3143-3151 (2008)
-                king = 1.096
-            elif gasname == '12C-16O2':
-                #A. Bideau-Mehu, Y. Guern, R. Abjean and A. Johannin-Gilles. Interferometric determination of the refractive index of carbon dioxide in the ultraviolet region, Opt. Commun. 9, 432-434 (1973)
-                ns = 1 + 6.991e-2/(166.175-wl**-2)+1.44720e-3/(79.609-wl**-2)+6.42941e-5/(56.3064-wl**-2)+5.21306e-5/(46.0196-wl**-2)+1.46847e-6/(0.0584738-wl**-2)
-                king = 1.1364 #  Sneep & Ubachs 2005
-            elif gasname == '12C-1H4':
-                ns = 1 + 1.e-8*(46662. + 4.02*1.e-6*(1/(wl*1.e-4))**2)
-            elif gasname == '12C-16O':
-                ns = 1 + 32.7e-5 * (1. + 8.1e-3 / wl**2)
-                king = 1.016  #  Sneep & Ubachs 2005
-            elif gasname == '14N-1H3':
-                ns = 1 + 37.0e-5 * (1. + 12.0e-3 / wl**2)
-            elif gasname == '1H2-16O':
-                ns_air = (1 + (0.05792105/(238.0185 - wl**-2) + 0.00167917/(57.362-wl**-2))) # P. E. Ciddor. Appl. Optics 35, 1566-1573 (1996)
-                ns = 0.85 * (ns_air - 1.) + 1  # ns = 0.85 r(air) (Edlen 1966)
-                delta = 0.17 # Marshall & Smith 1990
-                king = (6.+3.*delta)/(6.-7.*delta)
-            else:
-                # this sets sigma_R to zero for all other gases
-                n_formula = False
-                logging.warning('There is no formula for the refractive index of %s. Cannot compute the cross section' % gasname)
+                # get the refractive index of a given gas gasname at a specific wavelength wl
+                # Formulae taken from Allen Astrophysical Quantities if not otherwise specified
 
-            if n_formula: # only if the refractive index was computed
-                Ns = 2.6867805e25 # in m^-3
-                sigma_R =  ( 24.*np.pi**3/ (Ns**2) ) * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / (wl * 1.e-6)**4
-                filename = os.path.join('Input', 'rayleigh', '%s.rayleigh' % gasname)
-                logging.info('Saving cross section for %s to %s' % (gasname, filename))
-                np.savetxt(filename, np.vstack((wl, sigma_R)).transpose())
+                n_formula = True # assume we have a formula for the refractive index of gasname
+                king = 1 # King correction factor
+                ns = 0   # refractive index
+                wn = np.arange(1000, 30000, 0.01) # wavenumber in cm^-1
+                #
+                if gasname == 'He':
+                    ns = 1 + 0.01470091/(423.98-(10000./wn)**-2) # C. R. Mansfield and E. R. Peck. Dispersion of helium, J. Opt. Soc. Am. 59, 199-203 (1969)
+                    # king is one for He
+                elif gasname == 'H2':
+                    ns = 1 + 13.58e-5 * (1. + 7.52e-3 / (10000./wn)**2)
+                    delta = 0.035 # from Morgan old code..
+                    king = (6.+3.*delta)/(6.-7.*delta) # Bates (1984)
+                if gasname == 'N2':
+                    ns = 1. + (6498.2 + (307.43305e12)/(14.4e9 - wn**2))*1.e-8 # Peck and Khanna
+                    king = 1.034+3.17e-12*wn**2 # Bates
+
+                # elif gasname == 'O2':
+                #     ns = 1 + 1.181494e-4 + 9.708931e-3/(75.4-wl**-2) #  J. Zhang, Z. H. Lu, and L. J. Wang. Appl. Opt. 47, 3143-3151 (2008)
+                #     king = 1.096
+                # elif gasname == '12C-16O2':
+                #     #A. Bideau-Mehu, Y. Guern, R. Abjean and A. Johannin-Gilles. Interferometric determination of the refractive index of carbon dioxide in the ultraviolet region, Opt. Commun. 9, 432-434 (1973)
+                #     ns = 1 + 6.991e-2/(166.175-wl**-2)+1.44720e-3/(79.609-wl**-2)+6.42941e-5/(56.3064-wl**-2)+5.21306e-5/(46.0196-wl**-2)+1.46847e-6/(0.0584738-wl**-2)
+                #     king = 1.1364 #  Sneep & Ubachs 2005
+                # elif gasname == '12C-1H4':
+                #     ns = 1 + 1.e-8*(46662. + 4.02*1.e-6*(1/(wl*1.e-4))**2)
+                # elif gasname == '12C-16O':
+                #     ns = 1 + 32.7e-5 * (1. + 8.1e-3 / wl**2)
+                #     king = 1.016  #  Sneep & Ubachs 2005
+                # elif gasname == '14N-1H3':
+                #     ns = 1 + 37.0e-5 * (1. + 12.0e-3 / wl**2)
+                # elif gasname == '1H2-16O':
+                #     ns_air = (1 + (0.05792105/(238.0185 - wl**-2) + 0.00167917/(57.362-wl**-2))) # P. E. Ciddor. Appl. Optics 35, 1566-1573 (1996)
+                #     ns = 0.85 * (ns_air - 1.) + 1  # ns = 0.85 r(air) (Edlen 1966)
+                #     delta = 0.17 # Marshall & Smith 1990
+                #     king = (6.+3.*delta)/(6.-7.*delta)
+                else:
+                    # this sets sigma_R to zero for all other gases
+                    n_formula = False
+                    logging.warning('There is no formula for the refractive index of %s. Cannot compute the cross section' % gasname)
+
+                if n_formula: # only if the refractive index was computed
+                    Ns = 2.6867805e25 # in m^-3
+                    sigma_R =  ( 24.*np.pi**3/ (Ns**2) ) * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / ((10000./wn) * 1.e-6)**4
+                    logging.info('Saving cross section for %s to %s' % (gasname, filename))
+                    np.savetxt(filename, np.vstack((wn, sigma_R)).transpose())
 
     #@profile
     def get_rayleigh_sigma(self):

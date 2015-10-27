@@ -115,9 +115,6 @@ class atmosphere(base):
         self.clouds_m = self.params.in_cld_m
         self.clouds_a = self.params.in_cld_a
 
-        if self.params.in_use_TP_file == True: # todo temporary. Just to feed a given T profile.
-            self.T = np.loadtxt(self.params.in_TP_file)[:,0]
-
          #selecting TP profile to use
         if self.params.gen_type == 'emission':
             if tp_profile_type is None:

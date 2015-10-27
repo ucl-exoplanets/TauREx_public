@@ -85,11 +85,13 @@ class parameters(base):
         self.all_inactive_gases = ['He', 'H2', 'N2']
 
         self.trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
-        self.gen_abs_wavegrid      = self.getpar('General','abs_wavegrid', 'bool')
+        # self.gen_abs_wavegrid      = self.getpar('General','abs_wavegrid', 'bool')
+
         self.gen_manual_waverange  = self.getpar('General','manual_waverange', 'bool')
         self.gen_wavemin           = self.getpar('General','wavemin', 'float')
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')
-        self.gen_spec_res          = self.getpar('General','spec_res', 'float')
+
+        # self.gen_spec_res          = self.getpar('General','spec_res', 'float')
         self.gen_type              = self.getpar('General','type')
         self.gen_compile_cpp       = self.getpar('General','compile_cpp', 'bool')
         self.gen_run_gui           = False
@@ -98,18 +100,19 @@ class parameters(base):
         if self.in_spectrum_file == 'False':
             self.in_spectrum_file = False
 
-        self.in_use_spectrum_bins  = self.getpar('Input','use_spectrum_bins', 'bool')
+        # self.in_use_spectrum_bins  = self.getpar('Input','use_spectrum_bins', 'bool')
 
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
-        self.in_use_TP_file        = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
-        self.in_TP_file            = self.getpar('Input','TP_file') # todo temporary param
+        # self.in_use_TP_file        = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
+        # self.in_TP_file            = self.getpar('Input','TP_file') # todo temporary param
 
         self.in_abs_path           = self.getpar('Input','abs_path')
         self.in_use_P_broadening   = self.getpar('Input','use_P_broadening', 'bool')
         self.in_abs_path_P         = self.getpar('Input','abs_path_P')
-        self.in_convert2microns    = self.getpar('Input','convert2microns', 'bool')
-        self.in_abs_files          = self.getpar('Input','__legacy__abs_files')
+
+        # self.in_convert2microns    = self.getpar('Input','convert2microns', 'bool')
+        # self.in_abs_files          = self.getpar('Input','__legacy__abs_files')
         
         self.in_tempres            = self.getpar('Input','tempres', 'float')
         self.in_presres            = self.getpar('Input','presres', 'float')

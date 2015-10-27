@@ -98,22 +98,20 @@ class create_spectrum(object):
         if options.bin == 'resolution':
             #get grids
             self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.xs_wngrid)
         elif options.bin == 'dlambda':
             self.wavegrid = np.arange(self.params.gen_wavemin, self.params.gen_wavemax, float(options.dlambda))
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.xs_wngrid)
         elif options.bin == 'spectrum':
             self.wavegrid = self.dataob.wavegrid
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.xs_wngrid)
         elif options.bin == 'file':
             self.wavegrid = np.loadtxt(options.bin_file)[:,0]
             self.binwidths = np.loadtxt(options.bin_file)[:,1]
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid, self.binwidths)
-
-
+            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.xs_wngrid, self.binwidths)
         else:
-
-            self.wavegrid = self.dataob.specgrid
+            self.wavegrid = self.dataob.xs_wngrid
+            print self.wavegrid
 
         self.n_spec_bin_grid = len(self.wavegrid)
 
@@ -121,7 +119,8 @@ class create_spectrum(object):
         #run forward model and bin it down
         self.fmob.atmosphere.update_atmosphere()
         model_int = self.fmob.model(**kwarg)
- 
+
+
         if self.options.bin == 'resolution' or self.options.bin == 'dlambda' or self.options.bin == 'spectrum' or self.options.bin == 'file':
             model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,self.n_spec_bin_grid+1)]
         else:
@@ -151,7 +150,9 @@ class create_spectrum(object):
         
 #         #get grids
 #         self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(self.options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-#         self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.specgrid)
+#         self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.xs_wngrid)
+
+        self.spectrum[:,0] = 10000./self.spectrum[:,0]
         return self.spectrum
     
     
@@ -218,7 +219,7 @@ class create_spectrum(object):
         
     def save_spectrum(self,filename='spectrum.dat'):
 
-        #saves spectrum to ascii file 
+        #saves spectrum to ascii file
         np.savetxt(os.path.join(self.params.out_path, filename),  self.spectrum)
         
     def plot_tp_profile(self):
@@ -238,18 +239,19 @@ class create_spectrum(object):
         pl.figure()
 
         if self.options.error == 0:
-            pl.plot(self.spectrum[:,0],self.spectrum[:,1])
+            pl.plot(self.spectrum[:,0], self.spectrum[:,1])
         else:
-            pl.errorbar(self.spectrum[:,0],self.spectrum[:,1],self.spectrum[:,2])
+            pl.errorbar(self.spectrum[:,0], self.spectrum[:,1], self.spectrum[:,2])
+
         pl.xscale('log')
-        plt.xlim(np.min(self.spectrum[:,0])-0.1, np.max(self.spectrum[:,0])+1)
+        pl.xlim(np.min(self.spectrum[:,0])-0.1, np.max(self.spectrum[:,0])+1)
+
         pl.xlabel(r'Wavelength $\mu$m')
         if self.params.gen_type == 'transmission':
             pl.ylabel(r'$(R_{p}/R_{\ast})^2$')
         elif self.params.gen_type == 'emission':
             pl.ylabel(r'$F_{p}/F_{\ast}$')
-        
-        
+
     def movingaverage(self,values,window):
         weigths = np.repeat(1.0, window)/window
         smas = np.convolve(values, weigths, 'valid')
@@ -273,7 +275,7 @@ if __name__ == '__main__':
     #  - 'none': no binning
     parser.add_option('-b', '--bin',
                       dest="bin",
-                      default='resolution',
+                      default='',
     )
     parser.add_option('-r', '--res',    # binning resolution
                       dest="resolution",
