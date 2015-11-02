@@ -41,6 +41,7 @@ double interpolateValue(double *bounds, double sig1, double sig2)
 }
 #endif
 
+
 extern "C" {
 
 void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
@@ -61,25 +62,41 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 }
 
  void cpath_int(
-    const double ** sigma_array, const double * sigma_array_flat, int const_temp, const double * dlarray,
-    const double * z, const double * dz, const double * Rsig, const double * Csig, const double ** X, const double * rho,
-    double Rp, double Rs, int nlambda, const int nlayers, const int n_gas, const int n_sig_temp, int include_cld,
-    const double cld_lowbound, const double cld_upbound, const double * p_bar, const double * cld_sig,
-
-    const int pressure_broadening, const double * flattened_sigma_arr,
-    const double * sigma_templist, const double * sigma_preslist,
-    const int nsigma_templist, const int nsigma_preslist,
-    const double * pressure_array, const double * temperature_array,
-
-    const double temperature,
-
-    void * absorptionv) {
-
+    const double * flattened_sigma_arr,
+    const double ** sigma_array,
+    const double * sigma_array_flat,
+    int const_temp,
+    const double * dlarray,
+    const double * z,
+    const double * dz,
+    const double * Rsig,
+    const double * Csig,
+    const double ** X,
+    const double * rho,
+    double Rp,
+    double Rs,
+    int nlambda,
+    const int nlayers,
+    const int n_gas,
+    const int n_sig_temp,
+    int include_cld,
+    const double cld_lowbound,
+    const double cld_upbound,
+    const double * p_bar,
+    const double * cld_sig,
+    const int pressure_broadening,
+    const double * sigma_templist,
+    const double * sigma_preslist,
+    const int nsigma_templist,
+    const int nsigma_preslist,
+    const double * pressure_array,
+    const double * temperature_array,
+    const double temperature, void * absorptionv) {
+//    const double temperature) {
 
     //output array to be passed back to python
+
     double * absorption = (double *) absorptionv;
-
-
 
    // setting up arrays and variables
     double tau[nlayers];
@@ -93,47 +110,39 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     double F11, F12, F21, F22, F1, F2;
     double x, y, x1, x2, y1, y2;
     double sigma;
+    double sum;
     int t;
 
     double ***sigma_array_3d = new double**[n_sig_temp];
 
-//   //cout << " n_sig_temp " << n_sig_temp << " n_gas " << n_gas << " nlambda " <<   nlambda << endl;
+    //cout << " n_sig_temp " << n_sig_temp << " n_gas " << n_gas << " nlambda " <<   nlambda << endl;
+
+
 
 	//if T not constant with altitude, generating 3D sigma_array from flat 1D sigma_array_flat
 	//if T is constant, then use sigma_array (2d array)
     if(const_temp==0){
         for(int i =0; i<n_sig_temp; i++){
-
-            sigma_array_3d[i] = new double*[n_gas];
+           sigma_array_3d[i] = new double*[n_gas];
            for(int j =0; j<n_gas; j++){
                sigma_array_3d[i][j] = new double[nlambda];
                for(int k = 0; k<nlambda;k++){
+                    sum = (i*n_gas*nlambda)+(j*nlambda)+k;
+                    sigma_array_3d[i][j][k] = sigma_array_flat[(i*n_gas*nlambda)+(j*nlambda)+k];
 
-//                   //cout << (i*n_gas*nlambda)+(j*nlambda)+k << endl;
-                   sigma_array_3d[i][j][k] = sigma_array_flat[(i*n_gas*nlambda)+(j*nlambda)+k];
                }
            }
         }
     }
+   //cout << "debug 1 " << endl;
 
     // initialise cloud quantities
 	double bounds[3]={0.0}, cld_log_rho=0.0;
 
-//    count = 0;
-//    for (int j=0; j<(nlayers); j++) {	// loop through atmosphere layers, z[0] to z[nlayers]
-//        for (int k=2; k < (nlayers-j); k++) {
-//           // if ((k > 0) && (k < (nlayers-j))) {
-//                p = pow((Rp + z[j]),2);
-// 		        dlarray[count] = 2.0 * (sqrt(pow((Rp + z[k+j]),2) - p) - sqrt(pow((Rp + z[k-1+j]),2) - p));
-//                count += 1;
-//            //}
-//        }
-//    }
-//
 
     if (pressure_broadening == 1) {
         if (const_temp==1) {
-
+       //cout << "precalculate p broadening" << endl;
             // temperature is constant through the atmosphere (doesn't change with j)
             // precalculate closest temperature indexes in sigma_templist
             if (nsigma_templist == 1) {
@@ -173,14 +182,13 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     } else {
         // pressure broadening is off
 
-//        //cout << "nsigma_templist" << nsigma_templist << endl;
+       //cout << "nsigma_templist" << nsigma_templist << endl;
 
         if (const_temp==0) {
             // variable T profile. Precalculate T indexes in sigma_array for each layer
 
-
             for (int j=0; j<(nlayers); j++) { // loop through layers
-//        //cout << "test0" << endl;
+            //cout << "test0" << endl;
                 //cout << " temp at j " << j << " is " << temperature_array[j] << endl;
                 for(int t=0; t<nsigma_templist;t++) { // loop through sigma T grid
 
@@ -200,12 +208,14 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
         }
     }
 
-//    //cout << "  end " << endl;
+    //cout << "  check 12 " << endl;
 
     //beginning calculations
-    for (int wl=0;wl < nlambda; wl++) {
+    for (int wl=0; wl < nlambda; wl++) {
+        //cout << "  check 2 " << endl;
         count = 0;
 		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
+    //cout << "  check 3 " << endl;
 
 			Rtau = 0.0; 					// sum of Rayleigh optical depth
 			Ctau = 0.0; 					// sum of CIA optical depth
@@ -213,6 +223,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 			tau[j] = 0.0;					// total optical depth
 
 			for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+    //cout << "  check 4 " << endl;
 
                 // pressure is pressure_array[k]
                 // temperature is temperature
@@ -223,10 +234,12 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 
 			    /* Sum up taus for all gases for this path */
 				for(int l=0;l<n_gas;l++) {
+    //cout << "  check 5 " << endl;
 
 				    if (pressure_broadening == 1) {
                         // x = temperature
                         // y = pressure
+    //cout << "  check 6 " << endl;
 
                         // interpolate sigma_array for given pressure and temperature and molecule
                         // follow wikipedia Bilinear interpolation: http://en.wikipedia.org/wiki/Bilinear_interpolation
@@ -235,48 +248,72 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 
 
                         if (temperature > sigma_templist[nsigma_templist-1]) {
+    //cout << "  check 7 " << endl;
                             x = sigma_templist[nsigma_templist-1]; // if T is > max(sigma_templist) set T to max(sigma_templist)
                         } else if (temperature < sigma_templist[0]) {
+    //cout << "  check 8 " << endl;
                             x = sigma_templist[nsigma_templist-1]; // if T is < min(sigma_templist) set T to min(sigma_templist)
                         } else {
+    //cout << "  check 9 " << endl;
                             x = temperature;
                         }
+    //cout << "  check 10 " << endl;
 
                         if (pressure_array[k]*1.0e-5 > sigma_preslist[nsigma_preslist-1]) {
+    //cout << "  check 11 " << endl;
                             y = sigma_preslist[nsigma_preslist-1]; // if P is > max(sigma_preslist) set it to max(sigma_preslist)
                         } else if (pressure_array[k]*1.0e-5 < sigma_preslist[0]) {
+    //cout << "  check 12 " << endl;
                             y = sigma_preslist[0]; // if P is < min(sigma_preslist) set it to to min(sigma_preslist)
                         } else {
+    //cout << "  check 13 " << endl;
                             y = pressure_array[k]*1.0e-5;
 
                         }
+    //cout << "  check 14 " << endl;
 
                         //apply linear or bilinear interpolation:
 
                         if (t1 == t2) {
+    //cout << "  check 15 " << endl;
                             // no interpolation in temperature needed
                             if (p1[k] == p2[l]) {
                                 // no interpolation needed
+    //cout << "  check 16 " << endl;
                                 sigma = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
                             } else {
+    //cout << "  check 17 " << endl;
                                 // interpolate in P
+
+    //cout << "  check a " << t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl << endl;
+    //cout << "  check b " << t1 << endl;
+    //cout << "  check c " << nsigma_preslist << endl;
+    //cout << "  check d " << n_gas << endl;
+    //cout << "  check e " << nlambda << endl;
+    //cout << "  check f " << p1[k] << endl;
+    //cout << "  check g " << wl << endl;
+
                                 F1 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
+    //cout << "  check 18 " << endl;
                                 F2 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p2[k]*n_gas*nlambda+l*nlambda+wl];
+    //cout << "  check 19 " << endl;
                                 x1 = sigma_preslist[p1[k]];
                                 x2 = sigma_preslist[p2[k]];
+    //cout << "  check 20 " << endl;
                                 x = pressure_array[k]*1.0e-5;
+    //cout << "  check 21 " << endl;
                                 sigma = F1 + (F2-F1)*(x-x1)/(x2-x1);
-//                                //cout << k << " interpolate in P " << sigma << " F1 " << F1 << " F2 " << F2 << " x1 " << x1 << " x2 " << x2 << " x " << x << endl;
-//
-//                                //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
-//                                     <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
-//                                     <<  " P "  << y <<  " T "  << x << endl;;
-//
-//                                //cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
+                                //cout << k << " interpolate in P " << sigma << " F1 " << F1 << " F2 " << F2 << " x1 " << x1 << " x2 " << x2 << " x " << x << endl;
+                                //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
+                                 //    <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
+                                 //    <<  " P "  << y <<  " T "  << x << endl;;
+
+                                //cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
                             }
                         } else {
                             if (p1[k] == p2[l]) {
                                 // linear interpolation in T
+                                 //cout << k << " interpolate in T ";
                                 F1 = flattened_sigma_arr[t1*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
                                 F2 = flattened_sigma_arr[t2*nsigma_preslist*n_gas*nlambda+p1[k]*n_gas*nlambda+l*nlambda+wl];
                                 x1 = sigma_templist[t1];
@@ -285,6 +322,8 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                                 sigma = F1 + (F2-F1)*(x-x1)/(x2-x1);
                             } else {
                                 // bilinear interpolation in both T and P
+                                 //cout << k << " bilinear T and P ";
+
                                 x1 = sigma_templist[t1];
                                 x2 = sigma_templist[t2];
                                 y1 = sigma_preslist[p1[k]];
@@ -297,17 +336,18 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                             }
                         }
 
-//                        //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
-//                             <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
-//                             <<  " P "  << y <<  " T "  << x << endl;;
+                        //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
+                        //     <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
+                        //     <<  " P "  << y <<  " T "  << x << endl;;
 
-//                        //cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
+                        //cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
 
                         if (sigma != sigma) { // check for nans
                             sigma = 0;
                         }
                     } else {
                         if(const_temp==0){
+
 
                             // temperature is temperature_array[k]
 
@@ -320,7 +360,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 
                             // temperature idx for layer j
 
-                            //cout << "wl" << wl << " t " << t0[j] << endl;
+                            //cout << " wl " << wl << " t " << t0[j] << endl;
 
                             sigma = sigma_array_3d[t0[j]][l][wl];
 
@@ -371,9 +411,9 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 		}
 		integral*=2.0;
 
-        //cout << "integral ole" << endl;
-		absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
+        absorption[wl] = ((Rp*Rp) + integral) / (Rs*Rs);
 
+        //cout << absorption[wl] << endl;
 
     }
     if(const_temp==0){

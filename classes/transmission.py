@@ -29,6 +29,8 @@ from library_general import *
 from library_transmission import *
 import logging
 
+import matplotlib.pylab as plt
+
 # from mpi4py import MPI
 
 class transmission(base):
@@ -56,7 +58,7 @@ class transmission(base):
             #use wavelengthgrid of data or internal specgrid defined in data class
             self.lambdagrid = self.data.obs_wlgrid
         else:
-            self.lambdagrid = self.data.xs_wngrid
+            self.lambdagrid = self.data.int_wngrid
         self.nlambda = len(self.lambdagrid)
 
         # preload Rayleigh for all gases and the given wavelengths (lambdagrid)
@@ -133,7 +135,7 @@ class transmission(base):
         sigma_dict_arr = np.zeros((len(self.data.sigma_templist),
                                    len(self.data.sigma_preslist),
                                    len(self.params.planet_molec),
-                                   self.nlambda))
+                                   self.nlambda-2))
 
         for idxtemp, valtemp in enumerate(self.data.sigma_templist):
             for idxpres, valpres in enumerate(self.data.sigma_preslist):
@@ -146,7 +148,7 @@ class transmission(base):
 
         #generating 3D sigma_array from sigma_dict for c++ path integral
         tempgrid = self.data.sigma_dict['tempgrid']
-        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases),len(self.data.xs_wngrid)), dtype=np.float64)
+        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases), self.data.int_nwngrid), dtype=np.float64)
 
         c=0
         for t in tempgrid:
@@ -222,6 +224,7 @@ class transmission(base):
         cconst_temp = C.c_int(0)
 
         if len(np.unique(temperature)) == 1:
+
             # constant T with altitude
             cconst_temp = C.c_int(1)
             # cast first value of T profile (it's isothermal..)
@@ -230,14 +233,18 @@ class transmission(base):
             if self.params.in_use_P_broadening:
                 
                 cpressure_broadening = C.c_int(1)
-                cflattened_sigma_arr =  cast2cpp(self.get_sigma_array_pressure().flatten())
+
+                flattened_sigma_arr = self.get_sigma_array_pressure().flatten()
+                cflattened_sigma_arr =  (C.c_double * len(flattened_sigma_arr))(*flattened_sigma_arr)
+                print len(cflattened_sigma_arr)
                 csigma_templist = cast2cpp(self.data.sigma_templist)
                 csigma_preslist = cast2cpp(self.data.sigma_preslist)
                 cnsigma_templist = C.c_int(len(self.data.sigma_templist))
                 cnsigma_preslist = C.c_int(len(self.data.sigma_preslist))
                 cpressure_array = cast2cpp(self.atmosphere.P)
                 ctemperature = C.c_double(temperature[0])
-                
+                cn_sig_temp = cnsigma_templist # again?
+
                 
             else:
                 sigma_array_2d = self.get_sigma_array(temperature[0])
@@ -278,6 +285,7 @@ class transmission(base):
         cRs = C.c_double(self.params.star_radius)
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.atmosphere.nlayers)
+
         cn_gas = C.c_int(len(X[:,0]))
 
         #setting and casting cloud paramters
@@ -300,10 +308,10 @@ class transmission(base):
         cpath_int = self.cpathlib.cpath_int
 
         #running c++ path integral
-        cpath_int(csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
+        cpath_int(cflattened_sigma_arr, csigma_array_2d,csigma_array_3d,cconst_temp,cdlarray,cz,cdz,cRsig,cCsig,cX,crho,cRp,cRs,\
                   clinecount,cnlayers,cn_gas,cn_sig_temp,cInclude_cld,cCld_lowbound,\
                   cCld_upbound,cP_bar,cCld_sig,\
-                  cpressure_broadening, cflattened_sigma_arr, csigma_templist, csigma_preslist,\
+                  cpressure_broadening, csigma_templist, csigma_preslist,\
                   cnsigma_templist, cnsigma_preslist, cpressure_array, ctemperature_array, ctemperature,  \
                   C.c_void_p(absorption.ctypes.data))
 

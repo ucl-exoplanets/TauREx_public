@@ -40,7 +40,7 @@ if __name__ == '__main__':
     )
     parser.add_option('-b', '--bin',
                       dest="bin",
-                      default='resolution',
+                      default=None,
     )
     parser.add_option('-r', '--res',    # binning resolution
                       dest="resolution",
@@ -73,12 +73,9 @@ if __name__ == '__main__':
 
     # set some fixed params
     params.tp_couple_mu = False
-    params.planet_molec = ['14N-16O', '12C-16O2', '16O-1H', '1H-12C-14N' ,'14N-1H3', '12C-1H4', '12C-16O', '1H2-16O']
-    params.planet_mixing = [1e-5,1e-5,1e-5,1e-5,1e-5,1e-5,1e-5,1e-5]
+    params.planet_molec = ['CO2', 'OH', 'HCN' , 'NH3', 'CH4', 'CO', 'H2O']
+    params.planet_mixing = [1e-5,1e-5,1e-5,1e-5,1e-5,1e-5,1e-5]
     params.in_use_ATMfile = True
-
-    # define number of layers
-    nlayers = 100
 
     # read tp profile. Column 0: altitude (km), column 1: pressure (mbar), column 2: temperature (K)
     tp_file = os.path.join(flaredir, 'profil_PTn_ADLeob_%sK.dat' % options.flare_temp)
@@ -87,15 +84,23 @@ if __name__ == '__main__':
     tp_interp_pres_temp = interpolate.interp1d(tp_in[:,1], tp_in[:,2]) # interpolate pressure - temperature profile
     tp_interp_pres_alt = interpolate.interp1d(tp_in[:,1], tp_in[:,0]) # interpolate pressure - altitude profile
 
-    # define planetary radius at 10 bar
     alt_readjust = tp_interp_pres_alt(1.e4)
     logging.info('Altitude readjustment: %2.1f km ' % alt_readjust)
 
 
+    # filelist = glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_*_renorm.dat')) + \
+    #         glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_*_retour_*_nonrenormalise_renorm.dat')) + \
+    #         glob.glob(os.path.join(flaredir, 'fractions_molaires_steady_ADLeo_*_nonrenormalise_renorm.dat'))
+
+
+    # filelist =  [os.path.join(flaredir, 'fractions_molaires_steady_ADLeo_1303K_nonrenormalise_renorm.dat'),
+    #              os.path.join(flaredir, 'fractions_molaires_ADLEO_912_renorm.dat')]
+
+    filelist =  [os.path.join(flaredir, 'fractions_molaires_steady_ADLeo_1303K.dat'),
+                  os.path.join(flaredir, 'fractions_molaires_ADLEO_renorm_entete_0912.dat')]
+
     # loop through flare files
-    for file in [os.path.join(flaredir, 'fractions_molaires_retour_ADLeo_%sK.dat' % options.flare_temp)] + [os.path.join(flaredir, 'fractions_molaires_steady_ADLeo_%sK.dat' % options.flare_temp)] + glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_renorm_entete_*.dat')):
-    #+ glob.glob(os.path.join(flaredir, 'fractions_molaires_ADLEO_renorm_entete_*.dat')):
-    #for file in [os.path.join(flaredir, 'fractions_molaires_retour_ADLeo_%sK.dat' % options.flare_temp)]:
+    for file in filelist:
 
         logging.info('Processing %s' % file)
         filename, file_extension = os.path.splitext(os.path.basename(file))
@@ -112,49 +117,58 @@ if __name__ == '__main__':
         f.close()
 
         atm_profile_in = np.loadtxt(file, skiprows=2)
-        altitude = atm_profile_in[:,0]
+        alt = atm_profile_in[:,0]
+        alt -= alt_readjust
+
         pressure = atm_profile_in[:,1]
         temperature = tp_interp_pres_temp(pressure)
 
+        altitude = alt[alt>0]
+        pressure = pressure[alt>0]
+        temperature = temperature[alt>0]
+
+
         # convert pressure from mbar to pascal
-        pressure *= nlayers
+        pressure *= 100
+
+        # define number of layers
+        nlayers = len(pressure)
 
         # readjust altitude to have 0 km at 10 bar
-        altitude -= alt_readjust
+        # altitude -= alt_readjust
 
         # interpolate to new grid with nlayers layers
-        atm_profile_interp = np.zeros((nlayers, len(molecules)))
-        alt_grid = np.linspace(0, np.max(altitude), nlayers)
-
-        pressure_interp = np.interp(alt_grid, altitude, pressure)
-        temperature_interp = np.interp(alt_grid, altitude, temperature)
+        # atm_profile_interp = np.zeros((nlayers, len(molecules)))
+        # alt_grid = np.linspace(0, np.max(altitude), nlayers)
+        # pressure_interp = np.interp(alt_grid, altitude, pressure)
+        # temperature_interp = np.interp(alt_grid, altitude, temperature)
 
         # sort by increasing pressure
-        idx = np.argsort(pressure_interp)
-        pressure_interp = pressure_interp[idx]
-        temperature_interp = temperature_interp[idx]
-        alt_grid = alt_grid[idx]
+        # idx = np.argsort(pressure_interp)
+        # pressure_interp = pressure_interp[idx]
+        # temperature_interp = temperature_interp[idx]
+        # alt_grid = alt_grid[idx]
 
+        atm_profile_new = np.zeros((len(altitude), len(molecules)))
         for j in xrange(len(molecules)):
-            atm_profile_interp[:,j] = np.interp(alt_grid, altitude, atm_profile_in[:,j+2]) # also sorts by idx
+             atm_profile_new[:,j] = atm_profile_in[:,j+2][alt>0] # also sorts by idx
 
         # reset mean molecular weight for each layer taking into account all 105 molecules
-        mu = np.zeros(nlayers)
-        for i in range(nlayers):
-            for j in range(len(molecules)):
-                mu[i] += atm_profile_interp[i,j]*float(weight[j])*AMU
-            logging.debug('The mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
-        mu = mu[::-1] # reverse array
+        # mu = np.zeros(nlayers)
+        # for i in range(nlayers):
+        #     for j in range(len(molecules)):
+        #         mu[i] += atm_profile_new[i,j]*float(weight[j])*AMU
+        #     logging.debug('The mean molecular weight for layer %i is %.4f (alt = %i km)' % (i, mu[i]/AMU, int(altitude[i])))
+        # mu = mu[altitude>0] #[::-1] # reverse array
 
-        atm_output = np.column_stack((pressure_interp, temperature_interp, alt_grid,
-                                      atm_profile_interp[:,molecules.index('NO')],
-                                      atm_profile_interp[:,molecules.index('CO2')],
-                                      atm_profile_interp[:,molecules.index('OH')],
-                                      atm_profile_interp[:,molecules.index('HCN')],
-                                      atm_profile_interp[:,molecules.index('NH3')],
-                                      atm_profile_interp[:,molecules.index('CH4')],
-                                      atm_profile_interp[:,molecules.index('CO')],
-                                      atm_profile_interp[:,molecules.index('H2O')]))
+        atm_output = np.column_stack((pressure, temperature, altitude,
+                                      atm_profile_new[:,molecules.index('CO2')],
+                                      atm_profile_new[:,molecules.index('OH')],
+                                      atm_profile_new[:,molecules.index('HCN')],
+                                      atm_profile_new[:,molecules.index('NH3')],
+                                      atm_profile_new[:,molecules.index('CH4')],
+                                      atm_profile_new[:,molecules.index('CO')],
+                                      atm_profile_new[:,molecules.index('H2O')]))
 
         header = 'P-T grid - Venot Flare. Generated on %s \n'
         header += ' Model Atmosphere Pressures, Temperatures, and Gas Mixing Ratios\n'
@@ -165,9 +179,7 @@ if __name__ == '__main__':
         header += ' solar longitude of sounding (degrees)       =         0.0\n'
         header += ' number of absorbing gases:                  =         8\n'
         header += ' \n'
-        header += '   p(Pas)       t(k)    alt(km)    NO     CO2     OH     HCN     NH3     CH4     CO     H2O'
-
-
+        header += '   p(Pas)       t(k)    alt(km)    CO2     OH     HCN     NH3     CH4     CO     H2O'
 
         atm_filename = '%s.atm' % filename
         np.savetxt(os.path.join(atm_dir, atm_filename), atm_output, header=header, fmt='%.5e',)
@@ -177,62 +189,56 @@ if __name__ == '__main__':
         #loading object
         createob = create_spectrum(options, params=params)
 
-        # set mean molecular weight for each level, based on all 105 molecules
 
-        createob.atmosphereob.planet_mu =  mu
-        # if options.flare_temp == 1303:
-        #     createob.atmosphereob.planet_mu = 2.748*AMU
-        # elif options.flare_temp == 412:
-        #     createob.atmosphereob.planet_mu = 3.15*AMU
 
         #generating spectrum
         createob.generate_spectrum()
 
-        z = createob.atmosphereob.z
-
-        # save ap profile
-        ap = np.zeros((nlayers, 2))
-        ap[:,0] = z
-        ap[:,1] = createob.atmosphereob.P
-        np.savetxt(os.path.join(params.out_path, 'ap', '%s.dat' % filename), ap)
-
-        # save scale height profile
-        sh = np.zeros((nlayers, 2))
-        sh[:,0] = z
-        sh[:,1] = createob.atmosphereob.scaleheight
-        np.savetxt(os.path.join(params.out_path, 'scaleheight', '%s.dat' % filename), sh)
-
-        # gravity profile
-        grav = np.zeros((nlayers, 2))
-        grav[:,0] = z
-        grav[:,1] = createob.atmosphereob.planet_grav
-        np.savetxt(os.path.join(params.out_path, 'gravity', '%s.dat' % filename), grav)
-
-        # T profile
-        temp = np.zeros((nlayers, 2))
-        temp[:,0] = z
-        temp[:,1] = createob.atmosphereob.T
-        np.savetxt(os.path.join(params.out_path, 'temp', '%s.dat' % filename), temp)
-
-        # density profile
-        density = np.zeros((nlayers, 2))
-        density[:,0] = z
-        density[:,1] = createob.atmosphereob.rho
-        np.savetxt(os.path.join(params.out_path, 'density', '%s.dat' % filename), density)
-
-        # mu profile
-        mup = np.zeros((nlayers, 2))
-        mup[:,0] = z
-        mup[:,1] = createob.atmosphereob.planet_mu
-        np.savetxt(os.path.join(params.out_path, 'mu', '%s.dat' % filename), mup)
-
-        # mol profile
-        mol = np.zeros((nlayers, len(params.planet_molec)+1))
-        mol[:,0] = z
-        for idx, molecule in enumerate(params.planet_molec):
-            mol[:,idx+1] = createob.atmosphereob.X[idx,:]
-
-        np.savetxt(os.path.join(params.out_path, 'molecules', '%s.dat' % filename), mol)
+        # z = createob.atmosphereob.z
+        #
+        # # save ap profile
+        # ap = np.zeros((nlayers, 2))
+        # ap[:,0] = z
+        # ap[:,1] = createob.atmosphereob.P
+        # np.savetxt(os.path.join(params.out_path, 'ap', '%s.dat' % filename), ap)
+        #
+        # # save scale height profile
+        # sh = np.zeros((nlayers, 2))
+        # sh[:,0] = z
+        # sh[:,1] = createob.atmosphereob.scaleheight
+        # np.savetxt(os.path.join(params.out_path, 'scaleheight', '%s.dat' % filename), sh)
+        #
+        # # gravity profile
+        # grav = np.zeros((nlayers, 2))
+        # grav[:,0] = z
+        # grav[:,1] = createob.atmosphereob.planet_grav
+        # np.savetxt(os.path.join(params.out_path, 'gravity', '%s.dat' % filename), grav)
+        #
+        # # T profile
+        # temp = np.zeros((nlayers, 2))
+        # temp[:,0] = z
+        # temp[:,1] = createob.atmosphereob.T
+        # np.savetxt(os.path.join(params.out_path, 'temp', '%s.dat' % filename), temp)
+        #
+        # # density profile
+        # density = np.zeros((nlayers, 2))
+        # density[:,0] = z
+        # density[:,1] = createob.atmosphereob.rho
+        # np.savetxt(os.path.join(params.out_path, 'density', '%s.dat' % filename), density)
+        #
+        # # mu profile
+        # mup = np.zeros((nlayers, 2))
+        # mup[:,0] = z
+        # mup[:,1] = createob.atmosphereob.planet_mu
+        # np.savetxt(os.path.join(params.out_path, 'mu', '%s.dat' % filename), mup)
+        #
+        # # mol profile
+        # mol = np.zeros((nlayers, len(params.planet_molec)+1))
+        # mol[:,0] = z
+        # for idx, molecule in enumerate(params.planet_molec):
+        #     mol[:,idx+1] = createob.atmosphereob.X[idx,:]
+        #
+        # np.savetxt(os.path.join(params.out_path, 'molecules', '%s.dat' % filename), mol)
 
         #saving spectrum
         spectrum_filename = '%s.dat' % filename

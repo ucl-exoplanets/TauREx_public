@@ -63,30 +63,27 @@ def find_nearest(arr, value):
     return [arr[idx], idx]
 
 
-def find_absfiles(PATH, MOLNAME):
-    # finding all absorption crosssection files in path for molecule molname (path/molanme_*.abs)
+def find_absfiles(path, molname, ext='sigma'):
+    # finding all absorption crosssection files in path for molecule molname (path/molname/*.ext)
     # filename convection follows that of zero pressure ExoMol cross sections
-    # return: array of absfilenames and array of corresponding temperatures and pressures
-    
-    globlist = glob.glob(PATH+'*.txt')
+    # return: array of absfilenames and array of corresponding temperatures
+
+    globlist = glob.glob(os.path.join(path, molname, '*.%s' % ext))
 
     absfilelist = []
     templist = []
 
-    for FILE in globlist:
-        fname = string.rsplit(FILE,'/',1)[1] #splitting the name
+    for file in globlist:
+        fname = string.rsplit(file,'/',1)[1] #splitting the name
         splitname = string.split(fname,'_',3)
-
-        if splitname[0] == MOLNAME:
-            absfilelist.append(fname)
-            templist.append(float(splitname[2][:-1]))
-
+        absfilelist.append(fname)
+        templist.append(float(splitname[2][:-1]))
 
     templist = asarray(templist)
     absfilelist = asarray(absfilelist)
-    
+
     sortidx = argsort(templist)
-    
+
     return absfilelist[sortidx], templist[sortidx]
 
 def find_absfiles_pressure(path, molname):
@@ -97,11 +94,12 @@ def find_absfiles_pressure(path, molname):
     absfilelist = {}
     templist = []
     presslist = []
-    for file in glob.glob(os.path.join(path, '%s*.abs' % molname)):
+
+    for file in glob.glob(os.path.join(path, molname, '*.sig')):
         fname = os.path.basename(file)
         splitname = string.split(fname,'_',5)
-        temp = float(splitname[3][:-1])
-        pres = float(splitname[4][:-3])
+        temp = float(splitname[3])
+        pres = float(splitname[4])
         templist.append(temp)
         presslist.append(pres)
         if not temp in absfilelist:

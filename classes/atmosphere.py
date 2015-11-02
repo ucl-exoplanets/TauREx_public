@@ -65,21 +65,33 @@ class atmosphere(base):
         planet_grav_tmp = self.get_surface_gravity()
         planet_temp_tmp = self.params.planet_temp
         scaleheight_tmp = self.get_scaleheight(g=planet_grav_tmp, mu=planet_mu_tmp, T=planet_temp_tmp)
-        self.max_z = self.params.tp_num_scale * scaleheight_tmp
-        self.alt_grid = np.arange(0., self.max_z, step=self.params.atm_step_size*1000.)
-        self.nlayers = len(self.alt_grid)
+
+
 
         self.ngas     = self.data.ngas
         if self.params.in_use_ATMfile:
+
+
             # build PTA profile and mixing ratio array from .atm file
             logging.info('Atmospheric PTA grid has been set by .atm file')
             self.X = self.data.X
             self.pta = self.data.pta
+
+            self.alt_grid = self.pta[:,2]
+            self.nlayers = len(self.alt_grid)
+
             if len(self.X) <> len(self.absorbing_gases):
                 logging.error('The number of molecules specified in the .par file is not consistent with'
                              'the mixing ratios in the .atm file %s ' % self.params.in_atm_file)
                 sys.exit()
         else:
+            self.max_z = self.params.tp_num_scale * scaleheight_tmp
+            self.alt_grid = np.arange(0., self.max_z, step=self.params.atm_step_size*1000.)
+            self.nlayers = len(self.alt_grid)
+            logging.info('Altitude grid step size is %.1f km. Max altitude is %i km. There are %i layers.' %
+                         (self.params.atm_step_size, self.max_z/1000., self.nlayers))
+
+            self.nlayers = len(self.alt_grid)
             self.absorbing_gases_X = self.params.planet_mixing # mixing ratios are read from parameter file
             self.X = self.set_mixing_ratios()
         self.absorbing_gases_X = self.X[:,0] # assume X from lowest layer. This will be used to calculate mu, if couple_mu is True
@@ -95,8 +107,6 @@ class atmosphere(base):
 
         self.planet_grav = self.get_surface_gravity() # planet gravity at the surface
         self.scaleheight = self.get_scaleheight(T = self.planet_temp)
-        logging.info('Altitude grid step size is %.1f km. Max altitude is %i km. There are %i layers.' %
-                     (self.params.atm_step_size, self.max_z/1000., self.nlayers))
 
         if not self.params.in_use_ATMfile:
             self.pta      = self.setup_pta_grid()

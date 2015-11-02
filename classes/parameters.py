@@ -108,6 +108,7 @@ class parameters(base):
         # self.in_TP_file            = self.getpar('Input','TP_file') # todo temporary param
 
         self.in_abs_path           = self.getpar('Input','abs_path')
+        self.in_abs_dnu           = self.getpar('Input','abs_dnu', 'float')
         self.in_use_P_broadening   = self.getpar('Input','use_P_broadening', 'bool')
         self.in_abs_path_P         = self.getpar('Input','abs_path_P')
 
