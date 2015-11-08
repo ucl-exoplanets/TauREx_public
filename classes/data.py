@@ -77,6 +77,7 @@ class data(base):
         if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             # set observed spectrum specific variables (only if spectrum is provided)
             self.obs_wlgrid = self.obs_spectrum[:,0] # wavegrid in micron
+
             self.obs_nwlgrid = len(self.obs_spectrum[:,0]) # number of datapoints in spectrum
             self.obs_binwidths = self.obs_spectrum[:,3]   if shape(self.obs_spectrum)[1] == 4 else None # bin widths
 
@@ -90,7 +91,7 @@ class data(base):
             lambdamin = self.obs_wlgrid[0]
             lambdamax = self.obs_wlgrid[-1]
             # Expand to half a bin up, and half a bin down to properly model edges
-            if self.obs_binwdiths == None:
+            if self.obs_binwidths == None:
                 # if bin widths are *not* provided in the input spectrum
                 bin_up -=  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
                 bin_low = (self.obs_wlgrid[1]-self.obs_wlgrid[0])/2.
@@ -105,6 +106,12 @@ class data(base):
         numin = 10000./lambdamax
         numax = 10000./lambdamin
 
+        #approximate numin and numax to closest gridding point
+        # todo NOT WORKING PROPERLY!!!
+        numin = libgen.round_base(numin, self.params.in_abs_dnu)
+        numax = libgen.round_base(numax, self.params.in_abs_dnu)
+
+
         # create wavenumber grid of internal model using numin, numax and delta wavenumber provided in param file
         # NOTE THAT DELTA NU MUST CORRESPOND TO THE CORRECT DELTA NU IN THE INPUT CROSSECTIONS
         # todo: this will change if we use non uniform grids. An external file with the grid should be provided...
@@ -112,10 +119,16 @@ class data(base):
         self.int_dwngrid = np.diff(self.int_wngrid) # not very useful... this is an array of equal dnu
         self.int_nwngrid = len(self.int_wngrid) # number of points in the grid
 
+        # convert wavenumber grid to wavelenght grid
+        self.int_wlgrid = 10000./self.int_wngrid
+        self.int_dwlgrid = np.diff(self.int_wlgrid)
+        self.int_nwlgrid = len(self.int_wlgrid) # number of points in the grid
+
         if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
-            # calculate spectral binning grid
-            self.obs_wngrid = 10000./self.obs_wlgrid
-            self.intsp_bingrid, self.intsp_bingrididx = self.get_specbingrid(self.obs_wlgrid, self.int_wngrid, self.obs_binwidths)
+            # calculate spectral binning grid in wavelength space
+
+            self.intsp_bingrid, self.intsp_bingrididx = self.get_specbingrid(self.obs_wlgrid, self.int_wlgrid, self.obs_binwidths)
+            self.intsp_nbingrid = len(self.obs_wlgrid)
 
         #reading in atmospheric profile file
         if self.params.in_use_ATMfile:

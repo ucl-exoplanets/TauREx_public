@@ -125,7 +125,11 @@ class transmission(base):
         return a / b * c
 
     def get_sigma_array(self, temperature):
-        # getting sigma array from sigma_dic for given temperature
+        # getting sigma array from sigma_dic for given temperatur
+
+
+
+
         return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
 
     def get_sigma_array_pressure(self):
@@ -186,10 +190,14 @@ class transmission(base):
     def cget_path_length(self):
 
         nlayers = self.atmosphere.nlayers
-        czRp = cast2cpp(self.atmosphere.z + self.atmosphere.planet_radius)
+
+        zRp = self.atmosphere.z + self.atmosphere.planet_radius
+        czRp = cast2cpp(zRp)
+
         dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
         cpath_length = self.cpathlib.cpath_length
         cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
+
         return dlarray
 
     #@profile
@@ -233,10 +241,11 @@ class transmission(base):
             if self.params.in_use_P_broadening:
                 
                 cpressure_broadening = C.c_int(1)
-
                 flattened_sigma_arr = self.get_sigma_array_pressure().flatten()
                 cflattened_sigma_arr =  (C.c_double * len(flattened_sigma_arr))(*flattened_sigma_arr)
-                print len(cflattened_sigma_arr)
+
+
+
                 csigma_templist = cast2cpp(self.data.sigma_templist)
                 csigma_preslist = cast2cpp(self.data.sigma_preslist)
                 cnsigma_templist = C.c_int(len(self.data.sigma_templist))
@@ -245,7 +254,6 @@ class transmission(base):
                 ctemperature = C.c_double(temperature[0])
                 cn_sig_temp = cnsigma_templist # again?
 
-                
             else:
                 sigma_array_2d = self.get_sigma_array(temperature[0])
         else:
@@ -255,10 +263,15 @@ class transmission(base):
             # variable T with altitude. Get 3d sigma array and set other variables
             # note this does not include pressure broadening
             sigma_array_3d, tempgrid = self.get_sigma_array_c()
+
             sigma_array_3d = sigma_array_3d.flatten()
+
+
             ctemperature_array = (C.c_double * len(self.atmosphere.T.tolist()))(*self.atmosphere.T.tolist())
             #ctemperature_array = cast2cpp(self.atmosphere.T) # crazy stuff, here cast2cpp doesn't work !!!
             csigma_templist = cast2cpp(tempgrid) # temperature grid of cross sections
+
+
             cnsigma_templist= C.c_int(len(tempgrid))
             cn_sig_temp= C.c_int(len(tempgrid)) # legacy???
 
@@ -318,7 +331,9 @@ class transmission(base):
         out = zeros((self.nlambda))
         out[:] = absorption
 
+        del(dlarray)
         del(absorption)
+
 
         return out
 

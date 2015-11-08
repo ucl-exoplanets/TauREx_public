@@ -56,6 +56,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
         for (int k=1; k < (nlayers - j); k++) {
             p = pow((zRp[j]),2);
             dlarray[count] = 2.0 * (sqrt(pow((zRp[k+j]),2) - p) - sqrt(pow((zRp[k-1+j]),2) - p));
+            //cout << count << " " << j << " " << zRp[j] << " " << dlarray[count] << " " << zRp[k+j] << " " <<  pow((zRp[k+j]),2) << " " << p << endl;
             count += 1;
         }
     }
@@ -116,6 +117,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     double ***sigma_array_3d = new double**[n_sig_temp];
 
     //cout << " n_sig_temp " << n_sig_temp << " n_gas " << n_gas << " nlambda " <<   nlambda << endl;
+
 
 
 
@@ -190,7 +192,8 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
             for (int j=0; j<(nlayers); j++) { // loop through layers
             //cout << "test0" << endl;
                 //cout << " temp at j " << j << " is " << temperature_array[j] << endl;
-                for(int t=0; t<nsigma_templist;t++) { // loop through sigma T grid
+                t0[j] = nsigma_templist - 1;
+                for(int t=0; t<(nsigma_templist-1);t++) { // loop through sigma T grid
 
                     //cout << " is T " << temperature_array[j]  << " betweem " << sigma_templist[t] << " and " << sigma_templist[t+1] << endl;
                     if ((temperature_array[j] >= sigma_templist[t]) && (temperature_array[j] <= sigma_templist[t+1])) {
@@ -198,12 +201,14 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                         if ((temperature_array[j]-sigma_templist[t]) < (sigma_templist[t+1]-temperature_array[j])) {
                             // set idx to closest temperature between upper/lower bounds
                             t0[j] = t;
-                            //cout << " t0 j " << j << " " << t << endl;
+                            break;
                         } else {
                             t0[j] = t+1;
+                            break;
                         }
                     }
                 }
+                //cout << " t0 j " << j << " " << t << endl;
             }
         }
     }
@@ -304,10 +309,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
     //cout << "  check 21 " << endl;
                                 sigma = F1 + (F2-F1)*(x-x1)/(x2-x1);
                                 //cout << k << " interpolate in P " << sigma << " F1 " << F1 << " F2 " << F2 << " x1 " << x1 << " x2 " << x2 << " x " << x << endl;
-                                //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
-                                 //    <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
-                                 //    <<  " P "  << y <<  " T "  << x << endl;;
-
+                                //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]  <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]   <<  " P "  << y <<  " T "  << x << endl;;
                                 //cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
                             }
                         } else {
@@ -336,9 +338,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                             }
                         }
 
-                        //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]
-                        //     <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]
-                        //     <<  " P "  << y <<  " T "  << x << endl;;
+                        //cout << sigma <<  " k "  << k <<  " t1 "  << t1 <<  " T_t1 "  << sigma_templist[t1] <<  " t2 "  << t2 <<  " T_t2 "  << sigma_templist[t2]    <<  " p1 "  << p1[k] <<  " P_p1 "  << sigma_preslist[p1[k]] <<  " p2 "  << p2[k] <<  " P_p2 "  << sigma_preslist[p2[k]]  <<  " P "  << y <<  " T "  << x << endl;;
 
                         //cout << "sigma "  << sigma   << " F11 "  << F11 << " F12 "  << F12 << " F21 "  << F21 <<  " F22 "  << F22 <<  endl;
 
@@ -360,7 +360,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 
                             // temperature idx for layer j
 
-                            //cout << " wl " << wl << " t " << t0[j] << endl;
+                            //cout << "l" << l << " wl " << wl << " t0 " << t0[j] << endl;
 
                             sigma = sigma_array_3d[t0[j]][l][wl];
 
@@ -368,7 +368,11 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
                             sigma = sigma_array[l][wl];
                         }
                     }
+
+
+                    //cout << "tau " << (sigma * X[l][k+j] * rho[k+j] * dlarray[count]) << " l " << l << " sigma " << sigma << " X " << X[l][k+j] << " rho " << rho[k+j] << " dlarry " << dlarray[count] << endl;
                     tau[j] += (sigma * X[l][k+j] * rho[k+j] * dlarray[count]);
+                    // cout << "j " << j << " " << tau[j] << " " << sigma << " " <<  X[l][k+j] << " " <<  rho[k+j] << " " <<  dlarray[count] << endl;
 				}
 
 				Rtau += Rsig[wl] * rho[j+k] * dlarray[count]; // calculating Rayleigh scattering optical depth
@@ -395,7 +399,10 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
             tau[j] += cld_tau; //adding cloud tau to gas tau
 
             exptau[j]= exp(-tau[j]);
-            //cout << " exptau " << exptau[j] << endl;
+
+            //cout << " J: "<< j << " tau " << exp(-tau[j]) << " exptau " << exptau[j] << endl;
+
+
 		}
 
 
@@ -407,7 +414,7 @@ void cpath_length(int nlayers, const double * zRp, void * dlarrayv) {
 		  // END OF HOTFIX
 
 		   integral += ((Rp+z[j])*(1.0-exptau[j])*dz[j]);
-		   //cout << "int " << integral << " j " << j << " dz " << dz[j] << " z " << z[j] << " exptau "  << exptau[j] << endl;
+		  // cout << "int " << integral << " j " << j << " dz " << dz[j] << " z " << z[j] << " exptau "  << exptau[j] << endl;
 		}
 		integral*=2.0;
 

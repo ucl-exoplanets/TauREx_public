@@ -116,7 +116,7 @@ class create_spectrum(object):
 
     def generate_spectrum(self,**kwarg):
         #run forward model and bin it down
-        self.fmob.atmosphere.update_atmosphere()
+        #self.fmob.atmosphere.update_atmosphere()
         model_int = self.fmob.model(**kwarg)
 
 

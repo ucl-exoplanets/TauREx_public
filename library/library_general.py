@@ -259,3 +259,67 @@ def funcGauss(p, x):
     sigma = p[1]
 
     return 1.0/(sigma * sqrt(2.0 * pi)) * exp(-(x-mu)**2/(2.0*sigma**2))
+
+def round_base(x, base=1):
+    return int(base * round(float(x)/base))
+
+def binspectrum(spectrum_in, resolution):
+    wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))
+    spec_bin_grid, spec_bin_grid_idx = get_specbingrid(wavegrid, spectrum_in[:,0])
+    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
+    return transpose(vstack((spec_bin_grid[:-1], spectrum_binned)))
+
+def get_specgrid( R=5000, lambda_min=0.1, lambda_max=20.0):
+    #generating wavelength grid with uniform binning in log(lambda)
+    #lambda min and max are in microns, R is the spectral resolution
+    #R = lambda/delta_lamdba
+    specgrid = []
+    delta_lambda =[]
+    specgrid.append(lambda_min)
+    run = True
+    i=1
+    while run:
+        dlam= specgrid[i-1]/R
+        specgrid.append(specgrid[i-1]+dlam)
+        delta_lambda.append(dlam)
+
+        if specgrid[i] >= lambda_max:
+            run=False
+        i+=1
+    return np.asarray(specgrid),np.asarray(delta_lambda)
+
+def get_specbingrid(wavegrid, specgrid, binwidths=None):
+    #function calculating the bin boundaries for the data
+    #this is used to bin the internal spectrum to the data in fitting module
+    if not isinstance(binwidths, (np.ndarray, np.generic)):
+        bingrid =[]
+        bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
+        for i in range(len(wavegrid)-1):
+            bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
+        bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
+        bingrid_idx = np.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
+    else:
+        # this bingrid is actually useless, as it doesn't allow for gaps in the data
+        bingrid = []
+        for i in range(len(wavegrid)):
+            bingrid.append(wavegrid[i]-binwidths[i]/2.)
+            bingrid.append(wavegrid[i]+binwidths[i]/2.)
+
+        # build bin grid index array (an index for each model datapoint
+        bingrid_idx = np.empty(len(specgrid))
+        bingrid_idx[:] = np.NaN
+        for i in range(len(specgrid)):
+            for j in range(len(wavegrid)):
+                if specgrid[i] >= (wavegrid[j]-binwidths[j]/2.) and specgrid[i] < (wavegrid[j]+binwidths[j]/2.):
+                    bingrid_idx[i] = j+1
+                    break
+    return bingrid, bingrid_idx
+
+def plot_bin(spectrum, R, ycol=1, yadg=0., **kwargs):
+    sptmp = np.zeros((len(spectrum[:,0]),2))
+    sptmp[:,0] = spectrum[:,0]
+    sptmp[:,1] = spectrum[:,ycol]
+    spectrum_bin = binspectrum(sptmp, R)
+    plt.plot(spectrum_bin[:,0], spectrum_bin[:,1]+yadg, **kwargs)
+
+

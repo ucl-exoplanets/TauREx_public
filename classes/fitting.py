@@ -107,7 +107,7 @@ class fitting(base):
             self.MPIrank     = 0
             self.MPIsize     = 0
 
-        if not isinstance(self.data.spectrum, (np.ndarray, np.generic)):
+        if not isinstance(self.data.obs_spectrum, (np.ndarray, np.generic)):
             logging.error('You have not provided an input observed spectrum. Cannot continue with fitting.')
             sys.exit()
 
@@ -513,10 +513,10 @@ class fitting(base):
 
         #runnning fast cythonised function or slower python depending on import
         if cythonised:
-            model_binned = cy_fun.runtime_bin_spectrum(model,self.data.spec_bin_grid_idx,self.data.n_spec_bin_grid)     
-        else:      
-            model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1, self.data.n_spec_bin_grid+1)]
-            
+            model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
+        else:
+            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
+
         # get residuals
         res = (data - model_binned) / datastd
         res = sum(res*res)
@@ -534,16 +534,16 @@ class fitting(base):
         # figure(2)
         # clf()
         #
-#         ion()
-#         figure(1)
-#         clf()
-#         errorbar(self.data.spectrum[:,0],self.data.spectrum[:,1],self.data.spectrum[:,2])
-#         plot(self.data.spectrum[:,0], model_binned)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         xscale('log')
-#         xlim((min(self.data.spectrum[:,0]), max(self.data.spectrum[:,0])))
-#         draw()
+        # ion()
+        # figure(1)
+        # clf()
+        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        # plot(self.data.obs_spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
+        # draw()
         # pause(0.0001)
         #
         # print 'res=%.2f - T=%.1f, mu=%.6f, R=%.4f, P=%.4f' % (res, self.forwardmodel.atmosphere.planet_temp, \
@@ -565,8 +565,8 @@ class fitting(base):
 
         logging.info('Fit data using %s minimisation' % self.params.downhill_type)
 
-        data = self.data.spectrum[:,1] # observed data
-        datastd = self.data.spectrum[:,2] # data error
+        data = self.data.obs_spectrum[:,1] # observed data
+        datastd = self.data.obs_spectrum[:,2] # data error
 
         fit_output = minimize(fun=self.chisq_trans,
                               x0=self.fit_params,
@@ -594,8 +594,8 @@ class fitting(base):
         else:
             self.fit_params_init = self.fit_params
 
-        data = self.data.spectrum[:,1] #observed data
-        datastd = self.data.spectrum[:,2] #data error
+        data = self.data.obs_spectrum[:,1] #observed data
+        datastd = self.data.obs_spectrum[:,2] #data error
         
         # setting prior distributions
         # master thread (MPIrank =0) will start from ideal solution (from downhill fitting)
@@ -726,8 +726,8 @@ class fitting(base):
             for i in xrange(len(self.fit_params)):
                 cube[i] = (cube[i] * (self.fit_bounds[i][1]-self.fit_bounds[i][0])) + self.fit_bounds[i][0]
 
-        data = self.data.spectrum[:,1] # observed data
-        datastd = self.data.spectrum[:,2] # data error
+        data = self.data.obs_spectrum[:,1] # observed data
+        datastd = self.data.obs_spectrum[:,2] # data error
         datastd_mean = mean(datastd)
         
         parameters = [str(i) for i in xrange(len(self.fit_params))]
