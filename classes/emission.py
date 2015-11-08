@@ -64,7 +64,7 @@ class emission(base):
         self.Rs            = self.params.star_radius
 
         self.n_gas         = self.atmosphere.ngas
-        self.specgrid      = self.data.specgrid.astype(self.DTYPE)
+        self.specgrid      = self.data.int_wngrid.astype(self.DTYPE)
         self.sigma_dict    = self.data.sigma_dict
         self.X             = self.atmosphere.X.astype(self.DTYPE)
         self.F_star        = self.data.F_star.astype(self.DTYPE)
@@ -79,10 +79,11 @@ class emission(base):
         self.dzarray       = self.get_dz()
 
         if usedatagrid:
+        # todo not sure about the following???
         #use wavelengthgrid of data or internal specgrid defined in data class
-            self.set_lambdagrid(self.data.wavegrid)
+            self.set_lambdagrid(self.data.obs_wngrid)
         else:
-            self.set_lambdagrid(self.data.specgrid)
+            self.set_lambdagrid(self.data.int_wngrid)
 
 
         #setting up static arrays for path_integral
@@ -290,7 +291,7 @@ class emission(base):
         clinecount = C.c_int(self.nlambda)
         cnlayers = C.c_int(self.nlayers)
         cn_gas = C.c_int(len(X[:,0]))
-        cn_lambda = C.c_int(len(self.specgrid))
+        cn_lambda = C.c_int(len(self.int_wngrid))
         cn_sig_temp= C.c_int(len(self.sig_tempgrid))
         
         #setting up output array

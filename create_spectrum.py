@@ -115,10 +115,12 @@ class create_spectrum(object):
         self.n_spec_bin_grid = len(self.wavegrid)
 
     def generate_spectrum(self,**kwarg):
-        #run forward model and bin it down
-        #self.fmob.atmosphere.update_atmosphere()
-        model_int = self.fmob.model(**kwarg)
 
+        #run forward model and bin it down
+        if not self.params.in_use_ATMfile:
+            self.fmob.atmosphere.update_atmosphere()
+
+        model_int = self.fmob.model(**kwarg)
 
         if self.options.bin == 'resolution' or self.options.bin == 'dlambda' or self.options.bin == 'spectrum' or self.options.bin == 'file':
             model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,self.n_spec_bin_grid+1)]
@@ -317,7 +319,7 @@ if __name__ == '__main__':
     )
     parser.add_option('-t', '--tp_filename',
                       dest='tpfilename',
-                      default=None
+                      default='tp_profile.dat'
     )
     options, remainder = parser.parse_args()
     
@@ -328,7 +330,7 @@ if __name__ == '__main__':
     #setup TP profile 
     if options.tp_profile:
         Pnodes = [createob.MAX_P, 1e4, 100.0, createob.MIN_P]
-        Tnodes = [1550,1550, 700,700]
+        Tnodes = [1950,1950, 400, 400]
         createob.generate_tp_profile_1(Tnodes,Pnodes)
 
     #generating spectrum

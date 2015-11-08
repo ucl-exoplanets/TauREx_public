@@ -77,7 +77,7 @@ class data(base):
         if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             # set observed spectrum specific variables (only if spectrum is provided)
             self.obs_wlgrid = self.obs_spectrum[:,0] # wavegrid in micron
-
+            self.obs_wngrid = 10000./self.obs_spectrum[:,0]
             self.obs_nwlgrid = len(self.obs_spectrum[:,0]) # number of datapoints in spectrum
             self.obs_binwidths = self.obs_spectrum[:,3]   if shape(self.obs_spectrum)[1] == 4 else None # bin widths
 
