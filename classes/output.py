@@ -330,17 +330,17 @@ class output(base):
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
             self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
-            model_binned = [model[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid+1)]
+            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
 
             # model spectrum binned to observed spectrum
-            out = np.zeros((len(self.data.spectrum[:,0]), 2))
-            out[:,0] = self.data.spectrum[:,0]
+            out = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
+            out[:,0] = self.data.obs_spectrum[:,0]
             out[:,1] = model_binned
             fitting_out[idx]['spectrum'] = out
 
             # high res spectrum
-            out = np.zeros((len(self.data.specgrid), 2))
-            out[:,0] = self.data.specgrid
+            out = np.zeros((len(self.data.int_wlgrid), 2))
+            out[:,0] = self.data.int_wlgrid
             out[:,1] = model
             fitting_out[idx]['highres_spectrum'] = out
             
@@ -359,12 +359,12 @@ class output(base):
                 
                 self.fitting.update_atmospheric_parameters(fit_params2)
                 model2 = self.fitting.forwardmodel.model()
-                out2 = np.zeros((len(self.data.specgrid), 2))
-                out2[:,0] = self.data.specgrid
+                out2 = np.zeros((len(self.data.int_wlgrid), 2))
+                out2[:,0] = self.data.int_wlgrid
                 out2[:,1] = model2
-                out3 = np.zeros((len(self.data.spectrum[:,0]), 2))
-                out3[:,0] = self.data.spectrum[:,0]
-                out3[:,1] = [model2[self.data.spec_bin_grid_idx == i].mean() for i in xrange(1,self.data.n_spec_bin_grid+1)]
+                out3 = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
+                out3[:,0] = self.data.obs_spectrum[:,0]
+                out3[:,1] = [model2[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
                 
                 fitting_out[idx]['components'][param] ={}
                 fitting_out[idx]['components'][param]['highres_spectrum'] = out2
@@ -474,13 +474,13 @@ class output(base):
         logging.info('Plotting observed spectrum')
 
         fig = py.figure()
-        py.errorbar(self.data.spectrum[:,0],
-                    self.data.spectrum[:,1],
-                    self.data.spectrum[:,2],
+        py.errorbar(self.data.obs_spectrum[:,0],
+                    self.data.obs_spectrum[:,1],
+                    self.data.obs_spectrum[:,2],
                     color=[0.7,0.7,0.7],
                     linewidth=linewidth)
-        py.plot(self.data.spectrum[:,0],
-                self.data.spectrum[:,1],
+        py.plot(self.data.obs_spectrum[:,0],
+                self.data.obs_spectrum[:,1],
                 color=[0.3,0.3,0.3],
                 linewidth=linewidth,
                 label='Data')
@@ -491,7 +491,7 @@ class output(base):
         py.title('Input data')
         py.xlabel('Wavelength ($\mu m$)')
         py.xscale('log')
-        py.xlim((np.min(self.data.spectrum[:,0]), np.max(self.data.spectrum[:,0])))
+        py.xlim((np.min(self.data.obs_spectrum[:,0]), np.max(self.data.obs_spectrum[:,0])))
 
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$')
@@ -528,12 +528,12 @@ class output(base):
                                         fig=fig, linewidth=linewidth)
 
         # plot observed spectrum
-        py.errorbar(self.data.spectrum[:,0],
-                        self.data.spectrum[:,1],
-                        self.data.spectrum[:,2],
+        py.errorbar(self.data.obs_spectrum[:,0],
+                        self.data.obs_spectrum[:,1],
+                        self.data.obs_spectrum[:,2],
                         color=[0.4,0.4,0.4], mec=[0.5,0.5,0.5], fmt='', marker='o', linewidth=2, linestyle='None')
-        # py.plot(self.data.spectrum[:,0], # todo why again? - it looks prettier! Ah ok :)
-        #             self.data.spectrum[:,1],
+        # py.plot(self.data.obs_spectrum[:,0], # todo why again? - it looks prettier! Ah ok :)
+        #             self.data.obs_spectrum[:,1],
         #             color=[0.3,0.3,0.3],
         #             linewidth=0,label='DATA')
 
@@ -604,12 +604,12 @@ class output(base):
 
         if plot_observed:
             # plot observed spectrum
-            py.errorbar(self.data.spectrum[:,0],
-                        self.data.spectrum[:,1],
-                        self.data.spectrum[:,2],
+            py.errorbar(self.data.obs_spectrum[:,0],
+                        self.data.obs_spectrum[:,1],
+                        self.data.obs_spectrum[:,2],
                         color=[0.7,0.7,0.7],linewidth=linewidth,label='DATA')
-#             py.plot(self.data.spectrum[:,0], # todo why again? - it looks prettier!
-#                     self.data.spectrum[:,1],
+#             py.plot(self.data.obs_spectrum[:,0], # todo why again? - it looks prettier!
+#                     self.data.obs_spectrum[:,1],
 #                     color=[0.3,0.3,0.3],
 #                     linewidth=linewidth,label='DATA')
 
@@ -620,7 +620,7 @@ class output(base):
         py.title('Data and Model')
         py.xlabel('Wavelength ($\mu m$)')
         py.xscale('log')
-        py.xlim((np.min(self.data.spectrum[:,0]), np.max(self.data.spectrum[:,0])))
+        py.xlim((np.min(self.data.obs_spectrum[:,0]), np.max(self.data.obs_spectrum[:,0])))
 
         if self.__MODEL_ID__ == 'transmission':
             py.ylabel('$(Rp/Rs)^2$')
@@ -701,7 +701,7 @@ class output(base):
                 np.savetxt(filename2, self.DOWN_out[0]['highres_spectrum'])
 
         filename = os.path.join(self.out_path, 'observed_%s_spectrum.dat' % (self.__MODEL_ID__))
-        np.savetxt(filename, self.data.spectrum)
+        np.savetxt(filename, self.data.obs_spectrum)
 
     def save_spectrum_to_file(self, spectrum, saveas):
         filename = os.path.join(self.out_path, saveas)

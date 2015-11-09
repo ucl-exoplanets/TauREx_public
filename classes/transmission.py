@@ -56,7 +56,7 @@ class transmission(base):
 
         if usedatagrid:
             #use wavelengthgrid of data or internal specgrid defined in data class
-            self.lambdagrid = self.data.obs_wlgrid
+            self.lambdagrid = self.data.obs_wngrid
         else:
             self.lambdagrid = self.data.int_wngrid
         self.nlambda = len(self.lambdagrid)
@@ -119,8 +119,8 @@ class transmission(base):
 
         #calculating could cross sections
         a = (128.0* pi**5 * self.atmosphere.clouds_a**6)
-        b = (3.0 * self.lambdagrid**4)
-        c = ((self.atmosphere.clouds_m**2 -1.0)/(self.atmosphere.clouds_m**2 +2.0))**2
+        b = (3.0 * (10000./self.lambdagrid)**4)
+        c = ((self.atmosphere.clouds_m**2 -1.0)/(self.atmosphere.clouds_m**2 + 2.0))**2
 
         return a / b * c
 
