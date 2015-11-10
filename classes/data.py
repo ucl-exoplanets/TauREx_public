@@ -93,7 +93,7 @@ class data(base):
             # Expand to half a bin up, and half a bin down to properly model edges
             if self.obs_binwidths == None:
                 # if bin widths are *not* provided in the input spectrum
-                bin_up -=  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
+                bin_up =  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
                 bin_low = (self.obs_wlgrid[1]-self.obs_wlgrid[0])/2.
             else:
                 # if bin widths are provided in input spectrum
@@ -107,9 +107,10 @@ class data(base):
         numax = 10000./lambdamin
 
         #approximate numin and numax to closest gridding point
-        # todo NOT WORKING PROPERLY!!!
+        # todo NOT WORKING PROPERLY for in_abs_dnu < 1 !!!
         numin = libgen.round_base(numin, self.params.in_abs_dnu)
         numax = libgen.round_base(numax, self.params.in_abs_dnu)
+
 
 
         # create wavenumber grid of internal model using numin, numax and delta wavenumber provided in param file
