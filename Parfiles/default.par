@@ -49,10 +49,10 @@ use_TP_file = None
 TP_file = None
 
 #Path of ExoMol cross section files folder
-abs_path = Input/crosssections/
+abs_path = Input/crosssections_10wno_log/
 
 # dnu in abs cross sections
-abs_dnu = 0.01
+abs_dnu = 10
 
 use_P_broadening = False
 abs_path_P = Input/crosssections_pressure/

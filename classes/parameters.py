@@ -78,8 +78,7 @@ class parameters(base):
         logging.info('Initialise parameters object')
 
         # list of all molecules for which we have cross sections
-        self.all_absorbing_gases = ['1H2-16O', '1H-12C-14N', '12C-1H4', '12C-16O2', '12C-16O', '14N-1H3',
-                                    '14N-16O', '28Si-16O', '48Ti-16O', '51V-16O'] #, '1H2-32S', 'C2H2']
+        self.all_absorbing_gases = ['H2O', 'HCN', 'CH4', 'CO2', 'CO', 'NH3', 'C2H2']
 
         # list of all inactive gases we take care of
         self.all_inactive_gases = ['He', 'H2', 'N2']

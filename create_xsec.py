@@ -35,9 +35,18 @@ parser.add_option('-b', '--bin',
 )
 parser.add_option('-n', '--name',
                   dest='name',
+                  default='xsec',
+                  )
+parser.add_option('-e', '--extension',
+                  dest='extension',
                   default='sigma',
-)
-# exomol file version. v0: zero pressure, v1: pressure broadened
+                  )
+parser.add_option('-l', '--wnlim',
+                  dest='wnlim',
+                  default=None,
+                  )
+
+# exomol file version. 1: zero pressure, 2: pressure broadened
 parser.add_option('-v', '--version',
                   dest='version',
                   default=1,
@@ -71,13 +80,8 @@ def read_filename(fname, filetype=1):
 
 def get_specbingrid(wavegrid, specgrid):
 
-    bingrid =[]
-    bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
-    for i in range(len(wavegrid)-1):
-        bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
-    bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
+    bingrid = np.asarray([wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0 for i in range(len(wavegrid)-1)])
     bingrid_idx = np.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
-
     return bingrid, bingrid_idx
 
 temperatures = []
@@ -85,7 +89,7 @@ pressures = []
 wngrid = []
 
 # identify all pressures and temperatures and check for wavenumber grid constitency
-for fname in glob.glob(os.path.join(options.source_files, '*.*')):
+for fname in glob.glob(os.path.join(options.source_files, '*.%s' % options.extension)):
 
     temperature, pressure, resolution = read_filename(fname, options.version)
     temperatures.append(temperature)
@@ -97,12 +101,23 @@ for fname in glob.glob(os.path.join(options.source_files, '*.*')):
 
     if len(wngrid) == 0:
         wngrid = sigma[:,0]
+        if options.bin == None:
+            out_wngrid = wngrid
+            if options.wnlim:
+                out_wngrid = out_wngrid[np.logical_and((out_wngrid > options.wnmin[0]), out_wngrid<options.wnmax[0])]
     else:
-
         if len(wngrid) <> len(sigma[:,0]):
             print 'Wavenumber grid is not consistent for file %s. Skpping' % os.path.basename(fname)
             continue
 
+if options.wnlim:
+    wnlim = options.wnlim.split(',')
+    wnmin = float(wnlim[0])
+    wnmax = float(wnlim[1])
+    wngrid = wngrid[np.logical_and(wngrid>wnmin, wngrid<wnmax)]
+else:
+    wnmin = np.min(wngrid)
+    wnmax = np.max(wngrid)
 
 print 'Sorting  pressures and temperatures'
 pressures = np.sort(np.unique(pressures))
@@ -110,39 +125,40 @@ temperatures = np.sort(np.unique(temperatures))
 print 'Pressures are %s' % pressures
 print 'Temperatures are %s' % temperatures
 
-
-if bin:
-    new_wngrid = np.arange(np.min(wngrid), np.max(wngrid), float(options.bin))
+if options.bin:
+    new_wngrid = np.arange(wnmin, wnmax, float(options.bin))
     bin_grid, bin_grid_idx = get_specbingrid(new_wngrid, wngrid)
+    out_wngrid = bin_grid
+    if options.wnlim:
+        out_wngrid = out_wngrid[np.logical_and(out_wngrid>wnmin, out_wngrid<wnmax)]
 
-sigma_array = np.zeros((len(pressures), len(temperatures), len(wngrid)))
+
+sigma_array = np.zeros((len(pressures), len(temperatures), len(bin_grid)))
 
 for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
-        for fname in glob.glob(os.path.join(options.source_files, '*.*')):
-
+        for fname in glob.glob(os.path.join(options.source_files, '*.%s' % options.extension)):
             xsec_t, xsec_p, xsec_r = read_filename(fname, options.version)
             if xsec_t == temperature_val and xsec_p == pressure_val:
-                print fname
+                print 'Binning in log space (geometric average): %s' % fname
                 sigma = np.loadtxt(fname)
-                if bin:
+                if options.bin:
                     logval = np.log(sigma[:,1])
-                    values = np.asarray([np.average(logval[bin_grid_idx == i]) for i in xrange(1,len(bin_grid))])
+                    values = np.asarray([np.average(logval[bin_grid_idx == i]) for i in xrange(0,len(bin_grid))])
                     values[np.isnan(values)] = 0
                     values = np.exp(values)
                 else:
                     values = sigma[:,1]
-
-                sigma_array[pressure_idx, temperature_idx, :] = sigma[:,1]
+                if options.wnlim:
+                    values = values[np.logical_and(bin_grid>wnmin, bin_grid<wnmax)]
+                sigma_array[pressure_idx, temperature_idx, :] = values
 
 sigma_out = {
     'name': options.name,
-    'pres': pressures,
-    'temp': temperatures,
-    'wno': wngrid,
-    'sigma': sigma_array,
+    'p': pressures,
+    't': temperatures,
+    'wno': out_wngrid,
+    'xsecarr': sigma_array,
 }
 
-pickle.dump(open(os.path.join(options.output, 'wb'), '%s.db' % options.name), sigma_out)
-
-
+pickle.dump(sigma_out, open(os.path.join(options.output, '%s.db' % options.name), 'wb'))

@@ -134,9 +134,9 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.lineEdit_CO2.textChanged.connect(self.event_status_changed)
         self.lineEdit_CO.textChanged.connect(self.event_status_changed)
         self.lineEdit_NH3.textChanged.connect(self.event_status_changed)
-        self.lineEdit_SiO.textChanged.connect(self.event_status_changed)
-        self.lineEdit_TiO.textChanged.connect(self.event_status_changed)
-        self.lineEdit_VO.textChanged.connect(self.event_status_changed)
+        self.lineEdit_C2H2.textChanged.connect(self.event_status_changed)
+        # self.lineEdit_SiO.textChanged.connect(self.event_status_changed)
+        # self.lineEdit_TiO.textChanged.connect(self.event_status_changed)
         #self.lineEdit_NO.textChanged.connect(self.event_status_changed)
         #self.lineEdit_H2S.textChanged.connect(self.event_status_changed)
         #self.lineEdit_C2H2.textChanged.connect(self.event_status_changed)
@@ -170,9 +170,9 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.lineEdit_CO2.textChanged.disconnect(self.event_status_changed)
         self.lineEdit_CO.textChanged.disconnect(self.event_status_changed)
         self.lineEdit_NH3.textChanged.disconnect(self.event_status_changed)
-        self.lineEdit_SiO.textChanged.disconnect(self.event_status_changed)
-        self.lineEdit_TiO.textChanged.disconnect(self.event_status_changed)
-        self.lineEdit_VO.textChanged.disconnect(self.event_status_changed)
+        self.lineEdit_C2H2.textChanged.disconnect(self.event_status_changed)
+        # self.lineEdit_TiO.textChanged.disconnect(self.event_status_changed)
+        # self.lineEdit_VO.textChanged.disconnect(self.event_status_changed)
         #self.lineEdit_NO.textChanged.disconnect(self.event_status_changed)
         #self.lineEdit_H2S.textChanged.disconnect(self.event_status_changed)
         #self.lineEdit_C2H2.textChanged.disconnect(self.event_status_changed)
@@ -255,7 +255,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         params.planet_inactive_gases_X = planet_inactive_gases_X_tmp
         params.planet_inactive_gases =  params.all_inactive_gases
 
-        params.gen_spec_res = 1000
+        params.gen_spec_res = 50
         params.gen_wavemin = 0.4
         params.gen_wavemax = 20.0
         params.gen_manual_waverange = True
@@ -270,9 +270,9 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.lineEdit_CO2.setText(str(self.forwardmodel.params.planet_mixing[3]))
         self.lineEdit_CO.setText(str(self.forwardmodel.params.planet_mixing[4]))
         self.lineEdit_NH3.setText(str(self.forwardmodel.params.planet_mixing[5]))
-        self.lineEdit_SiO.setText(str(self.forwardmodel.params.planet_mixing[6]))
-        self.lineEdit_TiO.setText(str(self.forwardmodel.params.planet_mixing[7]))
-        self.lineEdit_VO.setText(str(self.forwardmodel.params.planet_mixing[8]))
+        self.lineEdit_C2H2.setText(str(self.forwardmodel.params.planet_mixing[6]))
+        # self.lineEdit_TiO.setText(str(self.forwardmodel.params.planet_mixing[7]))
+        # self.lineEdit_VO.setText(str(self.forwardmodel.params.planet_mixing[8]))
         #self.lineEdit_NO.setText(str(self.forwardmodel.params.planet_mixing[8]))
 #        self.lineEdit_H2S.setText(str(self.forwardmodel.params.planet_mixing[9]))
 #        self.lineEdit_C2H2.setText(str(self.forwardmodel.params.planet_mixing[10]))
@@ -310,12 +310,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
         self.forwardmodel.atmosphere.absorbing_gases_X[3] = float(self.lineEdit_CO2.text())
         self.forwardmodel.atmosphere.absorbing_gases_X[4] = float(self.lineEdit_CO.text())
         self.forwardmodel.atmosphere.absorbing_gases_X[5] = float(self.lineEdit_NH3.text())
-        self.forwardmodel.atmosphere.absorbing_gases_X[6] = float(self.lineEdit_SiO.text())
-        self.forwardmodel.atmosphere.absorbing_gases_X[7] = float(self.lineEdit_TiO.text())
-        self.forwardmodel.atmosphere.absorbing_gases_X[8] = float(self.lineEdit_VO.text())
-        #self.forwardmodel.atmosphere.absorbing_gases_X[8] = float(self.lineEdit_NO.text())
-        #self.forwardmodel.atmosphere.absorbing_gases_X[9] = float(self.lineEdit_H2S.text())
-        #self.forwardmodel.atmosphere.absorbing_gases_X[10] = float(self.lineEdit_C2H2.text())
+        self.forwardmodel.atmosphere.absorbing_gases_X[6] = float(self.lineEdit_C2H2.text())
         self.forwardmodel.atmosphere.X = self.forwardmodel.atmosphere.set_mixing_ratios()
         self.forwardmodel.atmosphere.inactive_gases_X[0] = self.doubleSpinBox_He.value() / 100.
         self.forwardmodel.atmosphere.inactive_gases_X[1] = self.doubleSpinBox_H2.value() / 100.
@@ -378,7 +373,7 @@ class ApplicationWindow(QtGui.QMainWindow, gui_class):
 
         # bin down internal model to given resolution (default = 1000)
         wavegrid, dlamb_grid = self.dataob.get_specgrid(R=int(R),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-        spec_bin_grid, spec_bin_grid_idx = self.dataob.get_specbingrid(wavegrid, self.dataob.specgrid)
+        spec_bin_grid, spec_bin_grid_idx = self.dataob.get_specbingrid(wavegrid, self.dataob.int_wlgrid)
         model = self.forwardmodel.model()
         model_binned = [model[spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
 
