@@ -10,6 +10,10 @@
 #
 ################################################
 
+'''
+    Deprecated in Taurex v2
+    
+    '''
 
 class base(object):
 

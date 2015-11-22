@@ -6,15 +6,10 @@
 #include <cmath>
 #include <algorithm>
 #include <vector>
-
 #include <stdlib.h>
 #include <iostream>
 #include <string>
 #include <sstream>
-
-
-
-
 
 using namespace std;
 

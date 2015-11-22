@@ -16,37 +16,30 @@
 ################################################
 
 #loading libraries   
-from base import base  
 import numpy
 import copy
-from numpy import *
-from pylab import *
 import itertools
 import time
 import ctypes as C
-import library_general,library_transmission
+import numpy as np
+
+from library_constants import *
 from library_general import *
 from library_transmission import *
 import logging
 
 import matplotlib.pylab as plt
 
-# from mpi4py import MPI
+class transmission():
 
-class transmission(base):
-
-    ##@profile
-    def __init__(self, atmosphere, data=None, params=None, usedatagrid=False):
+    def __init__(self, atmosphere, data=None, params=None):
 
         logging.info('Initialise object transmission')
-
-        self.__ID__ = 'transmission' #internal class identifier
 
         if params:
             self.params = params
         else:
             self.params = atmosphere.params #get params object from atmosphere
-
         if data:
             self.data = data
         else:
@@ -54,61 +47,49 @@ class transmission(base):
 
         self.atmosphere = atmosphere
 
-        if usedatagrid:
-            #use wavelengthgrid of data or internal specgrid defined in data class
-            self.lambdagrid = self.data.obs_wngrid
-        else:
-            self.lambdagrid = self.data.int_wngrid
-        self.nlambda = len(self.lambdagrid)
-
+        # todo IMPROVE RAYLEIGH SCATTERING
         # preload Rayleigh for all gases and the given wavelengths (lambdagrid)
         self.sigma_R_dict = {}
         for gasname in self.params.all_absorbing_gases + self.params.all_inactive_gases:
             if gasname in self.data.sigma_R:
-                self.sigma_R_dict[gasname] =  self.data.sigma_R[gasname](self.lambdagrid)
-
-        #calculating collision induced absorption cross sections
-        if self.params.in_include_cia:
-            self.cia       = self.data.cia
-            self.Csig      = self.get_Csig()
-        else:
-            self.Csig      = zeros((self.nlambda))
-
+                self.sigma_R_dict[gasname] =  self.data.sigma_R[gasname](self.data.int_wngrid)
         if self.params.in_include_Rayleigh:
             self.Rsig = self.get_Rsig()
         else:
-            self.Rsig = zeros((self.nlambda))
+            self.Rsig = zeros((self.data.int_nwngrid))
+
+        #calculating collision induced absorption cross sections
+        if self.params.in_include_cia:
+            self.cia = self.data.cia
+            self.Csig = self.get_Csig()
+        else:
+            self.Csig = zeros((self.data.int_nwngrid))
 
         #calculating cloud cross sections
         if self.params.in_include_cld:
             self.Cld_sig = self.get_cloud_sig()
         else:
-           self.Cld_sig = zeros((self.nlambda)) # unused but needed to cast to cpp code
+           self.Cld_sig = zeros((self.data.int_nwngrid)) # unused but needed to cast to cpp code
 
         #loading c++ pathintegral library for faster computation
         if self.params.trans_cpp:
-            self.cpathlib = C.CDLL('./library/pathintegral.so', mode=C.RTLD_GLOBAL)
-
+            self.cpathlib = C.CDLL('./library/cpath_pathintegral.so', mode=C.RTLD_GLOBAL)
 
         # set forward model function
-        self.model = self.cpath_integral
-        #self.model = self._path_integral
-
+        self.cpath_load_vars() # preload variables in memory for cpath
+        self.model = self.cpath_pathintegral
 
     #class methods
 
     def get_dz(self):
-
         # calculate area of circles of atmosphere
         dz = np.diff(self.atmosphere.z)
         return np.append(dz, dz[-1])
 
-    ##@profile
     def get_Rsig(self):
 
         # calculating rayleigh scattering cross-sections
-        Rsig = zeros((self.nlambda))
-
+        Rsig = zeros((self.data.int_nwngrid))
         # loop through all gases (absorbing + inactive)
         for gasname in self.params.all_absorbing_gases + self.params.all_inactive_gases:
             if gasname in self.data.sigma_R:
@@ -116,51 +97,11 @@ class transmission(base):
         return Rsig
 
     def get_cloud_sig(self):
-
         #calculating could cross sections
         a = (128.0* pi**5 * self.atmosphere.clouds_a**6)
-        b = (3.0 * (10000./self.lambdagrid)**4)
+        b = (3.0 * (10000./self.data.obs_wngrid)**4)
         c = ((self.atmosphere.clouds_m**2 -1.0)/(self.atmosphere.clouds_m**2 + 2.0))**2
-
         return a / b * c
-
-    def get_sigma_array(self, temperature):
-        # getting sigma array from sigma_dic for given temperatur
-
-
-
-
-        return self.data.sigma_dict[find_nearest(self.data.sigma_dict['tempgrid'], temperature)[0]]
-
-    def get_sigma_array_pressure(self):
-
-        # returns  sigma array from sigma_dict for all temperatures, pressures, molecules.
-
-        sigma_dict_arr = np.zeros((len(self.data.sigma_templist),
-                                   len(self.data.sigma_preslist),
-                                   len(self.params.planet_molec),
-                                   self.nlambda-2))
-
-        for idxtemp, valtemp in enumerate(self.data.sigma_templist):
-            for idxpres, valpres in enumerate(self.data.sigma_preslist):
-                for idxmol, valmol in enumerate(self.params.planet_molec):
-                    sigma_dict_arr[idxtemp, idxpres, idxmol, :] = \
-                        self.data.sigma_dict_pres[valtemp][valpres][idxmol]
-        return sigma_dict_arr
-
-    def get_sigma_array_c(self):
-
-        #generating 3D sigma_array from sigma_dict for c++ path integral
-        tempgrid = self.data.sigma_dict['tempgrid']
-        OUT = np.zeros((len(tempgrid), len(self.atmosphere.absorbing_gases), self.data.int_nwngrid), dtype=np.float64)
-
-        c=0
-        for t in tempgrid:
-            OUT[c,:,:] = self.data.sigma_dict[t]
-            c += 1
-
-        return OUT, np.asarray(tempgrid,dtype=np.float64)
-
 
     def get_Csig(self):
         '''
@@ -179,26 +120,76 @@ class transmission(base):
         sigma = self.cia[:,1] * (self.atmosphere.get_gas_fraction('H2')**2) * 1.385294e-49
         return sigma
 
-    # def cget_path_length(self):
-    #
-    #     nlayers = self.atmosphere.nlayers
-    #     czRp = cast2cpp(self.atmosphere.z + self.atmosphere.planet_radius)
-    #     dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
-    #     cpath_length = self.cpathlib.cpath_length
-    #     cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
-    #     return dlarray.reshape(nlayers, nlayers)
-    def cget_path_length(self):
 
-        nlayers = self.atmosphere.nlayers
+    def cpath_path_length(self):
 
         zRp = self.atmosphere.z + self.atmosphere.planet_radius
         czRp = cast2cpp(zRp)
-
         dlarray = np.zeros((self.atmosphere.nlayers*self.atmosphere.nlayers), dtype=np.double)
-        cpath_length = self.cpathlib.cpath_length
-        cpath_length(C.c_int(nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
+        cpath_length = self.cpathlib.path_length
+        cpath_length(C.c_int(self.atmosphere.nlayers), czRp, C.c_void_p(dlarray.ctypes.data))
 
         return dlarray
+
+    def cpath_load_vars(self):
+        
+        self.cpath_nwngrid = C.c_int(self.data.int_nwngrid)
+        self.cpath_nlayers = C.c_int(self.atmosphere.nlayers)
+        self.cpath_nmol = C.c_int(self.data.sigma_nmol)
+        self.cpath_sigma_array = cast2cpp(self.data.sigma_array)
+        self.cpath_sigma_np = cast2cpp(self.data.sigma_np.flatten())
+        self.cpath_sigma_nt = cast2cpp(self.data.sigma_nt.flatten())
+        self.cpath_sigma_p = cast2cpp(self.data.sigma_p.flatten())
+        self.cpath_sigma_t = cast2cpp(self.data.sigma_t.flatten())
+        self.cpath_dlarray = cast2cpp(self.cpath_path_length())
+        self.cpath_z = cast2cpp(self.get_dz())
+        self.cpath_dz = cast2cpp(self.atmosphere.z)
+        #self.cpath_rho = cast2cpp(self.atmosphere.rho)
+        #self.cpath_X = cast2cpp(self.atmosphere.X)
+        #self.cpath_T = cast2cpp(self.atmosphere.T)
+        #self.cpath_P = cast2cpp(self.atmosphere.P)
+        #self.cpath_Rp = cast2cpp(self.atmosphere.planet_radius)
+        self.cpath_Rs = cast2cpp(self.params.star_radius)
+    
+    def cpath_update_vars(self):
+        # todo should update depending on fitted params
+        self.cpath_X = cast2cpp(self.atmosphere.X)
+        self.cpath_T = cast2cpp(self.atmosphere.T)
+        self.cpath_P = cast2cpp(self.atmosphere.P)
+        self.cpath_Rp = cast2cpp(self.atmosphere.planet_radius)
+        self.cpath_rho = cast2cpp(self.atmosphere.rho)
+    
+    def cpath_pathintegral(self):
+        
+        self.cpath_update_vars()
+    
+        #setting up output array
+        absorption = zeros((self.data.int_nwngrid),dtype=float64)
+        
+        #retrieving function from cpp library
+        cpath_integral = self.cpathlib.path_integral
+        
+        #running c++ path integral
+        cpath_integral(self.cpath_nwngrid,
+                       self.cpath_nlayers,
+                       self.cpath_nmol,
+                       self.cpath_sigma_array,
+                       self.cpath_sigma_np,
+                       self.cpath_sigma_nt,
+                       self.cpath_sigma_p,
+                       self.cpath_sigma_t,
+                       self.cpath_dlarray,
+                       self.cpath_z,
+                       self.cpath_dz,
+                       self.cpath_rho,
+                       self.cpath_X,
+                       self.cpath_T,
+                       self.cpath_P,
+                       self.cpath_Rp,
+                       self.cpath_Rs,
+                       C.c_void_p(absorption.ctypes.data))
+        print 'end'
+        exit()
 
     #@profile
     def cpath_integral(self, X=None, rho=None, temperature=None):
@@ -296,7 +287,7 @@ class transmission(base):
 
         cRp = C.c_double(self.atmosphere.planet_radius)
         cRs = C.c_double(self.params.star_radius)
-        clinecount = C.c_int(self.nlambda)
+        clinecount = C.c_int(self.data.int_nwngrid)
         cnlayers = C.c_int(self.atmosphere.nlayers)
 
         cn_gas = C.c_int(len(X[:,0]))
@@ -315,7 +306,7 @@ class transmission(base):
             cCld_upbound = C.c_double(0)
 
         #setting up output array
-        absorption = zeros((self.nlambda),dtype=float64)
+        absorption = zeros((self.data.int_nwngrid),dtype=float64)
 
         #retrieving function from cpp library
         cpath_int = self.cpathlib.cpath_int
@@ -328,7 +319,7 @@ class transmission(base):
                   cnsigma_templist, cnsigma_preslist, cpressure_array, ctemperature_array, ctemperature,  \
                   C.c_void_p(absorption.ctypes.data))
 
-        out = zeros((self.nlambda))
+        out = zeros((self.data.int_nwngrid))
         out[:] = absorption
 
         del(dlarray)
@@ -364,75 +355,4 @@ class transmission(base):
         dlarray = asarray(dlarray, dtype=np.float)
         return dlarray, iteridx
 
-    def _path_integral(self, X=None, rho=None, temperature=None, rayleigh=True, absorption=True, clouds=True):
-
-        if X is None:
-            X = self.atmosphere.X
-        if rho is None:
-            rho = self.atmosphere.rho
-        if temperature is None:
-            temperature = self.params.planet_temp
-
-        nlayers = self.atmosphere.nlayers
-        P_bar = self.atmosphere.P_bar
-        dlarray, iteridx = self._get_path_length()
-        dz = self.get_dz()
-
-        # calculating rayleigh scattering cross sections
-        if self.params.in_include_Rayleigh:
-            self.Rsig = self.get_Rsig()
-        else:
-            self.Rsig = zeros((self.nlambda))
-
-        #selecting correct sigma_array for temperature
-        sigma_array = self.get_sigma_array(temperature)
-
-        #setting up arrays
-        absorption = zeros((self.nlambda))
-        tau = zeros((nlayers))
-        Rtau = zeros((nlayers))
-        Ctau = zeros((nlayers))
-        cld_tau = zeros((nlayers))
-        exptau = zeros((nlayers))
-
-        molnum = len(X[:,0])
-
-        for wl in range(self.nlambda): # loop through wavelenghts
-
-            tau[:] = 0.0
-            exptau[:] = 0.0
-            Rtau[:] = 0.0
-            cld_tau[:] = 0.0
-
-            for c, j, k in iteridx:
-
-                # optical depth due to gasses
-                for i in range(molnum):
-                    tau[j] += (sigma_array[i,wl] * X[i,j+k] * rho[j+k] * dlarray[c])
-
-                #optical depth due to Rayleigh scattering
-                Rtau[j] = self.Rsig[wl] * rho[j+k] * dlarray[c]
-
-                # calculating CIA optical depth
-                Ctau[j] = self.Csig[wl] * (rho[j+k] **2) * dlarray[c]
-
-                #Calculating cloud opacities, single cloud layer implementation only. can be upgraded or ... not
-                if self.params.in_include_cld:
-                    if P_bar[k+j] < self.atmosphere.clouds_upper_P and P_bar[k+j] > self.atmosphere.clouds_lower_P:
-                        # = log(cloud density), assuming linear decrease with decreasing log pressure
-                        # following Ackerman & Marley (2001), Fig. 6
-                        cld_log_rho = interp_value(np.log(P_bar[k+j]),np.log(self.atmosphere.clouds_lower_P),np.log(self.atmosphere.clouds_upper_P),-6.0,-1.0)
-                        cld_tau[j] += ( self.Cld_sig[wl] * (dlarray[c]*1.0e2) * (exp(cld_log_rho)*1.0e-6) )    # convert path lenth from m to cm, and density from g m^-3 to g cm^-3
-
-                #adding all taus together
-                tau[j] += Rtau[j]
-                tau[j] += Ctau[j]
-                tau[j] += cld_tau[j]
-
-                exptau[j]= exp(-tau[j])
-
-            integral = 2.0* sum(((self.atmosphere.planet_radius+self.atmosphere.z)*(1.0-exptau)*dz))
-            absorption[wl] = (self.atmosphere.planet_radius**2 + integral) / (self.params.star_radius**2)
-
-        return absorption
 
