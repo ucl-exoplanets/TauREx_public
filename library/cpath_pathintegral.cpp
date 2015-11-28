@@ -21,6 +21,7 @@
 using namespace std;
 
 
+
 extern "C" {
     
     void path_length(int nlayers, const double * zRp, void * dlarrayv) {
@@ -61,8 +62,49 @@ extern "C" {
                        void * absorptionv) {
             
         double * absorption = (double *) absorptionv;
+        int count;
+        cout << "start" << endl;
+        double ****sigma = new double***[nmol];
+    	for(int l=0;l<nmol;l++) {
+            cout << "mol " << l <<  endl;
+    	    sigma[l] = new double**[sigma_np[l]];
+            for(int k=0;k<sigma_np[l];k++) {
+                sigma[l][k] = new double*[sigma_nt[l]];
+                cout << "pres " << k << " nt for this mol is " << sigma_nt[l] << endl;
+                for(int j=0;j<sigma_nt[l];j++) {
+//                    cout << "temp " << j <<  endl;
+                    sigma[l][k][j] = new double[nwngrid];
+                    for(int z=0;z<nwngrid;z++) {
+//                        count = 0;
+//                        for (int p=0;p<l;p++) {
+//                            count += p*sigma_np[p]*sigma_nt[p]*nwngrid;
+//                        }
+//                        count += k * sigma_np[l] * sigma_np[l];
+//                        count += j * sigma_nt[l];
+                        sigma[l][k][j][z] = 3;
+                    }
+                }
+            }
+        }
+        cout << "finish" << endl;
 
+        cout << sigma[1][3][2][100] << endl;
+
+
+        for (int wn=0; wn < nwngrid; wn++) {
+            count = 0;
+    		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
+    			for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+    				for(int l=0;l<nmol;l++) {
+
+
+
+                    }
+                }
+            }
+        }
+
+        cout << sigma_array[10] << endl;
         cout << "ciao" << endl;
-        
     }
 }

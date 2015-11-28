@@ -132,7 +132,9 @@ class transmission():
         return dlarray
 
     def cpath_load_vars(self):
-        
+
+
+
         self.cpath_nwngrid = C.c_int(self.data.int_nwngrid)
         self.cpath_nlayers = C.c_int(self.atmosphere.nlayers)
         self.cpath_nmol = C.c_int(self.data.sigma_nmol)
@@ -188,6 +190,11 @@ class transmission():
                        self.cpath_Rp,
                        self.cpath_Rs,
                        C.c_void_p(absorption.ctypes.data))
+
+        print " there are ", self.atmosphere.nlayers
+
+        print self.atmosphere.T
+
         print 'end'
         exit()
 

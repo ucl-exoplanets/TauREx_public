@@ -131,8 +131,9 @@ class data(object):
         if self.params.gen_type == 'emission' or self.params.fit_emission:
             self.F_star = self.get_star_SED() #@todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment
 
-        logging.info('Loading cross sections into arrays')
+        # load cross section array
 
+        logging.info('Loading cross sections into arrays')
         molecules = self.params.planet_molec
         sigmadb_all = [pickle.load(open(os.path.join(self.params.in_xsec_path, '%s.db' % molecule))) for molecule in molecules]
         self.sigma_nmol = len(molecules)
@@ -145,12 +146,14 @@ class data(object):
         int_xsec_sigma = np.zeros(self.int_nwngrid) # assume sigma = 0 for regions of the internal wn grid not covered by the xsec
         for idx_m, val_molecule in enumerate(molecules):
             logging.info('Reading %s: %i pressures, %i temperatures between %.2f and %.2f cm-1' % (val_molecule, self.sigma_np[idx_m], self.sigma_nt[idx_m],
-                                                                                               np.min(self.sigma_wno[idx_m]), np.max(self.sigma_wno[idx_m])))
+                                                                                                  np.min(self.sigma_wno[idx_m]), np.max(self.sigma_wno[idx_m])))
             ext_xsec_wno = self.sigma_wno[idx_m]
             for idx_p in xrange(self.sigma_np[idx_m]):
                 for idx_t in xrange(self.sigma_nt[idx_m]):
                     # adapt input cross section wavenumber grid to internal grid
                     ext_xsec_sigma = np.asarray(sigmadb_all[idx_m]['xsecarr'][idx_p, idx_t, :])
+
+
                     idmin_xsec = 0
                     idmin_sigdic = 0
                     if np.min(ext_xsec_wno) < np.min(self.int_wngrid):

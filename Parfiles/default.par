@@ -48,6 +48,10 @@ atm_file = Input/profile.atm
 use_TP_file = None
 TP_file = None
 
+# path to pickled cross sections and dnu
+xsec_path = Input/xsec_10wno/
+xsec_dnu  = 10
+
 #Path of ExoMol cross section files folder
 abs_path = Input/crosssections_10wno_log/
 
