@@ -3,7 +3,6 @@
 verbose = True
 verbose_all_threads = False
 
-
 #use c++ path_integral version for transmission
 #True: c++ version, False: python version
 trans_cpp = True
@@ -11,18 +10,11 @@ trans_cpp = True
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
 
-
 #short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.4
 
 #long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 20.0
-
-#resolution of internal model runs (R)
-spec_res = 1000
-
-# use wavelength grid of cross sections for internal model (override spec_res)
-abs_wavegrid = False
 
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
@@ -34,60 +26,23 @@ compile_cpp = False
 #Observed spectrum to be fitted (three columns: wavelength (micron), (Rp/R*)^2, error
 spectrum_file = False
 
-# use bin widths from observed spectrum (bin width provided as a fourth column in spectrum_file)
-use_spectrum_bins = False
-
-
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
-
-#file containing pre-determined T-P profile and mixing ratios
 atm_file = Input/profile.atm
-
-# T profile file todo temporary param
-use_TP_file = None
-TP_file = None
 
 # path to pickled cross sections and dnu
 xsec_path = Input/xsec_10wno/
 xsec_dnu  = 10
 
-#Path of ExoMol cross section files folder
-abs_path = Input/crosssections_10wno_log/
-
-# dnu in abs cross sections
-abs_dnu = 10
-
-use_P_broadening = False
-abs_path_P = Input/crosssections_pressure/
-
-#run ExoMol cross section conversion from wavenumbers to microns
-convert2microns = True
-
-#files containing absorption cores-sections
-#you can specify several file names separated by commas
-#WARNING: parameter is legacy input. Not used by code, define abs_path and planet_molec parameters instead.
-__legacy__abs_files = h2o_1500K.abs
-
-#temperature grid resolution (K)
-tempres = 100
-
-#pressure grid resolution (bar)
-presres = 0.1
+# path to pickled CIA cross sections (h2h2.db, h2he.cia)
+cia_path = Input/cia/
+cia_pairs = h2h2
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
 star_path = Input/star_spectra
 
-#include varying stellar radii file. True/False
-include_rad = False
-
-#file from which to read stellar radius R*(lambda)
-rad_file = Input/rad_star.rad
-
 #include H2-H2 collision induced absorption. True/False
 include_cia = False
-
-#file from which to read CIA coefficients
 cia_file = Input/h2_h2_1000K.cia
 
 # rebuild Rayleigh scattering cross sections
@@ -96,9 +51,6 @@ create_sigma_rayleigh = False
 [Output]
 #path for output files
 path = Output/
-
-#output file prefix
-file_prefix =
 
 #save internal model to file. Useful for when only creating transmission/emisison model
 dump_internal = False
@@ -173,84 +125,61 @@ temp   = 4900
 
 
 [Planet]
-#defines planetary specific (fixed or starting) parameters:
 
-#Planetary radius (R_jupiter)
+# Planet calss. Available are: hotjupiter, superearth
+class = hotjupiter
+
+# Planetary radius (R_jupiter)
 radius = 1.138
 
-#Planetary mass (M_jupiter)
+# Planetary mass (M_jupiter)
 mass = 1.138
 
-#Orbital semi-major axis (AU)
-sma = 0.03099
-
-#Planetary bond albedo (0-1)
-albedo = 0.2
-
-#Planetary temperature (K)
+# Planetary temperature (K)
 temp = 1400
 
-#molecular weight of atmosphere
+# molecular weight of atmosphere
 mu = 2.3
 
-#molecules considered
-molecules = 1H2-16O, 12C-1H4, 12C-16O, 12C-16O2, 14N-1H3
 
-#initial mixing ratios (starting point for minimisation)
-#and used for model only mode (create_spectrum.py). Must have as
-#many mixing ratios as molecules above. Comma separated list.
-mixing_ratios = 2.0e-3, 2.0e-8, 2.0e-3, 2.0e-5, 2.0e-7
+[Atmosphere]
 
-# spectrally-inactive gases
-inactive_gases = He, H2
-
-# mixing ratios of spectrally inactive gases
-inactive_gases_X = 0.15, 0.85
-
-#include cloud opacities. True/False
-include_cld = False
-
-#cloud refractive index (m) and particle size (a) in microns. Comma separated
-cld_params = 1.5, 1.0
-
-#cloud pressure in bar, lower and upper bounds. Comma separated
-cld_pressure = 1.0e-3, 0.1
-
-#file from which to read optical depths for extra opacities (e.g. clouds)
-#parameter not in use but placeholder for implementation if needed
-cld_file = Input/cloud1.cld
-
-# include Ryleigh scattering opacities
-include_Rayleigh = True
-
-[T-P profile]
-#let mixing ratios and T-P profile vary
-#True: free parameters allowed and lower/upper limits taken from .atm,
-#False: all fixed to input .atm file
-var_atm = True
-
-#thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
+# thickness of atmosphere in number of atmospheric scale heights (if var_atm = True)
 num_scaleheights = 20
 
-#DEPRECATED, see atm_step_size
-#number of atmospheric levels
-atm_levels = 80
+# number of atmospheric levels
+nlayers = 80
 
-# altitude grid step size in km
-atm_step_size = 50
+# set maximum pressure level in bar
+max_pressure = 10
 
-#set maximum pressure level (if set variable) (Pa)
-atm_max_pressure = 1e6
-
-#set mixing ratios as variables
-var_mix = True
-
-#TP profile type to be selected (only sets for emission, tranmission = isothermal)
-#available profiles are: isothermal, guillot, hybrid, 2point, 3point
+# TP profile type to be selected (only sets for emission, tranmission = isothermal)
+# available profiles are: isothermal, guillot, hybrid, 2point, 3point
 profile_type = isothermal
 
-#Correlation length of TP profile for Rodgers2000 and Hybrid 
+# correlation length of TP profile for Rodgers2000 and Hybrid
 corr_length = 5.0
+
+# active absorbers
+active_gases = H2O
+active_gases_mixratios = 1e-5
+
+# spectrally-inactive gases
+inactive_gases = H2, He
+inactive_gases_mixratios = 0.85, 15
+
+# include Ryleigh scattering opacities
+rayleigh = True
+
+# include cloud opacities. True/False
+clouds = False
+
+# cloud refractive index (m) and particle size (a) in microns. Comma separated
+cld_params = 1.5, 1.0
+
+# cloud pressure in bar, lower and upper bounds. Comma separated
+cld_pressure = 1.0e-3, 0.1
+
 
 [Fitting]
 #defines general fittings parameters, independent of method

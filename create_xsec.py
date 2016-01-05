@@ -23,9 +23,9 @@ NB:
 Usage:
 
 python create_xsec.py -s 'source_directory'
-                      -o 'output_directory'
+                      -o 'output_filename'
                       -n 'molecule_name'
-                      -v 'exomol_file_version'
+                      -v 'exomol_file_version' (1: zero pressure, 2: pressure broadened)
                       -e 'file_extension'
 '''
 
@@ -77,14 +77,14 @@ def read_filename(fname, filetype=1):
         s = string.split(fname,'_',5)
         temperature = float(s[2][:-1])
         pressure = 0.
-        resolution = s[3]
+        resolution = float(s[3])
 
     elif int(filetype) == 2:
         # exomol file format v2 (pressure broadened), e.g. 12C-16O__0-8500_300_0.1_0.01.sig
         s = string.split(fname,'_',5)
         temperature = float(s[3])
         pressure = float(s[4])
-        resolution = s[5]
+        resolution = float(s[5])
 
     return temperature, pressure, resolution
 
@@ -121,6 +121,7 @@ pressures = np.sort(np.unique(pressures))
 temperatures = np.sort(np.unique(temperatures))
 print 'Pressures are %s' % pressures
 print 'Temperatures are %s' % temperatures
+print 'Wavenumber range is %f - %f' % (np.min(wngrid), np.max(wngrid))
 
 sigma_array = np.zeros((len(pressures), len(temperatures), len(wngrid)))
 
@@ -133,18 +134,17 @@ for pressure_idx, pressure_val in enumerate(pressures):
                 values = np.loadtxt(fname)[:,1]
                 sigma_array[pressure_idx, temperature_idx, :] = values
 
-time = str(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-comments.append('Cross section array created from Exomol cross sections v%i, using create_xsec.py, on GMT %s' %
-                (options.version, time))
+comments.append('Cross section array created from Exomol cross sections v%s, using create_xsec.py, on GMT %s' %
+                (options.version, strftime("%Y-%m-%d %H:%M:%S", gmtime())))
 comments.append('The resolution of the Exomol cross sections is %f' % resolution)
 
 sigma_out = {
-    'name': options.name,
+    'name': options.molecule_name,
     'p': pressures,
     't': temperatures,
-    'wno': out_wngrid,
+    'wno': wngrid,
     'xsecarr': sigma_array,
     'comments': comments
 }
 
-pickle.dump(sigma_out, open(options.output_filename), 'wb')
+pickle.dump(sigma_out, open(options.output_filename, 'wb'))

@@ -37,10 +37,10 @@ python convert_xsec.py -s 'sourcce_sigma'
 
 import sys, os, optparse, string, pickle, glob
 import numpy as np
-from scipy.inteprolate import interp2d
+#from scipy.inteprolate import interp2d
 from time import gmtime, strftime
 
-
+import matplotlib.pylab as plt
 
 
 parser = optparse.OptionParser()
@@ -76,17 +76,35 @@ parser.add_option('-r', '--input_resolution',
                   dest='input_resolution',
                   default=None,
 )
+parser.add_option('-n', '--molecule_name',
+                  dest='molecule_name',
+                  default=None,
+)
 
 options, remainder = parser.parse_args()
 
 if not options.source_sigma or \
-   not options.output_filename or \
-   not options.pressure_list or \
-   not options.temperature_list:
-   print 'Wrong input. Retry...'
-   exit()
+   not options.output_filename:
+       print 'Wrong input. Retry...'
+       exit()
+
 
 sigma_in = pickle.load(open(options.source_sigma))
+
+if not options.pressure_list:
+   pressures = sigma_in['p']
+else:
+   l = options.pressure_list.split(',')
+   pressures = np.asarray([float(m) for m in l])
+
+if not options.temperature_list:
+   temperatures = sigma_in['t']
+else:
+    l = options.temperature_list.split(',')
+    temperatures = np.asarray([float(m) for m in l])
+
+pressures = np.sort(pressures)
+temperatures = np.sort(temperatures)
 
 # define the wavenumber range of the output cross sections
 # if these limits extend above/below the input xsec, set to 0
@@ -94,7 +112,9 @@ if not options.wavenumber_range:
     wmin = np.min(sigma_in['wno'])
     wmax = np.max(sigma_in['wno'])
 else:
-    wnmin, wnmax = float(options.wavenumber_range.split(','))
+    wnmin, wnmax = options.wavenumber_range.split(',')
+    wnmin = float(wnmin)
+    wnmax = float(wnmax)
 
 if not options.input_resolution:
     print 'You must specify the resolution in wavenumber of the input sigma array'
@@ -106,40 +126,59 @@ if 'comments' in sigma_in:
 else:
     comments = []
 
+
+
 comments.append('Cross section array created using convert_xsec.py on GMT %s' % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 comments.append('Original wavenumber grid limits were: %f - %f' % (np.min(sigma_in['wno']), np.max(sigma_in['wno'])))
 comments.append('Original pressures were: %s' % sigma_in['p'])
 comments.append('Original temperatures were: %s' % sigma_in['t'])
 
-# firstly reinterpolate the highres cross section to the requested pressure/temperature grid
-# note that the wavenumber grid is arbitrary...
-pressures = np.asarray(float(options.pressure_list.split(',')))
-temperatures = np.asarray(float(options.temperature_list.split(',')))
-xsecarr = sigma_in['xsecarr']
-sigma_array = np.zeros((len(pressures), len(temperatures), len(sigma_in['wno'])))
-for pressure_idx, pressure_val in enumerate(pressures):
-    for temperature_idx, temperature_val in enumerate(temperatures):
-        for wno_idx, wno_val in enumerate(temperatures):
-            # to be changed with the wired inteprolation of Hill et al. 2012
-            comments.append('Linear interpolation used to create the new pressure and temperature grids')
-            siginterp = interp2d(sigma_in['p'], sigma_in['t'], sigma_in['xsecarr'][:,:,wno_idx])
-            sigma_array[pressure_idx, temperature_idx, wno_idx] = siginterp(pressure_val, temperature_val)
-
-# then reinterpolate to the requested wavenumber grid from wnmin to wnamx at the input resolution
+# reinterpolate to the requested wavenumber grid from wnmin to wnamx at the input resolution.
+# this is done to expand, or restrict, the wavenumber range. Zeros are assumed if we extend the wavenumber range.
 full_wngrid = np.arange(wnmin, wnmax, resolution)
-sigma_array_interp = np.zeros((len(pressures), len(temperatures), len(full_wngrid)))
+sigma_array = np.zeros((len(sigma_in['p']), len(sigma_in['t']), len(full_wngrid)))
+for pressure_idx, pressure_val in enumerate(sigma_in['p']):
+    for temperature_idx, temperature_val in enumerate(sigma_in['t']):
+        sigma_array[pressure_idx, temperature_idx] =  np.interp(full_wngrid, sigma_in['wno'], sigma_in['xsecarr'][pressure_idx, temperature_idx])
+
+
+# interpolate to new temperature and pressure grids. Note that it is better to interpolate to the temperature
+# grid in log space, and to the new pressure grid in linear space... so split interpolation in two steps
+# note that the interpolation of pressures is not great, so it is better to keep a fine grid.
+
+# interpolation of temperatures in log space
+sigma_array_tmp = np.zeros((len(sigma_in['p']), len(temperatures), len(full_wngrid)))
+comments.append('Interpolation to new temperature grid in log space')
+
+for pressure_idx, pressure_val in enumerate(sigma_in['p']):
+    for temperature_idx, temperature_val in enumerate(temperatures):
+        for wno_idx, wno_val in enumerate(full_wngrid):
+            sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx])))
+            if np.isnan(sigma_array_tmp[pressure_idx, temperature_idx, wno_idx]):
+                sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = 0
+
+# interpolation of pressures in linear space
+comments.append('Interpolation to new pressure grid in linear space')
+sigma_array = np.zeros((len(pressures), len(temperatures), len(full_wngrid)))
 for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
-        sigma_array_interp[pressure_idx, temperature_idx] =  np.interp(full_wngrid, sigma_in['wno'], sigma_array[pressure_idx, temperature_idx])
+        for wno_idx, wno_val in enumerate(full_wngrid):
+            sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
 
-# lastly, bin if needed
+# lastly, bin if needed.
+# For now, only linear binning available. Ideally implement optimal binning for input resolution.
 if options.linear_binning:
 
     # create the output wavenumber grid
     bin_wngrid = np.arange(wnmin, wnmax, float(options.linear_binning))
-    bingrid_idx = np.digitize(sigma_in['wno'], bin_wngrid) #getting the specgrid indexes for bins
+    bingrid_idx = np.digitize(full_wngrid, bin_wngrid) #getting the specgrid indexes for bins
 
-    comments.append('Linear binning, at %f wavenumber.' % float(options.linear_binning))
+    comments.append('Linear binning, at %f wavenumber resolution.' % float(options.linear_binning))
+
+    if options.binning_method == 'geometric_average':
+        comments.append('Linear binning: use geometric average.' )
+    elif options.binning_method == 'algebraic_average':
+        comments.append('Linear binning: use algebraic average.' )
 
     sigma_array_bin = np.zeros((len(pressures), len(temperatures), len(bin_wngrid)))
     for pressure_idx, pressure_val in enumerate(pressures):
@@ -149,29 +188,32 @@ if options.linear_binning:
             if options.binning_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 logval = np.log(sigma)
+                print logval[0], logval[1], logval[2]
                 values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
-                values[np.isnan(values)] = 0
                 values = np.exp(values)
-            elif options.binning_method == 'algebric_average':
-                # linear average
+                values[np.isnan(values)] = 0
+            elif options.binning_method == 'algebraic_average':
+                # algebraic average
                 values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
                 values[np.isnan(values)] = 0
+            # here you can try other methods, such as random sampling
 
-            sigma_array[pressure_idx, temperature_idx, :] = values
+
+            sigma_array_bin[pressure_idx, temperature_idx, :] = values
     sigma_array_out = sigma_array_bin
     wno_out = bin_wngrid
 else:
     comments.append('No binning of the cross section was performed.')
-    sigma_array_out =  sigma_array_interp
+    sigma_array_out =  sigma_array
     wno_out = full_wngrid
 
 sigma_out = {
     'name': options.molecule_name,
     'p': pressures,
     't': temperatures,
-    'wno': out_wngrid,
+    'wno': wno_out,
     'xsecarr': sigma_array_out,
     'comments': comments
 }
 
-pickle.dump(sigma_out, open(options.output_filename), 'wb')
+pickle.dump(sigma_out, open(options.output_filename, 'wb'))

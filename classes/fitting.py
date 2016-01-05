@@ -437,9 +437,7 @@ class fitting(base):
         # Pressure profile
         # get TP profile fitted parameters. Number of parameter is profile dependent, and defined by self.fit_TP_nparams
         if self.fit_TP_nparams > 0:
-
             TP_params = fit_params[count:count+self.fit_TP_nparams]
-            #@todo same as above, may be implicit not explicit in future (???)
             self.forwardmodel.atmosphere.T = self.forwardmodel.atmosphere.TP_profile(fit_params=TP_params)
             count += self.fit_TP_nparams
 
@@ -449,8 +447,6 @@ class fitting(base):
         #    If coupling, then we just derive mu from the mixing ratios.
         #    If we're fitting, get it from fit_params
 
-        #@todo same as above, may be implicit not explicit in future
-        #@todo what?? I wrote it, but I don't get it...?????
         if self.params.tp_couple_mu:
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
         else:
@@ -501,15 +497,10 @@ class fitting(base):
     def chisq_trans(self, fit_params, data, datastd):
 
         # update atmospheric parameters with fit_params values
-        
-        
         self.update_atmospheric_parameters(fit_params)
         
         # get forward model and bin
         model = self.forwardmodel.model()
-
-#         print len(model), len(self.data.spec_bin_grid_idx),self.data.n_spec_bin_grid,self.data.nwave
-#         exit()
 
         #runnning fast cythonised function or slower python depending on import
         if cythonised:

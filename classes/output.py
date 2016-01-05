@@ -324,7 +324,7 @@ class output(base):
 
     def add_spectra_from_solutions(self, fitting_out):
 
-        # loop through solutions
+        # loop through solutions and calculate spectra
         for idx, solution in enumerate(fitting_out):
 
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
@@ -344,7 +344,7 @@ class output(base):
             out[:,1] = model
             fitting_out[idx]['highres_spectrum'] = out
             
-            #individual molecules plotted @todo may need some cleaning 
+            #individual molecules plotted todo may need some cleaning
             fit_params2 = fit_params           
             fitting_out[idx]['components'] ={}
             for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
@@ -420,6 +420,8 @@ class output(base):
     def save_fit_out_to_file(self, fit_out, type=''):
 
         ''' Save value and standard deviation of each parameter for each solution to txt file '''
+
+        # todo it'd be nice to print a pdf latex table... :)
 
         f = open(os.path.join(self.out_path, '%s_out.txt' % type),'w')
         f.write('Note: mixing ratios are expressed as fractions in linear space, mean molecular weight '

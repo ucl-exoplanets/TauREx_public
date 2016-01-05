@@ -6,14 +6,12 @@ import ctypes as C
 import numpy as np
 import math
 
-
 def house_keeping(params,options):
     #does some housekeeping for the final fitting results
     #copies used parameter file to ./Output
     if params.clean_save_used_params:
         subprocess.call('cp '+options.param_filename+' Output/',shell=True)
     subprocess.call('python '+params.clean_script,shell=True)
-
 
 def weighted_avg_and_std(values, weights):
     average = np.average(values, weights=weights)
@@ -27,8 +25,9 @@ def find_nearest(arr, value):
     return [arr[idx], idx]
 
 def cast2cpp(ARRAY, cast=C.c_double):
-    
+
     ARRdim = len(shape(ARRAY)) #getting number of dimensions
+
     if ARRdim == 1:
         s1 = len(ARRAY)
         return ARRAY.ctypes.data_as(C.POINTER(cast)) #creating 1D pointer array
@@ -37,13 +36,6 @@ def cast2cpp(ARRAY, cast=C.c_double):
         dbptr = C.POINTER(cast)
         PARR = (dbptr*s1)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
         return PARR
-    elif ARRdim == 3:
-        PARR = ARRAY.ctypes.data_as(C.POINTER(cast))
-        [s1,s2,s3] = shape(ARRAY)
-        dbptr = C.POINTER(cast)
-        PARR = (dbptr*s1)(dbptr*s2)(*[row.ctypes.data_as(dbptr) for row in ARRAY]) #creating 2D pointer array
-        return PARR
-   
 
 def redirect_stderr_stdout(stderr=sys.stderr, stdout=sys.stdout):
     #function decorator to re-direct standard output
@@ -114,8 +106,9 @@ def funcGauss(p, x):
     sigma = p[1]
     return 1.0/(sigma * sqrt(2.0 * pi)) * exp(-(x-mu)**2/(2.0*sigma**2))
 
-def round_base(x, base=1):
-    return int(base * round(float(x)/base))
+def round_base(x, base=.05):
+  return base * round(float(x)/base)
+
 
 def binspectrum(spectrum_in, resolution):
     wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))

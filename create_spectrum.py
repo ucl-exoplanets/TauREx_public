@@ -92,8 +92,8 @@ class create_spectrum(object):
             self.fmob = emission(self.atmosphereob)
         
         #TP-profile stuff
-        self.MAX_P = self.atmosphereob.P[0]
-        self.MIN_P = self.atmosphereob.P[-1]
+        self.MAX_P = self.atmosphereob.pressure_profile[0]
+        self.MIN_P = self.atmosphereob.pressure_profile[-1]
 
         if options.bin == 'resolution':
             #get grids
@@ -117,8 +117,6 @@ class create_spectrum(object):
     def generate_spectrum(self,**kwarg):
 
         #run forward model and bin it down
-        if not self.params.in_use_ATMfile:
-            self.fmob.atmosphere.update_atmosphere()
 
         model_int = self.fmob.model(**kwarg)
 

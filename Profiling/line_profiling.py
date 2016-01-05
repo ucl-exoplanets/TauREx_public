@@ -27,7 +27,7 @@ print '-----------------------------------------'
 
 os.chdir('../')
 # os.system('./'+PROFDIR+'kernprof.py -l -v taurex.py -p Parfiles/taurex_superearth.par')
-os.system('./'+PROFDIR+'kernprof.py -l -v create_spectrum.py -p  Parfiles/taurex_emission_55cnc.par -T')
+os.system('./'+PROFDIR+'kernprof.py -l -v create_spectrum.py -p Output/newgrid/newgrid.par')
 
 print '-----------------------------------------'
 print 'Finished profiling'

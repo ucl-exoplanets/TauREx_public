@@ -1,8 +1,10 @@
 '''
-    TauREx v2 - Development version
-    
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
+
     Atmosphere class
-    
+
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
 '''
 
 #loading libraries
@@ -14,7 +16,6 @@ import matplotlib.pylab as plt
 
 from library_constants import *
 from library_general import *
-
 
 class atmosphere(object):
 
@@ -30,110 +31,83 @@ class atmosphere(object):
 
         self.data = data
         self.fit_transmission = self.params.fit_transmission
-        self.fit_emission     = self.params.fit_emission
+        self.fit_emission = self.params.fit_emission
 
-        # set mixing ratios
-        self.absorbing_gases = self.params.planet_molec
-        self.inactive_gases = self.params.planet_inactive_gases
-        self.inactive_gases_X = self.params.planet_inactive_gases_X
-        self.nallgases = len(self.absorbing_gases) + len(self.inactive_gases)
+        # active and inactive gas names and mixing ratios
+        self.nallgases = len(self.params.atm_active_gases) + len(self.params.atm_inactive_gases)
+        self.nactivegases = len(self.params.atm_active_gases)
+        self.ninactivegases = len(self.params.atm_inactive_gases)
 
-        # set values for parameter files
-        self.planet_temp = self.params.planet_temp
-        self.max_pressure = self.params.tp_max_pres
+        # set planet radius, mass, gravity
         self.planet_radius = self.params.planet_radius
         self.planet_mass = self.params.planet_mass
-        self.ngas = self.data.ngas
+        self.planet_grav = self.get_surface_gravity() # this should be set as a function of altitude
 
-        if self.params.in_use_ATMfile:
-            # build PTA profile and mixing ratio array from .atm file
-            logging.info('Atmospheric PTA grid has been set by .atm file')
-            self.X = self.data.X
-            self.pta = self.data.pta
-            self.alt_grid = self.pta[:,2]
-            self.nlayers = len(self.alt_grid)
-            if len(self.X) <> len(self.absorbing_gases):
-                logging.error('The number of molecules specified in the .par file is not consistent with'
-                             'the mixing ratios in the .atm file %s ' % self.params.in_atm_file)
-                sys.exit()
-        else:
-            # set altitude grid. Use mu from param file, calculate scaleheight, then set maximum altitude
-            planet_mu_tmp = self.params.planet_mu
-            planet_grav_tmp = self.get_surface_gravity()
-            planet_temp_tmp = self.params.planet_temp
-            scaleheight_tmp = self.get_scaleheight(g=planet_grav_tmp, mu=planet_mu_tmp, T=planet_temp_tmp)
-            self.max_z = self.params.tp_num_scale * scaleheight_tmp
-            # assume uniform steps in the altitude grid
-            self.alt_grid = np.arange(0., self.max_z, step=self.params.atm_step_size*1000.)
-            self.nlayers = len(self.alt_grid)
-            logging.info('Altitude grid step size is %.1f km. Max altitude is %i km. There are %i layers.' %
-                         (self.params.atm_step_size, self.max_z/1000., self.nlayers))
-            self.nlayers = len(self.alt_grid)
-            self.absorbing_gases_X = self.params.planet_mixing # mixing ratios are read from parameter file
-            self.X = self.set_mixing_ratios()
-        
-        self.absorbing_gases_X = self.X[:,0] # assume X from lowest layer. This will be used to calculate mu, if couple_mu is True
+        self.nlayers = self.params.atm_nlayers # todo change for external ATM file
 
-        # set mean molecular weight
-        if self.params.tp_couple_mu:
-            # coupling to molecular composition
-            self.planet_mu = self.get_coupled_planet_mu()
-            logging.info('Coupling mu to composition. Average mu = ' + str(np.average(self.planet_mu)/AMU))
+        # set mixing ratios profiles of active and inactive gases. todo optionally convert to single value profiles?
+        self.active_mixratio_profile = np.zeros(( self.nactivegases, self.nlayers))
+        self.inactive_mixratio_profile = np.zeros((self.ninactivegases, self.nlayers))
+        for i in xrange(self.nactivegases):
+            self.active_mixratio_profile[i, :] = self.params.atm_active_gases_mixratios[i]
+        for i in xrange(self.ninactivegases):
+            self.inactive_mixratio_profile[i, :] = self.params.atm_inactive_gases_mixratios[i]
+
+        if self.params.atm_couple_mu:
+            # todo calculate coupled mu
+            self.planet_mu = self.params.planet_mu
         else:
-            # from param file
             self.planet_mu = self.params.planet_mu
 
-        self.planet_grav = self.get_surface_gravity() # planet gravity at the surface
-        self.scaleheight = self.get_scaleheight(T = self.planet_temp)
+        # todo reimplement use of external ATM files!
 
-        if not self.params.in_use_ATMfile:
-            self.pta = self.setup_pta_grid()
+        # set pressure profile. This is fixed
+        self.pressure_profile = self.get_pressure_profile()
 
-        self.P        = self.pta[:,0] # pressure array
-        self.P_bar    = self.P * 1.0e-5 #convert pressure from Pa to bar
-        self.T        = self.pta[:,1] # temperature array
-        self.z        = self.pta[:,2] # altitude array
-        self.rho        = self.get_rho() # assume self.T, self.P
+        # set initial temperature profile. todo optionally convert to single value?
+        self.temperature_profile = np.zeros((self.nlayers))
+        self.temperature_profile[:] = self.params.planet_temp
 
-        # reset atmosphere using scale height ang gravity calculated as a function of altitude
+        # set initial altitude grid. This will vary during fitting as planet_mu, planet_temp vary
+        self.scale_height = self.get_scale_height()
+        self.altitude_profile = self.get_altitude_profile()
 
-        # set cloud parameters
-        self.clouds_lower_P = self.params.in_cld_lower_P
-        self.clouds_upper_P = self.params.in_cld_upper_P
-        self.clouds_m = self.params.in_cld_m
-        self.clouds_a = self.params.in_cld_a
+        # set density profile
+        self.density_profile = self.get_density_profile()
 
-         #selecting TP profile to use
-        if self.params.gen_type == 'emission':
-            if tp_profile_type is None:
-                self.TP_type = self.params.tp_type
-            else:
-                self.TP_type = tp_profile_type
+        # set cloud parameters # todo improve cloud model
+        if self.params.atm_clouds:
+            self.clouds_lower_P = self.params.atm_cld_lower_P
+            self.clouds_upper_P = self.params.atm_cld_upper_P
+            self.clouds_m = self.params.atm_cld_m
+            self.clouds_a = self.params.atm_cld_a
 
-        elif self.params.gen_type == 'transmission':
-            if tp_profile_type is None:
-                self.TP_type = self.params.tp_type
-            else:
-                self.TP_type = tp_profile_type
+        # selecting TP profile to use
+        if tp_profile_type is None:
+            self.TP_type = self.params.atm_tp_type
+        else:
+            self.TP_type = tp_profile_type
 
-        #setting up TP profile
+        # setting up TP profile
         self.set_TP_profile()
 
-        #set non-linear sampling grid for hybrid model
+        # set non-linear sampling grid for hybrid model
         if tp_profile_type == 'hybrid':
             self.hybrid_covmat = covariance
-            self.get_TP_sample_grid(covariance,delta=0.05)
+            self.get_TP_sample_grid(covariance, delta=0.05)
 
+        # get sigma array (and interpolate sigma array to pressure profile)
+        self.sigma_array = self.get_sigma_array()
+
+        # get sigma rayleigh array (for active and inactive absorbers)
+        self.sigma_rayleigh_array = self.get_sigma_rayleigh_array()
+
+        logging.info('Atmosphere object initialised')
 
     def get_coupled_planet_mu(self, absorbing_gases_X='', inactive_gases_X=''):
-
-        '''
-        Get the mean molecular weight (mu) from atmospheric composition
-        '''
-
+        # todo fix
         if inactive_gases_X == '':
             inactive_gases_X = self.inactive_gases_X
-
         # get mu for each layer
         mu = np.zeros(self.nlayers)
         for i in range(self.nlayers):
@@ -144,46 +118,53 @@ class atmosphere(object):
             logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
         return mu
 
-
-    def get_scaleheight(self, T=None, g=None, mu=None):
-
+    # get the atmospheric scale height
+    def get_scale_height(self, T=None, g=None, mu=None):
+        # here we might use a different approach, similar to Venot! think...
         if not T:
-            T = self.T
+            T = self.temperature_profile
         if not g:
             g = self.planet_grav
         if not mu:
             mu = self.planet_mu
-
-        #Tavg = np.average(T)
-
         return (KBOLTZ*T)/(mu*g)
 
-
+    # get the surface gravity of the planet
     def get_surface_gravity(self, mass=None, radius=None):
-
-        #calculate surface gravity of planet using Rp and Mp
         if not mass:
             mass = self.planet_mass
         if not radius:
             radius = self.planet_radius
-
         return (G * mass) / (radius**2)
 
 
-    def get_rho(self, T=None, P=None):
-
-        #calculate atmospheric densities for given temperature and pressure
+    # get the altitude profile
+    def get_altitude_profile(self, P=None):
+        # todo allow for variable scale height...
         if P is None:
-            P = self.P
+            P = self.pressure_profile
+        return (-1.)*self.scale_height*np.log(P/self.params.atm_max_pres)
+
+    # get the pressure profile
+    def get_pressure_profile(self, Pmax=None, num_scaleheights=None):
+        if not Pmax:
+            Pmax = self.params.atm_max_pres
+        if not num_scaleheights:
+            num_scaleheights = self.params.atm_num_scaleheights
+        Pmin = Pmax * np.exp(-num_scaleheights)
+        P = np.linspace(np.log(Pmin), np.log(Pmax), self.nlayers)
+        return np.exp(P)[::-1]
+
+    # get the density profile
+    def get_density_profile(self, T=None, P=None):
+        if P is None:
+            P = self.pressure_profile
         if T is None:
-            T = self.T
+            T = self.temperature_profile
+        return (P)/(KBOLTZ*T)
 
-        return  (P)/(KBOLTZ*T)
-
+    # calculates non-linear sampling grid for TP profile from provided covariance
     def get_TP_sample_grid(self, covmat, delta=0.02):
-        '''
-        Calculates non-linear sampling grid for TP profile from provided covariance
-        '''
 
         Pindex = [0]
         for i in range(self.nlayers-1):
@@ -194,128 +175,32 @@ class atmosphere(object):
         Pindex.append(self.nlayers-1)
 
         self.P_index = Pindex
-        self.P_sample   = self.P[Pindex]
+        self.P_sample   = self.pressure_profile[Pindex]
 
-    #@profile
-    def setup_pta_grid(self, T=None):
-
-        '''
-        Calculate pressure, temperature, altitude grid
-        '''
-
-        if T is None:
-            T = self.params.planet_temp
-
-        #generatinng altitude-pressure array
-        pta_arr = np.zeros((self.nlayers, 3))
-        pta_arr[:,2] = self.alt_grid # altitude grid
-        pta_arr[:,0] = self.max_pressure * np.exp(-pta_arr[:,2]/self.scaleheight)
-        pta_arr[:,1] = T
-
-        return pta_arr
-
-    #@profile
-    def get_gas_fraction(self, gasname):
-
-        # returns the mixing ratio of gasname. The gas can be either an absorber or an inactive gas
-        # careful that this returns the gas mixing ratio at the zeroth level.
-        if gasname in self.params.all_absorbing_gases:
-            if gasname in self.params.planet_molec:
-                index = self.params.planet_molec.index(gasname)
-                return self.X[index, 0]
-
-        elif gasname in self.params.all_inactive_gases:
-            if gasname in self.params.planet_inactive_gases:
-                index = self.params.planet_inactive_gases.index(gasname)
-                return self.inactive_gases_X[index]
-        return 0
-
-    #@profile
-    def get_prior_bounds(self):
-
-        # this is only used in emission now...
-
-        #partially to be moved to parameter file i guess
-
-        self.Xpriors = [self.params.fit_X_low, self.params.fit_X_up] #lower and upper bounds for column density
-        self.Tpriors = [self.params.planet_temp - self.params.fit_T_low, self.params.planet_temp + self.params.fit_T_up] #lower and upper bounds for temperature
-
-        #BE REALLY CAREFUL WITH THIS PARAMETER. THIS NEEDS SANITY CHECKING
-        self.Ppriors = [[5e4,5e5],[50.0,150.0]] #lower and upper bounds for individual TP transistion (e.g. tropopause height, mesospehere height) in Pa
-
-        #setting up bounds for downhill algorithm
-        #this may be merged into setup_parameter_grid() later but unsure of how complex this is going to be right now
-        bounds = []
-        for i in xrange(self.ngas):
-            bounds.append((self.Xpriors[0],self.Xpriors[1]))
-        if self.fit_transmission:
-            bounds.append((self.Tpriors[0],self.Tpriors[1]))
-        if self.fit_emission:
-            for i in xrange(self.num_T_params):
-                bounds.append((self.Tpriors[0],self.Tpriors[1]))
-            for i in xrange(self.num_T_params-1):
-                bounds.append((self.Ppriors[i][0],self.Ppriors[i][1]))
-
-        return bounds
-
-    def setup_parameter_grid(self):
-        '''
-        Setting up the parameter grid (variable in length depending on TP-profile model selected)
-
-        fit_params    [abundances (ngas), TP-profile (variable)] #TP profile parameters is 1 for isothermal (only T) but varies for different models
-        fit_count     [no. abundances, no. TP parameters]
-        fit_index     index to fitparams for slicing
-        '''
-        fit_params = []; fit_index = []
-
-        # setting up indices for parameter grid
-        cpar = len(self.bounds)
-        cgas = self.ngas
-        ctp  = cpar - cgas
-        fit_count = [cgas,ctp]
-
-        #generating index list
-        fit_index = [cgas, cpar]
-
-        #setting all initial guesses to the mean of the parameter bounds
-        #this can be modified later should it prove to be too awful
-        for par in self.bounds:
-            fit_params.append(np.mean(par))
+    # get sigma array from data.sigma_dict. Interpolate sigma array to pressure profile
+    def get_sigma_array(self):
+        pressure_profile_bar = self.pressure_profile/1e5
+        sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']), self.data.int_nwngrid))
+        for mol_idx, mol_val in enumerate(self.params.atm_active_gases):
+            sigma_in = self.data.sigma_dict['xsecarr'][mol_val]
+            for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
+                for temperature_idx, temperature_val in enumerate(self.data.sigma_dict['t']):
+                    for wno_idx, wno_val in enumerate(self.data.int_wngrid):
+                        sigma_array[mol_idx, pressure_idx, temperature_idx, wno_idx] = \
+                            np.interp(pressure_val, self.data.sigma_dict['p'], sigma_in[:,temperature_idx,wno_idx])
+        return sigma_array
 
 
-        self.fit_params = np.asarray(fit_params)
-        self.fit_index  = fit_index
-        self.fit_count  = fit_count
-
-#         return np.asarray(fit_params), fit_index, fit_count
-
-
-    def set_mixing_ratios(self):
-
-        # set up mixing ratio array from parameter file inputs
-
-        mixing = self.absorbing_gases_X
-
-        X = np.zeros((self.ngas,self.nlayers))
-        if self.params.pre_run:
-            # if preselector is running
-            X += 1e-4
-        else:
-
-            #checking if number of mixing ratios = number of gasses
-            if len(mixing) is not self.ngas:
-                logging.error('Wrong  number of mixing ratios to molecules in parameter file')
-                exit()
-
-            # X = np.tile(mixing, [self.nlayers, 1]).transpose()  # @todo check?
-            for i in range(self.ngas):
-                X[i,:] += float(mixing[i])
-        self.X = X
-
-        return X
+    def get_sigma_rayleigh_array(self):
+        sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.data.int_nwngrid))
+        for mol_idx, mol_val in enumerate(self.params.atm_active_gases+self.params.atm_inactive_gases):
+            sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val]
+        return sigma_rayleigh_array
 
 
     def update_atmosphere(self):
+
+        #### work needed!!
 
         # update surface gravity and scale height
         self.planet_grav = self.get_surface_gravity()
@@ -327,8 +212,8 @@ class atmosphere(object):
         else:
             self.z = self.alt_grid
 
-        self.P = self.max_pressure * np.exp(-self.z/self.scaleheight)
-        self.P_bar = self.P * 1.0e-5 #convert pressure from Pa to bar
+        self.pressure_profile = self.max_pressure * np.exp(-self.z/self.scaleheight)
+        self.P_bar = self.pressure_profile * 1.0e-5 #convert pressure from Pa to bar
         self.rho = self.get_rho() # update density
 
     #####################
@@ -373,14 +258,6 @@ class atmosphere(object):
         INDEX splits column densities from TP_profile parameters, INDEX = [Chi, TP]
         '''
 
-        # X_params  = fit_params[:self.fit_index[0]] #splitting to gas parameters
-        # TP_params = TP_params #splitting to TP profile parameters
-
-        #Setting up mixing ratio grid. Convert X into Nd arrays
-        # self.X[:] = 0.0             #using already generated grid
-        # for i in xrange(self.ngas):
-        #     self.X[i,:] += X_params[i]
-
         #generating TP profile given input TP_function
         T = TP_function(TP_params, **kwargs)
 
@@ -393,8 +270,8 @@ class atmosphere(object):
         TP profile for isothermal atmosphere. Follows the old implementation.
         '''
 
-        self.pta = self.setup_pta_grid(T=TP_params)
-        T = self.pta[:,1]
+        T = np.zeros((self.nlayers))
+        T[:] = TP_params
 
         return T
 
@@ -416,7 +293,7 @@ class atmosphere(object):
             - g        = surface gravity, fixed to self.planet_grav
         '''
 
-        #assigning fitting parameters
+        # assigning fitting parameters
         T_irr = TP_params[0];
         kappa_ir = TP_params[1];
         kappa_v1 = TP_params[2];
@@ -424,9 +301,9 @@ class atmosphere(object):
         alpha = TP_params[4]
 
         gamma_1 = kappa_v1/(kappa_ir + 1e-10); gamma_2 = kappa_v2/(kappa_ir + 1e-10)
-        tau = kappa_ir * self.P / self.planet_grav
+        tau = kappa_ir * self.pressure_profile / self.planet_grav
 
-        T_int = 200 #@todo internal heat parameter looks suspicious... needs looking at.
+        T_int = 200 # todo internal heat parameter looks suspicious... needs looking at.
 
         def eta(gamma, tau):
             part1 = 2.0/3.0 + 2.0 / (3.0*gamma) * (1.0 + (gamma*tau/2.0 - 1.0) * np.exp(-1.0 * gamma * tau))
@@ -449,34 +326,33 @@ class atmosphere(object):
             - T  = one temperature per layer of Pressure (P)
 
         Fixed parameters:
-            - P  = Pressure grid, fixed to self.P
+            - P  = Pressure grid, fixed to self.pressure_profile
             - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
                   may be left as free and Pressure dependent parameter later.
         '''
         if h is None:
             h = self.params.tp_corrlength
 
-        #assigning parameters
+        # assigning parameters
         T_init = TP_params
 
 #         covmatrix = np.zeros((self.nlayers,self.nlayers))
 #         for i in xrange(self.nlayers):
-#                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+#                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
 
         if covmatrix is None: #if covariance not provided, generate
             if self.TP_setup: #run only once and save
                 self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
                 for i in xrange(self.nlayers):
-                    self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+                    self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
         else:
             self.rodgers_covmat = covmatrix
-
 
         T = np.zeros((self.nlayers)) #temperature array
 
         #correlating temperature grid with covariance matrix
         for i in xrange(self.nlayers):
-#             covmat  = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+#             covmat  = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
             weights = self.rodgers_covmat[i,:] / np.sum(self.rodgers_covmat[i,:])
             T[i]    = np.sum(weights*T_init)
 
@@ -490,7 +366,6 @@ class atmosphere(object):
             self.TP_params_ascii = []
             for i in xrange(self.nlayers):
                 self.TP_params_ascii.append('T_{0}'.format(str(i)))
-
         return T
 
     def _TP_hybrid(self, TP_params, h=None):
@@ -505,7 +380,7 @@ class atmosphere(object):
             - T      = one temperature per layer of Pressure (P)
 
         Fixed parameters:
-            - P  = Pressure grid, fixed to self.P
+            - P  = Pressure grid, fixed to self.pressure_profile
             - h  = correlation parameter, in scaleheights, Line et al. 2013 sets this to 7, Irwin et al sets this to 1.5
                   may be left as free and Pressure dependent parameter later.
         '''
@@ -518,37 +393,31 @@ class atmosphere(object):
         #assigning parameters
         alpha  = TP_params[0]
 
-#         alpha = 0.5
-#         print 'alpha ',alpha
-#         print 'tparams ', TP_params[:10]
         T_init = TP_params[1:]
         covmatrix = self.hybrid_covmat
 
         #interpolating fitting temperatures to full grid
-        T_interp = np.interp(np.log(self.P[::-1]),np.log(self.P_sample[::-1]),T_init[::-1])[::-1]
-
-#         print T_init
+        T_interp = np.interp(np.log(self.pressure_profile[::-1]),np.log(self.P_sample[::-1]),T_init[::-1])[::-1]
 
         if self.TP_setup: #run only once and save
             self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
             for i in xrange(self.nlayers):
-                self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.P[i]/self.P[:]))/h)
+                self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
 
         T[:] = 0.0 #temperature array
         cov_hybrid = (1.0-alpha) * self.rodgers_covmat + alpha * covmatrix
 
-#         plt.figure(3)
         #correlating temperature grid with covariance matrix
         for i in xrange(self.nlayers):
             weights = cov_hybrid[i,:] / np.sum(cov_hybrid[i,:])
             T[i]    = np.sum(weights*T_interp)
-#             plt.plot(cov_hybrid[i,:])
 
+#             plt.plot(cov_hybrid[i,:])
 #         plt.ion()
 #         plt.figure(2)
 #         plt.clf()
-# #         plt.plot(self.T,self.P,'blue')
-# #         plt.plot(T_interp,self.P,'k')
+# #         plt.plot(self.T,self.pressure_profile,'blue')
+# #         plt.plot(T_interp,self.pressure_profile,'k')
 #         plt.plot(T_init,self.P_sample,'ro')
 #         plt.yscale('log')
 # #         xlabel('Temperature')
@@ -559,15 +428,14 @@ class atmosphere(object):
 #         plt.ion()
 #         plt.figure(3)
 #         plt.clf()
-#         plt.plot(self.T,self.P,'blue')
-# #         plt.plot(T_interp,self.P,'k')
+#         plt.plot(self.T,self.pressure_profile,'blue')
+# #         plt.plot(T_interp,self.pressure_profile,'k')
 # #         plt.plot(T_init,self.P_sample,'ro')
 #         plt.yscale('log')
 # #         xlabel('Temperature')
 # #         ylabel('Pressure (Pa)')
 #         plt.gca().invert_yaxis()
 #         plt.draw()
-
 
 
 #         plt.figure(3)
@@ -596,11 +464,11 @@ class atmosphere(object):
             - P1 = pressure at tropopause
 
         Fixed parameters:
-            - Pressure grid (self.P)
+            - Pressure grid (self.pressure_profile)
         '''
 
-        maxP = np.max(self.P)
-        minP = np.min(self.P)
+        maxP = np.max(self.pressure_profile)
+        minP = np.min(self.pressure_profile)
 
         T_trop = TP_params[0] - TP_params[1]
 
@@ -608,7 +476,7 @@ class atmosphere(object):
         T_params = [TP_params[0],T_trop,T_trop]
 
         #creating linear T-P profile
-        T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        T = np.interp(np.log(self.pressure_profile[::-1]), np.log(P_params[::-1]), T_params[::-1])
 
         return T[::-1]
 
@@ -625,11 +493,11 @@ class atmosphere(object):
             - P2 = point 2 pressure
 
         Fixed parameters
-            - Pressure grid (self.P)
+            - Pressure grid (self.pressure_profile)
         '''
 
-        maxP = np.max(self.P)
-        minP = np.min(self.P)
+        maxP = np.max(self.pressure_profile)
+        minP = np.min(self.pressure_profile)
 
         T_point1 = TP_params[0] - TP_params[1]
         T_point2 = T_point1 - TP_params[2]
@@ -637,7 +505,7 @@ class atmosphere(object):
         T_params = [TP_params[0],T_point1,T_point2, T_point2]
 
         #creating linear T-P profile
-        T = np.interp(np.log(self.P[::-1]), np.log(P_params[::-1]), T_params[::-1])
+        T = np.interp(np.log(self.pressure_profile[::-1]), np.log(P_params[::-1]), T_params[::-1])
 
         return T[::-1]
 

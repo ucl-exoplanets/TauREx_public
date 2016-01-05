@@ -1,8 +1,12 @@
-################################################
-#class parameters 
-#Parse parameter file eg. 'exonest.par' and initialise  
-#parameters for run
-################################################
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
+
+    Parameters class
+
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
+'''
+
 from base import base
 from ConfigParser import SafeConfigParser
 import numpy as np
@@ -41,7 +45,6 @@ class parameters(base):
         '''
         a parameter file is parsed and initial parameter values are set.  
         to add a new parameter edit this file and the input .par file.
-        V1.0  - Definition - I. Waldmann, Apr 2013
         '''
 
         #config file parser
@@ -79,194 +82,151 @@ class parameters(base):
 
         # list of all molecules for which we have cross sections
         self.all_absorbing_gases = ['H2O', 'HCN', 'CH4', 'CO2', 'CO', 'NH3', 'C2H2']
-
         # list of all inactive gases we take care of
         self.all_inactive_gases = ['He', 'H2', 'N2']
 
-        self.trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
-        # self.gen_abs_wavegrid      = self.getpar('General','abs_wavegrid', 'bool')
 
+        # section General
+        self.gen_trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
         self.gen_manual_waverange  = self.getpar('General','manual_waverange', 'bool')
         self.gen_wavemin           = self.getpar('General','wavemin', 'float')
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')
-
-        # self.gen_spec_res          = self.getpar('General','spec_res', 'float')
         self.gen_type              = self.getpar('General','type')
         self.gen_compile_cpp       = self.getpar('General','compile_cpp', 'bool')
         self.gen_run_gui           = False
 
+        # section Input
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
         if self.in_spectrum_file == 'False':
             self.in_spectrum_file = False
-
-        # self.in_use_spectrum_bins  = self.getpar('Input','use_spectrum_bins', 'bool')
-
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
-        # self.in_use_TP_file        = self.getpar('Input','use_TP_file', 'bool') # todo temporary param
-        # self.in_TP_file            = self.getpar('Input','TP_file') # todo temporary param
-
-        self.in_abs_path           = self.getpar('Input','abs_path')
         self.in_xsec_path          = self.getpar('Input','xsec_path')
         self.in_xsec_dnu           = self.getpar('Input','xsec_dnu', 'float')
-
-        self.in_use_P_broadening   = self.getpar('Input','use_P_broadening', 'bool')
-        self.in_abs_path_P         = self.getpar('Input','abs_path_P')
-
-        # self.in_convert2microns    = self.getpar('Input','convert2microns', 'bool')
-        # self.in_abs_files          = self.getpar('Input','__legacy__abs_files')
-        
-        self.in_tempres            = self.getpar('Input','tempres', 'float')
-        self.in_presres            = self.getpar('Input','presres', 'float')
+        self.in_cia_path           = self.getpar('Input','cia_path')
+        self.in_cia_pairs          = self.getpar('Input','cia_pairs', 'list-str')
         self.in_star_path          = self.getpar('Input','star_path')
-        self.in_include_rad        = self.getpar('Input','include_rad', 'bool')
-        self.in_rad_file           = self.getpar('Input','rad_file')
         self.in_include_cia        = self.getpar('Input','include_cia', 'bool')
         self.in_cia_file           = self.getpar('Input','cia_file')
         self.in_create_sigma_rayleigh = self.getpar('Input','create_sigma_rayleigh', 'bool')
 
+        # section Output
         self.out_path              = self.getpar('Output','path')
-        self.out_file_prefix       = self.getpar('Output','file_prefix')
         self.out_dump_internal     = self.getpar('Output','dump_internal', 'bool')
         self.out_internal_name     = self.getpar('Output','internal_name')
         self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
         self.out_plot_contour      = self.getpar('Output','plot_contour', 'bool')
         self.out_plot_colour       = self.getpar('Output','plot_colour')
 
+        # section Star
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
         self.star_temp             = self.getpar('Star','temp', 'float')
-        
-        self.planet_radius         = self.getpar('Planet', 'radius', 'float')  *RJUP
-        self.planet_mass           = self.getpar('Planet', 'mass', 'float')     *MJUP
-        self.planet_sma            = self.getpar('Planet', 'sma', 'float')     *AU
-        self.planet_albedo         = self.getpar('Planet','albedo', 'float')
+
+        # section Planet
+        self.planet_class          = self.getpar('Planet','class')
+        self.planet_radius         = self.getpar('Planet', 'radius', 'float')*RJUP
+        self.planet_mass           = self.getpar('Planet', 'mass', 'float')*MJUP
         self.planet_temp           = self.getpar('Planet', 'temp', 'float')
-        self.planet_mu             = self.getpar('Planet', 'mu', 'float')      *AMU
-        self.planet_molec          = self.getpar('Planet','molecules', 'list-str')
-        self.planet_mixing         = self.getpar('Planet','mixing_ratios', 'list-float')
-        self.planet_inactive_gases     = self.getpar('Planet', 'inactive_gases', 'list-str')
-        self.planet_inactive_gases_X   = self.getpar('Planet', 'inactive_gases_X', 'list-float')
-        self.in_include_Rayleigh       = self.getpar('Planet','include_Rayleigh', 'bool')
-        try:
-            self.in_include_cld        = self.getpar('Planet','include_cld', 'bool')
-            self.in_cld_params         = self.getpar('Planet','cld_params', 'list-float')
-            self.in_cld_m              = np.float(self.in_cld_params[0])
-            self.in_cld_a              = np.float(self.in_cld_params[1])
-            self.in_cld_pressure       = self.getpar('Planet','cld_pressure', 'list-float')
-            self.in_cld_lower_P        = self.in_cld_pressure[0]
-            self.in_cld_upper_P        = self.in_cld_pressure[1]
-            self.in_cld_file           = self.getpar('Planet','cld_file')
-        except:
-            self.in_include_cld        = False
-            pass
+        self.planet_mu             = self.getpar('Planet', 'mu', 'float')*AMU
 
-        self.tp_num_scale          = self.getpar('T-P profile', 'num_scaleheights', 'int')
-        self.tp_atm_levels         = self.getpar('T-P profile', 'atm_levels', 'int')
-        self.atm_step_size         = self.getpar('T-P profile', 'atm_step_size', 'float')
-        self.tp_max_pres           = self.getpar('T-P profile', 'atm_max_pressure', 'float')
-        self.tp_type               = self.getpar('T-P profile', 'profile_type')
-        self.tp_corrlength         = self.getpar('T-P profile', 'corr_length','float')
-        self.tp_couple_mu          = self.getpar('T-P profile', 'couple_mu', 'bool')
+        # section Atmosphere
+        self.atm_num_scaleheights   = self.getpar('Atmosphere', 'num_scaleheights', 'int')
+        self.atm_nlayers            = self.getpar('Atmosphere', 'nlayers', 'int')
+        self.atm_max_pres           = self.getpar('Atmosphere', 'max_pressure', 'float')
+        self.atm_tp_type            = self.getpar('Atmosphere', 'profile_type')
+        self.atm_corrlength         = self.getpar('Atmosphere', 'corr_length','float')
+        self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
+        self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
+        self.atm_active_gases_mixratios = self.getpar('Atmosphere','active_gases_mixratios', 'list-float')
+        self.atm_inactive_gases     = [gas.upper() for gas in self.getpar('Atmosphere','inactive_gases', 'list-str')]
+        self.atm_inactive_gases_mixratios = self.getpar('Atmosphere','inactive_gases_mixratios', 'list-float')
+        self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
+        self.atm_clouds             = self.getpar('Atmosphere','clouds', 'bool')
+        self.atm_cld_params         = self.getpar('Atmosphere','cld_params', 'list-float')
+        self.atm_cld_m              = self.atm_cld_params[0]
+        self.atm_cld_a              = self.atm_cld_params[1]
+        self.atm_cld_pressure       = self.getpar('Atmosphere','cld_pressure', 'list-float')
+        self.atm_cld_lower_P        = self.atm_cld_pressure[0]
+        self.atm_cld_upper_P        = self.atm_cld_pressure[1]
 
-        try:
-            self.pre_run               = self.getpar('Preselector','run_pre', 'bool')
-            self.pre_speclib_path      = self.getpar('Preselector','speclib_path')
-            self.pre_pca_path          = self.getpar('Preselector','pca_path')
-            self.pre_gen_speclib       = self.getpar('Preselector','generate_speclib', 'bool')
-            self.pre_restrict_temp     = self.getpar('Preselector','restrict_temp', 'bool')
-            self.pre_temp_range        = self.getpar('Preselector', 'temp_range', 'list-float')  #genfromtxt(StringIO(self.getpar('Preselector', 'temp_range')), delimiter = ',')
-            self.pre_mixing_ratios     = self.getpar('Preselector', 'mixing_ratio', 'list-float')  #genfromtxt(StringIO(self.getpar('Preselector', 'mixing_ratio')), delimiter = ',')
-            self.pre_gen_pca           = self.getpar('Preselector','generate_pca', 'bool')
-            self.pre_mask_thres        = self.getpar('Preselector','mask_thres', 'float')
-            self.pre_mol_force_bool    = self.getpar('Preselector','mol_force_on', 'bool')
-            self.pre_mol_force         = self.getpar('Preselector', 'mol_force', 'list-str')  # genfromtxt(StringIO(self.getpar('Preselector','mol_force')),delimiter = ',',dtype='str',autostrip=True)
-        except:
-            self.pre_run               = False
-            pass
+        # section Preselector
+        self.pre_run               = self.getpar('Preselector','run_pre', 'bool')
+        self.pre_speclib_path      = self.getpar('Preselector','speclib_path')
+        self.pre_pca_path          = self.getpar('Preselector','pca_path')
+        self.pre_gen_speclib       = self.getpar('Preselector','generate_speclib', 'bool')
+        self.pre_restrict_temp     = self.getpar('Preselector','restrict_temp', 'bool')
+        self.pre_temp_range        = self.getpar('Preselector', 'temp_range', 'list-float')  #genfromtxt(StringIO(self.getpar('Preselector', 'temp_range')), delimiter = ',')
+        self.pre_mixing_ratios     = self.getpar('Preselector', 'mixing_ratio', 'list-float')  #genfromtxt(StringIO(self.getpar('Preselector', 'mixing_ratio')), delimiter = ',')
+        self.pre_gen_pca           = self.getpar('Preselector','generate_pca', 'bool')
+        self.pre_mask_thres        = self.getpar('Preselector','mask_thres', 'float')
+        self.pre_mol_force_bool    = self.getpar('Preselector','mol_force_on', 'bool')
+        self.pre_mol_force         = self.getpar('Preselector', 'mol_force', 'list-str')  # genfromtxt(StringIO(self.getpar('Preselector','mol_force')),delimiter = ',',dtype='str',autostrip=True)
 
-        try:
-            self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
-            self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
-            self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
-            self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
-            self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
-            self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
-            #self.fit_param_free_T      = arange(self.fit_param_free[0],dtype=int)
-            #self.fit_param_free_X      = arange(self.fit_param_free[0],self.fit_param_free[1]+self.fit_param_free[0],dtype=int)
-            self.fit_fix_inactive      = self.getpar('Fitting', 'fix_inactive', 'bool')
-            self.fit_fix_temp          = self.getpar('Fitting', 'fix_temp', 'bool')
-            self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
-            self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
-            self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
-            self.fit_fix_clouds_lower_P  = self.getpar('Fitting', 'fix_clouds_lower_P', 'bool')
-            self.fit_fix_clouds_upper_P  = self.getpar('Fitting', 'fix_clouds_upper_P', 'bool')
-            self.fit_fix_clouds_m      = self.getpar('Fitting', 'fix_clouds_m', 'bool')
-            self.fit_fix_clouds_a      = self.getpar('Fitting', 'fix_clouds_a', 'bool')
+        # Section Fit
+        self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
+        self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
+        self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
+        self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
+        self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
+        self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
+        self.fit_fix_inactive      = self.getpar('Fitting', 'fix_inactive', 'bool')
+        self.fit_fix_temp          = self.getpar('Fitting', 'fix_temp', 'bool')
+        self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
+        self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
+        self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
+        self.fit_fix_clouds_lower_P  = self.getpar('Fitting', 'fix_clouds_lower_P', 'bool')
+        self.fit_fix_clouds_upper_P  = self.getpar('Fitting', 'fix_clouds_upper_P', 'bool')
+        self.fit_fix_clouds_m      = self.getpar('Fitting', 'fix_clouds_m', 'bool')
+        self.fit_fix_clouds_a      = self.getpar('Fitting', 'fix_clouds_a', 'bool')
+        self.fit_X_log             = self.getpar('Fitting', 'X_log', 'bool')
+        self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
+        self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
+        self.fit_radius_up         = self.getpar('Fitting','radius_up', 'float')  # in RJUP
+        self.fit_radius_low        = self.getpar('Fitting','radius_low', 'float') # in RJUP
+        self.fit_P0_up             = self.getpar('Fitting','P0_up', 'float')  # in Pascal
+        self.fit_P0_low            = self.getpar('Fitting','P0_low', 'float') # in Pascal
+        self.fit_mu_up             = self.getpar('Fitting','mu_up', 'float') # in AMU
+        self.fit_mu_low            = self.getpar('Fitting','mu_low', 'float') # in AMU
+        self.fit_X_up              = self.getpar('Fitting','X_up', 'float')
+        self.fit_X_low             = self.getpar('Fitting','X_low', 'float')
+        self.fit_X_inactive_up     = self.getpar('Fitting','X_inactive_up', 'float')
+        self.fit_X_inactive_low    = self.getpar('Fitting','X_inactive_low', 'float')
+        self.fit_clouds_lower_P_bounds = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
+        self.fit_clouds_upper_P_bounds = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
+        self.fit_clouds_a_bounds = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
+        self.fit_clouds_m_bounds = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+        self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
 
-            self.fit_X_log             = self.getpar('Fitting', 'X_log', 'bool')
+        # section Downhill
+        self.downhill_run          = self.getpar('Downhill','run', 'bool')
+        self.downhill_type         = self.getpar('Downhill', 'type')
 
-            self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
-            self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
-            self.fit_radius_up         = self.getpar('Fitting','radius_up', 'float')  # in RJUP
-            self.fit_radius_low        = self.getpar('Fitting','radius_low', 'float') # in RJUP
-            self.fit_P0_up             = self.getpar('Fitting','P0_up', 'float')  # in Pascal
-            self.fit_P0_low            = self.getpar('Fitting','P0_low', 'float') # in Pascal
-            self.fit_mu_up             = self.getpar('Fitting','mu_up', 'float') # in AMU
-            self.fit_mu_low            = self.getpar('Fitting','mu_low', 'float') # in AMU
-            self.fit_X_up              = self.getpar('Fitting','X_up', 'float')
-            self.fit_X_low             = self.getpar('Fitting','X_low', 'float')
-            self.fit_X_inactive_up     = self.getpar('Fitting','X_inactive_up', 'float')
-            self.fit_X_inactive_low    = self.getpar('Fitting','X_inactive_low', 'float')
+        # section MCMC
+        self.mcmc_run              = self.getpar('MCMC','run', 'bool')
+        self.mcmc_update_std       = self.getpar('MCMC','update_std', 'bool')
+        self.mcmc_iter             = self.getpar('MCMC', 'iter', 'float')
+        self.mcmc_burn             = self.getpar('MCMC','burn', 'float')
+        self.mcmc_thin             = self.getpar('MCMC', 'thin', 'float')
+        self.mcmc_verbose          = self.getpar('MCMC', 'verbose', 'bool')
+        self.mcmc_progressbar          = self.getpar('MCMC', 'progressbar', 'bool')
 
-            self.fit_clouds_lower_P_bounds = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
-            self.fit_clouds_upper_P_bounds = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
-            self.fit_clouds_a_bounds = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
-            self.fit_clouds_m_bounds = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+        # section Nest
+        self.nest_run              = self.getpar('MultiNest','run', 'bool')
+        self.nest_resume           = self.getpar('MultiNest','resume', 'bool')
+        self.nest_verbose          = self.getpar('MultiNest','verbose', 'bool')
+        self.nest_path             = self.getpar('MultiNest','nest_path') # @todo not used?
+        self.nest_samp_eff         = self.getpar('MultiNest','sampling_eff')
+        self.nest_nlive            = self.getpar('MultiNest','n_live_points', 'int')
+        self.nest_max_iter         = self.getpar('MultiNest','max_iter', 'int')
+        self.nest_multimodes       = self.getpar('MultiNest','multimodes')
+        self.nest_max_modes        = self.getpar('MultiNest','max_modes', 'int')
+        self.nest_const_eff        = self.getpar('MultiNest','const_eff', 'bool')
+        self.nest_ev_tol           = self.getpar('MultiNest','evidence_tolerance','float')
+        self.nest_mode_tol         = self.getpar('MultiNest', 'mode_tolerance', 'float')
+        self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
+        self.nest_cluster_analysis = self.getpar('MultiNest','cluster_analysis', 'bool')
 
-            self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
-        except:
-            self.fit_transmission      = False
-            self.fit_emission          = False
-            pass
-        try: 
-            self.downhill_run          = self.getpar('Downhill','run', 'bool')
-            self.downhill_type         = self.getpar('Downhill', 'type')
-#             self.downhill_options      = ast.literal_eval(str(self.getpar('Downhill','options')))
-        except:
-            self.downhill_run          = False
-            pass
-        
-        try:
-            self.mcmc_run              = self.getpar('MCMC','run', 'bool')
-            self.mcmc_update_std       = self.getpar('MCMC','update_std', 'bool')
-            self.mcmc_iter             = self.getpar('MCMC', 'iter', 'float')
-            self.mcmc_burn             = self.getpar('MCMC','burn', 'float')
-            self.mcmc_thin             = self.getpar('MCMC', 'thin', 'float')
-            self.mcmc_verbose          = self.getpar('MCMC', 'verbose', 'bool')
-            self.mcmc_progressbar          = self.getpar('MCMC', 'progressbar', 'bool')
-        except:
-            self.mcmc_run              = False
-            pass
-
-        try:
-            self.nest_run              = self.getpar('MultiNest','run', 'bool')
-            self.nest_resume           = self.getpar('MultiNest','resume', 'bool')
-            self.nest_verbose          = self.getpar('MultiNest','verbose', 'bool')
-            self.nest_path             = self.getpar('MultiNest','nest_path') # @todo not used?
-            self.nest_samp_eff         = self.getpar('MultiNest','sampling_eff')
-            self.nest_nlive            = self.getpar('MultiNest','n_live_points', 'int')
-            self.nest_max_iter         = self.getpar('MultiNest','max_iter', 'int')
-            self.nest_multimodes       = self.getpar('MultiNest','multimodes')
-            self.nest_max_modes        = self.getpar('MultiNest','max_modes', 'int')
-            self.nest_const_eff        = self.getpar('MultiNest','const_eff', 'bool')
-            self.nest_ev_tol           = self.getpar('MultiNest','evidence_tolerance','float')
-            self.nest_mode_tol         = self.getpar('MultiNest', 'mode_tolerance', 'float')
-            self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
-            self.nest_cluster_analysis = self.getpar('MultiNest','cluster_analysis', 'bool')
-        except:
-            self.nest_run              = False
-            pass
-
+        # section Housekeeping ???
         try:
             self.clean_run             = self.getpar('Housekeeping','run','bool')
             self.clean_script          = self.getpar('Housekeeping','script_name')
@@ -275,16 +235,10 @@ class parameters(base):
             self.clean_run             = False
             pass
 
-
-        #####################################################################
-        #additional parser commands. Checking parameter compatibility and stuff 
-        
         #checking that either emission or transmisison is run
         if self.fit_emission and self.fit_transmission:
-            print 'Error: transmission and emission cannot currently be run simultaneously'
-            print 'change the fit_emission, fit_transmission parameters.'  
-        if self.fit_emission: self.fit_transmission = False
-        if self.fit_transmission: self.fit_emission = False
+            logging.error('Transmission and emission cannot currently be run simultaneously')
+            logging.error('change the fit_emission, fit_transmission parameters.' )
 
     def getpar(self, sec, par, type=None):
 

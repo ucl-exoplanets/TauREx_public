@@ -11,9 +11,6 @@ import os
 import time
 import ctypes as C
 
-
-
-
 def interp_value(value, low_bound, up_bound, sig1, sig2):
     #interpolating a single value between low_bound and up_bound to new 
     #bounds sig1 and sig2. Probably quicker than np.interp function
