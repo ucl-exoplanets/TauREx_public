@@ -91,6 +91,7 @@ extern "C" {
     				for (int l=0;l<nactive;l++) {
                         sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
                         tau += (sigma * active_mixratio[l][k+j] * density[k+j] * dlarray[count]);
+                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
                         tau += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[l][k+j] * density[j+k] * dlarray[count];
                     }
                     // calculating optical depth due inactive gases (rayleigh scattering)
@@ -98,6 +99,7 @@ extern "C" {
                         //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[l][k+j] << " " << density[j+k] << " " << dlarray[count] << endl;
                         tau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[l][k+j] * density[j+k] * dlarray[count];
                     }
+                    count += 1;
                 }
                 exptau = exp(-tau);
 		        integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
