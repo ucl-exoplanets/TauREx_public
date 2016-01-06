@@ -96,10 +96,17 @@ class transmission():
         self.cpath_nlayers = C.c_int(self.atmosphere.nlayers)
         self.cpath_nactive = C.c_int(self.atmosphere.nactivegases)
         self.cpath_ninactive = C.c_int(self.atmosphere.ninactivegases)
-        self.cpath_sigma_array = cast2cpp(self.atmosphere.sigma_array.flatten())
+        self.cpath_sigma_array = cast2cpp(self.atmosphere.sigma_array_flat)
         self.cpath_sigma_temp = cast2cpp(self.data.sigma_dict['t'])
         self.cpath_sigma_ntemp = C.c_int(len(self.data.sigma_dict['t']))
-        self.cpath_sigma_rayleigh_array = cast2cpp(self.atmosphere.sigma_rayleigh_array.flatten())
+        self.cpath_sigma_rayleigh_array = cast2cpp(self.atmosphere.sigma_rayleigh_array_flat)
+
+        self.cpath_cia_npairs = C.c_int(len(self.data.sigma_cia_dict['xsecarr']))
+        self.cpath_cia_idx = cast2cpp(self.atmosphere.cia_idx)
+        self.cpath_cia_nidx = C.c_int(len(self.atmosphere.cia_idx))
+        self.cpath_sigma_cia_array = cast2cpp(self.atmosphere.sigma_cia_array_flat)
+        self.cpath_sigma_cia_temp = cast2cpp(self.data.sigma_cia_dict['t'])
+        self.cpath_sigma_cia_ntemp = C.c_int(len(self.data.sigma_cia_dict['t']))
         self.cpath_star_radius = C.c_double(self.params.star_radius)
 
     def cpath_update_vars(self):
@@ -134,6 +141,12 @@ class transmission():
                        self.cpath_sigma_temp,
                        self.cpath_sigma_ntemp,
                        self.cpath_sigma_rayleigh_array,
+                       self.cpath_cia_npairs,
+                       self.cpath_cia_idx,
+                       self.cpath_cia_nidx,
+                       self.cpath_sigma_cia_array,
+                       self.cpath_sigma_cia_temp,
+                       self.cpath_sigma_cia_ntemp,
                        self.cpath_z,
                        self.cpath_dz,
                        self.cpath_density_profile,
@@ -285,7 +298,6 @@ class transmission():
 
         del(dlarray)
         del(absorption)
-
 
         return out
 

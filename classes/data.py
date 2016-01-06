@@ -131,6 +131,7 @@ class data(object):
 
         logging.info('Data object initialised')
 
+
     def load_sigma_dict(self):
 
         # preload the absorption cross sections for the input molecules
@@ -216,7 +217,7 @@ class data(object):
 
                 # load the sigma array in memory
                 logging.info('Preload cross section for %s' % mol_val)
-                sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx,wno_min_idx:wno_max_idx]
+                sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx,wno_min_idx:wno_max_idx] / 10000. # also convert from cm^-2 to m^-2
 
         del sigma_tmp, t, p, wno
 
@@ -335,10 +336,11 @@ class data(object):
 
             sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
             sigma_dict['wno'] = self.int_wngrid
+            sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid))
 
             # reinterpolate cia xsec to internal grid and save
             for t_idx, t_val in enumerate(sigma_dict['t']):
-                sigma_dict['xsecarr'][pair_val,t_idx] = np.interp(self.int_wngrid, wno, sigma_tmp['xsecarr'][t_idx])
+                sigma_dict['xsecarr'][pair_val][t_idx,:] = np.interp(self.int_wngrid, wno, sigma_tmp['xsecarr'][Tmin_idx+t_idx])
 
             # load the sigma array in memory
             logging.info('Preload cia cross section for %s' % pair_val)

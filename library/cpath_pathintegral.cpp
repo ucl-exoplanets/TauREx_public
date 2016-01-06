@@ -34,7 +34,13 @@ extern "C" {
                        const double * sigma_temp,
                        const int sigma_ntemp,
                        const double * sigma_rayleigh,
-                       const double * z, // altitude profile
+                       const int cia_npairs,
+                       const double * cia_idx,
+                       const int cia_nidx,
+                       const double * sigma_cia,
+                       const double * sigma_cia_temp,
+                       const int sigma_cia_ntemp,
+                       const double * z,
                        const double * dz,
                        const double * density,
                        const double ** active_mixratio,
@@ -43,12 +49,15 @@ extern "C" {
                        const double planet_radius,
                        const double star_radius,
                        void * absorptionv) {
-            
+
         double * absorption = (double *) absorptionv;
 
         // setting up arrays and variables
         double dlarray[nlayers*nlayers];
-        double sigma, sigma_l, sigma_r, sigma_interp[nwngrid*nlayers*nactive];
+        double sigma, sigma_l, sigma_r;
+        double sigma_interp[nwngrid*nlayers*nactive];
+        double sigma_cia_interp[nwngrid*nlayers*cia_npairs];
+
         double tau, exptau,  integral;
         double p;
         int count, t_idx;
@@ -64,8 +73,8 @@ extern "C" {
         }
 
         // interpolate sigma array to the temperature profile
-        for (int j=0; j<(nlayers); j++) {
-            for (int t=1; t<(sigma_ntemp); t++) {
+        for (int j=0; j<nlayers; j++) {
+            for (int t=1; t<sigma_ntemp; t++) {
                 if ((temperature[j] > sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
@@ -79,6 +88,21 @@ extern "C" {
             }
         }
 
+        // interpolate sigma CIA array to the temperature profile
+        for (int j=0; j<nlayers; j++) {
+            for (int t=1; t<sigma_cia_ntemp; t++) {
+                if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                    for (int wn=0; wn<nwngrid; wn++) {
+                        for (int l=0;l<cia_npairs;l++) {
+                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_ntemp*l)];
+                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_ntemp*l)];
+                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                        }
+                    }
+                }
+            }
+        }
 
         // calculate absorption
         for (int wn=0; wn < nwngrid; wn++) {

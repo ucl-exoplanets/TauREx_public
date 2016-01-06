@@ -98,9 +98,16 @@ class atmosphere(object):
 
         # get sigma array (and interpolate sigma array to pressure profile)
         self.sigma_array = self.get_sigma_array()
+        self.sigma_array_flat = self.sigma_array.flatten()
 
         # get sigma rayleigh array (for active and inactive absorbers)
         self.sigma_rayleigh_array = self.get_sigma_rayleigh_array()
+        self.sigma_rayleigh_array_flat = self.sigma_rayleigh_array.flatten()
+
+        # get collision induced absorption cross sections
+        self.sigma_cia_array = self.get_sigma_cia_array()
+        self.sigma_cia_array_flat = self.sigma_cia_array.flatten()
+        self.cia_idx = self.get_cia_idx()
 
         logging.info('Atmosphere object initialised')
 
@@ -190,13 +197,32 @@ class atmosphere(object):
                             np.interp(pressure_val, self.data.sigma_dict['p'], sigma_in[:,temperature_idx,wno_idx])
         return sigma_array
 
-
     def get_sigma_rayleigh_array(self):
         sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.data.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.params.atm_active_gases+self.params.atm_inactive_gases):
             sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val]
         return sigma_rayleigh_array
 
+    def get_sigma_cia_array(self):
+        sigma_cia_array = np.zeros((len(self.params.in_cia_pairs), len(self.data.sigma_cia_dict['t']), self.data.int_nwngrid))
+        for pair_idx, pair_val in enumerate(self.params.in_cia_pairs):
+            sigma_cia_array[pair_idx,:,:] = self.data.sigma_cia_dict['xsecarr'][pair_val]
+        return sigma_cia_array
+
+    def get_cia_idx(self):
+        # return the gas indexes of the molecules inside the pairs
+        # used to get the mixing ratios of the individual molecules in the cpp pathintegral
+        # the index refers to the full array of active_gas + inactive_gas
+        cia_idx = np.zeros((len(self.params.in_cia_pairs)*2))
+        c = 0
+        for pair_idx, pair_val in enumerate(self.params.in_cia_pairs):
+            for mol_idx, mol_val in enumerate(pair_val.split('-')):
+                try:
+                    cia_idx[c] = self.params.atm_active_gases.index(mol_val)
+                except ValueError:
+                    cia_idx[c] = self.nactivegases + self.params.atm_inactive_gases.index(mol_val)
+                c += 1
+        return cia_idx
 
     def update_atmosphere(self):
 

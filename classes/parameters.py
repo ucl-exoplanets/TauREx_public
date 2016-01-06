@@ -103,12 +103,11 @@ class parameters(base):
         self.in_atm_file           = self.getpar('Input','atm_file')
         self.in_xsec_path          = self.getpar('Input','xsec_path')
         self.in_xsec_dnu           = self.getpar('Input','xsec_dnu', 'float')
+        self.in_cia                = self.getpar('Input','cia', 'bool')
         self.in_cia_path           = self.getpar('Input','cia_path')
-        self.in_cia_pairs          = self.getpar('Input','cia_pairs', 'list-str')
+        self.in_cia_pairs          = [pair.upper() for pair in self.getpar('Input','cia_pairs', 'list-str')]
+
         self.in_star_path          = self.getpar('Input','star_path')
-        self.in_include_cia        = self.getpar('Input','include_cia', 'bool')
-        self.in_cia_file           = self.getpar('Input','cia_file')
-        self.in_create_sigma_rayleigh = self.getpar('Input','create_sigma_rayleigh', 'bool')
 
         # section Output
         self.out_path              = self.getpar('Output','path')

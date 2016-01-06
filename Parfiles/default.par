@@ -34,19 +34,15 @@ atm_file = Input/profile.atm
 xsec_path = Input/xsec_10wno/
 xsec_dnu  = 10
 
-# path to pickled CIA cross sections (h2h2.db, h2he.cia)
+# CIA cross sections
+include_cia = True
+# Path where cia pairs are stored as pickled files
 cia_path = Input/cia/
-cia_pairs = h2h2
+# Name of the pairs to include (use dash "-"!). The names are used to load the pickled files inside cia_path (e.g. "h2-h2" loads H2-H2.db).
+cia_pairs = h2-h2, h2-he
 
 #Path to Phoenix/Atlas stellar models (required by emission code)
 star_path = Input/star_spectra
-
-#include H2-H2 collision induced absorption. True/False
-include_cia = False
-cia_file = Input/h2_h2_1000K.cia
-
-# rebuild Rayleigh scattering cross sections
-create_sigma_rayleigh = False
 
 [Output]
 #path for output files
