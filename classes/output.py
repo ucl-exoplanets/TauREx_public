@@ -260,8 +260,8 @@ class output(base):
                 mixing_means /= sum(mixing_means) # closure operation
 
                 # get coupled std of means
-                absorbing_gases_X = mixing_means[:len(self.fitting.forwardmodel.atmosphere.absorbing_gases)]
-                inactive_gases_X = mixing_means[len(self.fitting.forwardmodel.atmosphere.inactive_gases)+1:]
+                absorbing_gases_X = mixing_means[:len(self.params.atm_active_gases)]
+                inactive_gases_X = mixing_means[len(self.params.atm_inactive_gases)+1:]
 
                 coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
 
@@ -270,8 +270,8 @@ class output(base):
 
                 # set new list of params names, including the clr inv mixing ratios
                 self.clrinv_params_names = []
-                for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
-                        self.fitting.forwardmodel.atmosphere.inactive_gases):
+                for idx, gasname in enumerate(self.params.atm_active_gases +
+                        self.params.atm_inactive_gases):
                     self.clrinv_params_names.append(gasname)
                 self.clrinv_params_names.append('coupled_mu')
                 for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
@@ -314,8 +314,8 @@ class output(base):
         i = 0
         for sample in mixing_ratios_tracedata:
             # get mean molecular weight from gas mixing ratios
-            absorbing_gases_X = sample[:len(self.fitting.forwardmodel.atmosphere.absorbing_gases)]
-            inactive_gases_X = sample[len(self.fitting.forwardmodel.atmosphere.inactive_gases)+1:]
+            absorbing_gases_X = sample[:len(self.params.atm_active_gases)]
+            inactive_gases_X = sample[len(self.params.atm_inactive_gases)+1:]
             coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
             coupled_mu_trace[i] = coupled_mu
             i += 1
@@ -344,31 +344,32 @@ class output(base):
             out[:,1] = model
             fitting_out[idx]['highres_spectrum'] = out
             
-            #individual molecules plotted todo may need some cleaning
-            fit_params2 = fit_params           
-            fitting_out[idx]['components'] ={}
-            for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
-                fit_params2 = np.copy(fit_params)
-                if self.params.fit_X_log:
-                    fit_params2[:self.fitting.fit_X_nparams] = [-20.0]*self.fitting.fit_X_nparams 
-                else:
-                    fit_params2[:self.fitting.fit_X_nparams] = [0.0]*self.fitting.fit_X_nparams
-                fit_params2[idx2] = solution['fit_params'][param]['value']
-#                 fit_params2[idx2] = 0.0
-           
-                
-                self.fitting.update_atmospheric_parameters(fit_params2)
-                model2 = self.fitting.forwardmodel.model()
-                out2 = np.zeros((len(self.data.int_wlgrid), 2))
-                out2[:,0] = self.data.int_wlgrid
-                out2[:,1] = model2
-                out3 = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
-                out3[:,0] = self.data.obs_spectrum[:,0]
-                out3[:,1] = [model2[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
-                
-                fitting_out[idx]['components'][param] ={}
-                fitting_out[idx]['components'][param]['highres_spectrum'] = out2
-                fitting_out[idx]['components'][param]['spectrum'] = out3
+            #individual molecules plotted
+            if self.params.fit_fit_active:
+                fit_params2 = fit_params
+                fitting_out[idx]['components'] ={}
+                for idx2, param in enumerate(self.params.atm_active_gases):
+                    fit_params2 = np.copy(fit_params)
+                    if self.params.fit_X_log:
+                        fit_params2[:self.fitting.fit_X_nparams] = [-20.0]*self.fitting.fit_X_nparams
+                    else:
+                        fit_params2[:self.fitting.fit_X_nparams] = [0.0]*self.fitting.fit_X_nparams
+                    fit_params2[idx2] = solution['fit_params'][param]['value']
+    #                 fit_params2[idx2] = 0.0
+
+
+                    self.fitting.update_atmospheric_parameters(fit_params2)
+                    model2 = self.fitting.forwardmodel.model()
+                    out2 = np.zeros((len(self.data.int_wlgrid), 2))
+                    out2[:,0] = self.data.int_wlgrid
+                    out2[:,1] = model2
+                    out3 = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
+                    out3[:,0] = self.data.obs_spectrum[:,0]
+                    out3[:,1] = [model2[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
+
+                    fitting_out[idx]['components'][param] ={}
+                    fitting_out[idx]['components'][param]['highres_spectrum'] = out2
+                    fitting_out[idx]['components'][param]['spectrum'] = out3
 
         return fitting_out
 
@@ -561,44 +562,45 @@ class output(base):
         
         
         # plot models
-        if self.fitting.DOWN:
-            fig = py.figure()
-#             plot_observed = True
-            fig = self.__plot_fit__(self.DOWN_out[0][res], 'MODEL', fig=fig, plot_observed = True,linewidth=linewidth)
-            for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
-#                 if idx2 == 1: plot_observed = False
-                fig = self.__plot_fit__(self.DOWN_out[0]['components'][param][res], param, 
-                                        fig=fig,plot_observed=False,linewidth=linewidth)
-            if save2pdf:
-                self.save_fig(fig, 'downhill_components_{}_res.pdf'.format(resolution))
-            
-        if self.fitting.MCMC:
-            for idx, solution in enumerate(self.MCMC_out):
+        if self.params.fit_fit_active:
+            if self.fitting.DOWN:
                 fig = py.figure()
-#                 plot_observed=True
-                fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
-                for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
-#                     if idx2 == 1: plot_observed = False
-                    fig = self.__plot_fit__(solution['components'][param][res],param,
-                                        fig=fig,plot_observed=False,linewidth=linewidth)
-                    
+    #             plot_observed = True
+                fig = self.__plot_fit__(self.DOWN_out[0][res], 'MODEL', fig=fig, plot_observed = True,linewidth=linewidth)
+                for idx2, param in enumerate(self.params.atm_active_gases):
+    #                 if idx2 == 1: plot_observed = False
+                    fig = self.__plot_fit__(self.DOWN_out[0]['components'][param][res], param,
+                                            fig=fig,plot_observed=False,linewidth=linewidth)
                 if save2pdf:
-                    self.save_fig(fig, 'mcmc_components_{0}_{1}_res.pdf'.format(idx,resolution))
-                
-        if self.fitting.NEST:
-            for idx, solution in enumerate(self.NEST_out):
-                fig = py.figure()
-#                 plot_observed=True
-                fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
-                for idx2, param in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases):
-#                     if idx2 == 1: plot_observed = False
-                    fig = self.__plot_fit__(solution['components'][param][res],param,
-                                        fig=fig,plot_observed=False,linewidth=linewidth)
-                    
-                if save2pdf:
-                    self.save_fig(fig, 'nested_components_{0}_{1}_res.pdf'.format(idx,resolution))
-                
-    
+                    self.save_fig(fig, 'downhill_components_{}_res.pdf'.format(resolution))
+
+            if self.fitting.MCMC:
+                for idx, solution in enumerate(self.MCMC_out):
+                    fig = py.figure()
+    #                 plot_observed=True
+                    fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
+                    for idx2, param in enumerate(self.params.atm_active_gases):
+    #                     if idx2 == 1: plot_observed = False
+                        fig = self.__plot_fit__(solution['components'][param][res],param,
+                                            fig=fig,plot_observed=False,linewidth=linewidth)
+
+                    if save2pdf:
+                        self.save_fig(fig, 'mcmc_components_{0}_{1}_res.pdf'.format(idx,resolution))
+
+            if self.fitting.NEST:
+                for idx, solution in enumerate(self.NEST_out):
+                    fig = py.figure()
+    #                 plot_observed=True
+                    fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
+                    for idx2, param in enumerate(self.params.atm_active_gases):
+    #                     if idx2 == 1: plot_observed = False
+                        fig = self.__plot_fit__(solution['components'][param][res],param,
+                                            fig=fig,plot_observed=False,linewidth=linewidth)
+
+                    if save2pdf:
+                        self.save_fig(fig, 'nested_components_{0}_{1}_res.pdf'.format(idx,resolution))
+
+
     def __plot_fit__(self,MODEL,LABEL,fig=None,plot_observed=False, linewidth=2.0):
         
         if fig is None:
@@ -866,7 +868,7 @@ class output(base):
     #
     #         # set parameter names of new traces
     #         self.params_names = []
-    #         for idx, gasname in enumerate(self.fitting.forwardmodel.atmosphere.absorbing_gases +
+    #         for idx, gasname in enumerate(self.params.atm_active_gases +
     #                 self.fitting.forwardmodel.atmosphere.inactive_gases):
     #             self.params_names.append(gasname)
     #         ## todo careful about adding coupled_mu, it might interfere with fit-params?

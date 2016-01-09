@@ -22,8 +22,6 @@
 
 using namespace std;
 
-
-
 extern "C" {
 
     void path_integral(const int nwngrid,
@@ -77,7 +75,7 @@ extern "C" {
         // interpolate sigma array to the temperature profile
         for (int j=0; j<nlayers; j++) {
             for (int t=1; t<sigma_ntemp; t++) {
-                if ((temperature[j] > sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+                if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
                             sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
@@ -132,7 +130,6 @@ extern "C" {
                         sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
                         tau += (sigma * active_mixratio[l][k+j] * density[k+j] * dlarray[count]);
                         //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
-
                         tau += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[l][k+j] * density[j+k] * dlarray[count];
                     }
                     // calculating optical depth due inactive gases (rayleigh scattering)

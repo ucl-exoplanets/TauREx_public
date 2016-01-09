@@ -43,6 +43,7 @@ class atmosphere(object):
         self.planet_mass = self.params.planet_mass
         self.planet_grav = self.get_surface_gravity() # this should be set as a function of altitude
 
+
         self.max_pressure = self.params.atm_max_pres
 
         self.nlayers = self.params.atm_nlayers # todo change for external ATM file
@@ -58,9 +59,14 @@ class atmosphere(object):
         if self.params.atm_couple_mu:
             self.planet_mu = self.get_coupled_planet_mu()
         else:
-            self.planet_mu = self.params.planet_mu
-        #
-        # todo reimplement use of external ATM files!
+            self.planet_mu = np.zeros((self.nlayers))
+            self.planet_mu[:] = self.params.planet_mu
+
+        logging.info('Planet radius: %.3f RJUP' % (self.planet_radius/RJUP))
+        logging.info('Planet mass: %.3f MJUP' % (self.planet_mass/MJUP))
+        logging.info('Planet gravity (log g): %.3f cgs' % (np.log10(self.planet_grav)))
+        logging.info('Mean molecular weight: %.5f AMU' % (self.planet_mu[0]/AMU))
+        logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
 
         # set pressure profile. This is fixed
         self.pressure_profile = self.get_pressure_profile()
@@ -150,6 +156,7 @@ class atmosphere(object):
 
     # get the surface gravity of the planet
     def get_surface_gravity(self, mass=None, radius=None):
+
         if not mass:
             mass = self.planet_mass
         if not radius:
@@ -165,14 +172,10 @@ class atmosphere(object):
 
     # get the pressure profile
     def get_pressure_profile(self, Pmax=None, num_scaleheights=None):
-
-
         if not Pmax:
             Pmax = self.max_pressure
         if not num_scaleheights:
             num_scaleheights = self.params.atm_num_scaleheights
-
-
         Pmin = Pmax * np.exp(-num_scaleheights)
         P = np.linspace(np.log(Pmin), np.log(Pmax), self.nlayers)
         return np.exp(P)[::-1]

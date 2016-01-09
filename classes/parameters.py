@@ -29,15 +29,7 @@ else:
     MPIrank     = 0
     MPIsize     = 0
 
-
-#conversion constants
-RSOL  = 6.955e8         #stellar radius to m
-RJUP  = 6.9911e7        #jupiter radius to m
-MJUP  = 1.898e27        #jupiter mass to kg
-REARTH= 6.371e3         #earth radius to m
-AU    = 1.49e11         #semi-major axis (AU) to m
-AMU   = 1.660538921e-27 #atomic mass to kg
-
+from library_constants import *
 
 class parameters(base):
 #instantiation

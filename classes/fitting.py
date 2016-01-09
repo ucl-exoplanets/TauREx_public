@@ -60,14 +60,8 @@ except ImportError:
 
 cythonised = False # currently disabelling cythonised functions
 
-#conversion constants
-RSOL  = 6.955e8         #stellar radius to m
-RJUP  = 6.9911e7        #jupiter radius to m
-MJUP  = 1.898e27        #jupiter mass to kg
-REARTH= 6.371e3         #earth radius to m
-AU    = 1.49e11         #semi-major axis (AU) to m
-AMU   = 1.660538921e-27 #atomic mass to kg
-
+from library_constants import *
+from library_general import *
 
 class fitting(base):
 
@@ -164,17 +158,18 @@ class fitting(base):
             # bounds defined in parameter file
 
             # active gases (see params.fit_fit_active)
-            for idx, gasname in enumerate(self.params.atm_active_gases):
-                if self.params.fit_X_log: # fit in log space
-                    self.fit_params.append(np.log10(self.params.atm_active_gases_mixratios[idx]))
-                    self.fit_bounds.append((np.log10(self.params.fit_X_active_bounds[0]),
-                                            np.log10(self.params.fit_X_active_bounds[1])))
-                else: # fit in linear space
-                    self.fit_params.append(self.params.atm_active_gases_mixratios[idx])
-                    self.fit_bounds.append((self.params.fit_X_active_bounds[0],
-                                            self.params.fit_X_active_bounds[1]))
-                self.fit_params_names.append(gasname)
-                count_X += 1
+            if self.params.fit_fit_active:
+                for idx, gasname in enumerate(self.params.atm_active_gases):
+                    if self.params.fit_X_log: # fit in log space
+                        self.fit_params.append(np.log10(self.params.atm_active_gases_mixratios[idx]))
+                        self.fit_bounds.append((np.log10(self.params.fit_X_active_bounds[0]),
+                                                np.log10(self.params.fit_X_active_bounds[1])))
+                    else: # fit in linear space
+                        self.fit_params.append(self.params.atm_active_gases_mixratios[idx])
+                        self.fit_bounds.append((self.params.fit_X_active_bounds[0],
+                                                self.params.fit_X_active_bounds[1]))
+                    self.fit_params_names.append(gasname)
+                    count_X += 1
 
             # inactive gases (see params.fit_fit_inactive [usually set to False !])
             if self.params.fit_fit_inactive:
@@ -314,9 +309,8 @@ class fitting(base):
         # surface pressure
         if self.params.fit_fit_P0:
             self.fit_params_names.append('P0')
-            self.fit_params.append(np.mean((np.log10(self.params.fit_P0_low), np.log10(self.params.fit_P0_up))))
+            self.fit_params.append(self.params.atm_max_pres)
             self.fit_bounds.append((np.log10(self.params.fit_P0_bounds[0]), np.log10(self.params.fit_P0_bounds[1]))) # in log[Pascal]
-
 
         ##########################################################################
         # Cloud parameters. Only if include_clouds = True
@@ -411,12 +405,13 @@ class fitting(base):
             # mixing ratios are expressed in log/linear space. No centered-log-ratio transformation applied
 
             # set mixing ratios of absorbing and inactive gases, assume constant mixing ratios as a function of altitude
-            for idx, gasname in enumerate(self.params.atm_active_gases):
-                if self.params.fit_X_log: # fit in log space
-                    self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = power(10, fit_params[count])
-                else:
-                    self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = fit_params[count]
-                count += 1
+            if self.params.fit_fit_active:
+                for idx, gasname in enumerate(self.params.atm_active_gases):
+                    if self.params.fit_X_log: # fit in log space
+                        self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = power(10, fit_params[count])
+                    else:
+                        self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = fit_params[count]
+                    count += 1
             if self.params.fit_fit_inactive:
                 for idx, gasname in enumerate(self.params.atm_inactive_gases):
                     if self.params.fit_X_log: # fit in log space
@@ -462,7 +457,11 @@ class fitting(base):
                     self.forwardmodel.atmosphere.inactive_mixratio_profile[1, :] = mixratio_remainder*mixratio_2
 
                 else:
-                    self.forwardmodel.atmosphere.planet_mu = fit_params[count]*AMU
+
+                    mw_active_gases = 0
+                    for idx, gasname in enumerate(self.params.atm_active_gases):
+                        mw_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0] * get_molecular_weight(gasname) # assume mu from first layer
+                    self.forwardmodel.atmosphere.planet_mu = mw_active_gases + fit_params[count]*AMU
 
                 count += 1
 
@@ -530,22 +529,22 @@ class fitting(base):
         # figure(2)
         # clf()
         #
-        ion()
-        figure(1)
-        clf()
-        errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-        plot(self.data.obs_spectrum[:,0], model_binned)
-        xlabel('Wavelength (micron)')
-        ylabel('Transit depth')
-        xscale('log')
-        xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-        ion()
-        draw()
-        pause(0.0001)
+        # ion()
+        # figure(1)
+        # clf()
+        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        # plot(self.data.obs_spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
+        # ion()
+        # draw()
+        # pause(0.0001)
 
         print 'res=%.2f - T=%.1f, mu=%.4f [%.4f], R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
             self.forwardmodel.atmosphere.planet_mu/AMU, \
-            fit_params[3], \
+            fit_params[2], \
             self.forwardmodel.atmosphere.planet_radius/RJUP, \
             self.forwardmodel.atmosphere.max_pressure/1.e5), \
             self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \

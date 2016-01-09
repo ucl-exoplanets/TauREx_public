@@ -6,13 +6,8 @@ import ctypes as C
 import numpy as np
 import math
 
-#conversion constants
-RSOL  = 6.955e8         #stellar radius to m
-RJUP  = 6.9911e7        #jupiter radius to m
-MJUP  = 1.898e27        #jupiter mass to kg
-REARTH= 6.371e3         #earth radius to m
-AU    = 1.49e11         #semi-major axis (AU) to m
-AMU   = 1.660538921e-27 #atomic mass to kg
+from library_constants import *
+
 
 def house_keeping(params,options):
     #does some housekeeping for the final fitting results
@@ -202,6 +197,8 @@ def get_molecular_weight(gasname):
         mu = 18.
     elif gasname == 'C2H2':
         mu = 26.04
+    elif gasname == 'HCN':
+        mu = 27.0253
     elif gasname == 'H2S':
         mu = 34.0809
     else:

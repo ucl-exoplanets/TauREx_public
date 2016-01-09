@@ -280,6 +280,8 @@ class data(object):
                 sigma =  ( 24.*np.pi**3/ (Ns**2) ) * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / ((10000./wn) * 1.e-6)**4
                 logging.info('Rayleigh scattering cross section of %s correctly computed' % (gasname))
                 sigma_rayleigh_dict[gasname] = sigma
+            else:
+                sigma_rayleigh_dict[gasname] = np.zeros((self.int_nwngrid))
 
         return sigma_rayleigh_dict
 
