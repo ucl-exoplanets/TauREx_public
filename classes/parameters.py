@@ -103,10 +103,7 @@ class parameters(base):
         self.in_atm_file           = self.getpar('Input','atm_file')
         self.in_xsec_path          = self.getpar('Input','xsec_path')
         self.in_xsec_dnu           = self.getpar('Input','xsec_dnu', 'float')
-        self.in_cia                = self.getpar('Input','cia', 'bool')
         self.in_cia_path           = self.getpar('Input','cia_path')
-        self.in_cia_pairs          = [pair.upper() for pair in self.getpar('Input','cia_pairs', 'list-str')]
-
         self.in_star_path          = self.getpar('Input','star_path')
 
         # section Output
@@ -134,12 +131,14 @@ class parameters(base):
         self.atm_max_pres           = self.getpar('Atmosphere', 'max_pressure', 'float')
         self.atm_tp_type            = self.getpar('Atmosphere', 'profile_type')
         self.atm_corrlength         = self.getpar('Atmosphere', 'corr_length','float')
-        self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
         self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
         self.atm_active_gases_mixratios = self.getpar('Atmosphere','active_gases_mixratios', 'list-float')
         self.atm_inactive_gases     = [gas.upper() for gas in self.getpar('Atmosphere','inactive_gases', 'list-str')]
         self.atm_inactive_gases_mixratios = self.getpar('Atmosphere','inactive_gases_mixratios', 'list-float')
+        self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
+        self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
+        self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
         self.atm_clouds             = self.getpar('Atmosphere','clouds', 'bool')
         self.atm_cld_params         = self.getpar('Atmosphere','cld_params', 'list-float')
         self.atm_cld_m              = self.atm_cld_params[0]
@@ -165,36 +164,36 @@ class parameters(base):
         self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
         self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
         self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
-        self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
-        self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
-        self.fit_param_free        = self.getpar('Fitting', 'param_free', 'list-float') # currently not used
-        self.fit_fix_inactive      = self.getpar('Fitting', 'fix_inactive', 'bool')
-        self.fit_fix_temp          = self.getpar('Fitting', 'fix_temp', 'bool')
-        self.fit_fix_mu            = self.getpar('Fitting', 'fix_mu', 'bool')
-        self.fit_fix_radius        = self.getpar('Fitting', 'fix_radius', 'bool')
-        self.fit_fix_P0            = self.getpar('Fitting', 'fix_P0', 'bool')
-        self.fit_fix_clouds_lower_P  = self.getpar('Fitting', 'fix_clouds_lower_P', 'bool')
-        self.fit_fix_clouds_upper_P  = self.getpar('Fitting', 'fix_clouds_upper_P', 'bool')
-        self.fit_fix_clouds_m      = self.getpar('Fitting', 'fix_clouds_m', 'bool')
-        self.fit_fix_clouds_a      = self.getpar('Fitting', 'fix_clouds_a', 'bool')
-        self.fit_X_log             = self.getpar('Fitting', 'X_log', 'bool')
-        self.fit_T_up              = self.getpar('Fitting','T_up', 'float')
-        self.fit_T_low             = self.getpar('Fitting','T_low', 'float')
-        self.fit_radius_up         = self.getpar('Fitting','radius_up', 'float')  # in RJUP
-        self.fit_radius_low        = self.getpar('Fitting','radius_low', 'float') # in RJUP
-        self.fit_P0_up             = self.getpar('Fitting','P0_up', 'float')  # in Pascal
-        self.fit_P0_low            = self.getpar('Fitting','P0_low', 'float') # in Pascal
-        self.fit_mu_up             = self.getpar('Fitting','mu_up', 'float') # in AMU
-        self.fit_mu_low            = self.getpar('Fitting','mu_low', 'float') # in AMU
-        self.fit_X_up              = self.getpar('Fitting','X_up', 'float')
-        self.fit_X_low             = self.getpar('Fitting','X_low', 'float')
-        self.fit_X_inactive_up     = self.getpar('Fitting','X_inactive_up', 'float')
-        self.fit_X_inactive_low    = self.getpar('Fitting','X_inactive_low', 'float')
+
+        self.fit_couple_mu    = self.getpar('Fitting','couple_mu', 'bool')
+        self.fit_X_log        = self.getpar('Fitting','X_log', 'bool')
+        self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
+
+        self.fit_fit_active          = self.getpar('Fitting', 'fit_active', 'bool')
+        self.fit_fit_inactive        = self.getpar('Fitting', 'fit_inactive', 'bool')
+        self.fit_fit_temp            = self.getpar('Fitting', 'fit_temp', 'bool')
+        self.fit_fit_mu              = self.getpar('Fitting', 'fit_mu', 'bool')
+        self.fit_fit_radius          = self.getpar('Fitting', 'fit_radius', 'bool')
+        self.fit_fit_P0              = self.getpar('Fitting', 'fit_P0', 'bool')
+        self.fit_fit_clouds_lower_P  = self.getpar('Fitting', 'fit_clouds_lower_P', 'bool')
+        self.fit_fit_clouds_upper_P  = self.getpar('Fitting', 'fit_clouds_upper_P', 'bool')
+        self.fit_fit_clouds_m        = self.getpar('Fitting', 'fit_clouds_m', 'bool')
+        self.fit_fit_clouds_a        = self.getpar('Fitting', 'fit_clouds_a', 'bool')
+
+        self.fit_X_active_bounds       = self.getpar('Fitting', 'X_active_bounds', 'list-float')
+        self.fit_X_inactive_bounds     = self.getpar('Fitting', 'X_inactive_bounds', 'list-float')
+        self.fit_clr_bounds              = self.getpar('Fitting', 'clr_bounds', 'list-float')
+        self.fit_T_bounds              = self.getpar('Fitting', 'T_bounds', 'list-float')
+        self.fit_mu_bounds             = self.getpar('Fitting', 'mu_bounds', 'list-float')
+        self.fit_radius_bounds         = self.getpar('Fitting', 'radius_bounds', 'list-float')
+        self.fit_P0_bounds             = self.getpar('Fitting', 'P0_bounds', 'list-float')
         self.fit_clouds_lower_P_bounds = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
         self.fit_clouds_upper_P_bounds = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
-        self.fit_clouds_a_bounds = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
-        self.fit_clouds_m_bounds = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
-        self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
+        self.fit_clouds_a_bounds       = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
+        self.fit_clouds_m_bounds       = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+
+        self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
+        self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
 
         # section Downhill
         self.downhill_run          = self.getpar('Downhill','run', 'bool')
@@ -207,7 +206,7 @@ class parameters(base):
         self.mcmc_burn             = self.getpar('MCMC','burn', 'float')
         self.mcmc_thin             = self.getpar('MCMC', 'thin', 'float')
         self.mcmc_verbose          = self.getpar('MCMC', 'verbose', 'bool')
-        self.mcmc_progressbar          = self.getpar('MCMC', 'progressbar', 'bool')
+        self.mcmc_progressbar      = self.getpar('MCMC', 'progressbar', 'bool')
 
         # section Nest
         self.nest_run              = self.getpar('MultiNest','run', 'bool')

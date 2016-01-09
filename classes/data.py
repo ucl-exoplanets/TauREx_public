@@ -183,8 +183,8 @@ class data(object):
                     # restrict temperature range
                     Tmax = Tmin = None
                     if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                        Tmax = self.params.planet_temp + self.params.fit_T_low
-                        Tmin = self.params.planet_temp - self.params.fit_T_up
+                        Tmax = self.params.fit_T_bounds[1]
+                        Tmin = self.params.fit_T_bounds[0]
                     elif self.params.in_use_ATMfile:
                         Tmax = np.max(self.pta[:,1])
                         Tmin = np.min(self.pta[:,1])
@@ -291,7 +291,7 @@ class data(object):
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
 
-        for pair_val in self.params.in_cia_pairs:
+        for pair_val in self.params.atm_cia_pairs:
 
             cia_path = os.path.join(self.params.in_cia_path, '%s.db' % pair_val.upper())
 
@@ -310,8 +310,8 @@ class data(object):
             # restrict temperature range
             Tmax = Tmin = None
             if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                Tmax = self.params.planet_temp + self.params.fit_T_low
-                Tmin = self.params.planet_temp - self.params.fit_T_up
+                Tmax = self.params.fit_T_bounds[1]
+                Tmin = self.params.fit_T_bounds[0]
             elif self.params.in_use_ATMfile:
                 Tmax = np.max(self.pta[:,1])
                 Tmin = np.min(self.pta[:,1])
@@ -402,33 +402,3 @@ class data(object):
         out = out[np.argsort(out[:,2]),:]
         return out[:,0:3],np.transpose(out[:,3:])
 
-    def get_molecular_weight(self, gasname):
-
-        # todo move to library general
-
-        if gasname == 'He':
-            mu = 4.
-        elif gasname == 'H2':
-            mu = 2.
-        elif gasname == 'N2':
-            mu = 28.
-        elif gasname == 'O2':
-            mu = 32.
-        elif gasname == 'CO2':
-            mu = 44.
-        elif gasname == 'CH4':
-            mu = 16.
-        elif gasname == 'CO':
-            mu = 28.
-        elif gasname == 'NH3':
-            mu = 17.
-        elif gasname == 'H2O':
-            mu = 18.
-        elif gasname == 'C2H2':
-            mu = 26.04
-        elif gasname == 'H2S':
-            mu = 34.0809
-        else:
-            mu = 0
-
-        return mu * AMU

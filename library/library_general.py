@@ -6,6 +6,14 @@ import ctypes as C
 import numpy as np
 import math
 
+#conversion constants
+RSOL  = 6.955e8         #stellar radius to m
+RJUP  = 6.9911e7        #jupiter radius to m
+MJUP  = 1.898e27        #jupiter mass to kg
+REARTH= 6.371e3         #earth radius to m
+AU    = 1.49e11         #semi-major axis (AU) to m
+AMU   = 1.660538921e-27 #atomic mass to kg
+
 def house_keeping(params,options):
     #does some housekeeping for the final fitting results
     #copies used parameter file to ./Output
@@ -170,3 +178,33 @@ def plot_bin(spectrum, R, ycol=1, yadg=0., **kwargs):
     plt.plot(spectrum_bin[:,0], spectrum_bin[:,1]+yadg, **kwargs)
 
 
+def get_molecular_weight(gasname):
+
+    gasname = gasname.upper()
+
+    if gasname == 'HE':
+        mu = 4.
+    elif gasname == 'H2':
+        mu = 2.
+    elif gasname == 'N2':
+        mu = 28.
+    elif gasname == 'O2':
+        mu = 32.
+    elif gasname == 'CO2':
+        mu = 44.
+    elif gasname == 'CH4':
+        mu = 16.
+    elif gasname == 'CO':
+        mu = 28.
+    elif gasname == 'NH3':
+        mu = 17.
+    elif gasname == 'H2O':
+        mu = 18.
+    elif gasname == 'C2H2':
+        mu = 26.04
+    elif gasname == 'H2S':
+        mu = 34.0809
+    else:
+        mu = 0
+
+    return mu * AMU

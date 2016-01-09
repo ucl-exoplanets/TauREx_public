@@ -43,6 +43,8 @@ class atmosphere(object):
         self.planet_mass = self.params.planet_mass
         self.planet_grav = self.get_surface_gravity() # this should be set as a function of altitude
 
+        self.max_pressure = self.params.atm_max_pres
+
         self.nlayers = self.params.atm_nlayers # todo change for external ATM file
 
         # set mixing ratios profiles of active and inactive gases. todo optionally convert to single value profiles?
@@ -54,11 +56,10 @@ class atmosphere(object):
             self.inactive_mixratio_profile[i, :] = self.params.atm_inactive_gases_mixratios[i]
 
         if self.params.atm_couple_mu:
-            # todo calculate coupled mu
-            self.planet_mu = self.params.planet_mu
+            self.planet_mu = self.get_coupled_planet_mu()
         else:
             self.planet_mu = self.params.planet_mu
-
+        #
         # todo reimplement use of external ATM files!
 
         # set pressure profile. This is fixed
@@ -111,30 +112,41 @@ class atmosphere(object):
 
         logging.info('Atmosphere object initialised')
 
-    def get_coupled_planet_mu(self, absorbing_gases_X='', inactive_gases_X=''):
-        # todo fix
-        if inactive_gases_X == '':
-            inactive_gases_X = self.inactive_gases_X
+    def get_coupled_planet_mu(self):
+
+        # calculate the absolute mixing ratio of inactive gases
+        inactive_mixratio_profile = np.zeros((self.ninactivegases, self.nlayers))
+        for i in xrange(self.ninactivegases):
+            inactive_mixratio_profile[i, :] = self.inactive_mixratio_profile[i,:]*(1. - np.sum(self.active_mixratio_profile, axis=0))
+
         # get mu for each layer
         mu = np.zeros(self.nlayers)
-        for i in range(self.nlayers):
-            for idx, gasname in enumerate(self.absorbing_gases):
-                mu[i] += self.X[idx, i] * self.data.get_molecular_weight(gasname)
-            for idx, gasname in enumerate(self.inactive_gases):
-                mu[i] += inactive_gases_X[idx] * self.data.get_molecular_weight(gasname)
-            logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
+        for i in xrange(self.nlayers):
+            for idx, gasname in enumerate(self.params.atm_active_gases):
+                mu[i] += self.active_mixratio_profile[idx, i] * get_molecular_weight(gasname)
+            for idx, gasname in enumerate(self.params.atm_inactive_gases):
+                mu[i] += inactive_mixratio_profile[idx, i] * get_molecular_weight(gasname)
+            #logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
+
         return mu
 
     # get the atmospheric scale height
     def get_scale_height(self, T=None, g=None, mu=None):
-        # here we might use a different approach, similar to Venot! think...
+
+
+        # here we might use a different approach, similar to Venot
         if not T:
             T = self.temperature_profile
         if not g:
             g = self.planet_grav
         if not mu:
             mu = self.planet_mu
-        return (KBOLTZ*T)/(mu*g)
+
+        scaleheight =  (KBOLTZ*T)/(mu*g)
+        if len(scaleheight) > 1:
+            scaleheight = np.average(scaleheight)
+
+        return scaleheight
 
     # get the surface gravity of the planet
     def get_surface_gravity(self, mass=None, radius=None):
@@ -143,7 +155,6 @@ class atmosphere(object):
         if not radius:
             radius = self.planet_radius
         return (G * mass) / (radius**2)
-
 
     # get the altitude profile
     def get_altitude_profile(self, P=None):
@@ -154,10 +165,14 @@ class atmosphere(object):
 
     # get the pressure profile
     def get_pressure_profile(self, Pmax=None, num_scaleheights=None):
+
+
         if not Pmax:
-            Pmax = self.params.atm_max_pres
+            Pmax = self.max_pressure
         if not num_scaleheights:
             num_scaleheights = self.params.atm_num_scaleheights
+
+
         Pmin = Pmax * np.exp(-num_scaleheights)
         P = np.linspace(np.log(Pmin), np.log(Pmax), self.nlayers)
         return np.exp(P)[::-1]
@@ -204,8 +219,8 @@ class atmosphere(object):
         return sigma_rayleigh_array
 
     def get_sigma_cia_array(self):
-        sigma_cia_array = np.zeros((len(self.params.in_cia_pairs), len(self.data.sigma_cia_dict['t']), self.data.int_nwngrid))
-        for pair_idx, pair_val in enumerate(self.params.in_cia_pairs):
+        sigma_cia_array = np.zeros((len(self.params.atm_cia_pairs), len(self.data.sigma_cia_dict['t']), self.data.int_nwngrid))
+        for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
             sigma_cia_array[pair_idx,:,:] = self.data.sigma_cia_dict['xsecarr'][pair_val]
         return sigma_cia_array
 
@@ -213,9 +228,9 @@ class atmosphere(object):
         # return the gas indexes of the molecules inside the pairs
         # used to get the mixing ratios of the individual molecules in the cpp pathintegral
         # the index refers to the full array of active_gas + inactive_gas
-        cia_idx = np.zeros((len(self.params.in_cia_pairs)*2))
+        cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=int)
         c = 0
-        for pair_idx, pair_val in enumerate(self.params.in_cia_pairs):
+        for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
             for mol_idx, mol_val in enumerate(pair_val.split('-')):
                 try:
                     cia_idx[c] = self.params.atm_active_gases.index(mol_val)
@@ -226,21 +241,12 @@ class atmosphere(object):
 
     def update_atmosphere(self):
 
-        #### work needed!!
-
-        # update surface gravity and scale height
         self.planet_grav = self.get_surface_gravity()
-        self.scaleheight = self.get_scaleheight()
+        self.pressure_profile = self.get_pressure_profile()
+        self.scale_height = self.get_scale_height()
+        self.altitude_profile = self.get_altitude_profile()
+        self.density_profile = self.get_density_profile()
 
-        # set altitude array
-        if self.params.in_use_ATMfile:
-            self.z = self.pta[:,2]
-        else:
-            self.z = self.alt_grid
-
-        self.pressure_profile = self.max_pressure * np.exp(-self.z/self.scaleheight)
-        self.P_bar = self.pressure_profile * 1.0e-5 #convert pressure from Pa to bar
-        self.rho = self.get_rho() # update density
 
     #####################
     # Everything below is related to Temperature Pressure Profiles
