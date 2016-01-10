@@ -438,14 +438,15 @@ class fitting(base):
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
         else:
             if self.params.fit_fit_mu:
+
+                mw_active_gases = 0
+                mixratio_active_gases = 0
+                for idx, gasname in enumerate(self.params.atm_active_gases):
+                    mixratio_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0]
+                    mw_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0] * get_molecular_weight(gasname) # assume mu from first layer
+                self.forwardmodel.atmosphere.planet_mu = mw_active_gases + (1.-mixratio_active_gases)*fit_params[count]*AMU
+
                 if self.params.atm_couple_mu:
-
-                    mu = np.zeros(self.atmosphere.nlayers)
-                    for i in xrange(self.atmosphere.nlayers):
-                        for idx, gasname in enumerate(self.params.atm_active_gases):
-                            mu[i] += self.forwardmodel.atmosphere.active_mixratio_profile[idx, i] * get_molecular_weight(gasname)
-
-                    self.forwardmodel.atmosphere.planet_mu = mu[i] + fit_params[count]*AMU
 
                     mw_0 = get_molecular_weight(self.params.atm_inactive_gases[0])
                     mw_1 = get_molecular_weight(self.params.atm_inactive_gases[1])
@@ -456,12 +457,6 @@ class fitting(base):
                     self.forwardmodel.atmosphere.inactive_mixratio_profile[0, :] = mixratio_remainder*mixratio_1
                     self.forwardmodel.atmosphere.inactive_mixratio_profile[1, :] = mixratio_remainder*mixratio_2
 
-                else:
-
-                    mw_active_gases = 0
-                    for idx, gasname in enumerate(self.params.atm_active_gases):
-                        mw_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0] * get_molecular_weight(gasname) # assume mu from first layer
-                    self.forwardmodel.atmosphere.planet_mu = mw_active_gases + fit_params[count]*AMU
 
                 count += 1
 
