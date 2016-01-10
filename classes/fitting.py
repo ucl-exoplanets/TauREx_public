@@ -542,13 +542,13 @@ class fitting(base):
         # draw()
         # pause(0.0001)
 
-        print 'res=%.2f - T=%.1f, mu=%.4f [%.4f], R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
-            self.forwardmodel.atmosphere.planet_mu/AMU, \
-            fit_params[2], \
-            self.forwardmodel.atmosphere.planet_radius/RJUP, \
-            self.forwardmodel.atmosphere.max_pressure/1.e5), \
-            self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \
-            self.forwardmodel.atmosphere.inactive_mixratio_profile[:,0], fit_params
+        # print 'res=%.2f - T=%.1f, mu=%.4f [%.4f], R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+        #     self.forwardmodel.atmosphere.planet_mu/AMU, \
+        #     fit_params[2], \
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
+        #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
+        #     self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \
+        #     self.forwardmodel.atmosphere.inactive_mixratio_profile[:,0], fit_params
 
         return res
 
