@@ -22,7 +22,10 @@ from base import base
 import numpy as np
 import pylab as py
 import os, glob, pickle, shutil
+import itertools, random
+
 import emission, transmission, atmosphere, library_plotting, library_emission
+
 from emission import *
 from transmission import *
 from atmosphere import *
@@ -328,6 +331,7 @@ class output(base):
         for idx, solution in enumerate(fitting_out):
 
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
+            fit_params_std = [solution['fit_params'][param]['std'] for param in self.params_names]
             self.fitting.update_atmospheric_parameters(fit_params)
             model = self.fitting.forwardmodel.model()
             model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
@@ -343,7 +347,28 @@ class output(base):
             out[:,0] = self.data.int_wlgrid
             out[:,1] = model
             fitting_out[idx]['highres_spectrum'] = out
-            
+
+            # create 1 sigma spectrum
+            if self.NEST and not self.params.fit_clr_trans:
+
+                weights = []
+                nspectra = 500
+                models = np.zeros((nspectra, self.data.int_nwngrid)) # number of possible combinations
+                for i in xrange(nspectra):
+                    rand_idx = random.randint(0, len(self.NEST_tracedata))
+                    weights.append(self.NEST_likelihood[rand_idx,0])
+                    fit_params_iter = self.NEST_tracedata[rand_idx]
+                    self.fitting.update_atmospheric_parameters(fit_params_iter)
+                    models[i, :] = self.fitting.forwardmodel.model()
+
+                std_spectrum = np.zeros((self.data.int_nwngrid))
+                for i in xrange(self.data.int_nwngrid):
+                    average = np.average(models[:,i], weights=weights)
+                    variance = np.average((models[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                    std_spectrum[i] = np.sqrt(variance)
+
+                fitting_out[idx]['std_spectrum'] = std_spectrum
+
             #individual molecules plotted
             if self.params.fit_fit_active:
                 fit_params2 = fit_params
@@ -529,16 +554,18 @@ class output(base):
             for idx, solution in enumerate(self.NEST_out):
                 fig = self.__plot_fit__(solution[res], 'NESTED %i' % idx,
                                         fig=fig, linewidth=linewidth)
+                py.fill_between(self.data.int_wlgrid,
+                                solution['highres_spectrum'][:,1]-solution['std_spectrum'],
+                                solution['highres_spectrum'][:,1]+solution['std_spectrum'],
+                                color='orange', alpha=0.6)
 
         # plot observed spectrum
         py.errorbar(self.data.obs_spectrum[:,0],
                         self.data.obs_spectrum[:,1],
                         self.data.obs_spectrum[:,2],
                         color=[0.4,0.4,0.4], mec=[0.5,0.5,0.5], fmt='', marker='o', linewidth=2, linestyle='None')
-        # py.plot(self.data.obs_spectrum[:,0], # todo why again? - it looks prettier! Ah ok :)
-        #             self.data.obs_spectrum[:,1],
-        #             color=[0.3,0.3,0.3],
-        #             linewidth=0,label='DATA')
+
+
 
         if save2pdf:
             self.save_fig(fig,'model_fit_{0}_res.pdf'.format(resolution))
