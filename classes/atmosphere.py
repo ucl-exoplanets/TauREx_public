@@ -129,15 +129,13 @@ class atmosphere(object):
 
         # get sigma array (and interpolate sigma array to pressure profile)
         self.sigma_array = self.get_sigma_array()
-        self.sigma_array_flat = self.sigma_array.flatten()
 
         # get sigma rayleigh array (for active and inactive absorbers)
         self.sigma_rayleigh_array = self.get_sigma_rayleigh_array()
-        self.sigma_rayleigh_array_flat = self.sigma_rayleigh_array.flatten()
 
         # get collision induced absorption cross sections
         self.sigma_cia_array = self.get_sigma_cia_array()
-        self.sigma_cia_array_flat = self.sigma_cia_array.flatten()
+
         self.cia_idx = self.get_cia_idx()
 
         logging.info('Atmosphere object initialised')
@@ -245,24 +243,24 @@ class atmosphere(object):
     # get sigma array from data.sigma_dict. Interpolate sigma array to pressure profile
     def get_sigma_array(self):
         pressure_profile_bar = self.pressure_profile/1e5
-        sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']), self.data.int_nwngrid))
+        sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']), self.data.int_nwngrid_full))
         for mol_idx, mol_val in enumerate(self.active_gases):
             sigma_in = self.data.sigma_dict['xsecarr'][mol_val]
             for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
                 for temperature_idx, temperature_val in enumerate(self.data.sigma_dict['t']):
-                    for wno_idx, wno_val in enumerate(self.data.int_wngrid):
+                    for wno_idx, wno_val in enumerate(self.data.int_wngrid_full):
                         sigma_array[mol_idx, pressure_idx, temperature_idx, wno_idx] = \
                             np.interp(pressure_val, self.data.sigma_dict['p'], sigma_in[:,temperature_idx,wno_idx])
         return sigma_array
 
     def get_sigma_rayleigh_array(self):
-        sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.data.int_nwngrid))
+        sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.data.int_nwngrid_full))
         for mol_idx, mol_val in enumerate(self.active_gases+self.inactive_gases):
             sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val]
         return sigma_rayleigh_array
 
     def get_sigma_cia_array(self):
-        sigma_cia_array = np.zeros((len(self.params.atm_cia_pairs), len(self.data.sigma_cia_dict['t']), self.data.int_nwngrid))
+        sigma_cia_array = np.zeros((len(self.params.atm_cia_pairs), len(self.data.sigma_cia_dict['t']), self.data.int_nwngrid_full))
         for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
             sigma_cia_array[pair_idx,:,:] = self.data.sigma_cia_dict['xsecarr'][pair_val]
         return sigma_cia_array

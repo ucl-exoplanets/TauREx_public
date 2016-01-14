@@ -524,25 +524,25 @@ class fitting(base):
         # figure(2)
         # clf()
         #
-        # ion()
-        # figure(1)
-        # clf()
-        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-        # plot(self.data.obs_spectrum[:,0], model_binned)
-        # xlabel('Wavelength (micron)')
-        # ylabel('Transit depth')
-        # xscale('log')
-        # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-        # ion()
-        # draw()
-        # pause(0.0001)
+        ion()
+        figure(1)
+        clf()
+        errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        plot(self.data.obs_spectrum[:,0], model_binned)
+        xlabel('Wavelength (micron)')
+        ylabel('Transit depth')
+        xscale('log')
+        xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
+        ion()
+        draw()
+        pause(0.0001)
 
-        # print 'res=%.2f - T=%.1f, mu=%.4f, R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
-        #     self.forwardmodel.atmosphere.planet_mu/AMU, \
-        #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
-        #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
-        #     self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \
-        #     self.forwardmodel.atmosphere.inactive_mixratio_profile[:,0], fit_params
+        print 'res=%.2f - T=%.1f, mu=%.4f, R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+            self.forwardmodel.atmosphere.planet_mu/AMU, \
+            self.forwardmodel.atmosphere.planet_radius/RJUP, \
+            self.forwardmodel.atmosphere.max_pressure/1.e5), \
+            self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \
+            self.forwardmodel.atmosphere.inactive_mixratio_profile[:,0], fit_params
 
         return res
 

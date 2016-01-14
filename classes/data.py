@@ -36,7 +36,7 @@ except:
 
 class data(object):
 
-    def __init__(self, params, spectrum=None):
+    def __init__(self, params):
 
         logging.info('Initialising data object')
 
@@ -45,77 +45,51 @@ class data(object):
         
         self.params = params
 
-        #reading in spectrum data to be fitted
-        if isinstance(spectrum, (np.ndarray, np.generic)):
-            # read spectrum from argument
-            logging.info('Reading spectrum from argument')
-            self.obs_spectrum = spectrum
-        elif params.in_spectrum_file:
+        # reading in atmospheric profile file from Venot
+        if self.params.ven_load:
+            self.load_venot_model()
+
+        # reading in Phoenix stellar model library (if emission is calculated only)
+        if self.params.gen_type == 'emission' or self.params.fit_emission:
+            self.F_star = self.get_star_SED() # todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment
+
+        # load observed input spectrum
+        self.load_input_spectrum()
+
+        # Preload the cross sections
+        self.load_sigma_dict()
+
+        # Preload rayleigh cross secitons
+        self.load_sigma_rayleigh_dict()
+
+        # Preload CIA cross sections
+        self.load_sigma_cia_dict()
+
+        # Create wavenumber grid of internal model
+        self.load_wavenumber_grid()
+
+        logging.info('Data object initialised')
+
+    def load_input_spectrum(self):
+
+        # set observed spectrum specific variables (only if spectrum is provided)
+        if self.params.in_spectrum_file:
+
             # read spectrum from file
             logging.info('Reading spectrum from file')
-            self.obs_spectrum = np.loadtxt(params.in_spectrum_file)
-        else:
-            # no input spectrum provided. If running only forward model, input spectrum can be omitted
-            logging.info('No input spectrum provided')
-            self.obs_spectrum = False
+            self.obs_spectrum = np.loadtxt(self.params.in_spectrum_file)
 
-        # observed input spectrum
-        if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
-            # set observed spectrum specific variables (only if spectrum is provided)
             self.obs_wlgrid = self.obs_spectrum[:,0] # grid in micron
             self.obs_wngrid = 10000./self.obs_spectrum[:,0] # grid in wavenumbers
             self.obs_nwlgrid = len(self.obs_spectrum[:,0]) # number of datapoints in spectrum
             self.obs_binwidths = self.obs_spectrum[:,3]   if shape(self.obs_spectrum)[1] == 4 else None # bin widths
-
-        logging.info('Create wavenumber grid of internal model')
-        
-        # wavenumber grid of internal model
-        if params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
-            # limits defined by a manual wavelength range in micron in param file
-            lambdamax = self.params.gen_wavemax
-            lambdamin = self.params.gen_wavemin
         else:
-            # limits defined by the input spectrum in micron.
-            lambdamin = self.obs_wlgrid[0]
-            lambdamax = self.obs_wlgrid[-1]
-            # Expand to half a bin up, and half a bin down to properly model edges
-            if self.obs_binwidths == None:
-                # if bin widths are *not* provided in the input spectrum
-                bin_up =  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
-                bin_low = (self.obs_wlgrid[1]-self.obs_wlgrid[0])/2.
-            else: 
-                # if bin widths are provided in input spectrum
-                bin_up = self.obs_binwidths[-1]/2.
-                bin_low = self.obs_binwidths[0]/2.
-            lambdamin = self.obs_wlgrid[0] - bin_low
-            lambdamax = self.obs_wlgrid[-1] + bin_up
 
-        # convert to wavenumbers
-        numin = 10000./lambdamax
-        numax = 10000./lambdamin
+            # no input spectrum provided. If running only forward model, input spectrum can be omitted
+            logging.info('No input spectrum provided')
+            self.obs_spectrum = False
 
-        #approximate numin and numax to closest xsec gridding point
-        numin = round_base(numin, self.params.in_xsec_dnu)
-        numax = round_base(numax, self.params.in_xsec_dnu)
-
-        # create wavenumber grid of internal model using numin, numax and delta wavenumber provided in param file
-        # NB: the xsec grid needs to be sampled in multiples of self.params.in_xsec_dnu
-        self.int_wngrid = np.arange(numin, numax, self.params.in_xsec_dnu)
-        self.int_dwngrid = np.diff(self.int_wngrid)
-        self.int_nwngrid = len(self.int_wngrid)
-        logging.info('Internal wavenumber grid is %.2f - %.2f in steps of %.2f, resulting in %i points' % (numin, numax, self.params.in_xsec_dnu, self.int_nwngrid))
-
-        # convert wavenumber grid to wavelenght grid
-        self.int_wlgrid = 10000./self.int_wngrid
-        self.int_dwlgrid = np.diff(self.int_wlgrid)
-        self.int_nwlgrid = len(self.int_wlgrid)
-        if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
-            # calculate spectral binning grid in wavelength space
-            self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid, self.int_wlgrid, self.obs_binwidths)
-            self.intsp_nbingrid = len(self.obs_wlgrid)
-
-        # reading in atmospheric profile file from Venot
-        if self.params.ven_load:
+    def load_venot_model(self):
 
             logging.info('Load atmospheric profile from external files. Format: Venot photochemical models')
 
@@ -168,23 +142,6 @@ class data(object):
 
             logging.info('Inactive gases: %s' %  self.ven_inactive_gases)
 
-
-        # reading in Phoenix stellar model library (if emission is calculated only)
-        if self.params.gen_type == 'emission' or self.params.fit_emission:
-            self.F_star = self.get_star_SED() # todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment
-
-        # Preload the cross sections for the given wavenumber range and temperature range
-        self.sigma_dict = self.load_sigma_dict()
-
-        # Preload rayleigh cross secitons
-        self.sigma_rayleigh_dict = self.load_sigma_rayleigh_dict()
-
-        # Preload CIA cross sections
-        self.sigma_cia_dict = self.load_sigma_cia_dict()
-
-        logging.info('Data object initialised')
-
-
     def load_sigma_dict(self):
 
         # preload the absorption cross sections for the input molecules
@@ -222,19 +179,19 @@ class data(object):
                 wno = sigma_tmp['wno']
 
                 if mol_idx == 0:
-                    if np.min(wno) > np.min(self.int_wngrid) or np.max(wno) < np.max(self.int_wngrid):
-                        logging.error('Internal wavenumber grid overflow')
-                        logging.error('Internal wavenumber grid range: %f - %f' % (np.min(self.int_wngrid), np.max(self.int_wngrid)))
-                        logging.error('Cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
-                        exit()
-                    if np.unique(np.diff(wno)) != self.params.in_xsec_dnu:
-                        logging.error('The resolution of the internal model (%f wno) is different from '
-                                      'the resolution of the cross sections (%f wno)' % (self.params.in_xsec_dnu, np.unique(np.diff(wno))))
-                        exit()
+                #     if np.min(wno) > np.min(self.int_wngrid) or np.max(wno) < np.max(self.int_wngrid):
+                #         logging.error('Internal wavenumber grid overflow')
+                #         logging.error('Internal wavenumber grid range: %f - %f' % (np.min(self.int_wngrid), np.max(self.int_wngrid)))
+                #         logging.error('Cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
+                #         exit()
+                #     if np.unique(np.diff(wno)) != self.params.in_xsec_dnu:
+                #         logging.error('The resolution of the internal model (%f wno) is different from '
+                #                       'the resolution of the cross sections (%f wno)' % (self.params.in_xsec_dnu, np.unique(np.diff(wno))))
+                #         exit()
 
                     # restrict wavenumber range
-                    wno_min_idx = np.where(np.abs(wno - np.min(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]
-                    wno_max_idx = np.where(np.abs(wno - np.max(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]+1
+                    # wno_min_idx = np.where(np.abs(wno - np.min(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]
+                    # wno_max_idx = np.where(np.abs(wno - np.max(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]+1
 
                     # restrict temperature range
                     Tmax = Tmin = None
@@ -265,19 +222,24 @@ class data(object):
 
                     sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
                     sigma_dict['p'] = p
-                    sigma_dict['wno'] = sigma_tmp['wno'][wno_min_idx:wno_max_idx] # check: this should be identical to internal model!
+                    #sigma_dict['wno'] = sigma_tmp['wno'][wno_min_idx:wno_max_idx] # check: this should be identical to internal model!
+                    sigma_dict['wno'] = sigma_tmp['wno'] # check: this should be identical to internal model!
 
-                    if np.unique(sigma_dict['wno'] - self.int_wngrid) != 0:
-                        logging.error('Wavenumber grid of xsec is different from wn grid of internal model')
-                        exit()
+                    # if np.unique(sigma_dict['wno'] - self.int_wngrid) != 0:
+                    #     logging.error('Wavenumber grid of xsec is different from wn grid of internal model')
+                    #     exit()
 
-                # load the sigma array in memory
                 logging.info('Preload cross section for %s' % mol_val)
-                sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx,wno_min_idx:wno_max_idx] / 10000. # also convert from cm^-2 to m^-2
+                #sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx,wno_min_idx:wno_max_idx] / 10000. # also convert from cm^-2 to m^-2
+                sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx] / 10000. # also convert from cm^-2 to m^-2
+
+        logging.info('The full wavenumber range is %.2f - %.2f in steps of %.2f' % (np.min(wno), np.max(wno), np.unique(np.diff(wno))))
+
+        self.int_wngrid_full = wno # full wavenumber range
+        self.int_nwngrid_full = len(wno)
+        self.sigma_dict = sigma_dict
 
         del sigma_tmp, t, p, wno
-
-        return sigma_dict
 
     def load_sigma_rayleigh_dict(self):
 
@@ -300,7 +262,7 @@ class data(object):
             n_formula = True # assume we have a formula for the refractive index of gasname
             king = 1 # King correction factor
             ns = 0   # refractive index
-            wn = self.int_wngrid # wavenumber in cm^-1
+            wn = self.int_wngrid_full # wavenumber in cm^-1
 
             if gasname == 'HE':
                 ns = 1 + 0.01470091/(423.98-(10000./wn)**-2) # C. R. Mansfield and E. R. Peck. Dispersion of helium, J. Opt. Soc. Am. 59, 199-203 (1969)
@@ -342,9 +304,9 @@ class data(object):
                 logging.info('Rayleigh scattering cross section of %s correctly computed' % (gasname))
                 sigma_rayleigh_dict[gasname] = sigma
             else:
-                sigma_rayleigh_dict[gasname] = np.zeros((self.int_nwngrid))
+                sigma_rayleigh_dict[gasname] = np.zeros((len(wn)))
 
-        return sigma_rayleigh_dict
+        self.sigma_rayleigh_dict = sigma_rayleigh_dict
 
     def load_sigma_cia_dict(self):
 
@@ -363,9 +325,9 @@ class data(object):
             wno = sigma_tmp['wno']
 
             # check cia wavenumber boundaries
-            if np.min(wno) > np.min(self.int_wngrid) or np.max(wno) < np.max(self.int_wngrid):
+            if np.min(wno) > np.min(self.int_wngrid_full) or np.max(wno) < np.max(self.int_wngrid_full):
                 logging.warning('Internal wavenumber grid overflow for CIA xsec for %s' % pair_val)
-                logging.warning('Internal wavenumber grid range: %f - %f' % (np.min(self.int_wngrid), np.max(self.int_wngrid)))
+                logging.warning('Internal wavenumber grid range: %f - %f' % (np.min(self.int_wngrid_full), np.max(self.int_wngrid_full)))
                 logging.warning('CIA cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
                 logging.warning('Assume xsec to be zero outside the cia range')
 
@@ -397,19 +359,76 @@ class data(object):
                 Tmax_idx = len(t) - 1
 
             sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
-            sigma_dict['wno'] = self.int_wngrid
-            sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid))
+            sigma_dict['wno'] = self.int_wngrid_full
+            sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid_full))
 
-            # reinterpolate cia xsec to internal grid and save
+            # reinterpolate cia xsec to molecule cross section grid and save
             for t_idx, t_val in enumerate(sigma_dict['t']):
-                sigma_dict['xsecarr'][pair_val][t_idx,:] = np.interp(self.int_wngrid, wno, sigma_tmp['xsecarr'][Tmin_idx+t_idx])
+                sigma_dict['xsecarr'][pair_val][t_idx,:] = np.interp(self.int_wngrid_full, wno, sigma_tmp['xsecarr'][Tmin_idx+t_idx])
 
             # load the sigma array in memory
             logging.info('Preload cia cross section for %s' % pair_val)
 
         del sigma_tmp, t, wno
 
-        return sigma_dict
+        self.sigma_cia_dict = sigma_dict
+
+    def load_wavenumber_grid(self):
+
+        logging.info('Create wavenumber grid of internal model')
+
+        # wavenumber grid limits of internal model
+        if self.params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
+            # limits defined by a manual wavelength range in micron in param file
+            lambdamax = self.params.gen_wavemax
+            lambdamin = self.params.gen_wavemin
+        else:
+            # limits defined by the input spectrum in micron.
+            lambdamin = self.obs_wlgrid[0]
+            lambdamax = self.obs_wlgrid[-1]
+            # Expand to half a bin up, and half a bin down to properly model edges
+            if self.obs_binwidths == None:
+                # if bin widths are *not* provided in the input spectrum
+                bin_up =  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
+                bin_low = (self.obs_wlgrid[1]-self.obs_wlgrid[0])/2.
+            else:
+                # if bin widths are provided in input spectrum
+                bin_up = self.obs_binwidths[-1]/2.
+                bin_low = self.obs_binwidths[0]/2.
+            lambdamin = self.obs_wlgrid[0] - bin_low
+            lambdamax = self.obs_wlgrid[-1] + bin_up
+
+        # convert to wavenumbers
+        numin = 10000./lambdamax
+        numax = 10000./lambdamin
+
+        # find numin / numax closest to the cross section wavenumber grid (approximate numin for defect, and numax for excess)
+        idx_min = np.argmin(np.abs(self.int_wngrid_full-numin))
+        if numin - self.int_wngrid_full[idx_min] < 0:
+            idx_min -= 1
+
+        idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
+        if numax - self.int_wngrid_full[idx_max] > 0:
+            idx_max += 1
+
+        self.int_wngrid_obs_idxmin = idx_min
+        self.int_wngrid_obs_idxmax = idx_max
+
+        self.int_wngrid_obs = self.int_wngrid_full[idx_min:idx_max]
+        self.int_nwngrid_obs = len(self.int_wngrid_obs)
+
+        logging.info('Internal wavenumber grid is %.2f - %.2f in steps of %.2f, resulting in %i points' %
+                     (self.int_wngrid_full[idx_min], self.int_wngrid_full[idx_max], np.unique(np.diff(self.int_wngrid_full)), self.int_nwngrid_obs))
+
+        # convert wavenumber grid to wavelenght grid
+        self.int_wlgrid_obs = 10000./self.int_wngrid_obs
+        self.int_nwlgrid_obs = len(self.int_wlgrid_obs)
+
+        if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
+            # calculate spectral binning grid in wavelength space
+            self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid, self.int_wlgrid_obs, self.obs_binwidths)
+            self.intsp_nbingrid = len(self.obs_wlgrid)
+
 
     def get_star_SED(self):
 
@@ -429,7 +448,7 @@ class data(object):
                 logging.warning('Stellar temp. in .par file exceeds range %.1f - %.1f K. '
                                 'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
             self.star_blackbody = True
-            SED = black_body(self.int_wngrid,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
+            SED = black_body(self.int_wngrid_obs,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
 #             SED *= self.params.star_radius**2 * np.pi * 4.
 #             SED *= self.params.star_radius**2 * np.pi * 4.
         else:
@@ -441,26 +460,14 @@ class data(object):
                 if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
                     self.SED_filename = file
 
-            #reading in correct file and interpolating it onto self.int_wngrid
+            #reading in correct file and interpolating it onto self.int_wngrid_obs
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane 
 #             SED_raw[:,1] *= self.params.star_radius**2 * np.pi * 4.
-#             digitized = np.digitize(SED_raw[:,0],self.int_wngrid)
-#             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.int_wngrid))])
-            SED = np.interp(self.int_wngrid, SED_raw[:,0], SED_raw[:,1])
+#             digitized = np.digitize(SED_raw[:,0],self.int_wngrid_obs)
+#             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.int_wngrid_obs))])
+            SED = np.interp(self.int_wngrid_obs, SED_raw[:,0], SED_raw[:,1])
         
 #         print self.params.star_temp
-#         SED = black_body(self.int_wngrid,self.params.star_temp)
+#         SED = black_body(self.int_wngrid_obs,self.params.star_temp)
         return SED
-
-
-    def readATMfile(self):
-        
-        try:
-            out = np.loadtxt(self.params.in_atm_file)
-        except ValueError:
-            out = np.loadtxt(self.params.in_atm_file,comments='*',skiprows=10)
-        out[:,2] *= 1000. #converting from km to m
-        out = out[np.argsort(out[:,2]),:]
-        return out[:,0:3],np.transpose(out[:,3:])
-
