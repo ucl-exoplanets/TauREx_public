@@ -555,8 +555,8 @@ class output(base):
                 fig = self.__plot_fit__(solution[res], 'NESTED %i' % idx,
                                         fig=fig, linewidth=linewidth)
                 py.fill_between(self.data.int_wlgrid,
-                                solution['highres_spectrum'][:,1]-solution['std_spectrum'],
-                                solution['highres_spectrum'][:,1]+solution['std_spectrum'],
+                                solution['highres_spectrum'][:,1]-2.*solution['std_spectrum'],
+                                solution['highres_spectrum'][:,1]+2.*solution['std_spectrum'],
                                 color='orange', alpha=0.6)
 
         # plot observed spectrum

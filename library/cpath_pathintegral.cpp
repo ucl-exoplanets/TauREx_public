@@ -51,13 +51,12 @@ extern "C" {
         double * absorption = (double *) absorptionv;
 
         // setting up arrays and variables
-        double dlarray[nlayers*nlayers];
+        double* dlarray = new double[nlayers*nlayers];
+        double* sigma_interp = new double[nwngrid*nlayers*nactive];
+        double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
-        double sigma_interp[nwngrid*nlayers*nactive];
-        double sigma_cia_interp[nwngrid*nlayers*cia_npairs];
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
-
         double tau, exptau,  integral;
         double p;
         int count, t_idx;
@@ -68,6 +67,7 @@ extern "C" {
             for (int k=1; k < (nlayers - j); k++) {
                 p = pow((z[j]+planet_radius),2);
                 dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius),2) - p) - sqrt(pow((z[k-1+j]+planet_radius),2) - p));
+                //cout << dlarray[count] << " " << p << " " << count << endl;
                 count += 1;
             }
         }
@@ -81,6 +81,7 @@ extern "C" {
                             sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
                             sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
                             sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                            //cout << sigma_l << " " << sigma_r << " " << temperature[j] << endl;
                             sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
                         }
                     }

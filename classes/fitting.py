@@ -444,7 +444,7 @@ class fitting(base):
                 for idx, gasname in enumerate(self.params.atm_active_gases):
                     mixratio_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0]
                     mw_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0] * get_molecular_weight(gasname) # assume mu from first layer
-                self.forwardmodel.atmosphere.planet_mu = mw_active_gases + (1.-mixratio_active_gases)*fit_params[count]*AMU
+                self.forwardmodel.atmosphere.planet_mu[:]= mw_active_gases + (1.-mixratio_active_gases)*fit_params[count]*AMU
 
                 if self.params.atm_couple_mu:
 
@@ -537,9 +537,8 @@ class fitting(base):
         # draw()
         # pause(0.0001)
 
-        # print 'res=%.2f - T=%.1f, mu=%.4f [%.4f], R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+        # print 'res=%.2f - T=%.1f, mu=%.4f, R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
         #     self.forwardmodel.atmosphere.planet_mu/AMU, \
-        #     fit_params[2], \
         #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
         #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
         #     self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \

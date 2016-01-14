@@ -64,9 +64,7 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function,iterate=
     to determine which combination gives the lowest/highest attainable 
     TP profile. Returns mean TP profile with errorbars on each pressure level
     ''' 
-
     Tmean = TP_function(TP_params)
-
 
     bounds = [] #list of lower and upper parameter bounds 
     lowpar = []

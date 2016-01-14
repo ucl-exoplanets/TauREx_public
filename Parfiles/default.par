@@ -12,7 +12,7 @@ trans_cpp = True
 #manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
 #short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.4
+wavemin = 0.6
 #long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 20.0
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
@@ -122,6 +122,7 @@ num_scaleheights = 30
 nlayers = 100
 # set maximum pressure level in Pascal
 max_pressure = 1e6
+min_pressure = 1e-4
 
 # TP profile type to be selected (only sets for emission, tranmission = isothermal)
 # available profiles are: isothermal, guillot, hybrid, 2point, 3point
@@ -133,7 +134,8 @@ corr_length = 5.0
 active_gases = H2O
 active_gases_mixratios = 1e-5
 
-# spectrally-inactive gases and relative mixing ratios. The mixing ratios are relative to the remainder of the amtosphere (1 - active_gases_mixratios)
+# spectrally-inactive gases and relative mixing ratios.
+# The mixing ratios are relative to the remainder of the amtosphere (1 - active_gases_mixratios)
 inactive_gases = H2, He
 inactive_gases_mixratios = 0.85, 15
 
@@ -156,6 +158,19 @@ clouds = False
 cld_params = 1.5, 1.0
 # cloud pressure in bar, lower and upper bounds. Comma separated
 cld_pressure = 1.0e-3, 0.1
+
+[Venot]
+
+# Integrates TP and mixing ratio profiles from Olivia Venot (photo)chemical models
+
+# if load = True, temperature-pressure-altitude profile is loaded form TP_profile_path, and mixing ratio profiles of the available
+# molecules in xsec_path are loaded from mol_profile_path. If specific molecules need to be excluded, use exclude_mol
+
+load = False
+TP_profile_path = Input/Venot/example/profil_PTn_1000K_metal1.dat
+mol_profile_path = Input/Venot/example/fractions_molaires_CO_0.5_T1000_019_renorm_1.25RJ.dat
+exclude_mol = False
+
 
 [Fitting]
 

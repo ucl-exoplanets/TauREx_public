@@ -71,6 +71,10 @@ class create_spectrum(object):
         self.params.gen_spec_res = 1000
         self.params.gen_manual_waverange = True
 
+        self.params.nest_run = False
+        self.params.mcmc_run = False
+        self.params.downhill_run = False
+
         #initialising data object
         self.dataob = data(self.params)
 

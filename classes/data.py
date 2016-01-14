@@ -114,7 +114,60 @@ class data(object):
             self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid, self.int_wlgrid, self.obs_binwidths)
             self.intsp_nbingrid = len(self.obs_wlgrid)
 
-        # #reading in atmospheric profile file
+        # reading in atmospheric profile file from Venot
+        if self.params.ven_load:
+
+            logging.info('Load atmospheric profile from external files. Format: Venot photochemical models')
+
+            # altitude (km), pressure (mbar), temperature (K) profile
+            apt = np.loadtxt(self.params.ven_TP_profile_path)
+            self.ven_altitude = apt[:,0]/1000. # convert km to m
+            self.ven_pressure = apt[:,1]*100. # convert mbar to pascal
+            self.ven_temperature = apt[:,2]
+            self.ven_altitude_int = interp1d(self.ven_pressure, self.ven_altitude)
+            self.ven_temperature_int = interp1d(self.ven_pressure, self.ven_temperature)
+
+            # mixing ratio profiles
+
+            # extract list of molecules from 'fractions_molaires' file
+            with open(self.params.ven_mol_profile_path, 'r') as f:
+                self.ven_molecules = [x.upper() for x in f.readline().split()]
+                self.ven_molweight = [float(x) for x in f.readline().split()] # molecular weight in AMU
+                table = np.loadtxt(self.params.ven_mol_profile_path, skiprows=2)
+                self.ven_molprof_altitude = table[:,0]/1000. # convert km to m
+                self.ven_molprof_pressure = table[:,1]*100. # convert mbar to pascal
+                self.ven_molprof_mixratios = table[:,2:]*1.5 # mixing ratios referring to self.ven_molecules
+                self.ven_molprof_altitude_int = interp1d(self.ven_molprof_pressure, self.ven_molprof_altitude)
+                self.ven_molprof_mixratios_int = [interp1d(self.ven_molprof_pressure, self.ven_molprof_mixratios[:,i]) for i in xrange(np.shape(self.ven_molprof_mixratios)[1])]
+                logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' % (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
+
+            # determine list of molecules with cross sections. exclude the others.
+            self.ven_active_gases = []
+            self.ven_active_gases_idx = []
+            self.ven_noxsec = []
+
+            for mol_idx, mol_val in enumerate(self.ven_molecules):
+                molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
+                if os.path.isfile(molpath) and not mol_val in self.params.ven_exclude_mol:
+                    self.ven_active_gases.append(mol_val)
+                    self.ven_active_gases_idx.append(mol_idx)
+                else:
+                    self.ven_noxsec.append(mol_val)
+
+            logging.info('Molecules with available cross sections: %s' %  self.ven_active_gases)
+            logging.info('Excluded molecules: %s' %  self.ven_noxsec)
+
+            # determine list of inactive gases
+            gases = ['H2', 'HE', 'N2']
+            self.ven_inactive_gases = []
+            self.ven_inactive_gases_idx = []
+            for gasname in gases:
+                if gasname in self.ven_molecules:
+                    self.ven_inactive_gases.append(gasname)
+                    self.ven_inactive_gases_idx.append(self.ven_molecules.index(gasname))
+
+            logging.info('Inactive gases: %s' %  self.ven_inactive_gases)
+
 
         # reading in Phoenix stellar model library (if emission is calculated only)
         if self.params.gen_type == 'emission' or self.params.fit_emission:
@@ -135,8 +188,11 @@ class data(object):
     def load_sigma_dict(self):
 
         # preload the absorption cross sections for the input molecules
+        if self.params.ven_load:
+            molecules = self.ven_active_gases
+        else:
+            molecules = self.params.atm_active_gases
 
-        molecules = self.params.atm_active_gases
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
 
@@ -185,9 +241,9 @@ class data(object):
                     if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
                         Tmax = self.params.fit_T_bounds[1]
                         Tmin = self.params.fit_T_bounds[0]
-                    elif self.params.in_use_ATMfile:
-                        Tmax = np.max(self.pta[:,1])
-                        Tmin = np.min(self.pta[:,1])
+                    elif self.params.ven_load:
+                        Tmax = np.max(self.ven_temperature)
+                        Tmin = np.min(self.ven_temperature)
                     else:
                         Tmin = Tmax = self.params.planet_temp
 
@@ -231,7 +287,12 @@ class data(object):
 
         sigma_rayleigh_dict = {}
 
-        for gasname in self.params.atm_active_gases + self.params.atm_inactive_gases:
+        if self.params.ven_load:
+            molecules = self.ven_active_gases + self.ven_inactive_gases
+        else:
+            molecules = self.params.atm_active_gases + self.params.atm_inactive_gases
+
+        for gasname in molecules:
 
             gasname = gasname.upper()
 
@@ -289,7 +350,6 @@ class data(object):
 
         # preload collision induced absorption cross sections
 
-        molecules = self.params.atm_active_gases
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
 

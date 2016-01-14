@@ -121,6 +121,7 @@ class parameters(base):
         self.atm_num_scaleheights   = self.getpar('Atmosphere', 'num_scaleheights', 'int')
         self.atm_nlayers            = self.getpar('Atmosphere', 'nlayers', 'int')
         self.atm_max_pres           = self.getpar('Atmosphere', 'max_pressure', 'float')
+        self.atm_min_pres           = self.getpar('Atmosphere', 'min_pressure', 'float')
         self.atm_tp_type            = self.getpar('Atmosphere', 'profile_type')
         self.atm_corrlength         = self.getpar('Atmosphere', 'corr_length','float')
         self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
@@ -139,7 +140,13 @@ class parameters(base):
         self.atm_cld_lower_P        = self.atm_cld_pressure[0]
         self.atm_cld_upper_P        = self.atm_cld_pressure[1]
 
-        # section Preselector
+        # section Venot
+        self.ven_load = self.getpar('Venot', 'load', 'bool')
+        self.ven_TP_profile_path = self.getpar('Venot', 'TP_profile_path')
+        self.ven_mol_profile_path = self.getpar('Venot', 'mol_profile_path')
+        self.ven_exclude_mol = [mol.upper() for mol in self.getpar('Venot','exclude_mol', 'list-str')]
+
+        # section Preselecto/100r
         self.pre_run               = self.getpar('Preselector','run_pre', 'bool')
         self.pre_speclib_path      = self.getpar('Preselector','speclib_path')
         self.pre_pca_path          = self.getpar('Preselector','pca_path')
