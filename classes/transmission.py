@@ -44,7 +44,7 @@ class transmission():
             self.cpathlib = C.CDLL('./library/cpath_pathintegral.so', mode=C.RTLD_GLOBAL)
 
         # preload variables in memory for cpath
-        self.cpath_load_vars(wngrid='obs_spectrum')
+        self.cpath_load_vars()
 
         # set forward model function
         self.model = self.cpath_pathintegral
@@ -58,49 +58,25 @@ class transmission():
         c = ((self.atmosphere.clouds_m**2 -1.0)/(self.atmosphere.clouds_m**2 + 2.0))**2
         return a / b * c
 
-    def cpath_load_vars(self, wngrid='obs_spectrum'):
+    def cpath_load_vars(self):
 
         # load variables that won't change during fitting
-
-        if wngrid == 'obs_spectrum':
-            sigma_array = self.atmosphere.sigma_array[:,:,self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
-            sigma_rayleigh_array = self.atmosphere.sigma_rayleigh_array[:,self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
-            sigma_cia_array = self.atmosphere.sigma_cia_array[:,self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
-            nwngrid = self.data.int_nwngrid_obs
-        else:
-            sigma_array = self.atmosphere.sigma_array
-            sigma_rayleigh_array = self.atmosphere.sigma_rayleigh_array
-            sigma_cia_array = self.atmosphere.sigma_cia_array
-            nwngrid = self.data.int_nwngrid_full
-
-        print np.shape(sigma_array)
-
-        print sigma_array
-
-        exit()
-        
-        self.cpath_nwngrid = C.c_int(nwngrid)
-        self.path_nwngrid = nwngrid
-
+        self.cpath_nwngrid = C.c_int(self.atmosphere.int_nwngrid)
         self.cpath_nlayers = C.c_int(self.atmosphere.nlayers)
         self.cpath_nactive = C.c_int(self.atmosphere.nactivegases)
         self.cpath_ninactive = C.c_int(self.atmosphere.ninactivegases)
-
-        self.cpath_sigma_array = cast2cpp(sigma_array.flatten())
+        self.cpath_sigma_array = cast2cpp(self.atmosphere.sigma_array_flat)
         self.cpath_sigma_temp = cast2cpp(self.data.sigma_dict['t'])
         self.cpath_sigma_ntemp = C.c_int(len(self.data.sigma_dict['t']))
-
-        self.cpath_sigma_cia_array = cast2cpp(sigma_cia_array.flatten())
+        self.cpath_sigma_cia_array = cast2cpp(self.atmosphere.sigma_cia_array_flat)
         self.cpath_cia_npairs = C.c_int(len(self.data.sigma_cia_dict['xsecarr']))
         self.cpath_cia_idx = (C.c_int*len(self.atmosphere.cia_idx))()
         self.cpath_cia_idx[:] = self.atmosphere.cia_idx
         self.cpath_cia_nidx = C.c_int(len(self.atmosphere.cia_idx))
         self.cpath_sigma_cia_temp = cast2cpp(self.data.sigma_cia_dict['t'])
         self.cpath_sigma_cia_ntemp = C.c_int(len(self.data.sigma_cia_dict['t']))
-
-        self.cpath_sigma_rayleigh_array = cast2cpp(sigma_rayleigh_array.flatten())
+        self.cpath_sigma_rayleigh_array = cast2cpp(self.atmosphere.sigma_rayleigh_array_flat)
         self.cpath_star_radius = C.c_double(self.params.star_radius)
-
 
     def cpath_update_vars(self):
 
@@ -118,9 +94,8 @@ class transmission():
     def cpath_pathintegral(self):
 
         self.cpath_update_vars()
-    
         #setting up output array
-        absorption = zeros((self.path_nwngrid),dtype=float64)
+        absorption = zeros((self.atmosphere.int_nwngrid),dtype=float64)
         
         #retrieving function from cpp library
         cpath_integral = self.cpathlib.path_integral

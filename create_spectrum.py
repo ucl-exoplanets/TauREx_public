@@ -99,22 +99,7 @@ class create_spectrum(object):
         self.MAX_P = self.atmosphereob.pressure_profile[0]
         self.MIN_P = self.atmosphereob.pressure_profile[-1]
 
-        if options.bin == 'resolution':
-            #get grids
-            self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.int_wngrid)
-        elif options.bin == 'dlambda':
-            self.wavegrid = np.arange(self.params.gen_wavemin, self.params.gen_wavemax, float(options.dlambda))
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.int_wngrid)
-        elif options.bin == 'spectrum':
-            self.wavegrid = self.dataob.wavegrid
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.int_wngrid)
-        elif options.bin == 'file':
-            self.wavegrid = np.loadtxt(options.bin_file)[:,0]
-            self.binwidths = np.loadtxt(options.bin_file)[:,1]
-            self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.int_wngrid, self.binwidths)
-        else:
-            self.wavegrid = self.dataob.int_wngrid
+        self.wavegrid = self.dataob.int_wngrid_obs
 
         self.n_spec_bin_grid = len(self.wavegrid)
 

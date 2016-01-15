@@ -14,7 +14,7 @@ manual_waverange = False
 #short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.6
 #long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 20.0
+wavemax = 29.0
 #specturm type (emission/transmission), for create_spectrum.py and create_grid.py
 type = transmission
 #recompile cpp code

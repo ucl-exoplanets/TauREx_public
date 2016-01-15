@@ -330,71 +330,106 @@ class output(base):
         # loop through solutions and calculate spectra
         for idx, solution in enumerate(fitting_out):
 
+            # add observed spectrum to all set of solutions
+            fitting_out[idx]['obs_spectrum'] = self.data.obs_spectrum
+
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
             fit_params_std = [solution['fit_params'][param]['std'] for param in self.params_names]
+
             self.fitting.update_atmospheric_parameters(fit_params)
+
+            # load model using full wavenumber range
+
+            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+            self.fitting.forwardmodel.cpath_load_vars()
             model = self.fitting.forwardmodel.model()
-            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
 
             # model spectrum binned to observed spectrum
-            out = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
+            sp_bingrid, sp_bingrididx = get_specbingrid(self.data.obs_wlgrid,
+                                                        self.data.int_wlgrid_full,
+                                                        self.data.obs_binwidths)
+            sp_nbingrid = self.data.obs_nwlgrid
+
+            model_binned = [model[sp_bingrididx == i].mean() for i in xrange(1,sp_nbingrid+1)]
+            out = np.zeros((self.data.obs_nwlgrid, 2))
             out[:,0] = self.data.obs_spectrum[:,0]
             out[:,1] = model_binned
-            fitting_out[idx]['spectrum'] = out
+            fitting_out[idx]['model_spres_obswno'] = out
 
-            # high res spectrum
-            out = np.zeros((len(self.data.int_wlgrid), 2))
-            out[:,0] = self.data.int_wlgrid
+            # high res spectrum, in the observed spectrum range
+            out = np.zeros((self.data.int_nwlgrid_obs, 2))
+            out[:,0] = self.data.int_wlgrid_obs
+            out[:,1] = model[self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
+            fitting_out[idx]['model_xsecres_obswno'] = out
+
+            # highres spectrum, in the full wavelength range
+            out = np.zeros((self.data.int_nwlgrid_full, 2))
+            out[:,0] = self.data.int_wlgrid_full
             out[:,1] = model
-            fitting_out[idx]['highres_spectrum'] = out
+            fitting_out[idx]['model_xsecres_fullwno'] = out
 
-            # create 1 sigma spectrum
+
+            std_spectrum = np.zeros((self.data.int_nwngrid_full))
+
+            # # create 2 sigma spectrum
             if self.NEST and not self.params.fit_clr_trans:
 
+                logging.info('Compute models to create the 2 sigma model spectrum spread')
+
                 weights = []
-                nspectra = 500
-                models = np.zeros((nspectra, self.data.int_nwngrid)) # number of possible combinations
+                nspectra = 5
+
+                models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
+                weights = np.zeros((nspectra))
                 for i in xrange(nspectra):
                     rand_idx = random.randint(0, len(self.NEST_tracedata))
-                    weights.append(self.NEST_likelihood[rand_idx,0])
+                    weights[i] = self.NEST_likelihood[rand_idx,0]
                     fit_params_iter = self.NEST_tracedata[rand_idx]
                     self.fitting.update_atmospheric_parameters(fit_params_iter)
+                    model = self.fitting.forwardmodel.model()
                     models[i, :] = self.fitting.forwardmodel.model()
 
-                std_spectrum = np.zeros((self.data.int_nwngrid))
-                for i in xrange(self.data.int_nwngrid):
+                models = models[1:,:] # exclude 1st spectrum, for some reasons is made of nan
+                weights = weights[1:]
+
+                std_spectrum = np.zeros((self.data.int_nwngrid_full))
+                for i in xrange(self.data.int_nwngrid_full):
                     average = np.average(models[:,i], weights=weights)
                     variance = np.average((models[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
                     std_spectrum[i] = np.sqrt(variance)
 
-                fitting_out[idx]['std_spectrum'] = std_spectrum
 
-            #individual molecules plotted
-            if self.params.fit_fit_active:
-                fit_params2 = fit_params
-                fitting_out[idx]['components'] ={}
-                for idx2, param in enumerate(self.params.atm_active_gases):
-                    fit_params2 = np.copy(fit_params)
-                    if self.params.fit_X_log:
-                        fit_params2[:self.fitting.fit_X_nparams] = [-20.0]*self.fitting.fit_X_nparams
-                    else:
-                        fit_params2[:self.fitting.fit_X_nparams] = [0.0]*self.fitting.fit_X_nparams
-                    fit_params2[idx2] = solution['fit_params'][param]['value']
-    #                 fit_params2[idx2] = 0.0
+                fitting_out[idx]['model_std_xsecres_fullwno'] = std_spectrum
+                fitting_out[idx]['model_std_xsecres_obswno'] = std_spectrum[self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
+                std_spectrum_binned = [std_spectrum[sp_bingrididx == i].mean() for i in xrange(1,sp_nbingrid+1)]
+                fitting_out[idx]['model_std_spres_obswno'] = np.asarray(std_spectrum_binned)
 
-
-                    self.fitting.update_atmospheric_parameters(fit_params2)
-                    model2 = self.fitting.forwardmodel.model()
-                    out2 = np.zeros((len(self.data.int_wlgrid), 2))
-                    out2[:,0] = self.data.int_wlgrid
-                    out2[:,1] = model2
-                    out3 = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
-                    out3[:,0] = self.data.obs_spectrum[:,0]
-                    out3[:,1] = [model2[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
-
-                    fitting_out[idx]['components'][param] ={}
-                    fitting_out[idx]['components'][param]['highres_spectrum'] = out2
-                    fitting_out[idx]['components'][param]['spectrum'] = out3
+    #         #individual molecules plotted
+    #         if self.params.fit_fit_active:
+    #             fit_params2 = fit_params
+    #             fitting_out[idx]['components'] ={}
+    #             for idx2, param in enumerate(self.params.atm_active_gases):
+    #                 fit_params2 = np.copy(fit_params)
+    #                 if self.params.fit_X_log:
+    #                     fit_params2[:self.fitting.fit_X_nparams] = [-20.0]*self.fitting.fit_X_nparams
+    #                 else:
+    #                     fit_params2[:self.fitting.fit_X_nparams] = [0.0]*self.fitting.fit_X_nparams
+    #                 fit_params2[idx2] = solution['fit_params'][param]['value']
+    # #                 fit_params2[idx2] = 0.0
+    #
+    #
+    #                 self.fitting.update_atmospheric_parameters(fit_params2)
+    #                 model2 = self.fitting.forwardmodel.model()
+    #                 out2 = np.zeros((len(self.data.int_wlgrid), 2))
+    #                 out2[:,0] = self.data.int_wlgrid
+    #                 out2[:,1] = model2
+    #                 out3 = np.zeros((len(self.data.obs_spectrum[:,0]), 2))
+    #                 out3[:,0] = self.data.obs_spectrum[:,0]
+    #                 out3[:,1] = [model2[self.data.intsp_bingrididx == i].mean() for i in xrange(1,self.data.intsp_nbingrid+1)]
+    #
+    #                 fitting_out[idx]['components'][param] ={}
+    #                 fitting_out[idx]['components'][param]['highres_spectrum'] = out2
+    #                 fitting_out[idx]['components'][param]['spectrum'] = out3
 
         return fitting_out
 
@@ -528,18 +563,18 @@ class output(base):
 
         if save2pdf:
             self.save_fig(fig, 'spectrum_data.pdf')
-        
-            
+
 
     def plot_fit(self,save2pdf=False,resolution='low',linewidth=1.0):
 
         logging.info('Plotting observed and fitted spectra')
 
         if resolution is 'low':
-            res = 'spectrum'
+            res = 'model_spres_obswno'
+            std = 'model_std_spres_obswno'
         elif resolution is 'high':
-            res = 'highres_spectrum'
-
+            res = 'model_xsecres_obswno'
+            std = 'model_std_xsecres_obswno'
         fig = py.figure()
 
         # plot models       
@@ -554,10 +589,6 @@ class output(base):
             for idx, solution in enumerate(self.NEST_out):
                 fig = self.__plot_fit__(solution[res], 'NESTED %i' % idx,
                                         fig=fig, linewidth=linewidth)
-                py.fill_between(self.data.int_wlgrid,
-                                solution['highres_spectrum'][:,1]-2.*solution['std_spectrum'],
-                                solution['highres_spectrum'][:,1]+2.*solution['std_spectrum'],
-                                color='orange', alpha=0.6)
 
         # plot observed spectrum
         py.errorbar(self.data.obs_spectrum[:,0],
@@ -565,12 +596,8 @@ class output(base):
                         self.data.obs_spectrum[:,2],
                         color=[0.4,0.4,0.4], mec=[0.5,0.5,0.5], fmt='', marker='o', linewidth=2, linestyle='None')
 
-
-
         if save2pdf:
             self.save_fig(fig,'model_fit_{0}_res.pdf'.format(resolution))
-           
-
 
     def plot_absorbers(self,save2pdf=False,params_names=None,resolution='low',linewidth=2.0):
         #routine plotting individual components
@@ -583,11 +610,10 @@ class output(base):
                 return
         
         if resolution is 'low':
-            res = 'spectrum'
+            res = 'model_spres_obswno'
         elif resolution is 'high':
-            res = 'highres_spectrum'
-        
-        
+            res = 'model_xsecres_obswno'
+
         # plot models
         if self.params.fit_fit_active:
             if self.fitting.DOWN:
@@ -709,27 +735,27 @@ class output(base):
 
         if self.MCMC:
             for idx, solution in enumerate(self.NEST_out):
-                filename1 = os.path.join(self.out_path, 'MCMC_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
-                filename2 = os.path.join(self.out_path, 'MCMC_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename1 = os.path.join(self.out_path, 'MCMC_%s_model_spres_obswno_%i.dat' % (self.__MODEL_ID__, idx))
+                filename2 = os.path.join(self.out_path, 'MCMC_%s_model_xsecres_obswno_%i.dat' % (self.__MODEL_ID__, idx))
                 logging.info('Saving MCMC spectrum for solution %i to %s and %s' % (idx, filename1, filename2))
-                np.savetxt(filename1, solution['spectrum'])
-                np.savetxt(filename2, solution['highres_spectrum'])
+                np.savetxt(filename1, solution['model_spres_obswno'])
+                np.savetxt(filename2, solution['model_xsecres_obswno'])
 
         if self.NEST:
             logging.info('MultiNest detected %i different modes. '
                          'Saving one model spectrum for each solution' % len(self.NEST_out))
             for idx, solution in enumerate(self.NEST_out):
-                filename1 = os.path.join(self.out_path, 'NEST_%s_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
-                filename2 = os.path.join(self.out_path, 'NEST_%s_highres_spectrum_%i.dat' % (self.__MODEL_ID__, idx))
+                filename1 = os.path.join(self.out_path, 'NEST_%s_model_spres_obswno_%i.dat' % (self.__MODEL_ID__, idx))
+                filename2 = os.path.join(self.out_path, 'NEST_%s_model_xsecres_obswno_%i.dat' % (self.__MODEL_ID__, idx))
                 logging.info('Saving Nested Sampling spectrum for solution %i to %s and %s' % (idx, filename1, filename2))
-                np.savetxt(filename1, solution['spectrum'])
-                np.savetxt(filename2, solution['highres_spectrum'])
+                np.savetxt(filename1, solution['model_spres_obswno'])
+                np.savetxt(filename2, solution['model_xsecres_obswno'])
         if self.DOWN:
-                filename1 = os.path.join(self.out_path, 'DOWN_%s_spectrum.dat' % (self.__MODEL_ID__))
-                filename2 = os.path.join(self.out_path, 'DOWN_%s_highres_spectrum.dat' % (self.__MODEL_ID__))
+                filename1 = os.path.join(self.out_path, 'DOWN_%s_model_spres_obswno.dat' % (self.__MODEL_ID__))
+                filename2 = os.path.join(self.out_path, 'DOWN_%s_model_xsecres_obswno.dat' % (self.__MODEL_ID__))
                 logging.info('Saving DOWHNILL spectrum to %s and %s' % (filename1, filename2))
-                np.savetxt(filename1, self.DOWN_out[0]['spectrum'])
-                np.savetxt(filename2, self.DOWN_out[0]['highres_spectrum'])
+                np.savetxt(filename1, self.DOWN_out[0]['model_spres_obswno'])
+                np.savetxt(filename2, self.DOWN_out[0]['model_xsecres_obswno'])
 
         filename = os.path.join(self.out_path, 'observed_%s_spectrum.dat' % (self.__MODEL_ID__))
         np.savetxt(filename, self.data.obs_spectrum)

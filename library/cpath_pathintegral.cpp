@@ -61,6 +61,7 @@ extern "C" {
         double p;
         int count, t_idx;
 
+
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
@@ -131,6 +132,7 @@ extern "C" {
                         sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
                         tau += (sigma * active_mixratio[l][k+j] * density[k+j] * dlarray[count]);
                         //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
+                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
                         tau += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[l][k+j] * density[j+k] * dlarray[count];
                     }
                     // calculating optical depth due inactive gases (rayleigh scattering)
@@ -150,6 +152,7 @@ extern "C" {
             }
             integral *= 2.0;
             absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
+            //cout << absorption[wn] << endl;
         }
     }
 }

@@ -110,7 +110,7 @@ class data(object):
                 table = np.loadtxt(self.params.ven_mol_profile_path, skiprows=2)
                 self.ven_molprof_altitude = table[:,0]/1000. # convert km to m
                 self.ven_molprof_pressure = table[:,1]*100. # convert mbar to pascal
-                self.ven_molprof_mixratios = table[:,2:]*1.5 # mixing ratios referring to self.ven_molecules
+                self.ven_molprof_mixratios = table[:,2:] # mixing ratios referring to self.ven_molecules
                 self.ven_molprof_altitude_int = interp1d(self.ven_molprof_pressure, self.ven_molprof_altitude)
                 self.ven_molprof_mixratios_int = [interp1d(self.ven_molprof_pressure, self.ven_molprof_mixratios[:,i]) for i in xrange(np.shape(self.ven_molprof_mixratios)[1])]
                 logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' % (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
@@ -195,12 +195,12 @@ class data(object):
 
                     # restrict temperature range
                     Tmax = Tmin = None
-                    if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                        Tmax = self.params.fit_T_bounds[1]
-                        Tmin = self.params.fit_T_bounds[0]
-                    elif self.params.ven_load:
+                    if self.params.ven_load:
                         Tmax = np.max(self.ven_temperature)
                         Tmin = np.min(self.ven_temperature)
+                    elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+                        Tmax = self.params.fit_T_bounds[1]
+                        Tmin = self.params.fit_T_bounds[0]
                     else:
                         Tmin = Tmax = self.params.planet_temp
 
@@ -237,6 +237,10 @@ class data(object):
 
         self.int_wngrid_full = wno # full wavenumber range
         self.int_nwngrid_full = len(wno)
+
+        self.int_wlgrid_full = 10000./wno
+        self.int_nwlgrid_full = len(wno)
+
         self.sigma_dict = sigma_dict
 
         del sigma_tmp, t, p, wno
@@ -359,6 +363,8 @@ class data(object):
                 Tmax_idx = len(t) - 1
 
             sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
+
+
             sigma_dict['wno'] = self.int_wngrid_full
             sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid_full))
 
@@ -380,8 +386,10 @@ class data(object):
         # wavenumber grid limits of internal model
         if self.params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             # limits defined by a manual wavelength range in micron in param file
-            lambdamax = self.params.gen_wavemax
-            lambdamin = self.params.gen_wavemin
+            # lambdamax = self.params.gen_wavemax
+            # lambdamin = self.params.gen_wavemin
+            self.int_wngrid_obs_idxmin = 0
+            self.int_wngrid_obs_idxmax = len(self.int_wngrid_full)
         else:
             # limits defined by the input spectrum in micron.
             lambdamin = self.obs_wlgrid[0]
@@ -398,27 +406,29 @@ class data(object):
             lambdamin = self.obs_wlgrid[0] - bin_low
             lambdamax = self.obs_wlgrid[-1] + bin_up
 
-        # convert to wavenumbers
-        numin = 10000./lambdamax
-        numax = 10000./lambdamin
+            # convert to wavenumbers
+            numin = 10000./lambdamax
+            numax = 10000./lambdamin
 
-        # find numin / numax closest to the cross section wavenumber grid (approximate numin for defect, and numax for excess)
-        idx_min = np.argmin(np.abs(self.int_wngrid_full-numin))
-        if numin - self.int_wngrid_full[idx_min] < 0:
-            idx_min -= 1
+            # find numin / numax closest to the cross section wavenumber grid (approximate numin for defect, and numax for excess)
+            idx_min = np.argmin(np.abs(self.int_wngrid_full-numin))
+            if numin - self.int_wngrid_full[idx_min] < 0:
+                idx_min -= 1
 
-        idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
-        if numax - self.int_wngrid_full[idx_max] > 0:
-            idx_max += 1
+            idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
+            if numax - self.int_wngrid_full[idx_max] > 0:
+                idx_max += 1
 
-        self.int_wngrid_obs_idxmin = idx_min
-        self.int_wngrid_obs_idxmax = idx_max
+            self.int_wngrid_obs_idxmin = idx_min
+            self.int_wngrid_obs_idxmax = idx_max
 
-        self.int_wngrid_obs = self.int_wngrid_full[idx_min:idx_max]
+        self.int_wngrid_obs = self.int_wngrid_full[self.int_wngrid_obs_idxmin:self.int_wngrid_obs_idxmax]
         self.int_nwngrid_obs = len(self.int_wngrid_obs)
 
         logging.info('Internal wavenumber grid is %.2f - %.2f in steps of %.2f, resulting in %i points' %
-                     (self.int_wngrid_full[idx_min], self.int_wngrid_full[idx_max], np.unique(np.diff(self.int_wngrid_full)), self.int_nwngrid_obs))
+                     (self.int_wngrid_full[self.int_wngrid_obs_idxmin],
+                      self.int_wngrid_full[self.int_wngrid_obs_idxmax-1],
+                      np.unique(np.diff(self.int_wngrid_full)), self.int_nwngrid_obs))
 
         # convert wavenumber grid to wavelenght grid
         self.int_wlgrid_obs = 10000./self.int_wngrid_obs
