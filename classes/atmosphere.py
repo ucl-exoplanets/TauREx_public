@@ -83,7 +83,6 @@ class atmosphere(object):
             self.temperature_profile = np.zeros((self.nlayers))
             self.temperature_profile[:] = self.params.planet_temp
 
-
         self.nallgases = len(self.active_gases) + len(self.inactive_gases)
         self.nactivegases = len(self.active_gases)
         self.ninactivegases = len(self.inactive_gases)
@@ -107,13 +106,6 @@ class atmosphere(object):
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
         logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
-
-        # set cloud parameters
-        if self.params.atm_clouds:
-            self.clouds_lower_P = self.params.atm_cld_lower_P
-            self.clouds_upper_P = self.params.atm_cld_upper_P
-            self.clouds_m = self.params.atm_cld_m
-            self.clouds_a = self.params.atm_cld_a
 
         # selecting TP profile to use
         if tp_profile_type is None:
@@ -164,6 +156,13 @@ class atmosphere(object):
         # get the gas indexes of the molecules inside the pairs
         self.cia_idx = self.get_cia_idx()
 
+        # get clouds specific parameters
+        self.clouds_upP = self.params.atm_cld_upper_P
+        self.clouds_lowP = self.params.atm_cld_lower_P
+        self.clouds_m = self.params.atm_cld_m
+        self.clouds_a = self.params.atm_cld_a
+        self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
+        self.clouds_density_profile = self.get_clouds_density_profile()
 
     def get_coupled_planet_mu(self):
 
@@ -189,22 +188,6 @@ class atmosphere(object):
                 #logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
 
         return mu
-
-    # get the atmospheric scale height
-    def get_scale_height(self, T=None, g=None, mu=None):
-
-
-        # here we might use a different approach, similar to Venot
-        if not T:
-            T = self.temperature_profile
-        if not g:
-            g = self.planet_grav
-        if not mu:
-            mu = self.planet_mu
-
-        scaleheight =  (KBOLTZ*T)/(mu*g)
-
-        return scaleheight
 
     # get the pressure profile
     def get_pressure_profile(self, Pmax=None, Pmin=None):
@@ -267,7 +250,6 @@ class atmosphere(object):
 
     # get sigma array from data.sigma_dict. Interpolate sigma array to pressure profile
     def get_sigma_array(self):
-
         pressure_profile_bar = self.pressure_profile/1e5
         sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']), self.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.active_gases):
@@ -305,6 +287,35 @@ class atmosphere(object):
                     cia_idx[c] = self.nactivegases + self.inactive_gases.index(mol_val)
                 c += 1
         return cia_idx
+
+    def get_sigma_clouds_array(self):
+
+        if self.params.atm_clouds:
+
+            # calculating could cross sections
+            a = (128.0* pi**5 * self.clouds_a**6)
+            b = (3.0 * (10000./self.int_wngrid)**4) # convert wavenumber grid to wavelength
+            c = ((self.clouds_m**2 -1.0)/(self.clouds_m**2 + 2.0))**2
+            sigma_clouds_array = a / b * c
+
+        else:
+            sigma_clouds_array = np.zeros((self.int_nwngrid))
+
+        return sigma_clouds_array
+
+    def get_clouds_density_profile(self):
+
+        low_P_interp = -6
+        up_P_interp = -1
+
+        clouds_density_profile = np.zeros((self.nlayers))
+
+        for pres_idx, pres_val  in enumerate(self.pressure_profile):
+             if pres_val < self.clouds_upP and pres_val > self.clouds_lowP:
+                cld_factor = (pres_val - self.clouds_lowP)/(self.clouds_upP-self.clouds_lowP)
+                clouds_density_profile[pres_idx] = exp(low_P_interp + (up_P_interp - low_P_interp)*cld_factor)
+
+        return clouds_density_profile
 
     def update_atmosphere(self):
 

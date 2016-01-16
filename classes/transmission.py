@@ -51,16 +51,10 @@ class transmission():
 
     # class methods
 
-    def get_cloud_sig(self):
-        # calculating could cross sections
-        a = (128.0* pi**5 * self.atmosphere.clouds_a**6)
-        b = (3.0 * (10000./self.data.obs_wngrid)**4)
-        c = ((self.atmosphere.clouds_m**2 -1.0)/(self.atmosphere.clouds_m**2 + 2.0))**2
-        return a / b * c
-
     def cpath_load_vars(self):
 
         # load variables that won't change during fitting
+
         self.cpath_nwngrid = C.c_int(self.atmosphere.int_nwngrid)
         self.cpath_nlayers = C.c_int(self.atmosphere.nlayers)
         self.cpath_nactive = C.c_int(self.atmosphere.nactivegases)
@@ -76,19 +70,23 @@ class transmission():
         self.cpath_sigma_cia_temp = cast2cpp(self.data.sigma_cia_dict['t'])
         self.cpath_sigma_cia_ntemp = C.c_int(len(self.data.sigma_cia_dict['t']))
         self.cpath_sigma_rayleigh_array = cast2cpp(self.atmosphere.sigma_rayleigh_array_flat)
+        self.cpath_clouds = C.c_int(1) if self.params.atm_clouds else C.c_int(0)
+        self.cpath_sigma_clouds_array = cast2cpp(self.atmosphere.sigma_clouds_array_flat)
         self.cpath_star_radius = C.c_double(self.params.star_radius)
 
     def cpath_update_vars(self):
 
         # load variables that will change during fitting
+
         self.cpath_z = cast2cpp(self.atmosphere.altitude_profile)
         dz = np.diff(self.atmosphere.altitude_profile)
         self.cpath_dz = cast2cpp(np.append(dz, dz[-1]))
-        self.cpath_density_profile = cast2cpp(self.atmosphere.density_profile)
         self.cpath_active_mixratio_profile = cast2cpp(self.atmosphere.active_mixratio_profile)
         self.cpath_inactive_mixratio_profile = cast2cpp(self.atmosphere.inactive_mixratio_profile)
         self.cpath_temperature_profile = cast2cpp(self.atmosphere.temperature_profile)
         self.cpath_planet_radius = C.c_double(self.atmosphere.planet_radius)
+        self.cpath_density_profile = cast2cpp(self.atmosphere.density_profile)
+        self.cpath_clouds_density_profile = cast2cpp(self.atmosphere.clouds_density_profile)
 
     #@profile
     def cpath_pathintegral(self):
@@ -115,9 +113,12 @@ class transmission():
                        self.cpath_sigma_cia_array,
                        self.cpath_sigma_cia_temp,
                        self.cpath_sigma_cia_ntemp,
+                       self.cpath_clouds,
+                       self.cpath_sigma_clouds_array,
+                       self.cpath_clouds_density_profile,
+                       self.cpath_density_profile,
                        self.cpath_z,
                        self.cpath_dz,
-                       self.cpath_density_profile,
                        self.cpath_active_mixratio_profile,
                        self.cpath_inactive_mixratio_profile,
                        self.cpath_temperature_profile,

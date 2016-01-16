@@ -38,15 +38,19 @@ extern "C" {
                        const double * sigma_cia,
                        const double * sigma_cia_temp,
                        const int sigma_cia_ntemp,
+                       const int clouds,
+                       const double * sigma_cloud,
+                       const double * clouds_density,
+                       const double * density,
                        const double * z,
                        const double * dz,
-                       const double * density,
                        const double ** active_mixratio,
                        const double ** inactive_mixratio,
                        const double * temperature,
                        const double planet_radius,
                        const double star_radius,
                        void * absorptionv) {
+
 
         double * absorption = (double *) absorptionv;
 
@@ -58,9 +62,9 @@ extern "C" {
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
         double tau, exptau,  integral;
+        double cld_factor, cld_rho;
         double p;
         int count, t_idx;
-
 
         // dl array
         count = 0;
@@ -144,6 +148,14 @@ extern "C" {
                     for (int c=0; c<cia_npairs;c++) {
                         tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x1_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
                     }
+
+                    // calculate optical depth due to clouds
+                    if (clouds == 1) {
+                        // = log(cloud density), assuming linear decrease with decreasing in log pressure
+                        // following Ackerman & Marley (2001), Fig. 6
+                        tau += sigma_cloud[wn] * dlarray[count]*1.0e2 * clouds_density[j+k] * 1.0e-6; // convert path lenth from m to cm, and density from g m^-3 to g cm^-3
+                    }
+
 
                     count += 1;
                 }
