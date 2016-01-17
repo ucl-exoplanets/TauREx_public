@@ -720,7 +720,6 @@ class fitting(base):
         datastd = self.data.obs_spectrum[:,2] # data error
         datastd_mean = mean(datastd)
         
-        parameters = [str(i) for i in xrange(len(self.fit_params))]
         ndim = len(self.fit_params)
 
         #progress = pymultinest.ProgressPlotter(n_params = len(self.fit_params)); progress.start()

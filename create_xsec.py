@@ -56,10 +56,10 @@ parser.add_option('-e', '--extension',
                   default='sigma',
                   )
 
-# exomol file version. 1: zero pressure, 2: pressure broadened
+# exomol file version. ZP: zero pressure, PB: pressure broadened, CH4: Sergey's ch4
 parser.add_option('-v', '--version',
                   dest='version',
-                  default=1,
+                  default='ZP',
 )
 options, remainder = parser.parse_args()
 
@@ -72,19 +72,27 @@ def read_filename(fname, filetype=1):
 
     fname  = os.path.splitext(os.path.basename(fname))[0]
 
-    if int(filetype) == 1:
-        # exomol file format v1 (zero pressure), e.g. 1H2-16O_0-30000_500K_0.010000.sigma
+    if filetype.upper() == 'ZP':
+        # exomol file format Zero Pressure, e.g. 1H2-16O_0-30000_500K_0.010000.sigma
         s = string.split(fname,'_',5)
         temperature = float(s[2][:-1])
         pressure = 0.
         resolution = float(s[3])
 
-    elif int(filetype) == 2:
-        # exomol file format v2 (pressure broadened), e.g. 12C-16O__0-8500_300_0.1_0.01.sig
-        s = string.split(fname,'_',5)
-        temperature = float(s[3])
-        pressure = float(s[4])
-        resolution = float(s[5])
+    elif filetype.upper() == 'PB':
+        # exomol file format Pressure Broadened, e.g. 12C-16O__0-8500_300_0.1_0.01.sig
+        strfname = fname.replace('__', '_')
+        s = strfname.split('_')
+        temperature = float(s[2])
+        pressure = float(s[3])
+        resolution = float(s[4])
+
+    elif filetype.upper() == 'CH4':
+        s = fname.split('_')
+        pressure = float(s[1][1:])
+        temperature = float(s[2][1:])
+        resolution = 0.01 # assume this resolution...
+
 
     return temperature, pressure, resolution
 
