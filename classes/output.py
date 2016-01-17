@@ -640,18 +640,18 @@ class output(base):
                     if save2pdf:
                         self.save_fig(fig, 'mcmc_components_{0}_{1}_res.pdf'.format(idx,resolution))
 
-            if self.fitting.NEST:
-                for idx, solution in enumerate(self.NEST_out):
-                    fig = py.figure()
-    #                 plot_observed=True
-                    fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
-                    for idx2, param in enumerate(self.params.atm_active_gases):
-    #                     if idx2 == 1: plot_observed = False
-                        fig = self.__plot_fit__(solution['components'][param][res],param,
-                                            fig=fig,plot_observed=False,linewidth=linewidth)
-
-                    if save2pdf:
-                        self.save_fig(fig, 'nested_components_{0}_{1}_res.pdf'.format(idx,resolution))
+    #         if self.fitting.NEST:
+    #             for idx, solution in enumerate(self.NEST_out):
+    #                 fig = py.figure()
+    # #                 plot_observed=True
+    #                 fig = self.__plot_fit__(solution[res], 'MODEL',fig=fig, plot_observed = True,linewidth=linewidth)
+    #                 for idx2, param in enumerate(self.params.atm_active_gases):
+    # #                     if idx2 == 1: plot_observed = False
+    #                     fig = self.__plot_fit__(solution['components'][param][res],param,
+    #                                         fig=fig,plot_observed=False,linewidth=linewidth)
+    #
+    #                 if save2pdf:
+    #                     self.save_fig(fig, 'nested_components_{0}_{1}_res.pdf'.format(idx,resolution))
 
 
     def __plot_fit__(self,MODEL,LABEL,fig=None,plot_observed=False, linewidth=2.0):

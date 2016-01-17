@@ -54,7 +54,6 @@ class transmission():
     def cpath_load_vars(self):
 
         # load variables that won't change during fitting
-
         self.cpath_nwngrid = C.c_int(self.atmosphere.int_nwngrid)
         self.cpath_nlayers = C.c_int(self.atmosphere.nlayers)
         self.cpath_nactive = C.c_int(self.atmosphere.nactivegases)

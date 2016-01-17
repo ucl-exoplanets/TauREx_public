@@ -139,6 +139,7 @@ extern "C" {
                         //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
                         tau += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[l][k+j] * density[j+k] * dlarray[count];
                     }
+
                     // calculating optical depth due inactive gases (rayleigh scattering)
                     for (int l=0; l<ninactive; l++) {
                         //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[l][k+j] << " " << density[j+k] << " " << dlarray[count] << endl;

@@ -506,8 +506,8 @@ class fitting(base):
         else:
             model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
 
-        # get residuals
-        res = (data - model_binned) / datastd
+        # get chi2
+        res = ((data - model_binned) / datastd)
         res = sum(res*res)
 
         #
@@ -707,9 +707,13 @@ class fitting(base):
             # log-likelihood function called by multinest
             fit_params_container = asarray([cube[i] for i in xrange(len(self.fit_params))])
             chi_t = self.chisq_trans(fit_params_container, data, datastd)
-            llterms = (-ndim/2.0)*log(2.*pi*datastd_mean**2) - 0.5*chi_t
-            return llterms
-    
+
+            loglike = (-1.)*np.sum(np.log(datastd*np.sqrt(2*np.pi))) - 0.5 * chi_t
+
+            #llterms = (-ndim/2.0)*log(2.*pi*datastd_mean**2) - 0.5*chi_t
+            return loglike
+            #return (-0.5 * chisq).sum()
+
         def multinest_uniform_prior(cube, ndim, nparams):
             # prior distributions called by multinest. Implements a uniform prior
             # converting parameters from normalised grid to uniform prior

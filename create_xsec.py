@@ -55,7 +55,14 @@ parser.add_option('-e', '--extension',
                   dest='extension',
                   default='sigma',
                   )
-
+parser.add_option('-b', '--binning_resolution',
+                  dest='linear_binning',
+                  default=None,
+)
+parser.add_option('-m', '--binning_method',
+                  dest='binning_method',
+                  default='geometric_average',
+)
 # exomol file version. ZP: zero pressure, PB: pressure broadened, CH4: Sergey's ch4
 parser.add_option('-v', '--version',
                   dest='version',
@@ -124,6 +131,8 @@ for fname in glob.glob(os.path.join(options.source_files, '*.%s' % options.exten
         wngrid = sigma[:,0]
 
 
+
+
 print 'Sorting  pressures and temperatures'
 pressures = np.sort(np.unique(pressures))
 temperatures = np.sort(np.unique(temperatures))
@@ -131,7 +140,24 @@ print 'Pressures are %s' % pressures
 print 'Temperatures are %s' % temperatures
 print 'Wavenumber range is %f - %f' % (np.min(wngrid), np.max(wngrid))
 
-sigma_array = np.zeros((len(pressures), len(temperatures), len(wngrid)))
+comments.append('The resolution of the original Exomol cross sections is %f' % resolution)
+
+if options.linear_binning:
+    # create the output wavenumber grid
+    bin_wngrid = np.arange(np.min(wngrid), np.max(wngrid), float(options.linear_binning))
+    bingrid_idx = np.digitize(wngrid, bin_wngrid) #getting the specgrid indexes for bins
+    sigma_array = np.zeros((len(pressures), len(temperatures), len(bin_wngrid)))
+
+    comments.append('Linear binning, at %f wavenumber resolution.' % float(options.linear_binning))
+
+    if options.binning_method == 'geometric_average':
+        comments.append('Linear binning: use geometric average.' )
+    elif options.binning_method == 'algebraic_average':
+        comments.append('Linear binning: use algebraic average.' )
+
+else:
+    sigma_array = np.zeros((len(pressures), len(temperatures), len(wngrid)))
+
 
 for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
@@ -139,12 +165,27 @@ for pressure_idx, pressure_val in enumerate(pressures):
             xsec_t, xsec_p, xsec_r = read_filename(fname, options.version)
             if xsec_t == temperature_val and xsec_p == pressure_val:
                 print 'Reading %s' % fname
-                values = np.loadtxt(fname)[:,1]
+                sigma_in = np.loadtxt(fname)[:,1]
+
+                if options.linear_binning:
+
+                    if options.binning_method == 'geometric_average':
+                        # geometric average (i.e. log-average)
+                        logval = np.log(sigma_in)
+                        values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
+                        values = np.exp(values)
+                        values[np.isnan(values)] = 0
+                    elif options.binning_method == 'algebraic_average':
+                        # algebraic average
+                        values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
+                        values[np.isnan(values)] = 0
+                else:
+                    values = sigma_in
+
                 sigma_array[pressure_idx, temperature_idx, :] = values
 
-comments.append('Cross section array created from Exomol cross sections v%s, using create_xsec.py, on GMT %s' %
+comments.append('Cross section array created from Exomol cross sections (v. %s), using create_xsec.py, on GMT %s' %
                 (options.version, strftime("%Y-%m-%d %H:%M:%S", gmtime())))
-comments.append('The resolution of the Exomol cross sections is %f' % resolution)
 
 sigma_out = {
     'name': options.molecule_name,

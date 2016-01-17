@@ -126,12 +126,12 @@ if 'comments' in sigma_in:
 else:
     comments = []
 
-
-
 comments.append('Cross section array created using convert_xsec.py on GMT %s' % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 comments.append('Original wavenumber grid limits were: %f - %f' % (np.min(sigma_in['wno']), np.max(sigma_in['wno'])))
 comments.append('Original pressures were: %s' % sigma_in['p'])
 comments.append('Original temperatures were: %s' % sigma_in['t'])
+
+print 'Reinterpolate to the requested wavenumber grid from wnmin to wnamx at the input resolution'
 
 # reinterpolate to the requested wavenumber grid from wnmin to wnamx at the input resolution.
 # this is done to expand, or restrict, the wavenumber range. Zeros are assumed if we extend the wavenumber range.
@@ -141,7 +141,6 @@ for pressure_idx, pressure_val in enumerate(sigma_in['p']):
     for temperature_idx, temperature_val in enumerate(sigma_in['t']):
         sigma_array[pressure_idx, temperature_idx] =  np.interp(full_wngrid, sigma_in['wno'], sigma_in['xsecarr'][pressure_idx, temperature_idx])
 
-
 # interpolate to new temperature and pressure grids. Note that it is better to interpolate to the temperature
 # grid in log space, and to the new pressure grid in linear space... so split interpolation in two steps
 # note that the interpolation of pressures is not great, so it is better to keep a fine grid.
@@ -149,9 +148,10 @@ for pressure_idx, pressure_val in enumerate(sigma_in['p']):
 # interpolation of temperatures in log space
 sigma_array_tmp = np.zeros((len(sigma_in['p']), len(temperatures), len(full_wngrid)))
 comments.append('Interpolation to new temperature grid in log space')
-
+print 'Interpolation to new temperature grid in log space'
 for pressure_idx, pressure_val in enumerate(sigma_in['p']):
     for temperature_idx, temperature_val in enumerate(temperatures):
+        print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
         for wno_idx, wno_val in enumerate(full_wngrid):
             sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx])))
             if np.isnan(sigma_array_tmp[pressure_idx, temperature_idx, wno_idx]):
@@ -162,12 +162,15 @@ comments.append('Interpolation to new pressure grid in linear space')
 sigma_array = np.zeros((len(pressures), len(temperatures), len(full_wngrid)))
 for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
+        print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
         for wno_idx, wno_val in enumerate(full_wngrid):
             sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
 
 # lastly, bin if needed.
 # For now, only linear binning available. Ideally implement optimal binning for input resolution.
 if options.linear_binning:
+
+    print 'Linear binning'
 
     # create the output wavenumber grid
     bin_wngrid = np.arange(wnmin, wnmax, float(options.linear_binning))
@@ -184,11 +187,12 @@ if options.linear_binning:
     for pressure_idx, pressure_val in enumerate(pressures):
         for temperature_idx, temperature_val in enumerate(temperatures):
 
+            print 'Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
+
             sigma = sigma_array[pressure_idx, temperature_idx]
             if options.binning_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 logval = np.log(sigma)
-                print logval[0], logval[1], logval[2]
                 values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
