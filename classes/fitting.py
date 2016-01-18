@@ -707,12 +707,8 @@ class fitting(base):
             # log-likelihood function called by multinest
             fit_params_container = asarray([cube[i] for i in xrange(len(self.fit_params))])
             chi_t = self.chisq_trans(fit_params_container, data, datastd)
-
             loglike = (-1.)*np.sum(np.log(datastd*np.sqrt(2*np.pi))) - 0.5 * chi_t
-
-            #llterms = (-ndim/2.0)*log(2.*pi*datastd_mean**2) - 0.5*chi_t
             return loglike
-            #return (-0.5 * chisq).sum()
 
         def multinest_uniform_prior(cube, ndim, nparams):
             # prior distributions called by multinest. Implements a uniform prior
@@ -723,7 +719,6 @@ class fitting(base):
         data = self.data.obs_spectrum[:,1] # observed data
         datastd = self.data.obs_spectrum[:,2] # data error
         datastd_mean = mean(datastd)
-        
         ndim = len(self.fit_params)
 
         #progress = pymultinest.ProgressPlotter(n_params = len(self.fit_params)); progress.start()
