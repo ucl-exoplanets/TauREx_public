@@ -205,23 +205,34 @@ class data(object):
                         Tmin = Tmax = self.params.planet_temp
 
                     if Tmax > np.max(t) or Tmin < np.min(t):
-                        logging.error('The atmospheric temperature profile falls outside the temperature range of the cross sections')
-                        logging.error('Internal temperature range: %i - %i' % (Tmin, Tmax))
-                        logging.error('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
-                        exit()
-                    if Tmax and Tmin:
-                        # get idx of the temperature boundaries in the cross sections
-                        # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
-                        Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
-                        Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+                        logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
+                        logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
+                        logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
+
+                    # get idx of the temperature boundaries in the cross sections
+                    # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
+
+                    print np.min(t), np.max(t)
+                    if Tmax > np.max(t):
+                        Tmax_idx = len(t) - 1
+                    else:
                         Tmax_diff = Tmax - t # t is sigma_tmp['t']
                         Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
-                    else:
-                        Tmin_idx = 0
-                        Tmax_idx = len(t) - 1
 
-                    sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
+                    if Tmin < np.min(t):
+                        Tmin_idx = 0
+                    else:
+                        Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
+                        Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+
+                    if Tmin > np.max(t) and Tmax > np.max(t):
+                        sigma_dict['t'] = np.asarray([t[-1]])
+                        Tmax_idx = len(t)
+                    else:
+                        sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
+
                     sigma_dict['p'] = p
+
                     #sigma_dict['wno'] = sigma_tmp['wno'][wno_min_idx:wno_max_idx] # check: this should be identical to internal model!
                     sigma_dict['wno'] = sigma_tmp['wno'] # check: this should be identical to internal model!
 
@@ -386,10 +397,10 @@ class data(object):
         # wavenumber grid limits of internal model
         if self.params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             # limits defined by a manual wavelength range in micron in param file
-            # lambdamax = self.params.gen_wavemax
-            # lambdamin = self.params.gen_wavemin
-            self.int_wngrid_obs_idxmin = 0
-            self.int_wngrid_obs_idxmax = len(self.int_wngrid_full)
+            lambdamax = self.params.gen_wavemax
+            lambdamin = self.params.gen_wavemin
+            #self.int_wngrid_obs_idxmin = 0
+            #self.int_wngrid_obs_idxmax = len(self.int_wngrid_full)
         else:
             # limits defined by the input spectrum in micron.
             lambdamin = self.obs_wlgrid[0]
@@ -406,21 +417,21 @@ class data(object):
             lambdamin = self.obs_wlgrid[0] - bin_low
             lambdamax = self.obs_wlgrid[-1] + bin_up
 
-            # convert to wavenumbers
-            numin = 10000./lambdamax
-            numax = 10000./lambdamin
+        # convert to wavenumbers
+        numin = 10000./lambdamax
+        numax = 10000./lambdamin
 
-            # find numin / numax closest to the cross section wavenumber grid (approximate numin for defect, and numax for excess)
-            idx_min = np.argmin(np.abs(self.int_wngrid_full-numin))
-            if numin - self.int_wngrid_full[idx_min] < 0:
-                idx_min -= 1
+        # find numin / numax closest to the cross section wavenumber grid (approximate numin for defect, and numax for excess)
+        idx_min = np.argmin(np.abs(self.int_wngrid_full-numin))
+        if numin - self.int_wngrid_full[idx_min] < 0:
+            idx_min -= 1
 
-            idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
-            if numax - self.int_wngrid_full[idx_max] > 0:
-                idx_max += 1
+        idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
+        if numax - self.int_wngrid_full[idx_max] > 0:
+            idx_max += 1
 
-            self.int_wngrid_obs_idxmin = idx_min
-            self.int_wngrid_obs_idxmax = idx_max
+        self.int_wngrid_obs_idxmin = idx_min
+        self.int_wngrid_obs_idxmax = idx_max
 
         self.int_wngrid_obs = self.int_wngrid_full[self.int_wngrid_obs_idxmin:self.int_wngrid_obs_idxmax]
         self.int_nwngrid_obs = len(self.int_wngrid_obs)

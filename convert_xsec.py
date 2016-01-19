@@ -139,7 +139,7 @@ full_wngrid = np.arange(wnmin, wnmax, resolution)
 sigma_array = np.zeros((len(sigma_in['p']), len(sigma_in['t']), len(full_wngrid)))
 for pressure_idx, pressure_val in enumerate(sigma_in['p']):
     for temperature_idx, temperature_val in enumerate(sigma_in['t']):
-        sigma_array[pressure_idx, temperature_idx] =  np.interp(full_wngrid, sigma_in['wno'], sigma_in['xsecarr'][pressure_idx, temperature_idx])
+        sigma_array[pressure_idx, temperature_idx] =  np.interp(full_wngrid, sigma_in['wno'], sigma_in['xsecarr'][pressure_idx, temperature_idx], left=0, right=0)
 
 # interpolate to new temperature and pressure grids. Note that it is better to interpolate to the temperature
 # grid in log space, and to the new pressure grid in linear space... so split interpolation in two steps
@@ -153,7 +153,7 @@ for pressure_idx, pressure_val in enumerate(sigma_in['p']):
     for temperature_idx, temperature_val in enumerate(temperatures):
         print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
         for wno_idx, wno_val in enumerate(full_wngrid):
-            sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx])))
+            sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx]), left=0, right=0))
             if np.isnan(sigma_array_tmp[pressure_idx, temperature_idx, wno_idx]):
                 sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = 0
 
@@ -164,7 +164,7 @@ for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
         print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
         for wno_idx, wno_val in enumerate(full_wngrid):
-            sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
+            sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx], left=0, right=0)
 
 # lastly, bin if needed.
 # For now, only linear binning available. Ideally implement optimal binning for input resolution.

@@ -79,15 +79,27 @@ extern "C" {
 
         // interpolate sigma array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            for (int t=1; t<sigma_ntemp; t++) {
-                if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-                    for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<nactive;l++) {
-                            sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
-                            sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
-                            //cout << sigma_l << " " << sigma_r << " " << temperature[j] << endl;
-                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+
+            //cout << temperature[j] << " " << sigma_temp[sigma_ntemp-1] << endl;
+
+            if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
+                for (int wn=0; wn<nwngrid; wn++) {
+                    for (int l=0;l<nactive;l++) {
+                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
+                    }
+                }
+            } else {
+
+                for (int t=1; t<sigma_ntemp; t++) {
+                    if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+                        for (int wn=0; wn<nwngrid; wn++) {
+                            for (int l=0;l<nactive;l++) {
+                                sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
+                                sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
+                                sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                                //cout << sigma_l << " " << sigma_r << " " << temperature[j] << endl;
+                                sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                            }
                         }
                     }
                 }
