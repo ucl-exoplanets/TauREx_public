@@ -508,7 +508,7 @@ class fitting(base):
 
         # get chi2
         res = ((data - model_binned) / datastd)
-        res = np.nansum(res*res)
+        res = np.sum(res*res)
 
         #
         # ion()
