@@ -377,7 +377,7 @@ class output(base):
                 logging.info('Compute models to create the 2 sigma model spectrum spread')
 
                 weights = []
-                nspectra = 5
+                nspectra = 150
 
                 models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
                 weights = np.zeros((nspectra))
