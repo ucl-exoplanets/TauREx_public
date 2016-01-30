@@ -112,8 +112,8 @@ extern "C" {
                 if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<cia_npairs;l++) {
-                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_ntemp*l)];
-                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_ntemp*l)];
+                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
                             sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
                             sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
                         }

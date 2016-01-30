@@ -99,8 +99,8 @@ class atmosphere(object):
         # set density profile
         self.density_profile = self.get_density_profile()
 
-        logging.info('Planet radius: %.3f RJUP' % (self.planet_radius/RJUP))
-        logging.info('Planet mass: %.3f MJUP' % (self.planet_mass/MJUP))
+        logging.info('Planet radius: %.3f RJUP = %.3e m' % (self.planet_radius/RJUP, self.planet_radius))
+        logging.info('Planet mass: %.3f MJUP = %.3e kg' % (self.planet_mass/MJUP, self.planet_mass))
         logging.info('Planet gravity (log g) (1st layer): %.3f cgs' % (np.log10(self.planet_grav[0])))
         logging.info('Mean molecular weight (1st layer): %.5f AMU' % (self.planet_mu[0]/AMU))
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))
@@ -220,6 +220,7 @@ class atmosphere(object):
 
             deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile[i]/self.pressure_profile[i-1])
             z[i] = z[i-1] + deltaz # altitude at the i-th layer
+            #g[i] = g[0]
             g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
             H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
 
