@@ -99,8 +99,9 @@ class atmosphere(object):
         # set density profile
         self.density_profile = self.get_density_profile()
 
-        logging.info('Planet radius: %.3f RJUP = %.3e m' % (self.planet_radius/RJUP, self.planet_radius))
-        logging.info('Planet mass: %.3f MJUP = %.3e kg' % (self.planet_mass/MJUP, self.planet_mass))
+        logging.info('Star radius: %.3f RSUN = %.9e m' % (self.params.star_radius/RSOL, self.params.star_radius))
+        logging.info('Planet radius: %.3f RJUP = %.9e m' % (self.planet_radius/RJUP, self.planet_radius))
+        logging.info('Planet mass: %.3f MJUP = %.9e kg' % (self.planet_mass/MJUP, self.planet_mass))
         logging.info('Planet gravity (log g) (1st layer): %.3f cgs' % (np.log10(self.planet_grav[0])))
         logging.info('Mean molecular weight (1st layer): %.5f AMU' % (self.planet_mu[0]/AMU))
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))

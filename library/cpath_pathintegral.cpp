@@ -43,7 +43,6 @@ extern "C" {
                        const double * clouds_density,
                        const double * density,
                        const double * z,
-                       const double * dz,
                        const double ** active_mixratio,
                        const double ** inactive_mixratio,
                        const double * temperature,
@@ -55,6 +54,7 @@ extern "C" {
         double * absorption = (double *) absorptionv;
 
         // setting up arrays and variables
+        double* dz = new double[nlayers];
         double* dlarray = new double[nlayers*nlayers];
         double* sigma_interp = new double[nwngrid*nlayers*nactive];
         double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
@@ -65,6 +65,15 @@ extern "C" {
         double cld_factor, cld_rho;
         double p;
         int count, t_idx;
+
+        //dz array
+        for (int j=0; j<(nlayers); j++) {
+            if ((j+1) == nlayers) {
+                dz[j] = z[j] - z[j-1];
+            } else {
+                dz[j] = z[j+1] - z[j];
+            }
+        }
 
         // dl array
         count = 0;
@@ -140,6 +149,8 @@ extern "C" {
         for (int wn=0; wn < nwngrid; wn++) {
             count = 0;
             integral = 0.0;
+            //cout << " integral 0 " << integral << endl;
+            //cout << " count 0 " << count << endl;
     		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
     			tau = 0.0;
     			for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
@@ -147,7 +158,7 @@ extern "C" {
     				for (int l=0;l<nactive;l++) {
                         sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
                         tau += (sigma * active_mixratio[l][k+j] * density[k+j] * dlarray[count]);
-                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
+                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[l][k+j] * density[k+j] * dlarray[count]) << endl;
                         //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[l][k+j] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
                         tau += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[l][k+j] * density[j+k] * dlarray[count];
                     }
@@ -174,10 +185,21 @@ extern "C" {
                 }
                 exptau = exp(-tau);
 		        integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
+                //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
             }
             integral *= 2.0;
+            //cout << integral << endl;
             absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
-            //cout << absorption[wn] << endl;
+            //cout << wn << " " << absorption[wn] << endl;
         }
+
+
+        delete dlarray;
+        delete sigma_interp;
+        delete sigma_cia_interp;
+        dlarray = NULL;
+        sigma_interp = NULL;
+        sigma_cia_interp = NULL;
+
     }
 }

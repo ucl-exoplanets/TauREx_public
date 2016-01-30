@@ -42,6 +42,7 @@ class transmission():
         #loading c++ pathintegral library for faster computation
         if self.params.gen_trans_cpp:
             self.cpathlib = C.CDLL('./library/cpath_pathintegral.so', mode=C.RTLD_GLOBAL)
+        C._reset_cache()
 
         # preload variables in memory for cpath
         self.cpath_load_vars()
@@ -59,6 +60,7 @@ class transmission():
         self.cpath_nactive = C.c_int(self.atmosphere.nactivegases)
         self.cpath_ninactive = C.c_int(self.atmosphere.ninactivegases)
         self.cpath_sigma_array = cast2cpp(self.atmosphere.sigma_array_flat)
+
         self.cpath_sigma_temp = cast2cpp(self.data.sigma_dict['t'])
         self.cpath_sigma_ntemp = C.c_int(len(self.data.sigma_dict['t']))
         self.cpath_sigma_cia_array = cast2cpp(self.atmosphere.sigma_cia_array_flat)
@@ -78,8 +80,8 @@ class transmission():
         # load variables that will change during fitting
 
         self.cpath_z = cast2cpp(self.atmosphere.altitude_profile)
-        dz = np.diff(self.atmosphere.altitude_profile)
-        self.cpath_dz = cast2cpp(np.append(dz, dz[-1]))
+        # dz = np.diff(self.atmosphere.altitude_profile)
+        # self.cpath_dz = cast2cpp(np.append(dz, dz[-1]))
         self.cpath_active_mixratio_profile = cast2cpp(self.atmosphere.active_mixratio_profile)
         self.cpath_inactive_mixratio_profile = cast2cpp(self.atmosphere.inactive_mixratio_profile)
         self.cpath_temperature_profile = cast2cpp(self.atmosphere.temperature_profile)
@@ -117,7 +119,6 @@ class transmission():
                        self.cpath_clouds_density_profile,
                        self.cpath_density_profile,
                        self.cpath_z,
-                       self.cpath_dz,
                        self.cpath_active_mixratio_profile,
                        self.cpath_inactive_mixratio_profile,
                        self.cpath_temperature_profile,
