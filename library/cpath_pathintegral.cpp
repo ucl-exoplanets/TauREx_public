@@ -98,16 +98,22 @@ extern "C" {
                     }
                 }
             } else {
-
-                for (int t=1; t<sigma_ntemp; t++) {
-                    if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-                        for (int wn=0; wn<nwngrid; wn++) {
-                            for (int l=0;l<nactive;l++) {
-                                sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
-                                sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
-                                sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
-                                //cout << sigma_l << " " << sigma_r << " " << temperature[j] << endl;
-                                sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
+                    for (int wn=0; wn<nwngrid; wn++) {
+                        for (int l=0;l<nactive;l++) {
+                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
+                        }
+                    }
+                } else {
+                    for (int t=1; t<sigma_ntemp; t++) {
+                        if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+                            for (int wn=0; wn<nwngrid; wn++) {
+                                for (int l=0;l<nactive;l++) {
+                                    sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
+                                    sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
+                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                                    sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                                }
                             }
                         }
                     }
