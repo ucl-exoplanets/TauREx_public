@@ -128,8 +128,8 @@ extern "C" {
                 }
                 // get blackbody (can be improved (if previous layer k-1 had the same temperature do not recompute)
                 if (temperature[j] != temperature[j-1]) {
-                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6 * kb * temperature[j]));
-                    BB_wl = ((pi*2.0*h*pow(c,2))/pow((10000./wngrid[wn]),5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
+                    BB_wl = ((pi*2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
                 }
                 I_total += (BB_wl * (exp(-1.0*tau))* dtau);
             }
