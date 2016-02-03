@@ -49,10 +49,6 @@ class data(object):
         if self.params.ven_load:
             self.load_venot_model()
 
-        # reading in Phoenix stellar model library (if emission is calculated only)
-        if self.params.gen_type == 'emission' or self.params.fit_emission:
-            self.F_star = self.get_star_SED() # todo there is most certainly a bug there. think units are ergs/s/cm^2 at the moment
-
         # load observed input spectrum
         self.load_input_spectrum()
 
@@ -67,6 +63,10 @@ class data(object):
 
         # Create wavenumber grid of internal model
         self.load_wavenumber_grid()
+
+        # reading in Phoenix stellar model library (if emission is calculated only)
+        if self.params.gen_type == 'emission' or self.params.fit_emission:
+            self.star_sed = self.get_star_SED()
 
         logging.info('Data object initialised')
 
@@ -453,8 +453,8 @@ class data(object):
 
     def get_star_SED(self):
 
-        #reading in phoenix spectra from folder specified in parameter file
-        
+        # reading in phoenix spectra from folder specified in parameter file
+
         index = loadtxt(os.path.join(self.params.in_star_path, "SPTyp_KH.dat"), dtype='string')
         tmpind = []
         for i in range(len(index)):
@@ -470,8 +470,6 @@ class data(object):
                                 'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
             self.star_blackbody = True
             SED = black_body(self.int_wngrid_obs,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2
-#             SED *= self.params.star_radius**2 * np.pi * 4.
-#             SED *= self.params.star_radius**2 * np.pi * 4.
         else:
             # finding closest match to stellar temperature in parameter file
             [tmpselect, idx] = find_nearest(tmpind, self.params.star_temp)
@@ -484,11 +482,7 @@ class data(object):
             #reading in correct file and interpolating it onto self.int_wngrid_obs
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane 
-#             SED_raw[:,1] *= self.params.star_radius**2 * np.pi * 4.
-#             digitized = np.digitize(SED_raw[:,0],self.int_wngrid_obs)
-#             SED = np.asarray([SED_raw[digitized==i,1].mean() for i in range(0,len(self.int_wngrid_obs))])
-            SED = np.interp(self.int_wngrid_obs, SED_raw[:,0], SED_raw[:,1])
-        
-#         print self.params.star_temp
-#         SED = black_body(self.int_wngrid_obs,self.params.star_temp)
+
+            SED = np.interp(self.int_wlgrid_obs, SED_raw[:,0], SED_raw[:,1])
+
         return SED

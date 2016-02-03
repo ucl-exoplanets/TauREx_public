@@ -43,9 +43,9 @@ from data import *
 
 
 #loading libraries
-import library_emission, library_transmission, library_general
+import library_emission
+import library_general
 from library_emission import *
-from library_transmission import *
 from library_general import *
 
 
@@ -178,7 +178,7 @@ class create_spectrum(object):
         if Pnodes is None:
             Pnodes = self.Pnodes
     
-        TP = np.interp((np.log(self.atmosphereob.P[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
+        TP = np.interp((np.log(self.atmosphereob.pressure_profile[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
         #smoothing T-P profile
         wsize = self.atmosphereob.nlayers*(smooth_window/100.0)
         if (wsize %2 == 0):
@@ -186,23 +186,27 @@ class create_spectrum(object):
         TP_smooth = self.movingaverage(TP,wsize)
         border = np.int((len(TP) - len(TP_smooth))/2)
         
-        #set atmosphere object 
-        self.fmob.atmosphere.T = TP[::-1]
-        self.fmob.atmosphere.T[border:-border] = TP_smooth[::-1]   
+        #set atmosphere object
+        foo = TP[::-1]
+        foo[border:-border] = TP_smooth[::-1]
+
+        self.fmob.atmosphere.temperature_profile = np.copy( foo , order='C')
+
+        #self.fmob.atmosphere.temperature_profile[border:-border] = TP_smooth[::-1]
             
-        logging.info('The mean temperature is %i' % int(np.average(self.fmob.atmosphere.T)))
+        logging.info('The mean temperature is %i' % int(np.average(self.fmob.atmosphere.temperature_profile)))
 
     def generate_tp_profile_2(self,tp_params,tp_type='2point'):
         #generates tp profile from functions available in atmosphere class
         self.fmob.atmosphere.set_TP_profile(profile=tp_type)
-        self.fmob.atmosphere.T = self.atmosphereob.TP_profile(fit_params=tp_params)
+        self.fmob.atmosphere.temperature_profile = self.atmosphereob.TP_profile(fit_params=tp_params)
       
         
     def save_tp_profile(self,filename='TP_profile.dat'):
         #saves TP profile currently held in atmosphere object 
-        out = np.zeros((len(self.fmob.atmosphere.T),2))
-        out[:,0] = self.fmob.atmosphere.T
-        out[:,1] = self.fmob.atmosphere.P
+        out = np.zeros((len(self.fmob.atmosphere.temperature_profile),2))
+        out[:,0] = self.fmob.atmosphere.temperature_profile
+        out[:,1] = self.fmob.atmosphere.pressure_profile
         np.savetxt(os.path.join(self.params.out_path, filename), out)
         
     def save_spectrum(self,filename='spectrum.dat'):
@@ -212,8 +216,8 @@ class create_spectrum(object):
         
     def plot_tp_profile(self):
         #plotting TP-profile
-        T = self.fmob.atmosphere.T
-        P = self.fmob.atmosphere.P
+        T = self.fmob.atmosphere.temperature_profile
+        P = self.fmob.atmosphere.pressure_profile
         pl.figure()
         pl.plot(T, P)
         pl.xlim(np.min(T)-np.min(T)*0.1,np.max(T)+np.max(T)*0.1)
@@ -317,7 +321,7 @@ if __name__ == '__main__':
     #setup TP profile 
     if options.tp_profile:
         Pnodes = [createob.MAX_P, 1e4, 100.0, createob.MIN_P]
-        Tnodes = [1950,1950, 400, 400]
+        Tnodes = [1600,1600, 950, 950]
         createob.generate_tp_profile_1(Tnodes,Pnodes)
 
     #generating spectrum

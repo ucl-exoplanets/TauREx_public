@@ -17,7 +17,6 @@ import numpy as np
 
 from library_constants import *
 from library_general import *
-from library_transmission import *
 import logging
 
 import matplotlib.pylab as plt
@@ -40,7 +39,7 @@ class transmission():
         self.atmosphere = atmosphere
 
         #loading c++ pathintegral library for faster computation
-        self.cpathlib = C.CDLL('./library/ctypes_pathintegral.so', mode=C.RTLD_GLOBAL)
+        self.cpathlib = C.CDLL('./library/ctypes_pathintegral_transmission.so', mode=C.RTLD_GLOBAL)
         C._reset_cache()
 
         # preload variables in memory for cpath
@@ -78,8 +77,6 @@ class transmission():
         # load variables that will change during fitting
 
         self.ctypes_z = cast2cpp(self.atmosphere.altitude_profile)
-        # dz = np.diff(self.atmosphere.altitude_profile)
-        # self.ctypes_dz = cast2cpp(np.append(dz, dz[-1]))
         self.ctypes_active_mixratio_profile = cast2cpp(self.atmosphere.active_mixratio_profile)
         self.ctypes_inactive_mixratio_profile = cast2cpp(self.atmosphere.inactive_mixratio_profile)
         self.ctypes_temperature_profile = cast2cpp(self.atmosphere.temperature_profile)

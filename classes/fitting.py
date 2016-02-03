@@ -514,7 +514,7 @@ class fitting(base):
         # ion()
         # figure(1)
         # clf()
-        # plot(self.forwardmodel.atmosphere.T, self.forwardmodel.atmosphere.P)
+        # plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
         # gca().invert_yaxis()
         # xlabel('Temperature')
         # ylabel('Pressure (Pa)')
