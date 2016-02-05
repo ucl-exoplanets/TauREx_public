@@ -130,10 +130,10 @@ if options.cluster_dictionary is not "None":
 
 if params.gen_type == 'transmission' or params.fit_transmission:
     # compile transmission cpp code if needed
-    if params.gen_compile_cpp or not os.path.isfile('library/pathintegral.so'):
+    if params.gen_compile_cpp or not os.path.isfile('library/ctypes_pathintegral_transmission.so'):
         if MPIrank == 0:
             os.system('rm library/pathintegral.so')
-            os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
+            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission.so library/ctypes_pathintegral_transmission.cpp')
 
     from taurex_transmission import run
 
