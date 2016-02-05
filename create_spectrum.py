@@ -84,10 +84,10 @@ class create_spectrum(object):
         #set forward model
         if self.params.gen_type == 'transmission':
             # compile transmission cpp code if needed
-            if self.params.gen_compile_cpp or not os.path.isfile('library/pathintegral.so'):
+            if self.params.gen_compile_cpp or not os.path.isfile('library/ctypes_pathintegral_transmission.so'):
                 if MPIrank == 0 or not MPIrank:
-                    os.system('rm library/pathintegral.so')
-                    os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
+                    os.system('rm library/ctypes_pathintegral_transmission.so')
+                    os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission.so library/ctypes_pathintegral_transmission.cpp')
 
             self.fmob = transmission(self.atmosphereob)
 
