@@ -45,8 +45,8 @@ class emission():
         self.model = self.ctypes_pathintegral
 
         #retrieving function from cpp library
-        self.ctypes_integral = self.cpathlib.path_integral
-        self.ctypes_integral.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+        self.pathintegral_lib = self.cpathlib.path_integral
+        self.pathintegral_lib.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                          C.c_int,
                                          C.c_int,
                                          C.c_int,
@@ -66,7 +66,7 @@ class emission():
     def ctypes_pathintegral(self):
 
         #setting up output array
-        FpFs = zeros((self.atmosphere.int_nwngrid), dtype=float64, order='C')
+        FpFs = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
 
         #running c++ path integral
         self.ctypes_integral(self.atmosphere.int_wngrid,

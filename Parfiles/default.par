@@ -15,7 +15,7 @@ manual_waverange = False
 wavemin = 0.6
 #long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 29.0
-#specturm type (emission/transmission), for create_spectrum.py and create_grid.py
+#specturm type (emission, transmission, ace_emission, ace_transmission)
 type = transmission
 #recompile cpp code
 compile_cpp = True
@@ -159,6 +159,12 @@ cld_params = 1.5, 1.0
 # cloud pressure in Pascal, lower and upper bounds. Comma separated
 cld_pressure = 1e3, 1.e6
 
+# ACE specific parameters
+ace_HE_abund_dex = 8
+ace_C_abund_dex = 8
+ace_O_abund_dex = 8
+ace_N_abund_dex = 8
+
 [Venot]
 
 # Integrates TP and mixing ratio profiles from Olivia Venot (photo)chemical models
@@ -214,6 +220,11 @@ fit_clouds_upper_P = False
 # cloud particle refractive index (m) and particle size (a) (defined in Planet > cld_params)
 fit_clouds_m = False
 fit_clouds_a = False
+# ACE: chemical consistent fitting
+fit_He_abund_dex = True
+fit_C_abund_dex = True
+fit_O_abund_dex = True
+fit_N_abund_dex = True
 
 # Set prior bounds (assume uniform priors)
 
@@ -242,6 +253,13 @@ clouds_a_bounds = 1.3, 1.7
 #lower and upper bounds for TP-profile hybrid alpha parameter
 hybrid_alpha_low  = 0.0
 hybrid_alpha_high = 1.0
+
+# ace specific parameters
+ace_He_abund_dex_bounds = 0, 10
+ace_C_abund_dex_bounds = 0, 10
+ace_O_abund_dex_bounds = 0, 10
+ace_N_abund_dex_bounds = 0, 10
+
 
 [Downhill]
 

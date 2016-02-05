@@ -105,7 +105,7 @@ void black_body_2(double lambda, double temperature, double &BB)
 //    for (int wl=0; wl < n_lambda; wl++){ //loop through wavelengths
     	exponent = exp((h * c) / (lambda*1e-6 * k * temperature));
     	BB = (pi * (2.0*h*pow(c,2))/pow((lambda*1e-6),5) * (1.0/(exponent -1)));
-    	BB *= 1e-6;
+    	BB *= 1e-6; // per micron (W/m^2/micron)
 //    }
 }
 #endif

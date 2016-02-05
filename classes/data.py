@@ -45,9 +45,17 @@ class data(object):
         
         self.params = params
 
+        # compile shared libraries
+        if self.params.gen_compile_cpp:
+            self.compile_shared_libs()
+
         # reading in atmospheric profile file from Venot
         if self.params.ven_load:
             self.load_venot_model()
+
+        # load ace specific parameters
+        if self.params.gen_type[:3] == 'ace':
+            self.load_ace_params()
 
         # load observed input spectrum
         self.load_input_spectrum()
@@ -69,6 +77,60 @@ class data(object):
             self.star_sed = self.get_star_SED()
 
         logging.info('Data object initialised')
+
+    def compile_shared_libs(self):
+
+        logging.info('Compiling shared libraries')
+
+        if  self.params.gen_type == 'transmission' or self.params.gen_type == 'ace_transmission':
+            os.system('rm library/ctypes_pathintegral_transmission.so')
+            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission.so library/ctypes_pathintegral_transmission.cpp')
+        elif  self.params.gen_type == 'emission' or self.params.gen_type == 'ace_emission':
+            os.system('rm library/ctypes_pathintegral_emission.so')
+            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission.so library/ctypes_pathintegral_emission.cpp')
+        if  self.params.gen_type == 'ace_transmission' or self.params.gen_type == 'ace_emission':
+            os.system('rm library/ACE.so')
+            os.system('gfortran -shared -fPIC  -o library/ACE.so library/Md_ACE.f90 library/Md_Constantes.f90 '
+                      'library/Md_Types_Numeriques.f90 library/Md_Utilitaires.f90 library/Md_numerical_recipes.f90')
+
+    def load_ace_params(self):
+
+        logging.info('Loading ACE specific parameters')
+
+        # get molcules list from composes.dat
+        self.ace_molecules = []
+        self.ace_molecules_mu = []
+        with open("library/ACE/composes.dat", "r") as textfile:
+            for line in textfile:
+                sl = line.split()
+                self.ace_molecules.append(sl[1])
+                self.ace_molecules_mu.append(float(sl[2]))
+
+        # include He, H and N as inactive gases
+        self.params.atm_inactive_gases = ['H', 'He', 'N']
+        self.params.atm_inactive_gases_mixratios = [0.85, 0.15, 0]
+        self.params.atm_inactive_gases_idx = [0, 0, 0] # will be set below
+
+        # include only molecules for which we have cross sections
+        self.params.atm_active_gases = []
+        self.params.atm_active_gases_mixratios = []
+        for mol_idx, mol_val in enumerate(self.ace_molecules):
+            molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
+            if os.path.isfile(molpath):
+                self.params.atm_active_gases.append(mol_val)
+                self.params.atm_active_gases.append(0)
+                self.ace_active_gases_idx.append(mol_idx)
+            if mol_val == 'H':
+                self.ace_inactive_gases_idx[0] = mol_idx
+            if mol_val == 'He':
+                self.ace_inactive_gases_idx[1] = mol_idx
+            if mol_val == 'N':
+                self.ace_inactive_gases_idx[2] = mol_idx
+
+        logging.info('ACE active absorbers:', self.params.atm_active_gases)
+        logging.info('ACE active absorbers idx:', self.ace_active_gases_idx)
+        logging.info('ACE inctive absorbers:', self.params.atm_inactive_gases)
+        logging.info('ACE inactive absorbers idx:', self.ace_inactive_gases_idx)
 
     def load_input_spectrum(self):
 

@@ -41,7 +41,9 @@ class atmosphere(object):
         self.max_pressure = self.params.atm_max_pres
 
         # set pressure profile. This is fixed
+
         self.pressure_profile = self.get_pressure_profile()
+
         logging.info('Atmospheric pressure boundaries from internal model: %f-%f' % (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
         if self.params.ven_load:
@@ -108,6 +110,11 @@ class atmosphere(object):
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
         logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
 
+        out = np.zeros((self.nlayers, 2))
+        out[:,0] = self.altitude_profile/1000
+        out[:,1] = self.pressure_profile/1e5
+        np.savetxt('altitude_pressure.txt', out)
+
         # selecting TP profile to use
         if tp_profile_type is None:
             self.TP_type = self.params.atm_tp_type
@@ -158,12 +165,19 @@ class atmosphere(object):
         self.cia_idx = self.get_cia_idx()
 
         # get clouds specific parameters
+        self.clouds = 1 if self.params.atm_clouds else 0
         self.clouds_upP = self.params.atm_cld_upper_P
         self.clouds_lowP = self.params.atm_cld_lower_P
         self.clouds_m = self.params.atm_cld_m
         self.clouds_a = self.params.atm_cld_a
         self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
         self.clouds_density_profile = self.get_clouds_density_profile()
+
+        # initialise ACE specific parameters
+        self.He_abund_dex = self.params.atm_ace_HE_abund_dex
+        self.C_abund_dex = self.params.atm_ace_C_abund_dex
+        self.O_abund_dex = self.params.atm_ace_O_abund_dex
+        self.N_abund_dex = self.params.atm_ace_N_abund_dex
 
     def get_coupled_planet_mu(self):
 
@@ -234,6 +248,7 @@ class atmosphere(object):
             P = self.pressure_profile
         if T is None:
             T = self.temperature_profile
+
         return (P)/(KBOLTZ*T)
 
     # calculates non-linear sampling grid for TP profile from provided covariance
@@ -279,7 +294,7 @@ class atmosphere(object):
         # return the gas indexes of the molecules inside the pairs
         # used to get the mixing ratios of the individual molecules in the cpp pathintegral
         # the index refers to the full array of active_gas + inactive_gas
-        cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=int)
+        cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=np.int)
         c = 0
         for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
             for mol_idx, mol_val in enumerate(pair_val.split('-')):

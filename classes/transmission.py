@@ -23,7 +23,7 @@ import matplotlib.pylab as plt
 
 class transmission():
 
-    def __init__(self, atmosphere, data=None, params=None):
+    def __init__(self, atmosphere, data=None, params=None, ACE=False):
 
         logging.info('Initialise object transmission')
 
@@ -38,88 +38,102 @@ class transmission():
 
         self.atmosphere = atmosphere
 
-        #loading c++ pathintegral library for faster computation
-        self.cpathlib = C.CDLL('./library/ctypes_pathintegral_transmission.so', mode=C.RTLD_GLOBAL)
-        C._reset_cache()
+        # chemically consistent model
+        self.ACE = ACE
 
-        # preload variables in memory for cpath
-        self.ctypes_load_vars()
+        # loading c++ pathintegral library
+        self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission.so', mode=C.RTLD_GLOBAL)
+
+        if self.ACE:
+            # loading Fortran code for chemically consistent model
+            self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
 
         # set forward model function
         self.model = self.ctypes_pathintegral
 
-    # class methods
+        # set arguments for ctypes libraries
+        self.pathintegral_lib.path_integral.argtypes = [C.c_int,
+                                                        C.c_int,
+                                                        C.c_int,
+                                                        C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.int, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_int,
+                                                        C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_double,
+                                                        C.c_double,
+                                                        C.c_void_p]
 
-    def ctypes_load_vars(self):
 
-        # load variables that won't change during fitting
-        self.ctypes_nwngrid = C.c_int(self.atmosphere.int_nwngrid)
-        self.ctypes_nlayers = C.c_int(self.atmosphere.nlayers)
-        self.ctypes_nactive = C.c_int(self.atmosphere.nactivegases)
-        self.ctypes_ninactive = C.c_int(self.atmosphere.ninactivegases)
-        self.ctypes_sigma_array = cast2cpp(self.atmosphere.sigma_array_flat)
-        self.ctypes_sigma_temp = cast2cpp(self.data.sigma_dict['t'])
-        self.ctypes_sigma_ntemp = C.c_int(len(self.data.sigma_dict['t']))
-        self.ctypes_sigma_cia_array = cast2cpp(self.atmosphere.sigma_cia_array_flat)
-        self.ctypes_cia_npairs = C.c_int(len(self.data.sigma_cia_dict['xsecarr']))
-        self.ctypes_cia_idx = (C.c_int*len(self.atmosphere.cia_idx))()
-        self.ctypes_cia_idx[:] = self.atmosphere.cia_idx
-        self.ctypes_cia_nidx = C.c_int(len(self.atmosphere.cia_idx))
-        self.ctypes_sigma_cia_temp = cast2cpp(self.data.sigma_cia_dict['t'])
-        self.ctypes_sigma_cia_ntemp = C.c_int(len(self.data.sigma_cia_dict['t']))
-        self.ctypes_sigma_rayleigh_array = cast2cpp(self.atmosphere.sigma_rayleigh_array_flat)
-        self.ctypes_clouds = C.c_int(1) if self.params.atm_clouds else C.c_int(0)
-        self.ctypes_sigma_clouds_array = cast2cpp(self.atmosphere.sigma_clouds_array_flat)
-        self.ctypes_star_radius = C.c_double(self.params.star_radius)
-
-    def ctypes_update_vars(self):
-
-        # load variables that will change during fitting
-
-        self.ctypes_z = cast2cpp(self.atmosphere.altitude_profile)
-        self.ctypes_active_mixratio_profile = cast2cpp(self.atmosphere.active_mixratio_profile)
-        self.ctypes_inactive_mixratio_profile = cast2cpp(self.atmosphere.inactive_mixratio_profile)
-        self.ctypes_temperature_profile = cast2cpp(self.atmosphere.temperature_profile)
-        self.ctypes_planet_radius = C.c_double(self.atmosphere.planet_radius)
-        self.ctypes_density_profile = cast2cpp(self.atmosphere.density_profile)
-        self.ctypes_clouds_density_profile = cast2cpp(self.atmosphere.clouds_density_profile)
-
-    #@profile
     def ctypes_pathintegral(self):
 
-        self.ctypes_update_vars()
+        if self.ACE:
+
+            # chemically consistent model
+            vector = C.c_double*self.atmosphere.nlayers
+            a_apt = vector()
+            p_apt = vector()
+            t_apt = vector()
+            for i in range(nlayers):
+               a_apt[i] = self.atmosphere.altitude_profile[i]/1000.
+               p_apt[i] = self.atmosphere.pressure_profile[i]/1.e5
+               t_apt[i] = self.atmosphere.temperature_profile[i]
+            y_out = ((C.c_double * 105) * self.atmosphere.nlayers)()
+            self.ace_lib.ACE(C.byref(C.c_int(nlayers)), C.byref(f_x), C.byref(f_x), C.byref(f_x),
+                             C.byref(C.c_double(self.atmosphere.He_abund_dex)),
+                             C.byref(C.c_double(self.atmosphere.C_abund_dex)),
+                             C.byref(C.c_double(self.atmosphere.O_abund_dex)),
+                             C.byref(C.c_double(self.atmosphere.N_abund_dex)),
+                             C.byref(y_out))
+            # y_out has (nlayers, 105). 105 is the total number of molecules computed
+
+            # todo set mixing ratio profiles
+
+
         #setting up output array
-        absorption = zeros((self.atmosphere.int_nwngrid),dtype=float64)
-        
-        #retrieving function from cpp library
-        ctypes_integral = self.cpathlib.path_integral
+        absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
+
 
         #running c++ path integral
-        ctypes_integral(self.ctypes_nwngrid,
-                       self.ctypes_nlayers,
-                       self.ctypes_nactive,
-                       self.ctypes_ninactive,
-                       self.ctypes_sigma_array,
-                       self.ctypes_sigma_temp,
-                       self.ctypes_sigma_ntemp,
-                       self.ctypes_sigma_rayleigh_array,
-                       self.ctypes_cia_npairs,
-                       self.ctypes_cia_idx,
-                       self.ctypes_cia_nidx,
-                       self.ctypes_sigma_cia_array,
-                       self.ctypes_sigma_cia_temp,
-                       self.ctypes_sigma_cia_ntemp,
-                       self.ctypes_clouds,
-                       self.ctypes_sigma_clouds_array,
-                       self.ctypes_clouds_density_profile,
-                       self.ctypes_density_profile,
-                       self.ctypes_z,
-                       self.ctypes_active_mixratio_profile,
-                       self.ctypes_inactive_mixratio_profile,
-                       self.ctypes_temperature_profile,
-                       self.ctypes_planet_radius,
-                       self.ctypes_star_radius,
-                       C.c_void_p(absorption.ctypes.data))
+        self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
+                                            self.atmosphere.nlayers,
+                                            self.atmosphere.nactivegases,
+                                            self.atmosphere.ninactivegases,
+                                            self.atmosphere.sigma_array_flat,
+                                            self.data.sigma_dict['t'],
+                                            len(self.data.sigma_dict['t']),
+                                            self.atmosphere.sigma_rayleigh_array_flat,
+                                            len(self.data.sigma_cia_dict['xsecarr']),
+                                            self.atmosphere.cia_idx,
+                                            len(self.atmosphere.cia_idx),
+                                            self.atmosphere.sigma_cia_array_flat,
+                                            self.data.sigma_cia_dict['t'],
+                                            len(self.data.sigma_cia_dict['t']),
+                                            self.atmosphere.clouds,
+                                            self.atmosphere.sigma_clouds_array_flat,
+                                            self.atmosphere.clouds_density_profile,
+                                            self.atmosphere.density_profile,
+                                            self.atmosphere.altitude_profile,
+                                            self.atmosphere.active_mixratio_profile.flatten(),
+                                            self.atmosphere.inactive_mixratio_profile.flatten(),
+                                            self.atmosphere.temperature_profile,
+                                            self.atmosphere.planet_radius,
+                                            self.params.star_radius,
+                                            C.c_void_p(absorption.ctypes.data))
 
         out = np.zeros((len(absorption)))
         out[:] = absorption
@@ -127,3 +141,24 @@ class transmission():
         del(absorption)
 
         return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

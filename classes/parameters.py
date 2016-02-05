@@ -139,6 +139,10 @@ class parameters(base):
         self.atm_cld_pressure       = self.getpar('Atmosphere','cld_pressure', 'list-float')
         self.atm_cld_lower_P        = self.atm_cld_pressure[0]
         self.atm_cld_upper_P        = self.atm_cld_pressure[1]
+        self.atm_ace_HE_abund_dex   = self.getpar('Atmosphere', 'ace_HE_abund_dex', 'float')
+        self.atm_ace_C_abund_dex    = self.getpar('Atmosphere', 'ace_C_abund_dex', 'float')
+        self.atm_ace_O_abund_dex    = self.getpar('Atmosphere', 'ace_O_abund_dex', 'float')
+        self.atm_ace_N_abund_dex    = self.getpar('Atmosphere', 'ace_N_abund_dex', 'float')
 
         # section Venot
         self.ven_load = self.getpar('Venot', 'load', 'bool')
@@ -178,10 +182,14 @@ class parameters(base):
         self.fit_fit_clouds_upper_P  = self.getpar('Fitting', 'fit_clouds_upper_P', 'bool')
         self.fit_fit_clouds_m        = self.getpar('Fitting', 'fit_clouds_m', 'bool')
         self.fit_fit_clouds_a        = self.getpar('Fitting', 'fit_clouds_a', 'bool')
+        self.fit_fit_He_abund_dex    = self.getpar('Fitting', 'fit_He_abund_dex', 'bool')
+        self.fit_fit_C_abund_dex     = self.getpar('Fitting', 'fit_C_abund_dex', 'bool')
+        self.fit_fit_O_abund_dex     = self.getpar('Fitting', 'fit_O_abund_dex', 'bool')
+        self.fit_fit_N_abund_dex     = self.getpar('Fitting', 'fit_N_abund_dex', 'bool')
 
         self.fit_X_active_bounds       = self.getpar('Fitting', 'X_active_bounds', 'list-float')
         self.fit_X_inactive_bounds     = self.getpar('Fitting', 'X_inactive_bounds', 'list-float')
-        self.fit_clr_bounds              = self.getpar('Fitting', 'clr_bounds', 'list-float')
+        self.fit_clr_bounds            = self.getpar('Fitting', 'clr_bounds', 'list-float')
         self.fit_T_bounds              = self.getpar('Fitting', 'T_bounds', 'list-float')
         self.fit_mu_bounds             = self.getpar('Fitting', 'mu_bounds', 'list-float')
         self.fit_radius_bounds         = self.getpar('Fitting', 'radius_bounds', 'list-float')
@@ -190,6 +198,10 @@ class parameters(base):
         self.fit_clouds_upper_P_bounds = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
         self.fit_clouds_a_bounds       = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
         self.fit_clouds_m_bounds       = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+        self.fit_ace_He_abund_dex_bounds = self.getpar('Fitting', 'ace_He_abund_dex_bounds', 'list-float')
+        self.fit_ace_C_abund_dex_bounds  = self.getpar('Fitting', 'ace_C_abund_dex_bounds', 'list-float')
+        self.fit_ace_O_abund_dex_bounds  = self.getpar('Fitting', 'ace_O_abund_dex_bounds', 'list-float')
+        self.fit_ace_N_abund_dex_bounds  = self.getpar('Fitting', 'ace_N_abund_dex_bounds', 'list-float')
 
         self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
         self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')

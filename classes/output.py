@@ -341,7 +341,7 @@ class output(base):
             # load model using full wavenumber range
 
             self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
-            self.fitting.forwardmodel.cpath_load_vars()
+
             model = self.fitting.forwardmodel.model()
 
             # model spectrum binned to observed spectrum
@@ -774,9 +774,9 @@ class output(base):
         profilename = '_TP_profile_'
         basename = self.out_path 
 
-        P = self.fitting.forwardmodel.atmosphere.P
+        P = self.fitting.forwardmodel.atmosphere.pressure_profile
 
-        out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
+        out = np.zeros((len(self.fitting.forwardmodel.atmosphere.pressure_profile), 3))
         out[:,0] = P # pressure
         
         fit_TPparams_bounds = self.fitting.fit_bounds[self.fitting.fit_X_nparams:]
@@ -894,11 +894,12 @@ class output(base):
 
 
     def save_contribution_function(self, fit_params,filename):
-        
-        self.fitting.update_atmospheric_parameters(fit_params)
-        tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()   
-            
-        np.save(filename,tau_total)
+        pass
+
+        # self.fitting.update_atmospheric_parameters(fit_params)
+        # tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()
+        #
+        # np.save(filename,tau_total)
 
 
 

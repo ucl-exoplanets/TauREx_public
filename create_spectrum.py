@@ -67,34 +67,28 @@ class create_spectrum(object):
         else:
             self.params = params
 
-        #set model resolution to 1000
-        self.params.gen_spec_res = 1000
         self.params.gen_manual_waverange = True
 
         self.params.nest_run = False
         self.params.mcmc_run = False
         self.params.downhill_run = False
 
-        #initialising data object
+        # initialising data object
         self.dataob = data(self.params)
 
-        #initialising TP profile object
+        # initialising atmosphere object
         self.atmosphereob = atmosphere(self.dataob)
 
-        #set forward model
+        # set forward model
         if self.params.gen_type == 'transmission':
-            # compile transmission cpp code if needed
-            if self.params.gen_compile_cpp or not os.path.isfile('library/pathintegral.so'):
-                if MPIrank == 0 or not MPIrank:
-                    os.system('rm library/pathintegral.so')
-                    os.system('g++ -fPIC -shared -o library/pathintegral.so library/pathintegral.cpp')
-
             self.fmob = transmission(self.atmosphereob)
-
-
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
-        
+        elif self.params.gen_type == 'ace_transmission':
+            self.fmob = ace(self.atmosphereob, type='transmission')
+        elif self.params.gen_type == 'ace_emission':
+            self.fmob = ace(self.atmosphereob, type='emission')
+
         #TP-profile stuff
         self.MAX_P = self.atmosphereob.pressure_profile[0]
         self.MIN_P = self.atmosphereob.pressure_profile[-1]
@@ -321,7 +315,7 @@ if __name__ == '__main__':
     #setup TP profile 
     if options.tp_profile:
         Pnodes = [createob.MAX_P, 1e4, 100.0, createob.MIN_P]
-        Tnodes = [1600,1600, 950, 950]
+        Tnodes = [2200, 2200, 1800, 1800]
         createob.generate_tp_profile_1(Tnodes,Pnodes)
 
     #generating spectrum
