@@ -89,9 +89,9 @@ class data(object):
             os.system('rm library/ctypes_pathintegral_emission.so')
             os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission.so library/ctypes_pathintegral_emission.cpp')
         if  self.params.gen_type == 'ace_transmission' or self.params.gen_type == 'ace_emission':
-            os.system('rm library/ACE.so')
-            os.system('gfortran -shared -fPIC  -o library/ACE.so library/Md_ACE.f90 library/Md_Constantes.f90 '
-                      'library/Md_Types_Numeriques.f90 library/Md_Utilitaires.f90 library/Md_numerical_recipes.f90')
+            os.system('rm library/ACE/ACE.so')
+            os.system('gfortran -shared -fPIC  -o library/ACE/ACE.so library/ACE/Md_ACE.f90 library/ACE/Md_Constantes.f90 '
+                      'library/ACE/Md_Types_Numeriques.f90 library/ACE/Md_Utilitaires.f90 library/ACE/Md_numerical_recipes.f90')
 
     def load_ace_params(self):
 
@@ -107,30 +107,36 @@ class data(object):
                 self.ace_molecules_mu.append(float(sl[2]))
 
         # include He, H and N as inactive gases
-        self.params.atm_inactive_gases = ['H', 'He', 'N']
+        self.params.atm_inactive_gases = ['H2', 'HE', 'N2']
         self.params.atm_inactive_gases_mixratios = [0.85, 0.15, 0]
         self.params.atm_inactive_gases_idx = [0, 0, 0] # will be set below
 
         # include only molecules for which we have cross sections
         self.params.atm_active_gases = []
         self.params.atm_active_gases_mixratios = []
+        self.ace_active_gases_idx = []
+        self.ace_inactive_gases_idx = [0,0,0]
+
         for mol_idx, mol_val in enumerate(self.ace_molecules):
             molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
             if os.path.isfile(molpath):
                 self.params.atm_active_gases.append(mol_val)
-                self.params.atm_active_gases.append(0)
+                self.params.atm_active_gases_mixratios.append(0)
                 self.ace_active_gases_idx.append(mol_idx)
-            if mol_val == 'H':
+
+
+            if mol_val.upper() == 'H2':
                 self.ace_inactive_gases_idx[0] = mol_idx
-            if mol_val == 'He':
+            if mol_val.upper() == 'HE':
                 self.ace_inactive_gases_idx[1] = mol_idx
-            if mol_val == 'N':
+            if mol_val.upper() == 'N2':
                 self.ace_inactive_gases_idx[2] = mol_idx
 
-        logging.info('ACE active absorbers:', self.params.atm_active_gases)
-        logging.info('ACE active absorbers idx:', self.ace_active_gases_idx)
-        logging.info('ACE inctive absorbers:', self.params.atm_inactive_gases)
-        logging.info('ACE inactive absorbers idx:', self.ace_inactive_gases_idx)
+
+        logging.info('ACE active absorbers: %s' % self.params.atm_active_gases)
+        logging.info('ACE active absorbers idx: %s' % self.ace_active_gases_idx)
+        logging.info('ACE inctive absorbers: %s' % self.params.atm_inactive_gases)
+        logging.info('ACE inactive absorbers idx: %s' % self.ace_inactive_gases_idx)
 
     def load_input_spectrum(self):
 
@@ -191,6 +197,7 @@ class data(object):
                     self.ven_noxsec.append(mol_val)
 
             logging.info('Molecules with available cross sections: %s' %  self.ven_active_gases)
+            logging.info('Molecules with available cross sections idx: %s' %  self.ven_active_gases_idx)
             logging.info('Excluded molecules: %s' %  self.ven_noxsec)
 
             # determine list of inactive gases
@@ -274,7 +281,6 @@ class data(object):
                     # get idx of the temperature boundaries in the cross sections
                     # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
 
-                    print np.min(t), np.max(t)
                     if Tmax > np.max(t):
                         Tmax_idx = len(t) - 1
                     else:

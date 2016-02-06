@@ -1,3 +1,6 @@
+! compile with gfortran -shared -fPIC  -o ACE.so Md_ACE.f90 Md_Constantes.f90 Md_Types_Numeriques.f90 Md_Utilitaires.f90 Md_numerical_recipes.f90
+
+
 Module Md_ACE
 
 Use Md_Types_Numeriques
@@ -10,7 +13,7 @@ Implicit None
 Integer, parameter :: nmaxcharspec = 10       ! Maximum number of species
 Integer, parameter :: nmaxelemxs = 10         ! Maximum number of different elements in one species
 Integer, parameter :: nb_NASA_coef = 7        ! Number of coefficients in NASA therm polynomials
-Character(len=*), parameter :: specfile = "composes.dat"
+Character(len=*), parameter :: specfile = "library/ACE/composes.dat"
 
 !Real(8)         :: fm(105,1)
 Integer         :: code
@@ -27,9 +30,9 @@ Subroutine ACE(nlayers,a_apt,p_apt,t_apt,He_abund_dex,C_abund_dex,O_abund_dex, &
 !               nspec,fm,code)  bind(c, name='ACE')
 
 Integer,         intent(in)    :: nlayers                     ! number of layers
-Real(8),         intent(in)    :: a_apt(nlayers)              ! array of altitude points [km]  
-Real(8),         intent(in)    :: p_apt(nlayers)              ! array of pressure points [bar] 
-Real(8),         intent(in)    :: t_apt(nlayers)              ! array of temperature points [K]   
+Real(8),         intent(in)    :: a_apt(nlayers)              ! array of altitude points [km]
+Real(8),         intent(in)    :: p_apt(nlayers)              ! array of pressure points [bar]
+Real(8),         intent(in)    :: t_apt(nlayers)              ! array of temperature points [K]
 Real(8),         intent(in)    :: He_abund_dex
 Real(8),         intent(in)    :: C_abund_dex
 Real(8),         intent(in)    :: O_abund_dex
@@ -39,7 +42,7 @@ Real(8),         intent(out)   :: fm(105,nlayers)
 !Real(8),         intent(out)   :: fm(nspec,size(a_apt))
 !Integer,          intent(inout) :: code
 
-Character(len=100), parameter :: thermfile = 'Data/ACE/NASA.therm'        ! therm file
+Character(len=100), parameter :: thermfile = 'library/ACE/NASA.therm'        ! therm file
 Character(len=20) :: spec(105)
 
 
@@ -83,16 +86,6 @@ Real(8) :: density                           ! number of particles per unit volu
 Integer  :: i, j, u
 Character(len=100) :: line
 
-
-print *, nlayers
-print *, a_apt(1)
-print *, p_apt(1)
-print *, t_apt(1)
-print *, He_abund_dex
-print *, C_abund_dex
-print *, O_abund_dex
-print *, N_abund_dex
-print *, nspec
 
 If (nelem > nmaxelem) Call Message_exec('E- Number of elements too high','stop')
 
@@ -166,11 +159,6 @@ Call compute_chemical_equilibrium(nspec,spec,elfab,mat,charge,nat,ion,id_electr,
 
 Deallocate(charge,nattot,nat,ilenspec,abun,idtherm,atherm,btherm, &
            tkmin_therm,tkmax_therm,tkmid_therm)
-
-do i=1,105
-	print *, spec(i)
-	print *, fm(i, 1)
-end do
 
 End Subroutine ACE
 
@@ -622,7 +610,7 @@ Do while ((it <= nmaxit) .and. (.not.converge))
       If (dabs(dlnns(j)) > lambda1) lambda1 = dabs(dlnns(j))
     Else
       If (dlnns(j) >= 0.0d0) then
-         ! La condition du if est parfois remplie et j'ai donc ajouté cette boucle if pour éviter un rwk=NAN 
+         ! La condition du if est parfois remplie et j'ai donc ajoutï¿½ cette boucle if pour ï¿½viter un rwk=NAN 
 	If ((abun(j)/abuntot-dlog(1.0d4)) <= 0.0d0) then
 	  rwk = Infini_dp
 	Else
@@ -709,7 +697,7 @@ Do i = 1, nspec
   End if
   h = a(1) + a(2)*tk/2.0d0 + a(3)*tk**2.0d0/3.0d0 + a(4)*tk**3.0d0/4.0d0 + a(5)*tk**4.0d0/5.0d0 + a(6)/tk
   s = a(1)*dlog(tk) + a(2)*tk + a(3)*tk**2.0d0/2.0d0 + a(4)*tk**3.0d0/3.0d0 + a(5)*tk**4.0d0/4.0d0 + a(7)
-  ! Condition if remplie pour les espèces très peu abondantes qui décroissent en montant dans l'atmosphère et tendent vers 0
+  ! Condition if remplie pour les espï¿½ces trï¿½s peu abondantes qui dï¿½croissent en montant dans l'atmosphï¿½re et tendent vers 0
   If (abun(i) == 0.0d0) then
     mu(i) = -750.0d0
   Else

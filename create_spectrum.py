@@ -85,9 +85,9 @@ class create_spectrum(object):
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
         elif self.params.gen_type == 'ace_transmission':
-            self.fmob = ace(self.atmosphereob, type='transmission')
+            self.fmob = transmission(self.atmosphereob, ACE=True)
         elif self.params.gen_type == 'ace_emission':
-            self.fmob = ace(self.atmosphereob, type='emission')
+            self.fmob = emissions(self.atmosphereob, ACE=True)
 
         #TP-profile stuff
         self.MAX_P = self.atmosphereob.pressure_profile[0]

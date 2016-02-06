@@ -18,7 +18,7 @@ wavemax = 29.0
 #specturm type (emission, transmission, ace_emission, ace_transmission)
 type = transmission
 #recompile cpp code
-compile_cpp = True
+compile_cpp = False
 
 [Input]
 
