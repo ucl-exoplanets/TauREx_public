@@ -23,7 +23,7 @@ import matplotlib.pylab as plt
 
 class transmission():
 
-    def __init__(self, atmosphere, data=None, params=None, ACE=False):
+    def __init__(self, atmosphere, data=None, params=None):
 
         logging.info('Initialise object transmission')
 
@@ -38,13 +38,10 @@ class transmission():
 
         self.atmosphere = atmosphere
 
-        # chemically consistent model
-        self.ACE = ACE
-
         # loading c++ pathintegral library
         self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission.so', mode=C.RTLD_GLOBAL)
 
-        if self.ACE:
+        if self.params.gen_ACE:
             # loading Fortran code for chemically consistent model
             self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
 
@@ -81,7 +78,7 @@ class transmission():
 
     def ctypes_pathintegral(self):
 
-        if self.ACE:
+        if self.params.gen_ACE:
 
             # chemically consistent model
             vector = C.c_double*self.atmosphere.nlayers
@@ -113,6 +110,12 @@ class transmission():
 
             for mol_idx, mol_val in enumerate(self.params.atm_inactive_gases):
                 self.atmosphere.inactive_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_inactive_gases_idx[mol_idx]]
+
+            del(y_out)
+            del(a_apt)
+            del(p_apt)
+            del(t_apt)
+
 
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')

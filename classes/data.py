@@ -54,7 +54,7 @@ class data(object):
             self.load_venot_model()
 
         # load ace specific parameters
-        if self.params.gen_type[:3] == 'ace':
+        if self.params.gen_ACE:
             self.load_ace_params()
 
         # load observed input spectrum

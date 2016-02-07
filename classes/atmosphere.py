@@ -177,7 +177,7 @@ class atmosphere(object):
         self.clouds_density_profile = self.get_clouds_density_profile()
 
         # initialise ACE specific parameters
-        self.He_abund_dex = self.params.atm_ace_HE_abund_dex
+        self.He_abund_dex = self.params.atm_ace_He_abund_dex
         self.C_abund_dex = self.params.atm_ace_C_abund_dex
         self.O_abund_dex = self.params.atm_ace_O_abund_dex
         self.N_abund_dex = self.params.atm_ace_N_abund_dex

@@ -79,11 +79,11 @@ class parameters(base):
 
 
         # section General
-        self.gen_trans_cpp             = self.getpar('General', 'trans_cpp', 'bool')
         self.gen_manual_waverange  = self.getpar('General','manual_waverange', 'bool')
         self.gen_wavemin           = self.getpar('General','wavemin', 'float')
         self.gen_wavemax           = self.getpar('General','wavemax', 'float')
         self.gen_type              = self.getpar('General','type')
+        self.gen_ACE              = self.getpar('General','ACE', 'bool')
         self.gen_compile_cpp       = self.getpar('General','compile_cpp', 'bool')
         self.gen_run_gui           = False
 
@@ -139,7 +139,7 @@ class parameters(base):
         self.atm_cld_pressure       = self.getpar('Atmosphere','cld_pressure', 'list-float')
         self.atm_cld_lower_P        = self.atm_cld_pressure[0]
         self.atm_cld_upper_P        = self.atm_cld_pressure[1]
-        self.atm_ace_HE_abund_dex   = self.getpar('Atmosphere', 'ace_HE_abund_dex', 'float')
+        self.atm_ace_He_abund_dex   = self.getpar('Atmosphere', 'ace_HE_abund_dex', 'float')
         self.atm_ace_C_abund_dex    = self.getpar('Atmosphere', 'ace_C_abund_dex', 'float')
         self.atm_ace_O_abund_dex    = self.getpar('Atmosphere', 'ace_O_abund_dex', 'float')
         self.atm_ace_N_abund_dex    = self.getpar('Atmosphere', 'ace_N_abund_dex', 'float')

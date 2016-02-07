@@ -6,18 +6,17 @@
 verbose = True
 verbose_all_threads = False
 
-#use c++ path_integral version for transmission
-#True: c++ version, False: python version
-trans_cpp = True
-#manually set wavelength range (if False, range taken from input data)
+# manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
-#short wavelength cut-off (in microns) if manual_waverange = True
+# short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.6
-#long wavelength cut-off (in microns) if manual_waverange = True
+# long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 29.0
-#specturm type (emission, transmission, ace_emission, ace_transmission)
+# specturm type (emission, transmission)
 type = transmission
-#recompile cpp code
+# chemically consistent model
+ACE = False
+# recompile cpp code
 compile_cpp = False
 
 [Input]
@@ -182,12 +181,15 @@ exclude_mol = False
 
 # Defines general fittings parameters, independent of method
 
-#f it transmission model
+# fit transmission model
 transmission = True
 # fit emission model
 emission     = False
 # fit emission in 2 stage mode
 emission_stage2 = True
+# use the chemically consistent fit
+ace = False
+
 
 # if True mu is not fitted, but derived from the absolute mixing ratios of active and inactive gases
 # if False, mu is either fitted (if fit_mu = True) or kept fixed (Planet > mu)
@@ -221,10 +223,10 @@ fit_clouds_upper_P = False
 fit_clouds_m = False
 fit_clouds_a = False
 # ACE: chemical consistent fitting
-fit_He_abund_dex = True
-fit_C_abund_dex = True
-fit_O_abund_dex = True
-fit_N_abund_dex = True
+fit_He_abund_dex = False
+fit_C_abund_dex = False
+fit_O_abund_dex = False
+fit_N_abund_dex = False
 
 # Set prior bounds (assume uniform priors)
 
@@ -255,10 +257,10 @@ hybrid_alpha_low  = 0.0
 hybrid_alpha_high = 1.0
 
 # ace specific parameters
-ace_He_abund_dex_bounds = 0, 10
-ace_C_abund_dex_bounds = 0, 10
-ace_O_abund_dex_bounds = 0, 10
-ace_N_abund_dex_bounds = 0, 10
+ace_He_abund_dex_bounds = 0, 12
+ace_C_abund_dex_bounds = 0, 12
+ace_O_abund_dex_bounds = 0, 12
+ace_N_abund_dex_bounds = 0, 12
 
 
 [Downhill]
