@@ -100,7 +100,7 @@ class data(object):
         # get molcules list from composes.dat
         self.ace_molecules = []
         self.ace_molecules_mu = []
-        with open("library/ace/composes.dat", "r") as textfile:
+        with open("library/ACE/composes.dat", "r") as textfile:
             for line in textfile:
                 sl = line.split()
                 self.ace_molecules.append(sl[1])
