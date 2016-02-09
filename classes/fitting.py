@@ -205,9 +205,9 @@ class fitting(base):
 
             if self.params.fit_fit_ace_metallicity:
                 self.fit_params_names.append('ace_metallicity')
-                self.fit_bounds.append((self.params.fit_ace_metallicity_bounds[0],
-                                        self.params.fit_ace_metallicity_bounds[1]))
-                self.fit_params.append(self.params.atm_ace_metallicity)
+                self.fit_bounds.append((np.log10(self.params.fit_ace_metallicity_bounds[0]),
+                                        np.log10(self.params.fit_ace_metallicity_bounds[1])))
+                self.fit_params.append(np.log10(self.params.atm_ace_metallicity))
                 count_ace += 1
 
             if self.params.fit_fit_ace_co:
@@ -462,7 +462,7 @@ class fitting(base):
         if self.params.gen_ace:
 
             if self.params.fit_fit_ace_metallicity:
-                self.atmosphere.ace_metallicity = fit_params[count]
+                self.atmosphere.ace_metallicity = np.power(10, fit_params[count])
                 count += 1
 
             if self.params.fit_fit_ace_co:
