@@ -174,10 +174,12 @@ class output(base):
         for idx, solution in enumerate(self.NEST_out):
             self.NEST_params_values[idx] = [self.NEST_out[idx]['fit_params'][param]['value'] for param in self.params_names]
             self.NEST_params_std[idx]    = [self.NEST_out[idx]['fit_params'][param]['std'] for param in self.params_names]
-            self.NEST_X_params_values[idx]  = self.NEST_params_values[idx][:self.fitting.fit_X_nparams]
-            self.NEST_X_params_std[idx]     = self.NEST_params_std[idx][:self.fitting.fit_X_nparams]
-            self.NEST_TP_params_values[idx] = self.NEST_params_values[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
-            self.NEST_TP_params_std[idx]    = self.NEST_params_std[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+            if not self.params.gen_ace and self.params.fit_fit_active:
+                self.NEST_X_params_values[idx]  = self.NEST_params_values[idx][:self.fitting.fit_X_nparams]
+                self.NEST_X_params_std[idx]     = self.NEST_params_std[idx][:self.fitting.fit_X_nparams]
+            if self.params.fit_fit_temp:
+                self.NEST_TP_params_values[idx] = self.NEST_params_values[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
+                self.NEST_TP_params_std[idx]    = self.NEST_params_std[idx][self.fitting.fit_X_nparams:self.fitting.fit_X_nparams+self.fitting.fit_TP_nparams]
 
     def get_multinest_solutions(self):
 
@@ -341,7 +343,7 @@ class output(base):
             # load model using full wavenumber range
 
             self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
-            self.fitting.forwardmodel.cpath_load_vars()
+
             model = self.fitting.forwardmodel.model()
 
             # model spectrum binned to observed spectrum
@@ -372,37 +374,40 @@ class output(base):
             std_spectrum = np.zeros((self.data.int_nwngrid_full))
 
             # # create 2 sigma spectrum
-            if self.NEST and not self.params.fit_clr_trans:
+            #
+            # if self.NEST and not self.params.fit_clr_trans:
+            #
+            #     logging.info('Compute models to create the 1 sigma model spectrum spread')
+            #
+            #     weights = []
+            #     nspectra = 150
+            #
+            #     models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
+            #     weights = np.zeros((nspectra))
+            #     for i in xrange(nspectra):
+            #         rand_idx = random.randint(0, len(self.NEST_tracedata))
+            #         weights[i] = self.NEST_likelihood[rand_idx,0]
+            #         fit_params_iter = self.NEST_tracedata[rand_idx]
+            #         self.fitting.update_atmospheric_parameters(fit_params_iter)
+            #         model = self.fitting.forwardmodel.model()
+            #         models[i, :] = self.fitting.forwardmodel.model()
+            #
+            #     models = models[1:,:] # exclude 1st spectrum, for some reasons is made of nan
+            #     weights = weights[1:]
+            #
+            #     std_spectrum = np.zeros((self.data.int_nwngrid_full))
+            #     for i in xrange(self.data.int_nwngrid_full):
+            #         average = np.average(models[:,i], weights=weights)
+            #         variance = np.average((models[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+            #         std_spectrum[i] = np.sqrt(variance)
+            #
+            #
+            #     fitting_out[idx]['model_std_xsecres_fullwno'] = std_spectrum
+            #     fitting_out[idx]['model_std_xsecres_obswno'] = std_spectrum[self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
+            #     std_spectrum_binned = [std_spectrum[sp_bingrididx == i].mean() for i in xrange(1,sp_nbingrid+1)]
+            #     fitting_out[idx]['model_std_spres_obswno'] = np.asarray(std_spectrum_binned)
 
-                logging.info('Compute models to create the 2 sigma model spectrum spread')
 
-                weights = []
-                nspectra = 150
-
-                models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
-                weights = np.zeros((nspectra))
-                for i in xrange(nspectra):
-                    rand_idx = random.randint(0, len(self.NEST_tracedata))
-                    weights[i] = self.NEST_likelihood[rand_idx,0]
-                    fit_params_iter = self.NEST_tracedata[rand_idx]
-                    self.fitting.update_atmospheric_parameters(fit_params_iter)
-                    model = self.fitting.forwardmodel.model()
-                    models[i, :] = self.fitting.forwardmodel.model()
-
-                models = models[1:,:] # exclude 1st spectrum, for some reasons is made of nan
-                weights = weights[1:]
-
-                std_spectrum = np.zeros((self.data.int_nwngrid_full))
-                for i in xrange(self.data.int_nwngrid_full):
-                    average = np.average(models[:,i], weights=weights)
-                    variance = np.average((models[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
-                    std_spectrum[i] = np.sqrt(variance)
-
-
-                fitting_out[idx]['model_std_xsecres_fullwno'] = std_spectrum
-                fitting_out[idx]['model_std_xsecres_obswno'] = std_spectrum[self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
-                std_spectrum_binned = [std_spectrum[sp_bingrididx == i].mean() for i in xrange(1,sp_nbingrid+1)]
-                fitting_out[idx]['model_std_spres_obswno'] = np.asarray(std_spectrum_binned)
 
     #         #individual molecules plotted
     #         if self.params.fit_fit_active:
@@ -774,9 +779,9 @@ class output(base):
         profilename = '_TP_profile_'
         basename = self.out_path 
 
-        P = self.fitting.forwardmodel.atmosphere.P
+        P = self.fitting.forwardmodel.atmosphere.pressure_profile
 
-        out = np.zeros((len(self.fitting.forwardmodel.atmosphere.P), 3))
+        out = np.zeros((len(self.fitting.forwardmodel.atmosphere.pressure_profile), 3))
         out[:,0] = P # pressure
         
         fit_TPparams_bounds = self.fitting.fit_bounds[self.fitting.fit_X_nparams:]
@@ -894,11 +899,12 @@ class output(base):
 
 
     def save_contribution_function(self, fit_params,filename):
-        
-        self.fitting.update_atmospheric_parameters(fit_params)
-        tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()   
-            
-        np.save(filename,tau_total)
+        pass
+
+        # self.fitting.update_atmospheric_parameters(fit_params)
+        # tau, tau_total, dtau = self.fitting.forwardmodel.get_contribution_function()
+        #
+        # np.save(filename,tau_total)
 
 
 

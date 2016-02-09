@@ -41,7 +41,10 @@ class atmosphere(object):
         self.max_pressure = self.params.atm_max_pres
 
         # set pressure profile. This is fixed
+
         self.pressure_profile = self.get_pressure_profile()
+
+
         logging.info('Atmospheric pressure boundaries from internal model: %f-%f' % (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
         if self.params.ven_load:
@@ -108,6 +111,13 @@ class atmosphere(object):
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
         logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
 
+        # out = np.zeros((self.nlayers, 4))
+        # out[:,0] = self.altitude_profile/1000
+        # out[:,1] = self.pressure_profile/1e5
+        # out[:,2] = self.temperature_profile
+        # out[:,3] = self.active_mixratio_profile[2,:]
+        # np.savetxt('altitude_pressure_temp_HCN.txt', out)
+
         # selecting TP profile to use
         if tp_profile_type is None:
             self.TP_type = self.params.atm_tp_type
@@ -124,6 +134,18 @@ class atmosphere(object):
 
         # load opacity arrays (gas, rayleigh, cia)
         self.load_opacity_arrays(wngrid='obs_spectrum')
+
+        # initialise ACE specific parameters
+        if self.params.gen_ace:
+            # set solar elemental abundances. H and He are always set to solar and never change.
+            self.ace_H_solar = 12.
+            self.ace_He_solar = 10.93
+            self.ace_C_solar = 8.43
+            self.ace_O_solar = 8.69
+            self.ace_N_solar = 7.83
+            self.ace_metallicity = self.params.atm_ace_metallicity
+            self.ace_co = self.params.atm_ace_co
+            self.set_ace_params()
 
         logging.info('Atmosphere object initialised')
 
@@ -158,12 +180,14 @@ class atmosphere(object):
         self.cia_idx = self.get_cia_idx()
 
         # get clouds specific parameters
+        self.clouds = 1 if self.params.atm_clouds else 0
         self.clouds_upP = self.params.atm_cld_upper_P
         self.clouds_lowP = self.params.atm_cld_lower_P
         self.clouds_m = self.params.atm_cld_m
         self.clouds_a = self.params.atm_cld_a
         self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
         self.clouds_density_profile = self.get_clouds_density_profile()
+
 
     def get_coupled_planet_mu(self):
 
@@ -218,10 +242,8 @@ class atmosphere(object):
         H[0] = (KBOLTZ*self.temperature_profile[0])/(self.planet_mu[0]*g[0]) # scaleheight at the surface (0th layer)
 
         for i in xrange(1, self.nlayers):
-
             deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile[i]/self.pressure_profile[i-1])
             z[i] = z[i-1] + deltaz # altitude at the i-th layer
-            #g[i] = g[0]
             g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
             H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
 
@@ -234,6 +256,7 @@ class atmosphere(object):
             P = self.pressure_profile
         if T is None:
             T = self.temperature_profile
+
         return (P)/(KBOLTZ*T)
 
     # calculates non-linear sampling grid for TP profile from provided covariance
@@ -252,6 +275,9 @@ class atmosphere(object):
 
     # get sigma array from data.sigma_dict. Interpolate sigma array to pressure profile
     def get_sigma_array(self):
+
+        logging.info('Interpolate sigma array to pressure profile')
+
         pressure_profile_bar = self.pressure_profile/1e5
         sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']), self.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.active_gases):
@@ -264,12 +290,14 @@ class atmosphere(object):
         return sigma_array
 
     def get_sigma_rayleigh_array(self):
+        logging.info('Interpolate Ryleigh sigma array to pressure profile')
         sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.active_gases+self.inactive_gases):
             sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val][self.int_wngrid_idxmin:self.int_wngrid_idxmax]
         return sigma_rayleigh_array
 
     def get_sigma_cia_array(self):
+        logging.info('Interpolate CIA sigma array to pressure profile')
         sigma_cia_array = np.zeros((len(self.params.atm_cia_pairs), len(self.data.sigma_cia_dict['t']), self.int_nwngrid))
         for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
             sigma_cia_array[pair_idx,:,:] = self.data.sigma_cia_dict['xsecarr'][pair_val][:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]
@@ -279,7 +307,7 @@ class atmosphere(object):
         # return the gas indexes of the molecules inside the pairs
         # used to get the mixing ratios of the individual molecules in the cpp pathintegral
         # the index refers to the full array of active_gas + inactive_gas
-        cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=int)
+        cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=np.int)
         c = 0
         for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
             for mol_idx, mol_val in enumerate(pair_val.split('-')):
@@ -319,7 +347,21 @@ class atmosphere(object):
 
         return clouds_density_profile
 
+    def set_ace_params(self):
+
+        # set O, C and N abundances given metallicity (in solar units) and CO ratio
+        self.O_abund_dex = np.log10(self.ace_metallicity * (10**(self.ace_O_solar-12.)))+12.
+        self.N_abund_dex = np.log10(self.ace_metallicity * (10**(self.ace_N_solar-12.)))+12.
+        self.C_abund_dex = self.O_abund_dex + np.log10(self.ace_co)
+
+        # H and He don't change
+        self.H_abund_dex = self.ace_H_solar
+        self.He_abund_dex = self.ace_He_solar
+
     def update_atmosphere(self):
+
+        if self.params.gen_ace:
+            self.set_ace_params()
 
         self.pressure_profile = self.get_pressure_profile()
         self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()

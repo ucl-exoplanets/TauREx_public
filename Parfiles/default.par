@@ -6,19 +6,18 @@
 verbose = True
 verbose_all_threads = False
 
-#use c++ path_integral version for transmission
-#True: c++ version, False: python version
-trans_cpp = True
-#manually set wavelength range (if False, range taken from input data)
+# manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
-#short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.6
-#long wavelength cut-off (in microns) if manual_waverange = True
+# short wavelength cut-off (in microns) if manual_waverange = True
+wavemin = 0.4
+# long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 29.0
-#specturm type (emission/transmission), for create_spectrum.py and create_grid.py
+# specturm type (emission, transmission)
 type = transmission
-#recompile cpp code
-compile_cpp = True
+# chemically consistent model ACE (Atmospheric Chemical Equilibrium)
+ace = False
+# recompile cpp code
+compile_cpp = False
 
 [Input]
 
@@ -159,6 +158,11 @@ cld_params = 1.5, 1.0
 # cloud pressure in Pascal, lower and upper bounds. Comma separated
 cld_pressure = 1e3, 1.e6
 
+# metallicity (1 = solar metallicity, 10 = 10x solar metallicity etc)
+ace_metallicity = 1
+# co ratio (value given below is solar)
+ace_co = 0.54954
+
 [Venot]
 
 # Integrates TP and mixing ratio profiles from Olivia Venot (photo)chemical models
@@ -176,12 +180,15 @@ exclude_mol = False
 
 # Defines general fittings parameters, independent of method
 
-#f it transmission model
+# fit transmission model
 transmission = True
 # fit emission model
 emission     = False
 # fit emission in 2 stage mode
 emission_stage2 = True
+# use the chemically consistent fit
+ace = False
+
 
 # if True mu is not fitted, but derived from the absolute mixing ratios of active and inactive gases
 # if False, mu is either fitted (if fit_mu = True) or kept fixed (Planet > mu)
@@ -214,6 +221,9 @@ fit_clouds_upper_P = False
 # cloud particle refractive index (m) and particle size (a) (defined in Planet > cld_params)
 fit_clouds_m = False
 fit_clouds_a = False
+# ace: chemical consistent fitting
+fit_ace_metallicity = False
+fit_ace_co = False
 
 # Set prior bounds (assume uniform priors)
 
@@ -242,6 +252,10 @@ clouds_a_bounds = 1.3, 1.7
 #lower and upper bounds for TP-profile hybrid alpha parameter
 hybrid_alpha_low  = 0.0
 hybrid_alpha_high = 1.0
+
+# ace specific parameters
+ace_metallicity_bounds = 1.e-1, 1.e4
+ace_co_bounds = 0, 2
 
 [Downhill]
 
