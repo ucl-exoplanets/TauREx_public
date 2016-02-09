@@ -14,7 +14,7 @@ parser.add_option('-d', '--dir',
                   )
 parser.add_option('-n', '--nprocess',
                   dest="max_nprocesses",
-                  default=6,
+                  default=1,
                   )
 
 
@@ -25,7 +25,6 @@ folder_list = glob.glob(options.path+'/*')
 N_folder = len(folder_list)
 
 N_cpu = mp.cpu_count()
-print 'No. of CPUs available: ', N_cpu
 print 'No. of Folders to process: ', N_folder
 
 if N_folder >= N_cpu:
@@ -33,18 +32,24 @@ if N_folder >= N_cpu:
 else:
     N_processes = N_folder
 
-if N_processes > options.max_nprocesses:
+if int(N_processes) > int(options.max_nprocesses):
     N_processes = options.max_nprocesses
 
+print 'No. of CPUs available: ', N_cpu
+print 'No. of CPUs used: ',N_processes
+
 print 'Starting plotting... '
+
+# print N_processes
+print folder_list
 
 def plot_folder(folder):
     if os.path.isdir(folder):
         print 'Plotting: ', folder
-        parfile = glob.glob(folder+'/stage_0/*.par')[0]
+        parfile = glob.glob(folder+'/*.par')[0]
         os.system('python analyse_solutions_from_traces.py -p '+parfile+' -d '+folder)
 
-pool = mp.Pool(processes=N_processes)           #setting number of cores on which to run
+pool = mp.Pool(processes=int(N_processes))           #setting number of cores on which to run
 pool_result = pool.map(plot_folder,folder_list) #runnning the stuff
 pool.close()                                    #closing the pool 
 # pool.join()                                     #closing the pool.
