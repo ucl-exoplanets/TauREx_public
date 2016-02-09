@@ -174,7 +174,7 @@ class output(base):
         for idx, solution in enumerate(self.NEST_out):
             self.NEST_params_values[idx] = [self.NEST_out[idx]['fit_params'][param]['value'] for param in self.params_names]
             self.NEST_params_std[idx]    = [self.NEST_out[idx]['fit_params'][param]['std'] for param in self.params_names]
-            if not self.params.gen_ACE and self.params.fit_fit_active:
+            if not self.params.gen_ace and self.params.fit_fit_active:
                 self.NEST_X_params_values[idx]  = self.NEST_params_values[idx][:self.fitting.fit_X_nparams]
                 self.NEST_X_params_std[idx]     = self.NEST_params_std[idx][:self.fitting.fit_X_nparams]
             if self.params.fit_fit_temp:

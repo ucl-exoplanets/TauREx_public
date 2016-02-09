@@ -137,7 +137,7 @@ class fitting(base):
         ##########################################################################
         # Mixing ratios of absorbing and inactive gases either in log/linear space or in centred-log-ratio space
 
-        if not self.params.gen_ACE:
+        if not self.params.gen_ace:
 
             # only if we are not running the chemically consistent model
 
@@ -199,39 +199,25 @@ class fitting(base):
         #####################################################
         # Chemically consistent model parameters
 
-        if self.params.gen_ACE:
+        if self.params.gen_ace:
 
-            count_ACE = 0
+            count_ace = 0
 
-            if self.params.fit_fit_He_abund_dex:
-                self.fit_params_names.append('He_abund_dex')
-                self.fit_bounds.append((self.params.fit_ace_He_abund_dex_bounds[0],
-                                        self.params.fit_ace_He_abund_dex_bounds[1]))
-                self.fit_params.append(self.params.atm_ace_He_abund_dex)
-                count_ACE += 1
+            if self.params.fit_fit_ace_metallicity:
+                self.fit_params_names.append('ace_metallicity')
+                self.fit_bounds.append((self.params.fit_ace_metallicity_bounds[0],
+                                        self.params.fit_ace_metallicity_bounds[1]))
+                self.fit_params.append(self.params.atm_ace_metallicity)
+                count_ace += 1
 
-            if self.params.fit_fit_C_abund_dex:
-                self.fit_params_names.append('C_abund_dex')
-                self.fit_bounds.append((self.params.fit_ace_C_abund_dex_bounds[0],
-                                        self.params.fit_ace_C_abund_dex_bounds[1]))
-                self.fit_params.append(self.params.atm_ace_C_abund_dex)
-                count_ACE += 1
+            if self.params.fit_fit_ace_co:
+                self.fit_params_names.append('ace_co')
+                self.fit_bounds.append((self.params.fit_ace_co_bounds[0],
+                                        self.params.fit_ace_co_bounds[1]))
+                self.fit_params.append(self.params.atm_ace_co)
+                count_ace += 1
 
-            if self.params.fit_fit_O_abund_dex:
-                self.fit_params_names.append('O_abund_dex')
-                self.fit_bounds.append((self.params.fit_ace_O_abund_dex_bounds[0],
-                                        self.params.fit_ace_O_abund_dex_bounds[1]))
-                self.fit_params.append(self.params.atm_ace_O_abund_dex)
-                count_ACE += 1
-
-            if self.params.fit_fit_N_abund_dex:
-                self.fit_params_names.append('N_abund_dex')
-                self.fit_bounds.append((self.params.fit_ace_N_abund_dex_bounds[0],
-                                        self.params.fit_ace_N_abund_dex_bounds[1]))
-                self.fit_params.append(self.params.atm_ace_N_abund_dex)
-                count_ACE += 1
-
-            self.fit_ACE_nparams = count_ACE
+            self.fit_ace_nparams = count_ace
 
 
         ##########################################################################
@@ -424,7 +410,7 @@ class fitting(base):
         #####################################################
         # Mixing ratios of absorbing and inactive gases
 
-        if not self.params.gen_ACE:
+        if not self.params.gen_ace:
 
             # only if we are not running the chemically consistent model
 
@@ -473,22 +459,14 @@ class fitting(base):
         #####################################################
         # Chemically consistent model parameters
 
-        if self.params.gen_ACE:
+        if self.params.gen_ace:
 
-            if self.params.fit_fit_He_abund_dex:
-                self.atmosphere.He_abund_dex = fit_params[count]
+            if self.params.fit_fit_ace_metallicity:
+                self.atmosphere.ace_metallicity = fit_params[count]
                 count += 1
 
-            if self.params.fit_fit_C_abund_dex:
-                self.atmosphere.C_abund_dex = fit_params[count]
-                count += 1
-
-            if self.params.fit_fit_O_abund_dex:
-                self.atmosphere.O_abund_dex = fit_params[count]
-                count += 1
-
-            if self.params.fit_fit_N_abund_dex:
-                self.atmosphere.N_abund_dex = fit_params[count]
+            if self.params.fit_fit_ace_co:
+                self.atmosphere.ace_co = fit_params[count]
                 count += 1
 
         #####################################################

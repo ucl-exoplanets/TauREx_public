@@ -41,7 +41,7 @@ class transmission():
         # loading c++ pathintegral library
         self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission.so', mode=C.RTLD_GLOBAL)
 
-        if self.params.gen_ACE:
+        if self.params.gen_ace:
             # loading Fortran code for chemically consistent model
             self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
 
@@ -78,7 +78,7 @@ class transmission():
 
     def ctypes_pathintegral(self):
 
-        if self.params.gen_ACE:
+        if self.params.gen_ace:
 
             # chemically consistent model
             vector = C.c_double*self.atmosphere.nlayers

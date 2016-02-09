@@ -54,7 +54,7 @@ class data(object):
             self.load_venot_model()
 
         # load ace specific parameters
-        if self.params.gen_ACE:
+        if self.params.gen_ace:
             self.load_ace_params()
 
         # load observed input spectrum
@@ -82,25 +82,25 @@ class data(object):
 
         logging.info('Compiling shared libraries')
 
-        if  self.params.gen_type == 'transmission' or self.params.gen_type == 'ace_transmission':
+        if  self.params.gen_type == 'transmission':
             os.system('rm library/ctypes_pathintegral_transmission.so')
             os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission.so library/ctypes_pathintegral_transmission.cpp')
-        elif  self.params.gen_type == 'emission' or self.params.gen_type == 'ace_emission':
+        elif  self.params.gen_type == 'emission':
             os.system('rm library/ctypes_pathintegral_emission.so')
             os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission.so library/ctypes_pathintegral_emission.cpp')
-        if  self.params.gen_type == 'ace_transmission' or self.params.gen_type == 'ace_emission':
+        if  self.params.gen_ace:
             os.system('rm library/ACE/ACE.so')
             os.system('gfortran -shared -fPIC  -o library/ACE/ACE.so library/ACE/Md_ACE.f90 library/ACE/Md_Constantes.f90 '
                       'library/ACE/Md_Types_Numeriques.f90 library/ACE/Md_Utilitaires.f90 library/ACE/Md_numerical_recipes.f90')
 
     def load_ace_params(self):
 
-        logging.info('Loading ACE specific parameters')
+        logging.info('Loading ace specific parameters')
 
         # get molcules list from composes.dat
         self.ace_molecules = []
         self.ace_molecules_mu = []
-        with open("library/ACE/composes.dat", "r") as textfile:
+        with open("library/ace/composes.dat", "r") as textfile:
             for line in textfile:
                 sl = line.split()
                 self.ace_molecules.append(sl[1])
@@ -124,7 +124,6 @@ class data(object):
                 self.params.atm_active_gases_mixratios.append(0)
                 self.ace_active_gases_idx.append(mol_idx)
 
-
             if mol_val.upper() == 'H2':
                 self.ace_inactive_gases_idx[0] = mol_idx
             if mol_val.upper() == 'HE':
@@ -133,10 +132,10 @@ class data(object):
                 self.ace_inactive_gases_idx[2] = mol_idx
 
 
-        logging.info('ACE active absorbers: %s' % self.params.atm_active_gases)
-        logging.info('ACE active absorbers idx: %s' % self.ace_active_gases_idx)
-        logging.info('ACE inctive absorbers: %s' % self.params.atm_inactive_gases)
-        logging.info('ACE inactive absorbers idx: %s' % self.ace_inactive_gases_idx)
+        logging.info('ace active absorbers: %s' % self.params.atm_active_gases)
+        logging.info('ace active absorbers idx: %s' % self.ace_active_gases_idx)
+        logging.info('ace inctive absorbers: %s' % self.params.atm_inactive_gases)
+        logging.info('ace inactive absorbers idx: %s' % self.ace_inactive_gases_idx)
 
     def load_input_spectrum(self):
 

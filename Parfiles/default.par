@@ -9,13 +9,13 @@ verbose_all_threads = False
 # manually set wavelength range (if False, range taken from input data)
 manual_waverange = False
 # short wavelength cut-off (in microns) if manual_waverange = True
-wavemin = 0.6
+wavemin = 0.4
 # long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 29.0
 # specturm type (emission, transmission)
 type = transmission
-# chemically consistent model
-ACE = False
+# chemically consistent model ACE (Atmospheric Chemical Equilibrium)
+ace = False
 # recompile cpp code
 compile_cpp = False
 
@@ -158,11 +158,10 @@ cld_params = 1.5, 1.0
 # cloud pressure in Pascal, lower and upper bounds. Comma separated
 cld_pressure = 1e3, 1.e6
 
-# ACE specific parameters
-ace_HE_abund_dex = 8
-ace_C_abund_dex = 8
-ace_O_abund_dex = 8
-ace_N_abund_dex = 8
+# metallicity (1 = solar metallicity, 10 = 10x solar metallicity etc)
+ace_metallicity = 1
+# co ratio (value given below is solar)
+ace_co = 0.54954
 
 [Venot]
 
@@ -222,11 +221,9 @@ fit_clouds_upper_P = False
 # cloud particle refractive index (m) and particle size (a) (defined in Planet > cld_params)
 fit_clouds_m = False
 fit_clouds_a = False
-# ACE: chemical consistent fitting
-fit_He_abund_dex = False
-fit_C_abund_dex = False
-fit_O_abund_dex = False
-fit_N_abund_dex = False
+# ace: chemical consistent fitting
+fit_ace_metallicity = False
+fit_ace_co = False
 
 # Set prior bounds (assume uniform priors)
 
@@ -257,11 +254,8 @@ hybrid_alpha_low  = 0.0
 hybrid_alpha_high = 1.0
 
 # ace specific parameters
-ace_He_abund_dex_bounds = 0, 12
-ace_C_abund_dex_bounds = 0, 12
-ace_O_abund_dex_bounds = 0, 12
-ace_N_abund_dex_bounds = 0, 12
-
+ace_metallicity_bounds = 1.e-1, 1.e4
+ace_co_bounds = 0, 2
 
 [Downhill]
 

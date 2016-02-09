@@ -135,6 +135,18 @@ class atmosphere(object):
         # load opacity arrays (gas, rayleigh, cia)
         self.load_opacity_arrays(wngrid='obs_spectrum')
 
+        # initialise ACE specific parameters
+        if self.params.gen_ace:
+            # set solar elemental abundances. H and He are always set to solar and never change.
+            self.ace_H_solar = 12.
+            self.ace_He_solar = 10.93
+            self.ace_C_solar = 8.43
+            self.ace_O_solar = 8.69
+            self.ace_N_solar = 7.83
+            self.ace_metallicity = self.params.atm_ace_metallicity
+            self.ace_co = self.params.atm_ace_co
+            self.set_ace_params()
+
         logging.info('Atmosphere object initialised')
 
     def load_opacity_arrays(self, wngrid='obs_spectrum'):
@@ -175,14 +187,6 @@ class atmosphere(object):
         self.clouds_a = self.params.atm_cld_a
         self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
         self.clouds_density_profile = self.get_clouds_density_profile()
-
-        # initialise ACE specific parameters
-        self.He_abund_dex = self.params.atm_ace_He_abund_dex
-        self.C_abund_dex = self.params.atm_ace_C_abund_dex
-        self.O_abund_dex = self.params.atm_ace_O_abund_dex
-        self.N_abund_dex = self.params.atm_ace_N_abund_dex
-
-
 
 
     def get_coupled_planet_mu(self):
@@ -242,7 +246,6 @@ class atmosphere(object):
             z[i] = z[i-1] + deltaz # altitude at the i-th layer
             g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
             H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
-
 
         return z, H, g
 
@@ -344,7 +347,21 @@ class atmosphere(object):
 
         return clouds_density_profile
 
+    def set_ace_params(self):
+
+        # set O, C and N abundances given metallicity (in solar units) and CO ratio
+        self.O_abund_dex = np.log10(self.ace_metallicity * (10**(self.ace_O_solar-12.)))+12.
+        self.N_abund_dex = np.log10(self.ace_metallicity * (10**(self.ace_N_solar-12.)))+12.
+        self.C_abund_dex = self.O_abund_dex + np.log10(self.ace_co)
+
+        # H and He don't change
+        self.H_abund_dex = self.ace_H_solar
+        self.He_abund_dex = self.ace_He_solar
+
     def update_atmosphere(self):
+
+        if self.params.gen_ace:
+            self.set_ace_params()
 
         self.pressure_profile = self.get_pressure_profile()
         self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
