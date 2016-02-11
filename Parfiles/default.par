@@ -49,7 +49,7 @@ internal_name = internal_model.dat
 #save plots to .pdf
 save_plots = True
 #plotting contours onto densities in posterior plots
-plot_contour = True
+plot_contour = False
 # posterior plots colour (matplotlib colormaps)
 plot_colour = Blues
 
