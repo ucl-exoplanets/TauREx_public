@@ -116,6 +116,8 @@ class transmission():
             del(p_apt)
             del(t_apt)
 
+            # couple mu to composition
+            self.atmosphere.planet_mu = self.atmosphere.get_coupled_planet_mu()
 
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
