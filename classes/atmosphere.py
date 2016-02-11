@@ -49,7 +49,10 @@ class atmosphere(object):
 
         if self.params.ven_load:
 
-            self.temperature_profile = self.data.ven_temperature_int(self.pressure_profile)
+            #self.temperature_profile = self.data.ven_temperature_int(self.pressure_profile)
+            self.temperature_profile = np.interp(self.pressure_profile[::-1], self.data.ven_pressure[::-1], self.data.ven_temperature[::-1])[::-1]
+            self.temperature_profile = np.asarray(self.temperature_profile, order='C')
+
 
             # active and inactive gas names and mixing ratios
             self.active_gases = self.data.ven_active_gases
@@ -60,11 +63,14 @@ class atmosphere(object):
             self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
             for mol_idx, mol_val in enumerate(self.active_gases):
                 ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-                self.active_mixratio_profile[mol_idx, :] = self.data.ven_molprof_mixratios_int[ven_molprof_idx](self.pressure_profile)
+                #self.active_mixratio_profile[mol_idx, :] = self.data.ven_molprof_mixratios_int[ven_molprof_idx](self.pressure_profile)
+                self.active_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,ven_molprof_idx][::-1])[::-1]
+                self.active_mixratio_profile[mol_idx, :] = np.asarray(self.active_mixratio_profile[mol_idx, :], order='C')
             for mol_idx, mol_val in enumerate(self.inactive_gases):
                 ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-                self.inactive_mixratio_profile[mol_idx, :] = self.data.ven_molprof_mixratios_int[ven_molprof_idx](self.pressure_profile)
-
+                #self.inactive_mixratio_profile[mol_idx, :] = self.data.ven_molprof_mixratios_int[ven_molprof_idx](self.pressure_profile)
+                self.inactive_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,ven_molprof_idx][::-1])[::-1]
+                self.inactive_mixratio_profile[mol_idx, :] = np.asarray(self.inactive_mixratio_profile[mol_idx, :], order='C')
         else:
 
             # temperature, altitude, pressure mixing ratio profiles are computed using the planet parameters found in
@@ -86,6 +92,8 @@ class atmosphere(object):
             self.temperature_profile = np.zeros((self.nlayers))
             self.temperature_profile[:] = self.params.planet_temp
 
+
+
         self.nallgases = len(self.active_gases) + len(self.inactive_gases)
         self.nactivegases = len(self.active_gases)
         self.ninactivegases = len(self.inactive_gases)
@@ -105,7 +113,7 @@ class atmosphere(object):
         logging.info('Star radius: %.3f RSUN = %.9e m' % (self.params.star_radius/RSOL, self.params.star_radius))
         logging.info('Planet radius: %.3f RJUP = %.9e m' % (self.planet_radius/RJUP, self.planet_radius))
         logging.info('Planet mass: %.3f MJUP = %.9e kg' % (self.planet_mass/MJUP, self.planet_mass))
-        logging.info('Planet gravity (log g) (1st layer): %.3f cgs' % (np.log10(self.planet_grav[0])))
+        logging.info('Planet gravity (log g) (1st layer): %.3f cgs = %.3f m/s2' % (np.log10(self.planet_grav[0]*100.), self.planet_grav[0]))
         logging.info('Mean molecular weight (1st layer): %.5f AMU' % (self.planet_mu[0]/AMU))
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
@@ -146,6 +154,18 @@ class atmosphere(object):
             self.ace_metallicity = self.params.atm_ace_metallicity
             self.ace_co = self.params.atm_ace_co
             self.set_ace_params()
+
+
+        np.savetxt('olivia_molprofiles_inactive.dat', self.inactive_mixratio_profile)
+
+        np.savetxt('olivia_molprofiles.dat', self.active_mixratio_profile)
+        out = np.zeros((self.nlayers, 3))
+        out[:,0] = self.pressure_profile
+        out[:,1] = self.altitude_profile
+        out[:,2] = self.temperature_profile
+        np.savetxt('pat_molprofiles.dat', out)
+
+       # self.temperature_profile = np.logspace(np.log10(1400), np.log10(44), 100)
 
         logging.info('Atmosphere object initialised')
 
@@ -194,10 +214,12 @@ class atmosphere(object):
         if self.params.ven_load:
             mu = np.zeros(self.nlayers)
             for mol_idx, mol_val in enumerate(self.data.ven_molecules):
-                mu[:] += self.data.ven_molweight[mol_idx] * self.data.ven_molprof_mixratios_int[mol_idx](self.pressure_profile)*AMU
 
+                #mu[:] += self.data.ven_molweight[mol_idx] * self.data.ven_molprof_mixratios_int[mol_idx](self.pressure_profile)*AMU
+                ven_molprof_mixratio = np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,mol_idx][::-1])[::-1]
+                mu[:] += ven_molprof_mixratio*AMU
+            mu = np.asarray(mu, order='C')
         else:
-
             # calculate the absolute mixing ratio of inactive gases
             inactive_mixratio_profile = np.zeros((self.ninactivegases, self.nlayers))
             for i in xrange(self.ninactivegases):

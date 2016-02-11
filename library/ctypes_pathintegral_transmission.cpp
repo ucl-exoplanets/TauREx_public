@@ -88,13 +88,16 @@ extern "C" {
 
         // interpolate sigma array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-
-            //cout << temperature[j] << " " << sigma_temp[sigma_ntemp-1] << endl;
-
             if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
                         sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
+                    }
+                }
+            } else if (temperature[j] < sigma_temp[0]) {
+                for (int wn=0; wn<nwngrid; wn++) {
+                    for (int l=0;l<nactive;l++) {
+                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
                     }
                 }
             } else {
