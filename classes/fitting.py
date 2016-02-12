@@ -538,17 +538,17 @@ class fitting(base):
                 count += 1
 
         if self.params.fit_fit_P0:
-            self.pressure_profile = self.get_pressure_profile()
+            self.forwardmodel.atmosphere.pressure_profile = self.forwardmodel.atmosphere.get_pressure_profile()
 
         if self.params.fit_fit_P0 or self.fit_TP_nparams > 0:
-            self.density_profile = self.get_density_profile()
+            self.forwardmodel.atmosphere.density_profile = self.forwardmodel.atmosphere.get_density_profile()
 
 
         if self.params.gen_ace:
             self.forwardmodel.atmosphere.set_ace_params()
             # if ace is on get_altitude_gravity_scaleheight_profile are called from the transmission/emission object
         else:
-            self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
+            self.forwardmodel.atmosphere.altitude_profile, self.forwardmodel.atmosphere.scale_height, self.forwardmodel.atmosphere.planet_grav  = self.forwardmodel.atmosphere.get_altitude_gravity_scaleheight_profile()
 
     #@profile
     def chisq_trans(self, fit_params, data, datastd):
