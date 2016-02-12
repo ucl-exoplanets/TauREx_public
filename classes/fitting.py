@@ -537,8 +537,18 @@ class fitting(base):
                 self.forwardmodel.atmosphere.clouds_m = fit_params[count]
                 count += 1
 
-        # Update surface gravity, scale height, density bla bla
-        self.forwardmodel.atmosphere.update_atmosphere()
+        if self.params.fit_fit_P0:
+            self.pressure_profile = self.get_pressure_profile()
+
+        if self.params.fit_fit_P0 or self.fit_TP_nparams > 0:
+            self.density_profile = self.get_density_profile()
+
+
+        if self.params.gen_ace:
+            self.forwardmodel.atmosphere.set_ace_params()
+            # if ace is on get_altitude_gravity_scaleheight_profile are called from the transmission/emission object
+        else:
+            self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
 
     #@profile
     def chisq_trans(self, fit_params, data, datastd):
@@ -561,7 +571,7 @@ class fitting(base):
         if res == 0:
             res = np.nan
         #
-        # #
+        #
         # ion()
         # figure(1)
         # clf()
@@ -573,7 +583,7 @@ class fitting(base):
         # draw()
         # figure(2)
         # clf()
-        #
+        # #
         # # #
         # ion()
         # clf()
@@ -587,13 +597,10 @@ class fitting(base):
         # draw()
         # pause(0.0001)
         #
-        #
-        # print 'res=%.2f - T=%.1f, mu=%.4f, R=%.3f, P=%.3f' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+        # # #
+        # print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
         #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
-        #     self.forwardmodel.atmosphere.planet_radius/RJUP, \
-        #     self.forwardmodel.atmosphere.max_pressure/1.e5), \
-        #     self.forwardmodel.atmosphere.active_mixratio_profile[:,0], \
-        #     self.forwardmodel.atmosphere.inactive_mixratio_profile[:,0], fit_params
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP), self.forwardmodel.atmosphere.active_mixratio_profile[:,20] #fit_params
 
         return res
 

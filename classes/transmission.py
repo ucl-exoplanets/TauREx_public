@@ -119,6 +119,9 @@ class transmission():
             # couple mu to composition
             self.atmosphere.planet_mu = self.atmosphere.get_coupled_planet_mu()
 
+            # update atmospheric params
+            self.atmosphere.altitude_profile, self.atmosphere.scale_height, self.atmosphere.planet_grav  = self.atmosphere.get_altitude_gravity_scaleheight_profile()
+
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
 
