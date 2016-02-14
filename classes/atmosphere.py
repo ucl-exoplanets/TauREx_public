@@ -80,19 +80,38 @@ class atmosphere(object):
             self.active_gases = self.params.atm_active_gases
             self.inactive_gases = self.params.atm_inactive_gases
 
-            # set mixing ratios profiles of active and inactive gases
+            # set mixing ratios profiles of active gases
             self.active_mixratio_profile = np.zeros((len(self.active_gases), self.nlayers))
-            self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
             for i in xrange(len(self.active_gases)):
                 self.active_mixratio_profile[i, :] = self.params.atm_active_gases_mixratios[i]
+
+            # calculate mix ratio of inactive gases. Note that values specified in the param file are for remainder of the atmosphere (i.e. 1 - sum(active gases))
+            if np.sum(self.params.atm_inactive_gases_mixratios) != 1.:
+                logging.error('The sum of the mixing ratios of the inactive gases must be one (%.3f at the moment). Fix it and run TauREx again' % np.sum(self.params.atm_inactive_gases_mixratios))
+                exit()
+            self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
+            mixratio_remainder = 1. - np.sum(self.active_mixratio_profile[:,0], axis=0)
             for i in xrange(len(self.inactive_gases)):
-                self.inactive_mixratio_profile[i, :] = self.params.atm_inactive_gases_mixratios[i]
+                self.inactive_mixratio_profile[i, :] = mixratio_remainder*self.params.atm_inactive_gases_mixratios[i]
 
-            # set initial temperature profile
+            # set initial temperature profile (mainly used for create_spectrum)
             self.temperature_profile = np.zeros((self.nlayers))
-            self.temperature_profile[:] = self.params.planet_temp
-
-
+            if self.params.atm_tp_type == 'guillot':
+                TP_params = [self.params.atm_tp_guillot_T_irr,
+                             self.params.atm_tp_guillot_kappa_irr,
+                             self.params.atm_tp_guillot_kappa_v1,
+                             self.params.atm_tp_guillot_kappa_v2,
+                             self.params.atm_tp_guillot_alpha]
+                self.temperature_profile[:] = self._TP_guillot2010(TP_params)
+                logging.info('Set TP profile using Guillot model')
+                logging.info('T_irr = %.2f' % self.params.atm_tp_guillot_T_irr)
+                logging.info('kappa_irr = %.3f' % self.params.atm_tp_guillot_kappa_irr)
+                logging.info('kappa_v1 = %.3f' % self.params.atm_tp_guillot_kappa_v1)
+                logging.info('kappa_v2 = %.3f' % self.params.atm_tp_guillot_kappa_v2)
+                logging.info('alpha = %.3f' % self.params.atm_tp_guillot_alpha)
+            else: # if not guillot, always assume isothermal in forward model (i.e. create_spectrum)
+                self.temperature_profile[:] = self.params.atm_tp_iso_temp
+                logging.info('Set isothermal profile with T = %.2f' % self.params.atm_tp_iso_temp)
 
         self.nallgases = len(self.active_gases) + len(self.inactive_gases)
         self.nactivegases = len(self.active_gases)
@@ -102,7 +121,7 @@ class atmosphere(object):
             self.planet_mu = self.get_coupled_planet_mu()
         else:
             self.planet_mu = np.zeros((self.nlayers))
-            self.planet_mu[:] = self.params.planet_mu
+            self.planet_mu[:] = self.params.atm_mu
 
         # compute altitude profile, scale height and planet gravity arrays
         self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
@@ -119,13 +138,6 @@ class atmosphere(object):
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
         logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
 
-        # out = np.zeros((self.nlayers, 4))
-        # out[:,0] = self.altitude_profile/1000
-        # out[:,1] = self.pressure_profile/1e5
-        # out[:,2] = self.temperature_profile
-        # out[:,3] = self.active_mixratio_profile[2,:]
-        # np.savetxt('altitude_pressure_temp_HCN.txt', out)
-
         # selecting TP profile to use
         if tp_profile_type is None:
             self.TP_type = self.params.atm_tp_type
@@ -139,6 +151,7 @@ class atmosphere(object):
         if tp_profile_type == 'hybrid':
             self.hybrid_covmat = covariance
             self.get_TP_sample_grid(covariance, delta=0.05)
+
 
         # load opacity arrays (gas, rayleigh, cia)
         self.load_opacity_arrays(wngrid='obs_spectrum')
@@ -154,18 +167,6 @@ class atmosphere(object):
             self.ace_metallicity = self.params.atm_ace_metallicity
             self.ace_co = self.params.atm_ace_co
             self.set_ace_params()
-
-
-        np.savetxt('olivia_molprofiles_inactive.dat', self.inactive_mixratio_profile)
-
-        np.savetxt('olivia_molprofiles.dat', self.active_mixratio_profile)
-        out = np.zeros((self.nlayers, 3))
-        out[:,0] = self.pressure_profile
-        out[:,1] = self.altitude_profile
-        out[:,2] = self.temperature_profile
-        np.savetxt('pat_molprofiles.dat', out)
-
-       # self.temperature_profile = np.logspace(np.log10(1400), np.log10(44), 100)
 
         logging.info('Atmosphere object initialised')
 
@@ -208,22 +209,15 @@ class atmosphere(object):
         self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
         self.clouds_density_profile = self.get_clouds_density_profile()
 
-
     def get_coupled_planet_mu(self):
 
         if self.params.ven_load:
             mu = np.zeros(self.nlayers)
             for mol_idx, mol_val in enumerate(self.data.ven_molecules):
-
-                #mu[:] += self.data.ven_molweight[mol_idx] * self.data.ven_molprof_mixratios_int[mol_idx](self.pressure_profile)*AMU
                 ven_molprof_mixratio = np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,mol_idx][::-1])[::-1]
                 mu[:] += ven_molprof_mixratio*AMU
             mu = np.asarray(mu, order='C')
         else:
-            # calculate the absolute mixing ratio of inactive gases
-            inactive_mixratio_profile = np.zeros((self.ninactivegases, self.nlayers))
-            for i in xrange(self.ninactivegases):
-                inactive_mixratio_profile[i, :] = self.inactive_mixratio_profile[i,:]*(1. - np.sum(self.active_mixratio_profile, axis=0))
 
             # get mu for each layer
             mu = np.zeros(self.nlayers)
@@ -231,7 +225,7 @@ class atmosphere(object):
                 for idx, gasname in enumerate(self.active_gases):
                     mu[i] += self.active_mixratio_profile[idx, i] * get_molecular_weight(gasname)
                 for idx, gasname in enumerate(self.inactive_gases):
-                    mu[i] += inactive_mixratio_profile[idx, i] * get_molecular_weight(gasname)
+                    mu[i] += self.inactive_mixratio_profile[idx, i] * get_molecular_weight(gasname)
                 #logging.debug('Mean molecular weight for layer %i is %.4f' % (i, mu[i]/AMU))
 
         return mu
@@ -451,7 +445,7 @@ class atmosphere(object):
     def _TP_guillot2010(self, TP_params):
         '''
         TP profile from Guillot 2010, A&A, 520, A27 (equation 49)
-        Using modified 2stream approx. from Line et al. 2012, ApJ, 729,93 (equation 19)
+        Using modified 2stream approx. from Line et al. 2012, ApJ, 749,93 (equation 19)
 
         Free parameters required:
             - T_irr    = planet equilibrium temperature (Line fixes this but we keep as free parameter)
@@ -473,8 +467,10 @@ class atmosphere(object):
         kappa_v2 = TP_params[3];
         alpha = TP_params[4]
 
+        planet_grav = (G * self.planet_mass) / (self.planet_radius**2) # surface gravity
+
         gamma_1 = kappa_v1/(kappa_ir + 1e-10); gamma_2 = kappa_v2/(kappa_ir + 1e-10)
-        tau = kappa_ir * self.pressure_profile / self.planet_grav
+        tau = kappa_ir * self.pressure_profile / planet_grav
 
         T_int = 200 # todo internal heat parameter looks suspicious... needs looking at.
 
@@ -504,7 +500,7 @@ class atmosphere(object):
                   may be left as free and Pressure dependent parameter later.
         '''
         if h is None:
-            h = self.params.tp_corrlength
+            h = self.params.atm_tp_corr_length
 
         # assigning parameters
         T_init = TP_params
@@ -558,7 +554,7 @@ class atmosphere(object):
                   may be left as free and Pressure dependent parameter later.
         '''
         if h is None:
-            h = self.params.tp_corrlength
+            h = self.params.atm_tp_corr_length
 
         #if self.TP_setup:
         T = np.zeros((self.nlayers)) #temperature array

@@ -230,6 +230,7 @@ class output(base):
         for nmode in range(len(modes)):
 
             dict = {'weights': modes_weights[nmode],
+                    'tracedata': modes_array[nmode],
                     'fit_params': {}}
             for idx, param_name in enumerate(self.params_names):
                 dict['fit_params'][param_name] = {
@@ -329,6 +330,9 @@ class output(base):
 
     def add_spectra_from_solutions(self, fitting_out):
 
+        # load model using full wavenumber range
+        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+
         # loop through solutions and calculate spectra
         for idx, solution in enumerate(fitting_out):
 
@@ -339,10 +343,6 @@ class output(base):
             fit_params_std = [solution['fit_params'][param]['std'] for param in self.params_names]
 
             self.fitting.update_atmospheric_parameters(fit_params)
-
-            # load model using full wavenumber range
-
-            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
 
             model = self.fitting.forwardmodel.model()
 
@@ -370,8 +370,35 @@ class output(base):
             out[:,1] = model
             fitting_out[idx]['model_xsecres_fullwno'] = out
 
+            # get TP profile with std
+            fitting_out[idx]['tp_profile'] = np.zeros((self.atmosphere.nlayers, 3))
+            fitting_out[idx]['tp_profile'][:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
+            fitting_out[idx]['tp_profile'][:,1] = self.fitting.forwardmodel.atmosphere.temperature_profile
 
-            std_spectrum = np.zeros((self.data.int_nwngrid_full))
+            # get 1 sigma TP profile
+            if self.params.atm_tp_type == 'isothermal':
+                fitting_out[idx]['tp_profile'][:,2] = solution['fit_params']['T']['std']
+            else:
+                sol_tracedata = fitting_out[idx]['tracedata']
+                sol_weights = fitting_out[idx]['weights']
+
+                nprofiles = len(sol_tracedata)
+                tpprofiles = np.zeros((nprofiles, self.atmosphere.nlayers))
+                weights = np.zeros((nprofiles))
+                for i in range(nprofiles):
+                    rand_idx = random.randint(0, len(sol_tracedata))
+                    weights[i] = sol_weights[rand_idx]
+                    fit_params_iter = sol_tracedata[rand_idx]
+                    self.fitting.update_atmospheric_parameters(fit_params_iter)
+                    tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
+                std_tpprofiles = np.zeros((self.atmosphere.nlayers))
+                for i in xrange(self.atmosphere.nlayers):
+                    average = np.average(tpprofiles[:,i], weights=weights)
+                    variance = np.average((tpprofiles[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                    std_tpprofiles[i] = np.sqrt(variance)
+                fitting_out[idx]['tp_profile'][:,2] = std_tpprofiles
+
+            # std_spectrum = np.zeros((self.data.int_nwngrid_full))
 
             # # create 2 sigma spectrum
             #

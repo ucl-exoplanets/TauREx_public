@@ -262,15 +262,17 @@ class data(object):
                     # wno_max_idx = np.where(np.abs(wno - np.max(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]+1
 
                     # restrict temperature range
-                    Tmax = Tmin = None
+                    Tmin = 0
+                    Tmax = 5000
                     if self.params.ven_load:
                         Tmax = np.max(self.ven_temperature)
                         Tmin = np.min(self.ven_temperature)
                     elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                        Tmax = self.params.fit_T_bounds[1]
-                        Tmin = self.params.fit_T_bounds[0]
-                    else:
-                        Tmin = Tmax = self.params.planet_temp
+                        if self.params.atm_tp_type == 'isothermal':
+                            Tmax = self.params.fit_tp_iso_bounds[1]
+                            Tmin = self.params.fit_tp_iso_bounds[0]
+                    elif self.params.atm_tp_type == 'isothermal':
+                        Tmin = Tmax = self.params.atm_tp_iso_temp
 
                     if Tmax > np.max(t) or Tmin < np.min(t):
                         logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
@@ -415,16 +417,17 @@ class data(object):
                 logging.warning('CIA cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
                 logging.warning('Assume xsec to be zero outside the cia range')
 
-            # restrict temperature range
-            Tmax = Tmin = None
-            if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                Tmax = self.params.fit_T_bounds[1]
-                Tmin = self.params.fit_T_bounds[0]
-            elif self.params.in_use_ATMfile:
-                Tmax = np.max(self.pta[:,1])
-                Tmin = np.min(self.pta[:,1])
-            else:
-                Tmin = Tmax = self.params.planet_temp
+            Tmin = 0
+            Tmax = 5000
+            if self.params.ven_load:
+                Tmax = np.max(self.ven_temperature)
+                Tmin = np.min(self.ven_temperature)
+            elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+                if self.params.atm_tp_type == 'isothermal':
+                    Tmax = self.params.fit_tp_iso_bounds[1]
+                    Tmin = self.params.fit_tp_iso_bounds[0]
+            elif self.params.atm_tp_type == 'isothermal':
+                Tmin = Tmax = self.params.atm_tp_iso_temp
 
             if Tmax > np.max(t) or Tmin < np.min(t):
                 logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')

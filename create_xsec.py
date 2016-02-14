@@ -146,7 +146,8 @@ if options.linear_binning:
     # create the output wavenumber grid
     bin_wngrid = np.arange(np.min(wngrid), np.max(wngrid), float(options.linear_binning))
     bingrid_idx = np.digitize(wngrid, bin_wngrid) #getting the specgrid indexes for bins
-    sigma_array = np.zeros((len(pressures), len(temperatures), len(bin_wngrid)))
+
+    wngrid = bin_wngrid
 
     comments.append('Linear binning, at %f wavenumber resolution.' % float(options.linear_binning))
 
@@ -155,8 +156,7 @@ if options.linear_binning:
     elif options.binning_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
 
-else:
-    sigma_array = np.zeros((len(pressures), len(temperatures), len(wngrid)))
+sigma_array = np.zeros((len(pressures), len(temperatures), len(bin_wngrid)))
 
 
 for pressure_idx, pressure_val in enumerate(pressures):

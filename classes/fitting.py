@@ -117,7 +117,8 @@ class fitting(base):
                     os.mkdir(f)
 
         # set priors, starting values, and fitting parameters
-        self.fit_params_names = []
+        self.fit_params_names = [] # machine names
+        self.fit_params_texlabels = [] # pretty latex labels
         self.fit_params = []
         self.fit_bounds = []
 
@@ -132,6 +133,7 @@ class fitting(base):
 
         # build the fit_params list, input parameters to all the fitting routines.
         # build the fit_params_names, names of params in fit_params
+        # build the fit_params_texlabels, Latex labels of params in fit_params
         # build the fit_bounds list, boundary conditions for fit_params
 
         ##########################################################################
@@ -154,6 +156,7 @@ class fitting(base):
                     self.fit_params.append(clr[i])
                     self.fit_bounds.append((self.params.fit_clr_bounds[0], self.params.fit_clr_bounds[1]))
                     self.fit_params_names.append('%s_CLR' % gasnames[i])
+                    self.fit_params_texlabels.append('CLR_i' % i)
                     count_X += 1
             else:
 
@@ -168,11 +171,16 @@ class fitting(base):
                             self.fit_params.append(np.log10(self.params.atm_active_gases_mixratios[idx]))
                             self.fit_bounds.append((np.log10(self.params.fit_X_active_bounds[0]),
                                                     np.log10(self.params.fit_X_active_bounds[1])))
+                            self.fit_params_names.append('log_%s' % gasname)
+                            self.fit_params_texlabels.append('log(%s)' % tex_gas_label(gasname))
+
                         else: # fit in linear space
                             self.fit_params.append(self.params.atm_active_gases_mixratios[idx])
                             self.fit_bounds.append((self.params.fit_X_active_bounds[0],
                                                     self.params.fit_X_active_bounds[1]))
                         self.fit_params_names.append(gasname)
+                        self.fit_params_texlabels.append(tex_gas_label(gasname))
+
                         count_X += 1
 
                 # inactive gases (see params.fit_fit_inactive [usually set to False !])
@@ -182,11 +190,14 @@ class fitting(base):
                             self.fit_params.append(np.log10(self.params.atm_inactive_gases_mixratios[idx]))
                             self.fit_bounds.append((np.log10(self.params.fit_X_active_bounds[0]),
                                                     np.log10(self.params.fit_X_active_bounds[1])))
+                            self.fit_params_names.append('log_%s' % gasname)
+                            self.fit_params_texlabels.append('log(%s)' % tex_gas_label(gasname))
                         else: # fit in linear space
                             self.fit_params.append(self.params.atm_inactive_gases_mixratios[idx])
                             self.fit_bounds.append((self.params.fit_X_active_bounds[0],
                                                     self.params.fit_X_active_bounds[1]))
-                        self.fit_params_names.append(gasname)
+                            self.fit_params_names.append(gasname)
+                            self.fit_params_texlabels.append(tex_gas_label(gasname))
                         count_X += 1
 
             self.fit_X_nparams = count_X # set the number of fitted mixing ratios
@@ -204,7 +215,9 @@ class fitting(base):
             count_ace = 0
 
             if self.params.fit_fit_ace_metallicity:
-                self.fit_params_names.append('ace_metallicity')
+                self.fit_params_names.append('ace_log_metallicity')
+                self.fit_params_texlabels.append('log(Metallicity)')
+
                 self.fit_bounds.append((np.log10(self.params.fit_ace_metallicity_bounds[0]),
                                         np.log10(self.params.fit_ace_metallicity_bounds[1])))
                 self.fit_params.append(np.log10(self.params.atm_ace_metallicity))
@@ -212,6 +225,7 @@ class fitting(base):
 
             if self.params.fit_fit_ace_co:
                 self.fit_params_names.append('ace_co')
+                self.fit_params_texlabels.append('C/O')
                 self.fit_bounds.append((self.params.fit_ace_co_bounds[0],
                                         self.params.fit_ace_co_bounds[1]))
                 self.fit_params.append(self.params.atm_ace_co)
@@ -225,13 +239,14 @@ class fitting(base):
 
         if self.params.fit_fit_temp:
 
-            T_bounds = (self.params.fit_T_bounds[0], self.params.fit_T_bounds[1])
-            T_mean = self.params.planet_temp
+            T_bounds = (self.params.fit_tp_iso_bounds[0], self.params.fit_tp_iso_bounds[1])
+            T_mean = np.mean(((self.params.fit_tp_iso_bounds[0], self.params.fit_tp_iso_bounds[1])))
 
             if self.forwardmodel.atmosphere.TP_type   == 'isothermal':
 
                     self.fit_TP_nparams = 1
                     self.fit_params_names.append('T')
+                    self.fit_params_texlabels.append('$T$')
                     self.fit_bounds.append((T_bounds[0],T_bounds[1]))
                     self.fit_params.append(T_mean)
 
@@ -242,17 +257,21 @@ class fitting(base):
                 for i in xrange(self.forwardmodel.atmosphere.nlayers):
                     self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                     self.fit_params.append(T_mean)
+                    self.fit_params_names.append('T_%i' %1)
+                    self.fit_params_texlabels.append('$T_{%i}$' % i)
 
             elif self.forwardmodel.atmosphere.TP_type == 'hybrid':
 
                 self.fit_TP_nparams = len(self.forwardmodel.atmosphere.P_index) + 1
 
                 self.fit_params_names.append('alpha')
+                self.fit_params_texlabels.append('$\\alpha$')
                 self.fit_bounds.append((self.params.fit_hybrid_alpha_l,self.params.fit_hybrid_alpha_h)) #alpha parameter
                 self.fit_params.append(np.mean((self.params.fit_hybrid_alpha_l,self.params.fit_hybrid_alpha_h)))
 
                 for i in xrange(len(self.forwardmodel.atmosphere.P_index)):
                     self.fit_params_names.append('T_%i' % i)
+                    self.fit_params_texlabels.append('$T_{%i}$' % i)
                     self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                     self.fit_params.append(T_mean)
 
@@ -261,22 +280,27 @@ class fitting(base):
                 self.fit_TP_nparams = 5
 
                 self.fit_params_names.append('T_irr')
-                self.fit_bounds.append((T_bounds[0],T_bounds[1]))
-                self.fit_params.append(T_mean)
+                self.fit_params_texlabels.append('$T_\mathrm{irr}$')
+                self.fit_bounds.append((self.params.fit_tp_guillot_T_irr_bounds[0], self.params.fit_tp_guillot_T_irr_bounds[1]))
+                self.fit_params.append(np.mean((self.params.fit_tp_guillot_T_irr_bounds[0], self.params.fit_tp_guillot_T_irr_bounds[1])))
 
                 self.fit_params_names.append('kappa_irr')
+                self.fit_params_texlabels.append('$k_\mathrm{irr}$')
                 self.fit_bounds.append((0.0,0.1))
                 self.fit_params.append(np.mean((0.0,0.1)))
 
                 self.fit_params_names.append('kappa_v1') #
+                self.fit_params_texlabels.append('$k_\mathrm{1}$')
                 self.fit_bounds.append((0.0,0.1))
                 self.fit_params.append(np.mean((0.0,0.1)))
 
                 self.fit_params_names.append('kappa_v2')
+                self.fit_params_texlabels.append('$k_\mathrm{2}$')
                 self.fit_bounds.append((0.0,0.1))
                 self.fit_params.append(np.mean((0.0,0.1)))
 
                 self.fit_params_names.append('alpha')
+                self.fit_params_texlabels.append('$\\alpha$')
                 self.fit_bounds.append((0.0,1.0))
                 self.fit_params.append(np.mean((0.0,0.01)))
 
@@ -285,14 +309,17 @@ class fitting(base):
                 self.fit_TP_nparams = 3
 
                 self.fit_params_names.append('T_surf') #surface layer T
+                self.fit_params_texlabels.append('$T_mathrm{surf}$')
                 self.fit_bounds.append((T_bounds[0],T_bounds[1]))
                 self.fit_params.append(T_mean)
 
                 self.fit_params_names.append('T_trop') #troposphere layer T difference (T_surface- Tdiff) = T_trop
+                self.fit_params_texlabels.append('$T_mathrm{trop}$')
                 self.fit_bounds.append((0.0,1000.0))
                 self.fit_params.append(np.mean((0.0,1000.0)))
 
                 self.fit_params_names.append('P_trop') #troposphere pressure (Pa) #@todo careful with this needs to move somewhere else
+                self.fit_params_texlabels.append('$P_mathrm{trop}$')
                 self.fit_bounds.append((1.0,1e5))
                 self.fit_params.append(np.mean((1.0,1e5)))
 
@@ -301,22 +328,27 @@ class fitting(base):
                 self.fit_TP_nparams = 5
 
                 self.fit_params_names.append('T_surf')
+                self.fit_params_texlabels.append('$T_mathrm{surf}$')
                 self.fit_bounds.append((T_bounds[0],T_bounds[1])) #surface layer T
                 self.fit_params.append(T_mean)
 
                 self.fit_params_names.append('T_point1') #point1 T difference (T_surface- Tdiff) = T_point1
+                self.fit_params_texlabels.append('$T_1$')
                 self.fit_bounds.append((0.0,500.0))
                 self.fit_params.append(np.mean((0.0,500.0)))
 
                 self.fit_params_names.append('T_point2') #point2 T difference (T_point1- Tdiff) = T_point2
+                self.fit_params_texlabels.append('$T_2$')
                 self.fit_bounds.append((0.0,500.0))
                 self.fit_params.append(np.mean((0.0,500.0)))
 
                 self.fit_params_names.append('P_point1')  #point1 pressure (Pa) #@todo careful with this needs to move somewhere else
+                self.fit_params_texlabels.append('$P_1$')
                 self.fit_bounds.append((1.0,1e5))
                 self.fit_params.append(np.mean((1.0,1e5)))
 
                 self.fit_params_names.append('P_point2') #point2 pressure (Pa) #@todo careful with this needs to move somewhere else
+                self.fit_params_texlabels.append('$P_2$')
                 self.fit_bounds.append((1.0,1e5))
                 self.fit_params.append(np.mean((1.0,1e5)))
 
@@ -328,6 +360,7 @@ class fitting(base):
         if not self.params.fit_couple_mu:
             if self.params.fit_fit_mu:
                 self.fit_params_names.append('mu')
+                self.fit_params_texlabels.append('$\mu$')
                 self.fit_params.append(self.forwardmodel.atmosphere.planet_mu[0]/AMU) # in AMU
                 self.fit_bounds.append((self.params.fit_mu_bounds[0], self.params.fit_mu_bounds[1])) # in AMU
 
@@ -335,6 +368,7 @@ class fitting(base):
         # radius
         if self.params.fit_fit_radius:
             self.fit_params_names.append('Radius')
+            self.fit_params_texlabels.append('$R_p$')
             self.fit_params.append(self.forwardmodel.atmosphere.planet_radius/RJUP)
             self.fit_bounds.append((self.params.fit_radius_bounds[0],  self.params.fit_radius_bounds[1])) # in RJUP
 
@@ -342,6 +376,7 @@ class fitting(base):
         # surface pressure
         if self.params.fit_fit_P0:
             self.fit_params_names.append('P0')
+            self.fit_params_texlabels.append('$P_\mathrm{max}$')
             self.fit_params.append(self.params.atm_max_pres)
             self.fit_bounds.append((np.log10(self.params.fit_P0_bounds[0]), np.log10(self.params.fit_P0_bounds[1]))) # in log[Pascal]
 
@@ -350,6 +385,7 @@ class fitting(base):
         if self.params.atm_clouds:
             if self.params.fit_fit_clouds_lower_P:
                 self.fit_params_names.append('clouds_lower_P')
+                self.fit_params_texlabels.append('$P_\mathrm{cld,low}$')
                 self.fit_params.append(np.mean((self.params.fit_clouds_lower_P_bounds[0],
                                                 self.params.fit_clouds_lower_P_bounds[1])))
                 self.fit_bounds.append((self.params.fit_clouds_lower_P_bounds[0],
@@ -357,17 +393,20 @@ class fitting(base):
 
             if self.params.fit_fit_clouds_upper_P:
                 self.fit_params_names.append('clouds_upper_P')
+                self.fit_params_texlabels.append('$P_\mathrm{cld,up}$')
                 self.fit_params.append(np.mean((self.params.fit_clouds_upper_P_bounds[0],
                                                 self.params.fit_clouds_upper_P_bounds[1])))
                 self.fit_bounds.append((self.params.fit_clouds_upper_P_bounds[0],
                                         self.params.fit_clouds_upper_P_bounds[1]))
 
             if self.params.fit_fit_clouds_a:
+                self.fit_params_texlabels.append('$a_\mathrm{cld}$')
                 self.fit_params_names.append('clouds_a')
                 self.fit_params.append(np.mean((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1])))
                 self.fit_bounds.append((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1]))
 
             if self.params.fit_fit_clouds_m:
+                self.fit_params_texlabels.append('$m_\mathrm{cld}$')
                 self.fit_params_names.append('clouds_m')
                 self.fit_params.append(np.mean((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1])))
                 self.fit_bounds.append((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1]))
@@ -485,18 +524,24 @@ class fitting(base):
         #    If we're fitting, get it from fit_params
 
         if self.params.fit_couple_mu:
+            # mu is not fitted, but coupled to the atmospheric composition
             self.forwardmodel.atmosphere.planet_mu = self.forwardmodel.atmosphere.get_coupled_planet_mu()
         else:
             if self.params.fit_fit_mu:
 
+                # mu is fitted for the remainder of the atmosphere (i.e. the mu of the atmosphere excluding the active gases)
+                # the fitted mu is not the mmw of the *entire* atmosphere, but of the remainder of the atmosphere (1 - sum(active gases mixratio) )
                 mw_active_gases = 0
                 mixratio_active_gases = 0
+                # calculate contribution to total mu from active gases
                 for idx, gasname in enumerate(self.params.atm_active_gases):
                     mixratio_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0]
                     mw_active_gases += self.forwardmodel.atmosphere.active_mixratio_profile[idx, 0] * get_molecular_weight(gasname) # assume mu from first layer
+                # set global mu of the entire atmosphere
                 self.forwardmodel.atmosphere.planet_mu[:]= mw_active_gases + (1.-mixratio_active_gases)*fit_params[count]*AMU
 
-                if self.params.atm_couple_mu:
+                # see the parameter Fitting>inactive_mu_rescale in default.par for explanation
+                if self.params.fit_inactive_mu_rescale:
 
                     mw_0 = get_molecular_weight(self.params.atm_inactive_gases[0])
                     mw_1 = get_molecular_weight(self.params.atm_inactive_gases[1])
