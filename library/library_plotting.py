@@ -29,9 +29,9 @@ except:
 
 scale_pow = 0
 
-def plot_posteriors(fit_out, params_names=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='BuPu',log_cmap=False,loglabel=False):
+def plot_posteriors(fit_out, params_names=[], params_labels=[], plot_name='plot', save2pdf=False, out_path=None, plot_contour=True, color='BuPu',log_cmap=False,loglabel=False):
         
-        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, plot_contour=plot_contour, color=color,log_cmap=log_cmap,loglabel=loglabel)
+        fig = _plot_posteriors(fit_out, plot_name=plot_name, params_names=params_names, params_labels=params_labels, plot_contour=plot_contour, color=color,log_cmap=log_cmap,loglabel=loglabel)
 
         if save2pdf:
                 filename1 = os.path.join(out_path, '%s_posteriors.pdf' % plot_name)
@@ -102,7 +102,7 @@ def _fancy_param_name(param_name,log=False):
         return r'${0}$'.format(NAME)
     
 
-def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=False,fontsize=30, color='Blues',log_cmap=False,loglabel=False):
+def _plot_posteriors(fit_out, plot_name=None, params_names=None, params_labels=None, plot_contour=False,fontsize=30, color='Blues',log_cmap=False,loglabel=False):
 
     if params_names == None:
         params_names = fit_out[0]['fit_params'].keys()
@@ -126,7 +126,13 @@ def _plot_posteriors(fit_out, plot_name=None, params_names=None, plot_contour=Fa
 
         if i == 0:
             pl.ylabel("Prob. density",fontsize=fontsize)
-        pl.xlabel(_fancy_param_name(param_name,log=loglabel), x=0.6, ha='right', fontsize=fontsize)
+
+        if params_labels is not None:
+            param_label = params_labels[i]
+        else:
+            param_label = param_name
+
+        pl.xlabel(param_label, x=0.6, ha='right', fontsize=fontsize)
         globalxlims= ax.get_xlim()
 
         #scaling axis labels @todo labels can be improved but works now at least
