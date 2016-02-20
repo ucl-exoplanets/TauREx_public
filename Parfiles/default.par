@@ -49,7 +49,7 @@ internal_name = internal_model.dat
 #save plots to .pdf
 save_plots = True
 #plotting contours onto densities in posterior plots
-plot_contour = True
+plot_contour = False
 # posterior plots colour (matplotlib colormaps)
 plot_colour = Blues
 
@@ -106,17 +106,12 @@ class = hotjupiter
 radius = 1.1724
 # Planetary mass (M_jupiter)
 mass = 1.13035
-# Planetary temperature (K)
-temp = 1400
-# molecular weight of atmosphere
-mu = 2.3
+
 
 [Atmosphere]
 
 # Defines atmosphere specific parameters
 
-# thickness of atmosphere in number of atmospheric scale heights
-num_scaleheights = 30
 # number of atmospheric levels
 nlayers = 100
 # set maximum pressure level in Pascal
@@ -125,22 +120,38 @@ min_pressure = 1e-4
 
 # TP profile type to be selected (only sets for emission, tranmission = isothermal)
 # available profiles are: isothermal, guillot, hybrid, 2point, 3point
-profile_type = isothermal
-# correlation length of TP profile for Rodgers2000 and Hybrid
-corr_length = 5.0
+tp_type = isothermal
 
-# active absorbers and absolute mixing ratios
+# isothermal temperature
+tp_iso_temp = 1500
+
+# guillot params
+tp_guillot_T_irr = 1500
+tp_guillot_kappa_irr = 0.05
+tp_guillot_kappa_v1 = 0.05
+tp_guillot_kappa_v2 = 0.05
+tp_guillot_alpha = 0.005
+
+# correlation length of TP profile for Rodgers2000 and Hybrid
+tp_corr_length = 5.0
+
+# active absorbers and absolute mixing ratios (if ace = False)
 active_gases = H2O
 active_gases_mixratios = 1e-5
 
-# spectrally-inactive gases and relative mixing ratios.
+# spectrally-inactive gases and relative mixing ratios. (if ace = False)
 # The mixing ratios are relative to the remainder of the amtosphere (1 - active_gases_mixratios)
+# Hence sum(inactive gases) must be 1
 inactive_gases = H2, He
 inactive_gases_mixratios = 0.85, 15
 
-# Couple mean molecular weight to the absolute mixing ratios of inactive gases
-# NOTE: it overrides the value of mu specified in Planet->mu
-# NOTE 2: see the different parameter in Fitting>couple_mu
+# mean molecular weight of the atmosphere (see also next param couple_mu)
+mu = 2.3
+
+# Couple mean molecular weight to the absolute mixing ratios of active and inactive gases
+# This parameter is only used for forward model in create_spectrum
+# NOTE: it overrides the value of mu specified above
+# NOTE: for behaviour during fitting, see the different parameter in Fitting>couple_mu
 couple_mu = True
 
 # include Ryleigh scattering opacities
@@ -148,7 +159,8 @@ rayleigh = True
 
 # include CIA opacities
 cia = True
-# Name of the pairs to include (use dash "-"!). The names are used to load the pickled files inside cia_path (e.g. "h2-h2" loads H2-H2.db).
+
+# Name of the pairs to include (use dash "-" between elements). The names are used to load the pickled files inside cia_path (e.g. "h2-h2" loads H2-H2.db).
 cia_pairs = H2-H2, H2-He
 
 # include cloud opacities. True/False
@@ -189,10 +201,19 @@ emission_stage2 = True
 # use the chemically consistent fit
 ace = False
 
-
 # if True mu is not fitted, but derived from the absolute mixing ratios of active and inactive gases
-# if False, mu is either fitted (if fit_mu = True) or kept fixed (Planet > mu)
+# if False, mu is either fitted (if fit_mu = True) or kept fixed to the value defined in Atmosphere > mu (if fit_mu = False)
 couple_mu = False
+
+# If fit_mu is True, set this parameter to True to rescale the absolute abundances of H2 and He
+# according to the fitted value of mu. Note that the fitted value of mu referes to the remainder
+# of the atmosphere (1 - sum( active gases )). If this parameter is set to True, the priors bounds
+# for mu are automatically set between 2 and 4 (H2 dominated to He dominated), as values higher than
+# 4 would not be permitted. NOTE that this parameter only works for H2/He dominated atmospheres,
+# i.e. where the mmw of (1 - sum(active mix ratios) ) is between 2 and 4, and the inactive gases are
+# He and H2 (no other inactive gas is allowed).
+inactive_mu_rescale = False
+
 # fit mixing ratios in log space
 X_log = True
 # centered log ratio transformation for mixing ratios
@@ -233,8 +254,6 @@ X_active_bounds = 1.0e-8, 1.0
 X_inactive_bounds = 1.0e-8, 1.0
 # upper and lower bounds for the clr ratios
 clr_bounds = -20, 20
-#Upper and lower bounds for temperature
-T_bounds  = 1300, 1500
 #upper and lower bounds for mean molecular weight (in AMU)
 mu_bounds = 0, 10
 #Upper and lower bounds for planet radius (in RJUP)
@@ -249,9 +268,20 @@ clouds_upper_P_bounds = 1.e4, 1.e6
 clouds_m_bounds = 0.8, 1.2
 clouds_a_bounds = 1.3, 1.7
 
+# tp profile bounds
+
+#isothermal
+tp_iso_bounds  = 1300, 1500
+
+# guillot
+tp_guillot_T_irr_bounds = 1300, 1500
+tp_guillot_kappa_irr_bounds = 0., 0.1
+tp_guillot_kappa_v1_bounds = 0., 0.1
+tp_guillot_kappa_v2_bounds = 0., 0.1
+tp_guillot_alpha_bounds = 0., 0.01
+
 #lower and upper bounds for TP-profile hybrid alpha parameter
-hybrid_alpha_low  = 0.0
-hybrid_alpha_high = 1.0
+hybrid_alpha_bounds  = 0.0, 1.0
 
 # ace specific parameters
 ace_metallicity_bounds = 1.e-1, 1.e4

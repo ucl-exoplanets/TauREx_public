@@ -230,6 +230,7 @@ class output(base):
         for nmode in range(len(modes)):
 
             dict = {'weights': modes_weights[nmode],
+                    'tracedata': modes_array[nmode],
                     'fit_params': {}}
             for idx, param_name in enumerate(self.params_names):
                 dict['fit_params'][param_name] = {
@@ -329,6 +330,9 @@ class output(base):
 
     def add_spectra_from_solutions(self, fitting_out):
 
+        # load model using full wavenumber range
+        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+
         # loop through solutions and calculate spectra
         for idx, solution in enumerate(fitting_out):
 
@@ -340,9 +344,11 @@ class output(base):
 
             self.fitting.update_atmospheric_parameters(fit_params)
 
-            # load model using full wavenumber range
-
-            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+            # store atmospheric profiles
+            fitting_out[idx]['active_mixratio_profile'] = self.fitting.forwardmodel.atmosphere.active_mixratio_profile
+            fitting_out[idx]['inactive_mixratio_profile'] = self.fitting.forwardmodel.atmosphere.inactive_mixratio_profile
+            fitting_out[idx]['active_gases'] =  self.fitting.forwardmodel.atmosphere.active_gases
+            fitting_out[idx]['inactive_gases'] =  self.fitting.forwardmodel.atmosphere.inactive_gases
 
             model = self.fitting.forwardmodel.model()
 
@@ -370,17 +376,68 @@ class output(base):
             out[:,1] = model
             fitting_out[idx]['model_xsecres_fullwno'] = out
 
+            # get TP profile with std
+            fitting_out[idx]['tp_profile'] = np.zeros((self.atmosphere.nlayers, 3))
+            fitting_out[idx]['tp_profile'][:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
+            fitting_out[idx]['tp_profile'][:,1] = self.fitting.forwardmodel.atmosphere.temperature_profile
 
-            std_spectrum = np.zeros((self.data.int_nwngrid_full))
+            fitting_out[idx]['std_molprofiles_active'] = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
+            fitting_out[idx]['std_molprofiles_inactive'] = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
 
-            # # create 2 sigma spectrum
-            #
+            # get 1 sigma TP profile, 1 sigma mixing ratios
+
+            sol_tracedata = fitting_out[idx]['tracedata']
+            sol_weights = fitting_out[idx]['weights']
+
+            nprofiles = len(sol_tracedata)
+            tpprofiles = np.zeros((nprofiles, self.atmosphere.nlayers))
+            molprofiles_active = np.zeros((nprofiles, self.atmosphere.nactivegases, self.atmosphere.nlayers))
+            molprofiles_inactive = np.zeros((nprofiles, self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+            weights = np.zeros((nprofiles))
+            for i in range(nprofiles):
+                rand_idx = random.randint(0, len(sol_tracedata))
+                weights[i] = sol_weights[rand_idx]
+                fit_params_iter = sol_tracedata[rand_idx]
+                self.fitting.update_atmospheric_parameters(fit_params_iter)
+                tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
+                for j in range(self.atmosphere.nactivegases):
+                    molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[i,:]
+                for j in range(self.atmosphere.ninactivegases):
+                    print 'this is it', self.atmosphere.ninactivegases, i, j
+                    molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[i,:]
+
+            std_tpprofiles = np.zeros((self.atmosphere.nlayers))
+            std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
+            std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+            for i in xrange(self.atmosphere.nlayers):
+
+                average = np.average(tpprofiles[:,i], weights=weights)
+                variance = np.average((tpprofiles[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                std_tpprofiles[i] = np.sqrt(variance)
+
+                for j in range(self.atmosphere.nactivegases):
+                    average = np.average(molprofiles_active[:,j,i], weights=weights)
+                    variance = np.average((molprofiles_active[:,j,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                    std_molprofiles_active[i] = np.sqrt(variance)
+                    fitting_out[idx]['std_molprofiles_active'][j,i] = np.sqrt(variance)
+                for j in range(self.atmosphere.ninactivegases):
+                    average = np.average(molprofiles_inactive[:,j,i], weights=weights)
+                    variance = np.average((molprofiles_inactive[:,j,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                    fitting_out[idx]['std_molprofiles_inactive'][j,i] = np.sqrt(variance)
+
+            if self.params.atm_tp_type == 'isothermal':
+                fitting_out[idx]['tp_profile'][:,2] = solution['fit_params']['T']['std']
+            else:
+                fitting_out[idx]['tp_profile'][:,2] = std_tpprofiles
+
+            # create 1 sigma spectrum
+
             # if self.NEST and not self.params.fit_clr_trans:
             #
             #     logging.info('Compute models to create the 1 sigma model spectrum spread')
             #
             #     weights = []
-            #     nspectra = 150
+            #     nspectra = 250
             #
             #     models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
             #     weights = np.zeros((nspectra))
@@ -406,7 +463,7 @@ class output(base):
             #     fitting_out[idx]['model_std_xsecres_obswno'] = std_spectrum[self.data.int_wngrid_obs_idxmin:self.data.int_wngrid_obs_idxmax]
             #     std_spectrum_binned = [std_spectrum[sp_bingrididx == i].mean() for i in xrange(1,sp_nbingrid+1)]
             #     fitting_out[idx]['model_std_spres_obswno'] = np.asarray(std_spectrum_binned)
-
+            #
 
 
     #         #individual molecules plotted
@@ -527,7 +584,7 @@ class output(base):
             fig.savefig(filename)
             logging.info('Plot saved in %s' % filename)
 
-    def plot_all(self, save2pdf=False,params_names=None):
+    def plot_all(self, save2pdf=False,params_names=None,param_labels=None):
 
         logging.info('Plotting absolutely everything')
 
@@ -535,7 +592,7 @@ class output(base):
         self.plot_fit(save2pdf=save2pdf,resolution='low')
         self.plot_fit(save2pdf=save2pdf,resolution='high')
         self.plot_absorbers(save2pdf=save2pdf,resolution='high')
-        self.plot_distributions(save2pdf=save2pdf, params_names=params_names)
+        self.plot_distributions(save2pdf=save2pdf, params_names=params_names, params_labels=param_labels)
 
     def plot_spectrum(self,save2pdf=False,linewidth=2.0):
 
@@ -692,7 +749,7 @@ class output(base):
         return fig
           
 
-    def plot_distributions(self, save2pdf=False, params_names=None):
+    def plot_distributions(self, save2pdf=False, params_names=None, params_labels=None):
 
         logging.info('Plotting sampling distributions. Saving to %s' % self.out_path)
 
@@ -704,11 +761,11 @@ class output(base):
                 return
 
         if self.fitting.MCMC:
-            plot_posteriors(self.MCMC_out,params_names=params_names,
+            plot_posteriors(self.MCMC_out,params_names=params_names,params_labels=params_labels,
                             save2pdf=save2pdf,out_path=self.out_path,plot_name = 'MCMC',
                             plot_contour=self.params.out_plot_contour,color=self.params.out_plot_colour,loglabel=self.params.fit_X_log)
         if self.fitting.NEST:
-            plot_posteriors(self.NEST_out, params_names=params_names,save2pdf=save2pdf,out_path=self.out_path,
+            plot_posteriors(self.NEST_out, params_names=params_names,params_labels=params_labels,save2pdf=save2pdf,out_path=self.out_path,
                             plot_name='NEST',plot_contour=self.params.out_plot_contour, color=self.params.out_plot_colour,loglabel=self.params.fit_X_log)
 
             if self.params.fit_clr_trans == True:

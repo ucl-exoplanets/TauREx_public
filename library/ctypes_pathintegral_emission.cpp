@@ -74,6 +74,12 @@ extern "C" {
                         sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
                     }
                 }
+            } else if (temperature[j] < sigma_temp[0]) {
+                for (int wn=0; wn<nwngrid; wn++) {
+                    for (int l=0;l<nactive;l++) {
+                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
+                    }
+                }
             } else {
                 if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
                     for (int wn=0; wn<nwngrid; wn++) {
@@ -97,8 +103,7 @@ extern "C" {
                 }
             }
         }
-
-        // calculate emission
+                // calculate emission
         for (int wn=0; wn < nwngrid; wn++) {
 
             tau = 0.0;

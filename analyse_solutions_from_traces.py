@@ -59,7 +59,7 @@ if params.gen_type == 'transmission' or params.fit_transmission:
         fittingob.NEST = True
     outputob = output(fittingob)
     if params.verbose or params.out_save_plots:
-        outputob.plot_all(save2pdf=params.out_save_plots)
+        outputob.plot_all(save2pdf=params.out_save_plots, param_labels=fittingob.fit_params_texlabels)
     outputob.save_ascii_spectra()
     
     
@@ -85,7 +85,8 @@ if params.gen_type == 'emission' or params.fit_emission:
             outputob = output(fittingob)
             if params.verbose or params.out_save_plots:
                 outputob.plot_all(save2pdf=params.out_save_plots,
-                               params_names=fittingob.fit_params_names[:fittingob.fit_X_nparams])
+                               params_names=fittingob.fit_params_names[:fittingob.fit_X_nparams],
+                               params_labels=fittingob.fit_params_texlabels[:fittingob.fit_X_nparams])
             outputob.save_ascii_spectra()
             # save and plot TP profile (plotting only if save2pdf=True)
             outputob.save_TP_profile(save2pdf=True)  #saving TP profile

@@ -205,3 +205,32 @@ def get_molecular_weight(gasname):
         mu = 0
 
     return mu * AMU
+
+def tex_gas_label(gasname):
+
+    if gasname == 'HE':
+        return 'He'
+    elif gasname == 'H2':
+        return 'H$_2$'
+    elif gasname == 'N2':
+        return 'N$_2$'
+    elif gasname == 'O2':
+        return 'O$_2$'
+    elif gasname == 'CO2':
+        return 'CO$_2$'
+    elif gasname == 'CH4':
+        return 'CH$_4$'
+    elif gasname == 'CO':
+        return 'CO'
+    elif gasname == 'NH3':
+        return 'NH$_3$'
+    elif gasname == 'H2O':
+        return 'H$_2$O'
+    elif gasname == 'C2H2':
+        return 'C$_2$H$_2$'
+    elif gasname == 'HCN':
+        return 'HCN'
+    elif gasname == 'H2S':
+        return 'H$_2$S'
+    else:
+        return gasname

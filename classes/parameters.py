@@ -114,21 +114,29 @@ class parameters(base):
         self.planet_class          = self.getpar('Planet','class')
         self.planet_radius         = self.getpar('Planet', 'radius', 'float')*RJUP
         self.planet_mass           = self.getpar('Planet', 'mass', 'float')*MJUP
-        self.planet_temp           = self.getpar('Planet', 'temp', 'float')
-        self.planet_mu             = self.getpar('Planet', 'mu', 'float')*AMU
 
         # section Atmosphere
-        self.atm_num_scaleheights   = self.getpar('Atmosphere', 'num_scaleheights', 'int')
         self.atm_nlayers            = self.getpar('Atmosphere', 'nlayers', 'int')
         self.atm_max_pres           = self.getpar('Atmosphere', 'max_pressure', 'float')
         self.atm_min_pres           = self.getpar('Atmosphere', 'min_pressure', 'float')
-        self.atm_tp_type            = self.getpar('Atmosphere', 'profile_type')
-        self.atm_corrlength         = self.getpar('Atmosphere', 'corr_length','float')
+
+        self.atm_tp_type              = self.getpar('Atmosphere', 'tp_type')
+        self.atm_tp_iso_temp          = self.getpar('Atmosphere', 'tp_iso_temp', 'float' )
+        self.atm_tp_guillot_T_irr     = self.getpar('Atmosphere', 'tp_guillot_T_irr', 'float' )
+        self.atm_tp_guillot_kappa_irr = self.getpar('Atmosphere', 'tp_guillot_kappa_irr', 'float' )
+        self.atm_tp_guillot_kappa_v1  = self.getpar('Atmosphere', 'tp_guillot_kappa_v1', 'float' )
+        self.atm_tp_guillot_kappa_v2  = self.getpar('Atmosphere', 'tp_guillot_kappa_v2', 'float' )
+        self.atm_tp_guillot_alpha     = self.getpar('Atmosphere', 'tp_guillot_alpha', 'float' )
+        self.atm_tp_corr_length       = self.getpar('Atmosphere', 'tp_corr_length','float')
+
         self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
         self.atm_active_gases_mixratios = self.getpar('Atmosphere','active_gases_mixratios', 'list-float')
         self.atm_inactive_gases     = [gas.upper() for gas in self.getpar('Atmosphere','inactive_gases', 'list-str')]
         self.atm_inactive_gases_mixratios = self.getpar('Atmosphere','inactive_gases_mixratios', 'list-float')
+
+        self.atm_mu                 = self.getpar('Atmosphere', 'mu', 'float')*AMU
         self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
+
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
         self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
         self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
@@ -154,22 +162,26 @@ class parameters(base):
         self.pre_pca_path          = self.getpar('Preselector','pca_path')
         self.pre_gen_speclib       = self.getpar('Preselector','generate_speclib', 'bool')
         self.pre_restrict_temp     = self.getpar('Preselector','restrict_temp', 'bool')
-        self.pre_temp_range        = self.getpar('Preselector', 'temp_range', 'list-float')  #genfromtxt(StringIO(self.getpar('Preselector', 'temp_range')), delimiter = ',')
-        self.pre_mixing_ratios     = self.getpar('Preselector', 'mixing_ratio', 'list-float')  #genfromtxt(StringIO(self.getpar('Preselector', 'mixing_ratio')), delimiter = ',')
+        self.pre_temp_range        = self.getpar('Preselector', 'temp_range', 'list-float')
+        self.pre_mixing_ratios     = self.getpar('Preselector', 'mixing_ratio', 'list-float')
         self.pre_gen_pca           = self.getpar('Preselector','generate_pca', 'bool')
         self.pre_mask_thres        = self.getpar('Preselector','mask_thres', 'float')
         self.pre_mol_force_bool    = self.getpar('Preselector','mol_force_on', 'bool')
-        self.pre_mol_force         = self.getpar('Preselector', 'mol_force', 'list-str')  # genfromtxt(StringIO(self.getpar('Preselector','mol_force')),delimiter = ',',dtype='str',autostrip=True)
+        self.pre_mol_force         = self.getpar('Preselector', 'mol_force', 'list-str')
 
         # Section Fit
+
         self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
         self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
         self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
 
-        self.fit_couple_mu    = self.getpar('Fitting','couple_mu', 'bool')
-        self.fit_X_log        = self.getpar('Fitting','X_log', 'bool')
-        self.fit_clr_trans    = self.getpar('Fitting','clr_trans', 'bool')
+        # misc
+        self.fit_couple_mu           = self.getpar('Fitting','couple_mu', 'bool')
+        self.fit_inactive_mu_rescale = self.getpar('Fitting','inactive_mu_rescale', 'bool')
+        self.fit_X_log               = self.getpar('Fitting','X_log', 'bool')
+        self.fit_clr_trans           = self.getpar('Fitting','clr_trans', 'bool')
 
+        # fit / fix parameters
         self.fit_fit_active          = self.getpar('Fitting', 'fit_active', 'bool')
         self.fit_fit_inactive        = self.getpar('Fitting', 'fit_inactive', 'bool')
         self.fit_fit_temp            = self.getpar('Fitting', 'fit_temp', 'bool')
@@ -183,22 +195,27 @@ class parameters(base):
         self.fit_fit_ace_metallicity = self.getpar('Fitting', 'fit_ace_metallicity', 'bool')
         self.fit_fit_ace_co          = self.getpar('Fitting', 'fit_ace_co', 'bool')
 
-        self.fit_X_active_bounds       = self.getpar('Fitting', 'X_active_bounds', 'list-float')
-        self.fit_X_inactive_bounds     = self.getpar('Fitting', 'X_inactive_bounds', 'list-float')
-        self.fit_clr_bounds            = self.getpar('Fitting', 'clr_bounds', 'list-float')
-        self.fit_T_bounds              = self.getpar('Fitting', 'T_bounds', 'list-float')
-        self.fit_mu_bounds             = self.getpar('Fitting', 'mu_bounds', 'list-float')
-        self.fit_radius_bounds         = self.getpar('Fitting', 'radius_bounds', 'list-float')
-        self.fit_P0_bounds             = self.getpar('Fitting', 'P0_bounds', 'list-float')
-        self.fit_clouds_lower_P_bounds = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
-        self.fit_clouds_upper_P_bounds = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
-        self.fit_clouds_a_bounds       = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
-        self.fit_clouds_m_bounds       = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+        # prior bounds
+        self.fit_X_active_bounds        = self.getpar('Fitting', 'X_active_bounds', 'list-float')
+        self.fit_X_inactive_bounds      = self.getpar('Fitting', 'X_inactive_bounds', 'list-float')
+        self.fit_clr_bounds             = self.getpar('Fitting', 'clr_bounds', 'list-float')
+        self.fit_mu_bounds              = self.getpar('Fitting', 'mu_bounds', 'list-float')
+        self.fit_radius_bounds          = self.getpar('Fitting', 'radius_bounds', 'list-float')
+        self.fit_P0_bounds              = self.getpar('Fitting', 'P0_bounds', 'list-float')
+        self.fit_clouds_lower_P_bounds  = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
+        self.fit_clouds_upper_P_bounds  = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
+        self.fit_clouds_a_bounds        = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
+        self.fit_clouds_m_bounds        = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
-        self.fit_ace_co_bounds         = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
+        self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
 
-        self.fit_hybrid_alpha_l    = self.getpar('Fitting', 'hybrid_alpha_low', 'float')
-        self.fit_hybrid_alpha_h    = self.getpar('Fitting', 'hybrid_alpha_high', 'float')
+        self.fit_tp_iso_bounds               = self.getpar('Fitting', 'tp_iso_bounds', 'list-float')
+        self.fit_tp_guillot_T_irr_bounds     = self.getpar('Fitting', 'tp_guillot_T_irr_bounds', 'list-float')
+        self.fit_tp_guillot_kappa_irr_bounds = self.getpar('Fitting', 'tp_guillot_kappa_irr_bounds', 'list-float')
+        self.fit_tp_guillot_kappa_v1_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_v1_bounds', 'list-float')
+        self.fit_tp_guillot_kappa_v2_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_v2_bounds', 'list-float')
+        self.fit_tp_guillot_alpha_bounds     = self.getpar('Fitting', 'tp_guillot_alpha_bounds', 'list-float')
+        self.fit_hybrid_alpha_bounds         = self.getpar('Fitting', 'hybrid_alpha_bounds', 'list-float')
 
         # section Downhill
         self.downhill_run          = self.getpar('Downhill','run', 'bool')

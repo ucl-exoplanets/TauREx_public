@@ -262,15 +262,17 @@ class data(object):
                     # wno_max_idx = np.where(np.abs(wno - np.max(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]+1
 
                     # restrict temperature range
-                    Tmax = Tmin = None
+                    Tmin = 0
+                    Tmax = 5000
                     if self.params.ven_load:
                         Tmax = np.max(self.ven_temperature)
                         Tmin = np.min(self.ven_temperature)
                     elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                        Tmax = self.params.fit_T_bounds[1]
-                        Tmin = self.params.fit_T_bounds[0]
-                    else:
-                        Tmin = Tmax = self.params.planet_temp
+                        if self.params.atm_tp_type == 'isothermal':
+                            Tmax = self.params.fit_tp_iso_bounds[1]
+                            Tmin = self.params.fit_tp_iso_bounds[0]
+                    elif self.params.atm_tp_type == 'isothermal':
+                        Tmin = Tmax = self.params.atm_tp_iso_temp
 
                     if Tmax > np.max(t) or Tmin < np.min(t):
                         logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
@@ -281,7 +283,7 @@ class data(object):
                     # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
 
                     if Tmax > np.max(t):
-                        Tmax_idx = len(t) - 1
+                        Tmax_idx = len(t)
                     else:
                         Tmax_diff = Tmax - t # t is sigma_tmp['t']
                         Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
@@ -307,9 +309,11 @@ class data(object):
                     #     logging.error('Wavenumber grid of xsec is different from wn grid of internal model')
                     #     exit()
 
-                logging.info('Preload cross section for %s' % mol_val)
+
                 #sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx,wno_min_idx:wno_max_idx] / 10000. # also convert from cm^-2 to m^-2
                 sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx] / 10000. # also convert from cm^-2 to m^-2
+        logging.info('Temperature range: %s' % sigma_dict['t'] )
+        logging.info('Pressure range: %s ' % sigma_dict['p'])
 
         logging.info('The full wavenumber range is %.2f - %.2f in steps of %.2f' % (np.min(wno), np.max(wno), np.unique(np.diff(wno))))
 
@@ -413,35 +417,43 @@ class data(object):
                 logging.warning('CIA cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
                 logging.warning('Assume xsec to be zero outside the cia range')
 
-            # restrict temperature range
-            Tmax = Tmin = None
-            if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                Tmax = self.params.fit_T_bounds[1]
-                Tmin = self.params.fit_T_bounds[0]
-            elif self.params.in_use_ATMfile:
-                Tmax = np.max(self.pta[:,1])
-                Tmin = np.min(self.pta[:,1])
-            else:
-                Tmin = Tmax = self.params.planet_temp
+            Tmin = 0
+            Tmax = 5000
+            if self.params.ven_load:
+                Tmax = np.max(self.ven_temperature)
+                Tmin = np.min(self.ven_temperature)
+            elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+                if self.params.atm_tp_type == 'isothermal':
+                    Tmax = self.params.fit_tp_iso_bounds[1]
+                    Tmin = self.params.fit_tp_iso_bounds[0]
+            elif self.params.atm_tp_type == 'isothermal':
+                Tmin = Tmax = self.params.atm_tp_iso_temp
 
             if Tmax > np.max(t) or Tmin < np.min(t):
-                logging.error('The atmospheric temperature profile falls outside the temperature range of the cross sections')
-                logging.error('Internal temperature range: %i - %i' % (Tmin, Tmax))
-                logging.error('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
-                exit()
-            if Tmax and Tmin:
-                # get idx of the temperature boundaries in the cross sections
-                # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
-                Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
-                Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+                logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
+                logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
+                logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
+
+            # get idx of the temperature boundaries in the cross sections
+            # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
+
+            if Tmax > np.max(t):
+                Tmax_idx = len(t)
+            else:
                 Tmax_diff = Tmax - t # t is sigma_tmp['t']
                 Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
-            else:
+
+            if Tmin < np.min(t):
                 Tmin_idx = 0
-                Tmax_idx = len(t) - 1
+            else:
+                Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
+                Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
 
-            sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
-
+            if Tmin > np.max(t) and Tmax > np.max(t):
+                sigma_dict['t'] = np.asarray([t[-1]])
+                Tmax_idx = len(t)
+            else:
+                sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
 
             sigma_dict['wno'] = self.int_wngrid_full
             sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid_full))

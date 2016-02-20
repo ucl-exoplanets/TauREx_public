@@ -39,28 +39,27 @@ class emission():
         self.atmosphere = atmosphere
 
         #loading c++ pathintegral library for faster computation
-        self.cpathlib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
+        self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
 
         # set forward model function
         self.model = self.ctypes_pathintegral
 
         #retrieving function from cpp library
-        self.pathintegral_lib = self.cpathlib.path_integral
-        self.pathintegral_lib.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         C.c_int,
-                                         C.c_int,
-                                         C.c_int,
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         C.c_int,
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         C.c_double,
-                                         C.c_double,
-                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                         C.c_void_p]
+        self.pathintegral_lib.path_integral.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         C.c_int,
+                                                         C.c_int,
+                                                         C.c_int,
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         C.c_int,
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         C.c_double,
+                                                         C.c_double,
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                         C.c_void_p]
 
 
     def ctypes_pathintegral(self):
@@ -69,21 +68,21 @@ class emission():
         FpFs = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
 
         #running c++ path integral
-        self.ctypes_integral(self.atmosphere.int_wngrid,
-                             self.atmosphere.int_nwngrid,
-                             self.atmosphere.nlayers,
-                             self.atmosphere.nactivegases,
-                             self.atmosphere.sigma_array_flat,
-                             self.data.sigma_dict['t'],
-                             len(self.data.sigma_dict['t']),
-                             self.atmosphere.density_profile,
-                             self.atmosphere.altitude_profile,
-                             self.atmosphere.active_mixratio_profile.flatten(),
-                             self.atmosphere.temperature_profile,
-                             self.atmosphere.planet_radius,
-                             self.params.star_radius,
-                             self.atmosphere.data.star_sed,
-                             C.c_void_p(FpFs.ctypes.data))
+        self.pathintegral_lib.path_integral(self.atmosphere.int_wngrid,
+                                             self.atmosphere.int_nwngrid,
+                                             self.atmosphere.nlayers,
+                                             self.atmosphere.nactivegases,
+                                             self.atmosphere.sigma_array_flat,
+                                             self.data.sigma_dict['t'],
+                                             len(self.data.sigma_dict['t']),
+                                             self.atmosphere.density_profile,
+                                             self.atmosphere.altitude_profile,
+                                             self.atmosphere.active_mixratio_profile.flatten(),
+                                             self.atmosphere.temperature_profile,
+                                             self.atmosphere.planet_radius,
+                                             self.params.star_radius,
+                                             self.atmosphere.data.star_sed,
+                                             C.c_void_p(FpFs.ctypes.data))
 
         out = np.zeros((len(FpFs)))
         out[:] = FpFs
