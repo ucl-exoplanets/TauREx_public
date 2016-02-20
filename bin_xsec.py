@@ -160,32 +160,39 @@ if options.linear_binning:
 for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
         for fname in glob.glob(os.path.join(options.source_files, '*.%s' % options.extension)):
+
             xsec_t, xsec_p, xsec_r = read_filename(fname, options.version)
             if xsec_t == temperature_val and xsec_p == pressure_val:
-                print 'Reading %i/%i %s' % (pressure_idx+temperature_idx,
-                                            len(pressures)+len(temperatures),
-                                            fname)
-                sigma_in = np.loadtxt(fname)[:,1]
-
-                if options.binning_method == 'geometric_average':
-                    # geometric average (i.e. log-average)
-                    logval = np.log(sigma_in)
-                    values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
-                    values = np.exp(values)
-                    values[np.isnan(values)] = 0
-                elif options.binning_method == 'algebraic_average':
-                    # algebraic average
-                    values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
-                    values[np.isnan(values)] = 0
 
                 filename = os.path.join(options.output, 'binned_P%.2e_T%i_%s_%.2f.xsec' % (pressure_val,
                                                                                            temperature_val,
                                                                                            options.molecule_name,
                                                                                            float(options.linear_binning)))
-                out = np.zeros((len(values), 2))
-                out[:,0] = wngrid
-                out[:,1] = values
-                np.savetxt(filename, out)
+                if os.path.isfile(filename):
+                    print 'Skip file %i/%i: %s' % (pressure_idx*temperature_idx,
+                                                  len(pressures)*len(temperatures),
+                                                  fname)
+                else:
+                    print 'Bin file %i/%i: %s' % (pressure_idx*temperature_idx,
+                                                  len(pressures)*len(temperatures),
+                                                  fname)
+                    sigma_in = np.loadtxt(fname)[:,1]
+
+                    if options.binning_method == 'geometric_average':
+                        # geometric average (i.e. log-average)
+                        logval = np.log(sigma_in)
+                        values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
+                        values = np.exp(values)
+                        values[np.isnan(values)] = 0
+                    elif options.binning_method == 'algebraic_average':
+                        # algebraic average
+                        values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
+                        values[np.isnan(values)] = 0
+
+                    out = np.zeros((len(values), 2))
+                    out[:,0] = wngrid
+                    out[:,1] = values
+                    np.savetxt(filename, out)
 
 
 
