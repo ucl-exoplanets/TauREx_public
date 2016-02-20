@@ -560,10 +560,11 @@ class fitting(base):
         res = np.nansum(res*res)
         if res == 0:
             res = np.nan
+#         print res
         #
         # #
         # ion()
-        # figure(1)
+#         figure(1)
         # clf()
         # plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
         # gca().invert_yaxis()
@@ -577,10 +578,11 @@ class fitting(base):
         # # #
         # ion()
         # clf()
-        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-        # plot(self.data.obs_spectrum[:,0], model_binned)
-        # xlabel('Wavelength (micron)')
-        # ylabel('Transit depth')
+#         errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+#         plot(self.data.obs_spectrum[:,0], model_binned)
+#         xlabel('Wavelength (micron)')
+#         ylabel('Transit depth')
+#         show()
         # xscale('log')
         # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
         # ion()
@@ -618,6 +620,7 @@ class fitting(base):
 
         logging.info('Saving the downhill minimization results')
 
+        self.DOWN_fit_total = fit_output
         self.DOWN_fit_output = fit_output['x']
         self.DOWN = True
 
