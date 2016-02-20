@@ -106,6 +106,8 @@ temperatures = []
 pressures = []
 wngrid = []
 
+
+
 # identify all pressures and temperatures and check for wavenumber grid constitency
 for fname in glob.glob(os.path.join(options.source_files, '*.%s' % options.extension)):
 
@@ -136,9 +138,14 @@ print 'Wavenumber range is %f - %f' % (np.min(wngrid), np.max(wngrid))
 
 comments.append('The resolution of the original Exomol cross sections is %f' % resolution)
 
+def round_base(x, base=.05):
+  return base * round(float(x)/base)
+
 if options.linear_binning:
     # create the output wavenumber grid
-    bin_wngrid = np.arange(np.min(wngrid), np.max(wngrid), float(options.linear_binning))
+    bin_wngrid = np.arange(round_base(np.min(wngrid), float(options.linear_binning)),
+                           round_base(np.max(wngrid), float(options.linear_binning)),
+                           float(options.linear_binning))
     bingrid_idx = np.digitize(wngrid, bin_wngrid) #getting the specgrid indexes for bins
 
     wngrid = bin_wngrid
