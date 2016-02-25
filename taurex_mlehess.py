@@ -1,0 +1,403 @@
+#! /usr/bin/python 
+
+
+###########################################################
+# taurex_mlehess - running L-BFGS downhill with TauRex on
+# previously best-fit parameters (from multinest) to calculate
+# the hessian of the maximum likelihood 
+# 
+#
+# Requirements: -python libraries: pylab, numpy, ConfigParser 
+#             [these are the minimum requirements]
+#
+#
+# Inputs: minimal or normal parameter file
+#
+# Outputs: spectrum.dat
+#
+# To Run: 
+# ./taurex_mlehess.py [-p exonest.par] 
+#
+# Modification History:
+#   - v1.0 : first definition, Ingo Waldmann, Feb 2016      
+#       
+###########################################################
+
+
+#loading libraries     
+import sys, os, optparse, time, scipy
+import numpy as np #nummerical array library 
+import pylab as pl#science and plotting library for python
+from ConfigParser import SafeConfigParser
+import cPickle as pkl
+import numdifftools as nd
+from mpltools import special
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+from algopy.utils import piv2det
+
+#loading classes
+sys.path.append('./classes')
+sys.path.append('./library')
+
+import parameters,emission,transmission,fitting,atmosphere,data,preselector
+from parameters import *
+from emission import *
+from transmission import *
+from fitting import *
+from atmosphere import *
+from data import *
+
+
+#loading libraries
+import library_emission
+import library_general
+from library_emission import *
+from library_general import *
+
+
+class calculate_stats(object):
+    '''
+    Class that will in the future calculate statistical quantities such as the 
+    Hessian and Fisher information matrix of the Maximum Likelihood function 
+    It may also contain some trace analysis tools (e.g. eigenvectors etc)
+    '''
+
+    def __init__(self,options, params=None):
+        
+        self.options = options
+        if params is None:
+            #initialising parameters object
+            self.params = parameters(options.param_filename)
+        else:
+            self.params = params
+        self.dir = self.options.dir
+        self.params.gen_manual_waverange = False
+        self.params.nest_run = False
+        self.params.mcmc_run = False
+        self.params.downhill_run = True
+
+        #setting up output storage 
+        self.stats = {}
+        
+        #loading data from TauREx NEST output 
+        self.load_traces_likelihood('NEST_tracedata.txt', 'NEST_likelihood.txt', 'NEST_out.db')
+        
+        #loading parameter list 
+        self.parameters = np.loadtxt(os.path.join(self.dir,'parameters.txt'),dtype='str')
+        self.stats['parameters'] = self.parameters
+        
+        # initialising data object
+        self.dataob = data(self.params)
+
+        # initialising atmosphere object
+        self.atmosphereob = atmosphere(self.dataob)
+
+        # set forward model
+        if self.params.gen_type == 'transmission':
+            self.fmob = transmission(self.atmosphereob)
+        elif self.params.gen_type == 'emission':
+            self.fmob = emission(self.atmosphereob)
+        
+        #initialising fitting object 
+        self.fitting = fitting(self.fmob)
+        
+    def load_traces_likelihood(self,trace_fname,like_fname,nest_db_fname):
+        '''
+        loading following files from TauREx output: 
+          NEST_tracedata.txt
+          NEST_likelihood.txt
+          NEST_out.db
+        '''
+        
+        self.NEST_trace = np.loadtxt(self.dir+trace_fname)
+        self.NEST_like  = np.loadtxt(self.dir+like_fname)
+        with open(self.dir+nest_db_fname,'r') as file:
+            self.NEST_db = pkl.load(file)
+            
+        #getting maximum likelihood values 
+        self.mle_values = self.NEST_trace[-1,:]
+        
+        print np.shape(self.NEST_trace)
+        
+        #calculating mean and error from traces 
+        trace_std = []; trace_mean = []
+        for i in range(len(self.NEST_trace[0,:])):
+            tmp  = self.weighted_avg_and_std(self.NEST_trace[:,i], self.NEST_like[:,0])
+            trace_mean.append(tmp[0])
+            trace_std.append(tmp[1])
+
+        
+        #storing mle values 
+        self.stats['mle_values'] = self.mle_values
+        self.stats['trace_mean'] = trace_mean
+        self.stats['mle_std']    = trace_std
+        
+    
+    
+    def compute_hessian_mle(self):
+        '''
+        wrapper that takes the MLE from the multinest trace 
+        and starts the taurex native L-BFGS-B minimisation to 
+        compute the Hessian matrix around MLE. 
+        Returns: 
+            Jacobian,
+            Hessian, inverse Hessian, 
+            Fisher information matrix (negative Hessian),
+            Asymptotic Standard Error on parameters (CRLB)
+        '''
+        
+        #setting starting parameters to MLE 
+        self.fitting.fit_params = self.mle_values
+        
+        data = self.fitting.data.obs_spectrum[:,1] # observed data
+        datastd = self.fitting.data.obs_spectrum[:,2] # data error
+        
+        def loglike(fit_params):
+            # log-likelihood function called by multinest
+            chi_t = self.fitting.chisq_trans(fit_params, data, datastd)
+            loglike = (-1.)*np.sum(np.log(datastd*np.sqrt(2*np.pi))) - 0.5 * chi_t
+            return loglike
+        
+        
+        print 'Fine-tuning MLE'
+        bounds =[]
+        for bound in self.mle_values:
+            tmp = bound*0.2
+            bounds.append((bound-tmp,bound+tmp))
+            
+        MLE_fine = scipy.optimize.minimize(self.fitting.chisq_trans, 
+                                           x0=self.mle_values,  
+                                           method='TNC',
+                                           args=(data,datastd),
+                                           bounds=bounds)
+
+        self.mle_values = MLE_fine['x']
+        self.stats['mle_values'] = self.mle_values
+        
+        
+        print 'Calculating Jacobian'
+        fd = nd.Jacobian(loglike,step=1e-4)
+        jacob = fd(self.mle_values)
+        
+        print 'Calculating Hessian'
+        fdd = nd.Hessian(loglike,step=1e-4)
+        hess = fdd(self.mle_values)
+        
+        hess_inv = np.linalg.inv(hess) #inverse hessian
+        fisher = -1.0 * hess #the observed fisher information matrix is the negative hessian at MLE     
+        
+        #calculating assymptotic standard error of data 
+        stderr_asymp = np.sqrt(np.diag(hess_inv))
+          
+        #store results
+        self.stats['jacobian']     = jacob
+        self.stats['hessian']      = hess
+        self.stats['hessian_inv']  = hess_inv
+        self.stats['cov_asymp']    = -1.0*hess_inv
+        self.stats['stderr_asymp'] = stderr_asymp 
+        self.stats['fisher']       = fisher
+        
+#         return MLE_fit['hess:'], MLE_fit['hess_inv']
+        
+        
+    def compute_trace_eigenvectors(self):
+        '''
+        - computes the covariance from NEST_tracedata for parameters
+          - computes covariance of total sample space
+          - computes covariance of highest 10% likelihood space (i.e. the best fits)
+        - does eigenvalue decomposition to compute eigenvector/value sets for covariances
+        Return: 
+            Covariance matrix, Covariance matrix of top 10% likelihood results 
+            Eigenvalue/Eigenvector sets
+            Rotational angles of eigenvectors @todo define basis 
+        '''
+        #subtracting MLE from traces
+        trace_norm = self.NEST_trace - self.mle_values
+#         trace_norm = trace_norm[:,:3]
+        
+        #getting index for top 10% 
+        top_idx = int(len(trace_norm[:,0])*0.02)
+        
+        #getting covariance of centred traces
+        postcov = np.cov(np.transpose(trace_norm))
+
+#         print 'tracenorm ', np.shape(trace_norm)
+        print 'Calculating covariance matrix'
+        postcov_small = np.cov(np.transpose(trace_norm[-top_idx:,:])) 
+
+        #LAPAC decomposition 
+        print 'Calculating eigenvalue/eigenvector pairs'
+        [eigval_small, eigvec_small] = np.linalg.eig(postcov_small)
+        [eigval,eigvec] = np.linalg.eig(postcov)
+   
+        #need to figure out if angles should be w.r.t. each other 
+        #or w.r.t. a basis vector
+#         postangle = np.arctan2(eigvec[1,:],eigvec[0,:])
+        
+        #storing results
+        self.stats['trace_norm']     = trace_norm
+        self.stats['cov']            = postcov
+        self.stats['cov_small']      = postcov_small
+        self.stats['eigenval']       = eigval
+        self.stats['eigenvec']       = eigvec
+        self.stats['eigenval_small'] = eigval_small
+        self.stats['eigenvec_small'] = eigvec_small
+            
+
+        
+    #setting up storage object 
+#     def setup_storage(self):
+#         '''
+#         small wrapper setting up storage, now just returns 
+#         dictionary but may be more advanced later
+#         '''
+#         self.stats = {}  
+    
+#     def store_stats(self,type,value):
+#         #small wrapper storing data in object but may be more sophisticated later         
+#         
+#         self.stats[type] = value
+    def weighted_avg_and_std(self,values, weights):
+        '''
+        Function calculating weighted averages and standard-deviation
+        Same function in taurex/library_general
+        '''
+        average = np.average(values, weights=weights)
+        variance = np.average((values-average)**2, weights=weights)  # Fast and numerically precise
+        return (average, np.sqrt(variance))
+
+        
+    def get_stats(self,type):
+        #wrapper to storage
+        return self.stats[type]
+    
+    def dump(self,filename):
+        '''
+        wrapper dumping self.stats dict into pickle
+        '''
+        pkl.dump(self.stats,open(filename+'.db','wb'))
+        
+    
+    
+        
+        
+        
+#gets called when running from command line 
+if __name__ == '__main__':
+    
+    parser = optparse.OptionParser()
+    parser.add_option('-p', '--parfile',
+                      dest="param_filename",
+                      default="Parfiles/default.par",
+    )
+    parser.add_option('-d', '--dir',
+                      dest="dir",
+                      default="./",
+    )
+    parser.add_option('-o', '--outfname',
+                      dest="outfname",
+                      default="statistics",
+    )
+
+    options, remainder = parser.parse_args()
+    
+    
+    #loading object
+    statsob = calculate_stats(options)
+    
+    #compute hessian 
+#     statsob.compute_hessian_mle()
+
+    statsob.compute_trace_eigenvectors()
+    print statsob.stats.keys()
+    
+    statsob.dump(os.path.join(options.dir,options.outfname))
+
+
+#Some plotting stuff 
+############################
+#     pl.figure(1)
+# #         pl.imshow(postcov_small,interpolation='nearest')
+# #         special.hinton(postcov_small,max_value=3.0)
+#     special.hinton(statsob.stats['cov_small'])
+#     pl.gca().invert_yaxis()
+#           
+#     pl.figure(2)
+# #         special.hinton(postcov,max_value=3.0)
+#     special.hinton(statsob.stats['cov'])
+#     pl.gca().invert_yaxis()
+#       
+#     pl.figure(4)
+#     special.hinton(statsob.stats['hessian'])
+#     pl.gca().invert_yaxis()
+#           
+#     pl.figure(5)
+#     special.hinton(statsob.stats['cov_asymp'])
+#     pl.gca().invert_yaxis()    
+ 
+#     eigenval = statsob.stats['eigenval']
+#     eigenvec = statsob.stats['eigenvec']
+#     
+#     cov = statsob.stats['cov_small']
+#     
+# #     print cov
+#     print cov[:3,:3]
+#     
+#     [eigval2,eigvec2] = np.linalg.eig(cov[:3,:3])
+#     
+# #     print np.shape(eigenval)
+# #     print np.shape(eigenvec)
+#     
+# #     print eigenval
+#     
+#     
+# #     print eigvec2
+#     pivot = np.zeros((3,3))
+# 
+#     
+#     
+#     
+# #     eigvec3 = eigval2*eigvec2
+# #     print (eigenval[:,3]*eigenvec)[:3,:3]
+#     
+# #     
+# #     soa =np.array( [ [0,0,3,2], [0,0,1,1],[0,0,9,9]]) 
+# #     X,Y,U,V = zip(*soa)
+# 
+#     print eigval2
+#     eigvec2[0,:] *= eigval2[0]
+#     eigvec2[1,:] *= eigval2[1]
+#     eigvec2[2,:] *= eigval2[2]
+#     test = np.concatenate((pivot,eigvec2),axis=1)
+#     X,Y,Z,U,V,W = zip(*test)
+#     
+#     print U 
+#     print V 
+#     print W
+#     
+# #     pl.figure()
+# #     ax = plt.gca()
+# #     ax.quiver(X,Y,U,V,angles='xy',scale_units='xy',scale=1)
+# #     ax.set_xlim([-0.05,0.05])
+# #     ax.set_xlim([-0.05,0.05])
+# 
+# 
+# #     print X 
+# #     print Y
+# #     print Z
+# #     print U
+# #     print V 
+# #     print W
+# #     
+# #     
+#     fig = plt.figure()
+#     ax = fig.gca(projection='3d')
+#     ax.quiver(X,Y,Z,U,V,W, pivot='tail',color='red')
+# #     ax.quiver(pivot,pivot,pivot,eigvec2[0,:],eigvec2[1,:],eigvec2[2,:], pivot='tail')
+#     ax.set_xlim([-1,1])
+#     ax.set_ylim([-1,1])
+#     ax.set_zlim([-1,1])
+# #  
+# #      
+#     pl.show()
