@@ -156,7 +156,7 @@ if options.linear_binning:
     elif options.binning_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
 
-sigma_array = np.zeros((len(pressures), len(temperatures), len(bin_wngrid)))
+sigma_array = np.zeros((len(pressures), len(temperatures), len(wngrid)))
 
 
 for pressure_idx, pressure_val in enumerate(pressures):

@@ -153,7 +153,7 @@ for pressure_idx, pressure_val in enumerate(sigma_in['p']):
     for temperature_idx, temperature_val in enumerate(temperatures):
         print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
         for wno_idx, wno_val in enumerate(full_wngrid):
-            sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx]), left=0, right=0))
+            sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx])))
             if np.isnan(sigma_array_tmp[pressure_idx, temperature_idx, wno_idx]):
                 sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = 0
 
@@ -164,7 +164,7 @@ for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
         print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
         for wno_idx, wno_val in enumerate(full_wngrid):
-            sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx], left=0, right=0)
+            sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
 
 # lastly, bin if needed.
 # For now, only linear binning available. Ideally implement optimal binning for input resolution.

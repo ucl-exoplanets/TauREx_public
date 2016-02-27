@@ -137,7 +137,7 @@ class atmosphere(object):
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
         logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
-
+ 
         # selecting TP profile to use
         if tp_profile_type is None:
             self.TP_type = self.params.atm_tp_type
@@ -215,7 +215,7 @@ class atmosphere(object):
             mu = np.zeros(self.nlayers)
             for mol_idx, mol_val in enumerate(self.data.ven_molecules):
                 ven_molprof_mixratio = np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,mol_idx][::-1])[::-1]
-                mu[:] += ven_molprof_mixratio*AMU
+                mu[:] += ven_molprof_mixratio* self.data.ven_molweight[mol_idx]*AMU
             mu = np.asarray(mu, order='C')
         else:
 
