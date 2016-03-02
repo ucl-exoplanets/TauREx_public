@@ -178,11 +178,11 @@ class fitting(base):
                             self.fit_params.append(self.params.atm_active_gases_mixratios[idx])
                             self.fit_bounds.append((self.params.fit_X_active_bounds[0],
                                                     self.params.fit_X_active_bounds[1]))
-                        self.fit_params_names.append(gasname)
-                        self.fit_params_texlabels.append(tex_gas_label(gasname))
+                            self.fit_params_names.append(gasname)
+                            self.fit_params_texlabels.append(tex_gas_label(gasname))
 
                         count_X += 1
-
+                
                 # inactive gases (see params.fit_fit_inactive [usually set to False !])
                 if self.params.fit_fit_inactive:
                     for idx, gasname in enumerate(self.params.atm_active_gases):
