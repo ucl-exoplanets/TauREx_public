@@ -190,7 +190,7 @@ def get_molecular_weight(gasname):
     elif gasname == 'CH4':
         mu = 16.
     elif gasname == 'CO':
-        mu = 28.
+        mu = 28.01
     elif gasname == 'NH3':
         mu = 17.
     elif gasname == 'H2O':
