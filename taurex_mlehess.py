@@ -56,21 +56,32 @@ from library_emission import *
 from library_general import *
 
 
-class calculate_stats(object):
+class statistics(object):
     '''
     Class that will in the future calculate statistical quantities such as the 
     Hessian and Fisher information matrix of the Maximum Likelihood function 
     It may also contain some trace analysis tools (e.g. eigenvectors etc)
     '''
 
-    def __init__(self,options, params=None):
+    def __init__(self,options=None, params=None):
         
         self.options = options
-        if params is None:
-            #initialising parameters object
-            self.params = parameters(options.param_filename)
+        if options is None and params is None:
+            self.params = None
         else:
-            self.params = params
+            if params is None:
+                #initialising parameters object
+                self.params = parameters(options.param_filename)
+            else:
+                self.params = params
+        
+        
+    def init_stats(self):
+        '''
+        manually initialises the TauREx output analysis
+        when not loaded distance functinos are still available
+        ''' 
+        
         self.dir = self.options.dir
         self.params.gen_manual_waverange = False
         self.params.nest_run = False
@@ -156,7 +167,7 @@ class calculate_stats(object):
         def loglike(fit_params):
             # log-likelihood function called by multinest
             chi_t = self.fitting.chisq_trans(fit_params, data, datastd)
-            loglike = (-1.)*np.sum(np.log(datastd*np.sqrt(2*np.pi))) - 0.5 * chi_t
+            loglike = np.sum(np.log(datastd*np.sqrt(2*np.pi))) - 0.5 * chi_t
             return loglike
         
         
@@ -278,6 +289,259 @@ class calculate_stats(object):
         '''
         pkl.dump(self.stats,open(filename+'.db','wb'))
         
+    #DISTANCE FUNCTIONS
+    def distance_kullback(self,A, B):
+        """Kullback leibler divergence between two covariance matrices A and B.
+    
+        :param A: First covariance matrix
+        :param B: Second covariance matrix
+        :returns: Kullback leibler divergence between A and B
+    
+        """
+        dim = A.shape[0]
+        logdet = np.log(np.linalg.det(B) / np.linalg.det(A))
+        kl = np.trace(np.dot(np.linalg.inv(B), A)) - dim + logdet
+        return 0.5 * kl
+    
+    
+    def distance_kullback_right(self,A, B):
+        """wrapper for right kullblack leibler div."""
+        return self.distance_kullback(B, A)
+    
+    
+    def distance_kullback_sym(self,A, B):
+        """Symetrized kullback leibler divergence."""
+        return self.distance_kullback(A, B) + self.distance_kullback_right(A, B)
+    
+    
+    def distance_euclid(self,A, B):
+        """Euclidean distance between two covariance matrices A and B.
+    
+        The Euclidean distance is defined by the Froebenius norm between the two
+        matrices.
+    
+        .. math::
+                d = \Vert \mathbf{A} - \mathbf{B} \Vert_F
+    
+        :param A: First covariance matrix
+        :param B: Second covariance matrix
+        :returns: Eclidean distance between A and B
+    
+        """
+        return np.linalg.norm(A - B, ord='fro')
+    
+    
+    def distance_logeuclid(self,A, B):
+        """Log Euclidean distance between two covariance matrices A and B.
+    
+        .. math::
+                d = \Vert \log(\mathbf{A}) - \log(\mathbf{B}) \Vert_F
+    
+        :param A: First covariance matrix
+        :param B: Second covariance matrix
+        :returns: Log-Eclidean distance between A and B
+    
+        """
+        return self.distance_euclid(self.logm(A), self.logm(B))
+    
+    
+    def distance_riemann(self,A, B):
+        """Riemannian distance between two covariance matrices A and B.
+    
+        .. math::
+                d = {\left( \sum_i \log(\lambda_i)^2 \\right)}^{-1/2}
+    
+        where :math:`\lambda_i` are the joint eigenvalues of A and B
+    
+        :param A: First covariance matrix
+        :param B: Second covariance matrix
+        :returns: Riemannian distance between A and B
+    
+        """
+        return np.sqrt((np.log(scipy.linalg.eigvalsh(A, B))**2).sum())
+        
+    #GEODESIC FUNCTIONS
+    def geodesic_riemann(self,A, B, alpha=0.5):
+        """Return the matrix at the position alpha on the riemannian geodesic between A and B  :
+    
+        .. math::
+                \mathbf{C} = \mathbf{A}^{1/2} \left( \mathbf{A}^{-1/2} \mathbf{B} \mathbf{A}^{-1/2} \\right)^\\alpha \mathbf{A}^{1/2}
+    
+        C is equal to A if alpha = 0 and B if alpha = 1
+    
+        :param A: the first coavriance matrix
+        :param B: the second coavriance matrix
+        :param alpha: the position on the geodesic
+        :returns: the covariance matrix
+    
+        """
+        sA = self.sqrtm(A)
+        isA = self.invsqrtm(A)
+        C = isA * B * isA
+        D = self.powm(C, alpha)
+        E = np.matrix(sA * D * sA)
+        return E
+        
+    #TANGENT SPACE PROJECTIONS
+    def tangent_space(self,covmats, Cref):
+        """Project a set of covariance matrices in the tangent space according to the given reference point Cref
+    
+        :param covmats: Covariance matrices set, Ntrials X Nchannels X Nchannels
+        :param Cref: The reference covariance matrix
+        :returns: the Tangent space , a matrix of Ntrials X (Nchannels*(Nchannels+1)/2)
+    
+        """
+        Nt, Ne, Ne = covmats.shape
+        Cm12 = self.invsqrtm(Cref)
+        idx = np.triu_indices_from(Cref)
+        T = np.empty((Nt, Ne * (Ne + 1) / 2))
+        coeffs = (
+            np.sqrt(2) *
+            np.triu(
+                np.ones(
+                    (Ne,
+                     Ne)),
+                1) +
+            np.eye(Ne))[idx]
+        for index in range(Nt):
+            tmp = np.dot(np.dot(Cm12, covmats[index, :, :]), Cm12)
+            tmp = self.logm(tmp)
+            T[index, :] = np.multiply(coeffs, tmp[idx])
+        return T
+    
+    
+    def untangent_space(self,T, Cref):
+        """Project a set of Tangent space vectors in the manifold according to the given reference point Cref
+    
+        :param T: the Tangent space , a matrix of Ntrials X (Nchannels*(Nchannels+1)/2)
+        :param Cref: The reference covariance matrix
+        :returns: A set of Covariance matrix, Ntrials X Nchannels X Nchannels
+    
+        """
+        Nt, Nd = T.shape
+        Ne = int((np.sqrt(1 + 8 * Nd) - 1) / 2)
+        C12 = self.sqrtm(Cref)
+    
+        idx = np.triu_indices_from(Cref)
+        covmats = np.empty((Nt, Ne, Ne))
+        covmats[:, idx[0], idx[1]] = T
+        for i in range(Nt):
+            covmats[i] = np.diag(np.diag(covmats[i])) + np.triu(
+                covmats[i], 1) / np.sqrt(2) + np.triu(covmats[i], 1).T / np.sqrt(2)
+            covmats[i] = self.expm(covmats[i])
+            covmats[i] = np.dot(np.dot(C12, covmats[i]), C12)
+    
+        return covmats
+        
+    #BASIC MATRIX MATH FUNCTIONS STOLEN FROM PyRIEMANN package 
+    def sqrtm(self,Ci):
+        """Return the matrix square root of a covariance matrix defined by :
+    
+        .. math::
+                \mathbf{C} = \mathbf{V} \left( \mathbf{\Lambda} \\right)^{1/2} \mathbf{V}^T
+    
+        where :math:`\mathbf{\Lambda}` is the diagonal matrix of eigenvalues
+        and :math:`\mathbf{V}` the eigenvectors of :math:`\mathbf{Ci}`
+    
+        :param Ci: the coavriance matrix
+        :returns: the matrix square root
+    
+        """
+        D, V = scipy.linalg.eigh(Ci)
+        D = np.matrix(np.diag(np.sqrt(D)))
+        V = np.matrix(V)
+        Out = np.matrix(V * D * V.T)
+        return Out
+    
+    
+    def logm(self,Ci):
+        """Return the matrix logarithm of a covariance matrix defined by :
+    
+        .. math::
+                \mathbf{C} = \mathbf{V} \log{(\mathbf{\Lambda})} \mathbf{V}^T
+    
+        where :math:`\mathbf{\Lambda}` is the diagonal matrix of eigenvalues
+        and :math:`\mathbf{V}` the eigenvectors of :math:`\mathbf{Ci}`
+    
+        :param Ci: the coavriance matrix
+        :returns: the matrix logarithm
+    
+        """
+        D, V = scipy.linalg.eigh(Ci)
+        Out = np.dot(np.multiply(V, np.log(D)), V.T)
+        return Out
+    
+    
+    def expm(self,Ci):
+        """Return the matrix exponential of a covariance matrix defined by :
+    
+        .. math::
+                \mathbf{C} = \mathbf{V} \exp{(\mathbf{\Lambda})} \mathbf{V}^T
+    
+        where :math:`\mathbf{\Lambda}` is the diagonal matrix of eigenvalues
+        and :math:`\mathbf{V}` the eigenvectors of :math:`\mathbf{Ci}`
+    
+        :param Ci: the coavriance matrix
+        :returns: the matrix exponential
+    
+        """
+        D, V = scipy.linalg.eigh(Ci)
+        D = np.matrix(np.diag(np.exp(D)))
+        V = np.matrix(V)
+        Out = np.matrix(V * D * V.T)
+        return Out
+    
+    
+    def invsqrtm(self,Ci):
+        """Return the inverse matrix square root of a covariance matrix defined by :
+    
+        .. math::
+                \mathbf{C} = \mathbf{V} \left( \mathbf{\Lambda} \\right)^{-1/2} \mathbf{V}^T
+    
+        where :math:`\mathbf{\Lambda}` is the diagonal matrix of eigenvalues
+        and :math:`\mathbf{V}` the eigenvectors of :math:`\mathbf{Ci}`
+    
+        :param Ci: the coavriance matrix
+        :returns: the inverse matrix square root
+    
+        """
+        D, V = scipy.linalg.eigh(Ci)
+        D = np.matrix(np.diag(1.0 / np.sqrt(D)))
+        V = np.matrix(V)
+        Out = np.matrix(V * D * V.T)
+        return Out
+    
+    
+    def powm(self,Ci, alpha):
+        """Return the matrix power :math:`\\alpha` of a covariance matrix defined by :
+    
+        .. math::
+                \mathbf{C} = \mathbf{V} \left( \mathbf{\Lambda} \\right)^{\\alpha} \mathbf{V}^T
+    
+        where :math:`\mathbf{\Lambda}` is the diagonal matrix of eigenvalues
+        and :math:`\mathbf{V}` the eigenvectors of :math:`\mathbf{Ci}`
+    
+        :param Ci: the coavriance matrix
+        :param alpha: the power to apply
+        :returns: the matrix power
+    
+        """
+        D, V = scipy.linalg.eigh(Ci)
+        D = np.matrix(np.diag(D**alpha))
+        V = np.matrix(V)
+        Out = np.matrix(V * D * V.T)
+        return Out
+    
+    #OTHER VECTOR GEOMETRY FUNCTIONS
+    def dotproduct(self,v1, v2):
+      return sum((a*b) for a, b in zip(v1, v2))
+    
+    def length(self,v):
+      return np.sqrt(self.dotproduct(v, v))
+    
+    def angle(self,v1, v2):
+      return np.arccos(self.dotproduct(v1, v2) / (self.length(v1) * self.length(v2)))
+
     
     
         
@@ -304,10 +568,15 @@ if __name__ == '__main__':
     
     
     #loading object
-    statsob = calculate_stats(options)
+    statsob = statistics(options=options)
+    statsob.init_stats()
     
     #compute hessian 
-#     statsob.compute_hessian_mle()
+    statsob.compute_hessian_mle()
+    
+#     print statsob.stats['hessian']
+#     print '-----------'
+#     print statsob.stats['fisher']
 
     statsob.compute_trace_eigenvectors()
     print statsob.stats.keys()
