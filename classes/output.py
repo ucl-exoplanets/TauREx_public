@@ -394,36 +394,36 @@ class output(base):
             molprofiles_active = np.zeros((nprofiles, self.atmosphere.nactivegases, self.atmosphere.nlayers))
             molprofiles_inactive = np.zeros((nprofiles, self.atmosphere.ninactivegases, self.atmosphere.nlayers))
             weights = np.zeros((nprofiles))
+
             for i in range(nprofiles):
                 rand_idx = random.randint(0, len(sol_tracedata))
                 weights[i] = sol_weights[rand_idx]
                 fit_params_iter = sol_tracedata[rand_idx]
                 self.fitting.update_atmospheric_parameters(fit_params_iter)
                 tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
-                for j in range(self.atmosphere.nactivegases):
-                    molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[i,:]
-                for j in range(self.atmosphere.ninactivegases):
-                    print 'this is it', self.atmosphere.ninactivegases, i, j
-                    molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[i,:]
+                # for j in range(self.atmosphere.nactivegases):
+                #     molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[i,:]
+                # for j in range(self.atmosphere.ninactivegases):
+                #     molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[i,:]
 
             std_tpprofiles = np.zeros((self.atmosphere.nlayers))
-            std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
-            std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+            #std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
+            #std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
             for i in xrange(self.atmosphere.nlayers):
 
                 average = np.average(tpprofiles[:,i], weights=weights)
                 variance = np.average((tpprofiles[:,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
                 std_tpprofiles[i] = np.sqrt(variance)
 
-                for j in range(self.atmosphere.nactivegases):
-                    average = np.average(molprofiles_active[:,j,i], weights=weights)
-                    variance = np.average((molprofiles_active[:,j,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
-                    std_molprofiles_active[i] = np.sqrt(variance)
-                    fitting_out[idx]['std_molprofiles_active'][j,i] = np.sqrt(variance)
-                for j in range(self.atmosphere.ninactivegases):
-                    average = np.average(molprofiles_inactive[:,j,i], weights=weights)
-                    variance = np.average((molprofiles_inactive[:,j,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
-                    fitting_out[idx]['std_molprofiles_inactive'][j,i] = np.sqrt(variance)
+                # for j in range(self.atmosphere.nactivegases):
+                #     average = np.average(molprofiles_active[:,j,i], weights=weights)
+                #     variance = np.average((molprofiles_active[:,j,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                #     std_molprofiles_active[i] = np.sqrt(variance)
+                #     fitting_out[idx]['std_molprofiles_active'][j,i] = np.sqrt(variance)
+                # for j in range(self.atmosphere.ninactivegases):
+                #     average = np.average(molprofiles_inactive[:,j,i], weights=weights)
+                #     variance = np.average((molprofiles_inactive[:,j,i]-average)**2, weights=weights, axis=0)  # Fast and numerically precise
+                #     fitting_out[idx]['std_molprofiles_inactive'][j,i] = np.sqrt(variance)
 
             if self.params.atm_tp_type == 'isothermal':
                 fitting_out[idx]['tp_profile'][:,2] = solution['fit_params']['T']['std']
