@@ -56,6 +56,7 @@ c.read_dict()
 for IDs in c.IDs:
     scriptname = c.generate_script(IDs)
     os.system('qsub {}'.format(scriptname))  #script submit command for cobweb/legion
+#     time.sleep(5)
 
 #   the equivalent if to be run on pingu
 #     os.system('mpirun -np 12 python taurex.py -p Parfiles/taurex_emission_wasp76.par -c run_taurex.dict -i '+str(IDs))

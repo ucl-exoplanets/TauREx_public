@@ -41,7 +41,7 @@ from cluster import cluster
 # alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
 # alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
-datalist = glob.glob('Input/observations/riemann_hd209/*')
+datalist = glob.glob('Input/observations/riemann_hd209_wfc3/*')
 
 # print datalist
 
@@ -49,20 +49,33 @@ with open('datalist.txt','wb') as ofile:
     for name in datalist:
         ofile.write(string.split(name,'/')[-1]+'\n')
 
-# np.savetxt('datalist.txt',datalist2)
-
 #defining number of iteration per parameter in this case 
 RNUM = len(datalist)
-
 
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
-GENERAL['CPUS']       = 6
-GENERAL['WALLTIME']   = '10:00:00'
-GENERAL['MEMORY']     = 50
-GENERAL['PARFILE']    = 'Parfiles/riemann_largespec.par'
-GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex'
+GENERAL['CPUS']       = 12
+GENERAL['WALLTIME']   = '5:00:00'
+GENERAL['MEMORY']     = 5
+GENERAL['PARFILE']    = 'Parfiles/riemann_hd209_wfc3.par'
+GENERAL['CLUSTER']    = 'legion'
+GENERAL['USERNAME']   = 'ucapipw'
+GENERAL['DISKMEM']    = 10
+
+if GENERAL['CLUSTER'] is 'legion':
+    #legion directories (all must be absolute paths)
+    #legion does not require a scratch path, handled by $TMPDIR variable
+    GENERAL['DATA_DIR']   = '/home/ucapipw/Scratch/taurex'
+    GENERAL['OUTPUT_DIR'] = '/home/ucapipw/Scratch/riemann_output'
+
+elif GENERAL['CLUSTER'] is 'cobweb':
+    #cobweb directories (all must be absolute paths)
+    GENERAL['DATA_DIR']   = '/share/data/ingo/repos/taurex_cluster'
+    GENERAL['SCRATCH_DIR']= '/scratch/ingo/run'
+    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/riemann_hd209'
+    
+
 
 #initialising dictionary
 DICT = {}
@@ -72,7 +85,7 @@ ID = 0
 for i in range(RNUM): #this may be changed with a more informative ID... e.g. date
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
-    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']+'/'+str(ID)
+    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']
     DICT[ID]['spectrum_file'] = datalist[i]  #setting parameter for run
     ID += 1
 

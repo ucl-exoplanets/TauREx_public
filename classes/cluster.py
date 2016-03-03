@@ -61,18 +61,14 @@ class cluster(object):
             self.DATADIR  = options.datadir
         
     
-    def generate_script(self, ID_number,DICT=None,DICTFILENAME = None, DATADIR=None):
+    def generate_script(self, ID_number,DICT=None,DICTFILENAME = None):
         '''
         function generating the submit script. This can be improved (I guess) 
         but works for now.
         '''
-        SCRATCHDIR = '/scratch/ingo/run/{}'.format(ID_number)
-        if DATADIR is None:
-            DATADIR    = self.DATADIR
-        if DATADIR[-1] is '/':
-            DATADIR = DATADIR[:-1]
+  
         if DICTFILENAME is None:
-            DICFILE = self.DICTNAME 
+            DICTFILE = self.DICTNAME 
         if DICT is None:
             DICT = self.DICT
         
@@ -83,42 +79,98 @@ class cluster(object):
         WTIME = DICT[str(ID_number)]['GENERAL']['WALLTIME']
         MEM   = DICT[str(ID_number)]['GENERAL']['MEMORY']
         PFILE = DICT[str(ID_number)]['GENERAL']['PARFILE']
-        OUTDIR= DICT[str(ID_number)]['GENERAL']['OUTPUT_DIR']
+        DISKMEM = DICT[str(ID_number)]['GENERAL']['DISKMEM']
+        CLUSTER = DICT[str(ID_number)]['GENERAL']['CLUSTER']
+        USERID  = DICT[str(ID_number)]['GENERAL']['USERNAME']
         TCPUS = int(NODES)*int(CPUS) #total number of cores used
+        
+        if CLUSTER is 'cobweb':
+            SCRATCHDIR = DICT[str(ID_number)]['GENERAL']['SCRATCH_DIR']
+        OUTDIR  = DICT[str(ID_number)]['GENERAL']['OUTPUT_DIR']
+        DATADIR = DICT[str(ID_number)]['GENERAL']['DATA_DIR']
         
 #         print 'submit_{}.sh'.format(ID_number)
 #         exit()
-        
-        scriptname = 'submit_{}.sh'.format(ID_number)
-        
+        scriptname = 'submit_{}.sh'.format(ID_number)        
+        if CLUSTER is 'cobweb':
+            self.__generate_cobweb(ID_number, scriptname, TCPUS, PFILE, DICTFILE, NODES, CPUS, WTIME, MEM, SCRATCHDIR, DATADIR, OUTDIR)
+        elif CLUSTER is 'legion':
+            self.__generate_legion(ID_number,scriptname,USERID,TCPUS,PFILE,DICTFILE,WTIME,MEM,DISKMEM,DATADIR,OUTDIR)
+    
+        return scriptname
+    
+    def __generate_cobweb(self,ID_number,scriptname,TCPUS,PFILE,DICTFILE,NODES,CPUS,WTIME,MEM,SCRATCHDIR,DATADIR,OUTDIR):
+            with open(scriptname,'wb') as h:
+                #general setup stuff for the COBWEB cluster
+                
+                h.write('#! /bin/bash'+'\n')                           #sets script shell
+                h.write('#PBS -S /bin/bash'+'\n')                      #sets runtime shell
+                h.write('#PBS -N taurex_run_{}'.format(ID_number)+'\n')#sets runtime name 
+                h.write('#PBS -q compute'+'\n')                        #sets queue: compute/test
+                h.write('#PBS -j oe'+'\n')                             #merges STDOUT with SDTERR
+                #h.write('#PBS -o ./run_log_%s.txt',(ID_number))       #writes STDOUT to specific file
+                h.write('#PBS -V'+'\n')                                #imports login-node environment & path variables
+                
+                #hardware setup
+                h.write('#PBS -l nodes={}:ppn={}'.format(NODES,CPUS)+'\n')   #number of nodes and cores per node
+                h.write('#PBS -l walltime={}'.format(WTIME)+'\n')            #total runtime
+                h.write('#PBS -l mem={}gb'.format(MEM)+'\n')                 #total memory used (max 256GB per node)
+                
+                #copy and run
+                h.write('rm -rf {0}/{1}'.format(SCRATCHDIR,ID_number)+'\n')                     #removes previous stuff if there
+                h.write('mkdir -p {0}/{1}'.format(SCRATCHDIR,ID_number)+'\n')                   #make tmp folder on scratch
+                h.write('cp -rf {0}/* {1}/{2}'.format(DATADIR,SCRATCHDIR,ID_number)+'\n')       #copying everything over to scratch
+                h.write('cd {0}/{1}'.format(SCRATCHDIR,ID_number)+'\n')                         #we are going places
+                h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
+                
+                #run command standard version
+                h.write('mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+'\n') 
+                
+                #run command version for multiple processes per node (i.e. ppn <24)
+    #             h.write('OMPI_MCA_btl=^openib OMPI_MCA_mtl=^psm mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
+    
+                #version without hostfile. works better if run on 3+ nodes 
+    #             h.write('mpirun -np {0} /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
+    
+                h.write('mkdir -p {0}/{1}'.format(OUTDIR,ID_number)+'\n')                       #make output dir
+                h.write('cp -rf {0}/{2}/Output/* {1}/{2}'.format(SCRATCHDIR,OUTDIR,ID_number)+'\n')    #copy all the stuff back
+                h.write('rm -rf {0}/{1}'.format(SCRATCHDIR,ID_number)+' \n')                    #remove scratch dir
+    
+    
+    
+    def __generate_legion(self,ID_number,scriptname,USERID,TCPUS,PFILE,DICTFILE,WTIME,MEM,DISKMEM,DATADIR,OUTDIR):
+            #general setup stuff for the LEGION cluster 
         with open(scriptname,'wb') as h:
-            #general setup stuff
-            h.write('#! /bin/bash'+'\n')                           #sets script shell
-            h.write('#PBS -S /bin/bash'+'\n')                      #sets runtime shell
-            h.write('#PBS -N taurex_run_{}'.format(ID_number)+'\n')#sets runtime name 
-            h.write('#PBS -q compute'+'\n')                        #sets queue: compute/test
-            h.write('#PBS -j oe'+'\n')                             #merges STDOUT with SDTERR
-            #h.write('#PBS -o ./run_log_%s.txt',(ID_number))       #writes STDOUT to specific file
-            h.write('#PBS -V'+'\n')                                #imports login-node environment & path variables
+            h.write('#! /bin/bash -l'+'\n')                      #sets script shell
+            h.write('#$ -S /bin/bash'+'\n')                      #sets runtime shell
+            h.write('#$ -N taurex_run_{}'.format(ID_number)+'\n')#sets runtime name 
+            h.write('#$ -V'+'\n')                                #imports login-node environment & path variables
             
             #hardware setup
-            h.write('#PBS -l nodes={}:ppn={}'.format(NODES,CPUS)+'\n')   #number of nodes and cores per node
-            h.write('#PBS -l walltime={}'.format(WTIME)+'\n')            #total runtime
-            h.write('#PBS -l mem={}gb'.format(MEM)+'\n')                 #total memory used (max 256GB per node)
+            h.write('#$ -l h_rt={}'.format(WTIME)+'\n')          #total runtime
+            h.write('#$ -l mem={}G'.format(MEM)+'\n')           #total memory used 
+            h.write('#$ -l tmpfs={}G'.format(DISKMEM)+' \n')    #total amount of disk space needed (default 10GB)   
+            h.write('#$ -pe mpi {}'.format(TCPUS)+'\n')          #total number of cpus 
             
-            #copy and run
-            h.write('rm -rf '+SCRATCHDIR+'\n')                     #removes previous stuff if there
-            h.write('mkdir -p '+SCRATCHDIR+'\n')                   #make tmp folder on scratch
-            h.write('cp -rf '+DATADIR+'/* '+SCRATCHDIR+'\n')       #copying everything over to scratch
-            h.write('cd '+SCRATCHDIR+'\n')                         #we are going places
-#             h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
-#             h.write('mpirun -np {0} -machinefile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
-            h.write('mpirun -np {0} /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
-            h.write('mkdir -p '+OUTDIR+'\n')                       #make output dir
-            h.write('cp -rf '+SCRATCHDIR+'/Output/* '+OUTDIR+'/'+'\n')    #copy all the stuff back
-            h.write('rm -rf '+SCRATCHDIR+' \n')                    #remove scratch dir
+            #setting working directory 
+            h.write('#$ -wd '+DATADIR+'\n') #setting up path to SCRATCH space, data needs to be in scratch not home 
             
-        return scriptname
+            #setting up output dir on scratch
+            outdirpath = OUTDIR+'/{0}'.format(ID_number)
+    
+            h.write('mkdir -p '+outdirpath+'\n')  #setting up output directory
+            h.write('TMPRUN=$TMPDIR/run \n')         #generating temporary directory
+        
+            h.write('cp -rf {0}/* $TMPRUN'.format(DATADIR)+'\n')  #copying everything over to temp
+            h.write('cd $TMPRUN \n')              #going to $TMPRUN
+            
+            #run main command 
+            h.write('gerun python taurex.py -p {0} -c {1} -i {2}'.format(PFILE,DICTFILE,ID_number)+'\n') 
+    
+            h.write('cp $TMPRUN/Output/* '+outdirpath+'\n')        #copying results back to scratch
+         
+            
+        
             
     def write_dict(self,DICT,DICTNAME='run_dict.dat'):
         '''
