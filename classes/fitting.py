@@ -20,7 +20,7 @@
 
 #loading libraries     
 from base import base
-import numpy, pylab, os, sys, math, pymc, warnings, threading, subprocess, gzip, pickle, shutil, logging, time
+import numpy, pylab, os, sys, math, warnings, threading, subprocess, gzip, pickle, shutil, logging, time
 from pylab import *
 from numpy import *
 import numpy as np
