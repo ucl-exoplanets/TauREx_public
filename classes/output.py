@@ -340,7 +340,7 @@ class output(base):
             fitting_out[idx]['obs_spectrum'] = self.data.obs_spectrum
 
             fit_params = [solution['fit_params'][param]['value'] for param in self.params_names]
-            fit_params_std = [solution['fit_params'][param]['std'] for param in self.params_names]
+#             fit_params_std = [solution['fit_params'][param]['std'] for param in self.params_names]
 
             self.fitting.update_atmospheric_parameters(fit_params)
 
