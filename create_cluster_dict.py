@@ -87,6 +87,7 @@ for i in range(RNUM): #this may be changed with a more informative ID... e.g. da
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
     DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']
     DICT[ID]['spectrum_file'] = datalist[i]  #setting parameter for run
+    DICT[ID]['path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID)
     ID += 1
 
 # ID = 0

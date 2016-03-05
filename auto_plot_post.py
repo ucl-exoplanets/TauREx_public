@@ -56,6 +56,7 @@ def plot_folder(folder):
         else:
             parfile = options.parfile
         os.system('python analyse_solutions_from_traces.py -p '+parfile+' -d '+folder)
+        os.system('python taurex_mlehess.py -p '+parfile+' -d '+folder)
 
 pool = mp.Pool(processes=int(N_processes))           #setting number of cores on which to run
 pool_result = pool.map(plot_folder,folder_list) #runnning the stuff

@@ -579,7 +579,7 @@ if __name__ == '__main__':
 #     print statsob.stats['fisher']
 
     statsob.compute_trace_eigenvectors()
-    print statsob.stats.keys()
+#     print statsob.stats.keys()
     
     statsob.dump(os.path.join(options.dir,options.outfname))
 
