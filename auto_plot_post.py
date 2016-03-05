@@ -16,10 +16,15 @@ parser.add_option('-n', '--nprocess',
                   dest="max_nprocesses",
                   default=1,
                   )
+parser.add_option('-p', '--parfile',
+                  dest='parfile',
+                  default=None)
 
 
 options, remainder = parser.parse_args()
 # options.path = '/Volumes/DATA_CALIMERO/ingo/taurex2_paper/revised'
+
+
 
 folder_list = glob.glob(options.path+'/*')
 N_folder = len(folder_list)
@@ -46,7 +51,10 @@ print folder_list
 def plot_folder(folder):
     if os.path.isdir(folder):
         print 'Plotting: ', folder
-        parfile = glob.glob(folder+'/*.par')[0]
+        if options.parfile is None:
+            parfile = glob.glob(folder+'/*.par')[0]
+        else:
+            parfile = options.parfile
         os.system('python analyse_solutions_from_traces.py -p '+parfile+' -d '+folder)
 
 pool = mp.Pool(processes=int(N_processes))           #setting number of cores on which to run
