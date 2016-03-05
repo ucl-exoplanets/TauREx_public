@@ -41,7 +41,7 @@ from cluster import cluster
 # alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
 # alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
-datalist = glob.glob('Input/observations/riemann_hd209_wfc3/*')
+datalist = glob.glob('Input/observations/riemann_hd209/*')
 
 # print datalist
 
@@ -55,11 +55,11 @@ RNUM = len(datalist)
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
-GENERAL['CPUS']       = 12
-GENERAL['WALLTIME']   = '5:00:00'
-GENERAL['MEMORY']     = 5
-GENERAL['PARFILE']    = 'Parfiles/riemann_hd209_wfc3.par'
-GENERAL['CLUSTER']    = 'legion'
+GENERAL['CPUS']       = 24
+GENERAL['WALLTIME']   = '10:00:00'
+GENERAL['MEMORY']     = 100
+GENERAL['PARFILE']    = 'Parfiles/riemann_largespec.par'
+GENERAL['CLUSTER']    = 'cobweb'
 GENERAL['USERNAME']   = 'ucapipw'
 GENERAL['DISKMEM']    = 10
 
@@ -86,8 +86,8 @@ for i in range(RNUM): #this may be changed with a more informative ID... e.g. da
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
     DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']
-    DICT[ID]['spectrum_file'] = datalist[i]  #setting parameter for run
-    DICT[ID]['path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID)
+    DICT[ID]['in_spectrum_file'] = datalist[i]  #setting parameter for run
+#     DICT[ID]['out_path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID) #must be provided for legion but not for cobweb
     ID += 1
 
 # ID = 0

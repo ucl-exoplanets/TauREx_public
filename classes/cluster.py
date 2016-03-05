@@ -155,19 +155,20 @@ class cluster(object):
             #setting working directory 
             h.write('#$ -wd '+DATADIR+'\n') #setting up path to SCRATCH space, data needs to be in scratch not home 
             
+            #making sure environment variables are set
+            h.write('module unload compilers/intel/2015/update2 \n')
+            h.write('module load compilers/gnu/4.9.2 \n')
+            h.write('module unload mpi/intel/2015/update3/intel \n')
+            h.write('module load mpi/openmpi/1.10.1/gnu-4.9.2 \n')
+            
             #setting up output dir on scratch
             outdirpath = OUTDIR+'/{0}'.format(ID_number)
-    
             h.write('mkdir -p '+outdirpath+'\n')  #setting up output directory
-            h.write('TMPRUN=$TMPDIR/run \n')         #generating temporary directory
         
-            h.write('cp -rf {0}/* $TMPRUN'.format(DATADIR)+'\n')  #copying everything over to temp
-            h.write('cd $TMPRUN \n')              #going to $TMPRUN
-            
             #run main command 
             h.write('gerun python taurex.py -p {0} -c {1} -i {2}'.format(PFILE,DICTFILE,ID_number)+'\n') 
     
-            h.write('cp $TMPRUN/Output/* '+outdirpath+'\n')        #copying results back to scratch
+
          
             
         

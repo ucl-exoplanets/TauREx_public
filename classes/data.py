@@ -143,7 +143,7 @@ class data(object):
         if self.params.in_spectrum_file:
 
             # read spectrum from file
-            logging.info('Reading spectrum from file')
+            logging.info('Reading spectrum from file: '+self.params.in_spectrum_file)
             self.obs_spectrum = np.loadtxt(self.params.in_spectrum_file)
 
             self.obs_wlgrid = self.obs_spectrum[:,0] # grid in micron
