@@ -121,9 +121,9 @@ class statistics(object):
           NEST_out.db
         '''
         
-        self.NEST_trace = np.loadtxt(self.dir+trace_fname)
-        self.NEST_like  = np.loadtxt(self.dir+like_fname)
-        with open(self.dir+nest_db_fname,'r') as file:
+        self.NEST_trace = np.loadtxt(os.path.join(self.dir,trace_fname))
+        self.NEST_like  = np.loadtxt(os.path.join(self.dir,like_fname))
+        with open(os.path.join(self.dir,nest_db_fname),'r') as file:
             self.NEST_db = pkl.load(file)
             
         #getting maximum likelihood values 
@@ -563,12 +563,30 @@ if __name__ == '__main__':
                       dest="outfname",
                       default="statistics",
     )
+    parser.add_option('-c', '--cluster',
+                  dest="cluster_dictionary",
+                  default="None",
+                  type = "string",
+                  action="store"         
+                  )
+    parser.add_option('-i', '--cluster_index',
+                  dest="cluster_procid",
+                  default="None",
+                  type = "string",
+                  action="store"         
+                  )
 
     options, remainder = parser.parse_args()
-    
-    
     #loading object
-    statsob = statistics(options=options)
+    if options.cluster_dictionary is not "None":
+        params = parameters(options.param_filename)
+        from cluster import cluster
+        c = cluster()
+        c.read_dict(dict_name=options.cluster_dictionary)
+        params = c.modify_params(params,options.cluster_procid)
+        statsob = statistics(options=options,params=params)
+    else:
+        statsob = statistics(options=options)
     statsob.init_stats()
     
     #compute hessian 
