@@ -59,7 +59,6 @@ print 'No. of CPUs used: ',N_processes
 
 print 'Starting ... '
 
-folder_list = folder_list[:1]
 
 # print N_processes
 print folder_list
