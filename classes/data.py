@@ -16,7 +16,6 @@ import logging
 import numpy as np
 
 from scipy.interpolate import interp1d
-from scipy import interpolate
 
 from library_constants import *
 from library_general import *

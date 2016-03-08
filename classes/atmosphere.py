@@ -12,6 +12,7 @@ import numpy as np
 import scipy.special as spe
 import logging
 import sys
+
 import matplotlib.pylab as plt
 
 from library_constants import *
@@ -42,8 +43,7 @@ class atmosphere(object):
 
         # set pressure profile. This is fixed
 
-        self.pressure_profile = self.get_pressure_profile()
-
+        self.pressure_profile = np.copy(self.get_pressure_profile(), order='C')
 
         logging.info('Atmospheric pressure boundaries from internal model: %f-%f' % (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
@@ -202,12 +202,7 @@ class atmosphere(object):
 
         # get clouds specific parameters
         self.clouds = 1 if self.params.atm_clouds else 0
-        self.clouds_upP = self.params.atm_cld_upper_P
-        self.clouds_lowP = self.params.atm_cld_lower_P
-        self.clouds_m = self.params.atm_cld_m
-        self.clouds_a = self.params.atm_cld_a
-        self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
-        self.clouds_density_profile = self.get_clouds_density_profile()
+        self.clouds_topP = self.params.atm_cld_topP
 
     def get_coupled_planet_mu(self):
 
@@ -333,35 +328,6 @@ class atmosphere(object):
                     cia_idx[c] = self.nactivegases + self.inactive_gases.index(mol_val)
                 c += 1
         return cia_idx
-
-    def get_sigma_clouds_array(self):
-
-        if self.params.atm_clouds:
-
-            # calculating could cross sections
-            a = (128.0* pi**5 * self.clouds_a**6)
-            b = (3.0 * (10000./self.int_wngrid)**4) # convert wavenumber grid to wavelength
-            c = ((self.clouds_m**2 -1.0)/(self.clouds_m**2 + 2.0))**2
-            sigma_clouds_array = a / b * c
-
-        else:
-            sigma_clouds_array = np.zeros((self.int_nwngrid))
-
-        return sigma_clouds_array
-
-    def get_clouds_density_profile(self):
-
-        low_P_interp = -6
-        up_P_interp = -1
-
-        clouds_density_profile = np.zeros((self.nlayers))
-
-        for pres_idx, pres_val  in enumerate(self.pressure_profile):
-             if pres_val < self.clouds_upP and pres_val > self.clouds_lowP:
-                cld_factor = (pres_val - self.clouds_lowP)/(self.clouds_upP-self.clouds_lowP)
-                clouds_density_profile[pres_idx] = exp(low_P_interp + (up_P_interp - low_P_interp)*cld_factor)
-
-        return clouds_density_profile
 
     def set_ace_params(self):
 

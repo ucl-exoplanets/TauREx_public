@@ -1,39 +1,29 @@
-################################################
-#class fitting
-#
-# Class containing fitting interfaces to pymc and multinest.
-# All likelihoods are defined here.  
-#
-# Input: -parameter object
-#        -data object
-#        -
-#
-#
-# Output: -data object containing relevant data in dictionary 
-#         format  
-#
-#
-# Modification History:
-#   - v1.0 : first definition, Ingo Waldmann, Apr 2013 
-#
-################################################
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
+
+    Fitting class
+
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
+'''
+
 
 #loading libraries     
-from base import base
-import numpy, pylab, os, sys, math, warnings, threading, subprocess, gzip, pickle, shutil, logging, time
-from pylab import *
-from numpy import *
+import os
+import sys
+import shutil
+import logging
+
 import numpy as np
-from StringIO import StringIO
-from scipy.interpolate import interp1d
-from scipy.optimize import fmin
 from scipy.optimize import minimize
 
 from library_constants import *
 from library_general import *
 
+from matplotlib.pylab import *
 
-try: 
+
+try:
     import pymultinest
     multinest_import = True
 except:
@@ -63,14 +53,11 @@ cythonised = False # currently disabelling cythonised functions
 from library_constants import *
 from library_general import *
 
-class fitting(base):
+class fitting(object):
 
-    ##@profile
     def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None):
 
-        # note that forwardmodel can be either the transmission or the emission object
-
-        self.__ID__ = 'fitting'
+        # forwardmodel can be either the transmission or the emission object
 
         logging.info('Initialise object fitting')
 
@@ -610,12 +597,13 @@ class fitting(base):
         else:
             model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
 
+
         # get chi2
         res = ((data - model_binned) / datastd)
         res = np.nansum(res*res)
         if res == 0:
             res = np.nan
-#         print res
+
         #
         #
         # ion()
@@ -631,23 +619,22 @@ class fitting(base):
         # clf()
         # #
         # # #
+        #
         # ion()
         # clf()
-#         errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-#         plot(self.data.obs_spectrum[:,0], model_binned)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         show()
+        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        # plot(self.data.obs_spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
         # xscale('log')
         # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-        # ion()
         # draw()
         # pause(0.0001)
         #
-        # # #
         # print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
         #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
-        #     self.forwardmodel.atmosphere.planet_radius/RJUP), self.forwardmodel.atmosphere.active_mixratio_profile[:,20] #fit_params
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
+        #     fit_params #fit_params
 
         return res
 
@@ -680,7 +667,6 @@ class fitting(base):
     ###############################################################################
     #Markov Chain Monte Carlo algorithm
 
-    #@profile #line-by-line profiling decorator
     def mcmc_fit(self):
     # fitting using adaptive Markov Chain Monte Carlo
 
@@ -693,7 +679,7 @@ class fitting(base):
 
         data = self.data.obs_spectrum[:,1] #observed data
         datastd = self.data.obs_spectrum[:,2] #data error
-        
+
         # setting prior distributions
         # master thread (MPIrank =0) will start from ideal solution (from downhill fitting)
         # slave threads (MPIrank != 0) will start from randomised points.
@@ -803,13 +789,6 @@ class fitting(base):
                         except Exception, e:
                             logging.error('Cannot remove files in %s' % self.dir_multinest)
 
-        def show(filepath): 
-            # open the output (pdf) file for the user
-            if os.name == 'mac':
-                subprocess.call(('open', filepath))
-            elif os.name == 'nt':
-                os.startfile(filepath) #@todo possible error here but noone has windows anyways...
-
         def multinest_loglike(cube, ndim, nparams):
             # log-likelihood function called by multinest
             fit_params_container = asarray([cube[i] for i in xrange(len(self.fit_params))])
@@ -828,8 +807,6 @@ class fitting(base):
         datastd_mean = mean(datastd)
         ndim = len(self.fit_params)
 
-        #progress = pymultinest.ProgressPlotter(n_params = len(self.fit_params)); progress.start()
-        #threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
         logging.info('Multinest output dir is %s' % self.dir_multinest)
 
         pymultinest.run(LogLikelihood=multinest_loglike,
@@ -848,7 +825,6 @@ class fitting(base):
                         n_live_points = self.params.nest_nlive,
                         max_iter= self.params.nest_max_iter,
                         init_MPI=False)
-        #progress.stop()
 
         # wait for all threads to synchronise
         MPI.COMM_WORLD.Barrier()

@@ -1,39 +1,21 @@
-#! /usr/bin/python -W ignore
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
 
-###########################################################
-# TauRex (formerly Exonest) - Inverse spectral retrieval code using nested sampling
-#
-# Requirements: -python libraries: pylab, numpy, ConfigParser 
-#             [these are the minimum requirements]
-#
-# Additional requirements: pymc
-#
-# Inputs: 
-#
-# Outputs: 
-#
-# To Run: 
-# ./taurex.py [-p taurex.par] 
-#      
-#       
-###########################################################
+    TauREx execution code
 
-#loading libraries     
-import  sys, os, optparse, time,pylab
-# from numpy import * #nummerical array library 
-# from pylab import * #science and plotting library for python
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
+'''
+
+# loading libraries
+import  sys
+import os
+import optparse
 from ConfigParser import SafeConfigParser
 import logging
 
-
-####start of profiling code
-# import cProfile, pstats, StringIO
-# pr = cProfile.Profile()
-# pr.enable()
-# starttime = time.clock()
-
-#setting some parameters to global
-global MPIimport,MPIverbose,MPImaster,multinest_import,pymc_import
+# setting some parameters to global
+global MPIimport, MPIverbose, MPImaster, multinest_import
 
 #trying to initiate MPI parallelisation
 try:
@@ -56,10 +38,8 @@ except ImportError:
     MPIimport = False
     MPImaster = True
     MPIverbose= True
-    
 
-
-#checking for multinest library
+# checking for multinest library
 try: 
     import pymultinest
     multinest_import = True
@@ -67,23 +47,12 @@ except:
     logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
     multinest_import = False
 
-
-#checking for pymc library
-try: 
-    import pymc
-    pymc_import = True
-except:
-    logging.warning('PYMC library is not loaded. MCMC functionality will be disabled')
-    pymc_import = False
-
-
-# #loading classes
+# loading classes
 sys.path.append('./classes')
 sys.path.append('./library')
-# 
+
 import parameters
 from parameters import *
-from library_general import house_keeping
 
 #loading parameter file parser
 parser = optparse.OptionParser()
@@ -112,16 +81,16 @@ parser.add_option('-i', '--cluster_index',
 
 options, remainder = parser.parse_args()
 
-#Initialise parameters instance
+# Initialise parameters instance
 params = parameters(options.param_filename)
 
-#MPI related message
+# MPI related message
 if MPIimport:
     logging.info('MPI enabled. Running on %i cores' % MPIsize)
 else:
     logging.info('MPI disabled')
 
-#modifying parameters object if running in cluster mode (see cluster class for docu)
+# modifying parameters object if running in cluster mode (see cluster class for docu)
 if options.cluster_dictionary is not "None":
     from cluster import cluster
     c = cluster()
@@ -143,55 +112,3 @@ MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 #running Tau-REx
 run(params)
-
-
-#####################################################################
-#launches external housekeeping script. E.g. useful to transfer data 
-#from Scratch to home 
-    
-if params.clean_run:
-    house_keeping(params,options)
-
-#####################################################################
-#### end of profiling code
-# pr.disable()
-# 
-# PROFDIR = 'Profiling/'
-# if not os.path.isdir(PROFDIR):
-#         os.mkdir(PROFDIR)
-# 
-# # s = StringIO.StringIO()
-# sortby = 'cumulative'
-# # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-# 
-# #printing to terminal
-# # globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
-# # globalstats.print_stats()
-# 
-# #redirecting output to files
-# sys.stdout = open(PROFDIR+'gprofile_cum.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("cumulative")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_ncalls.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("ncalls")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_module.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("module")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_tottime.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("tottime")
-# globalstats.print_stats()
-# 
-# sys.stdout = open(PROFDIR+'gprofile_pcalls.profile','wb')
-# globalstats=pstats.Stats(pr).strip_dirs().sort_stats("pcalls")
-# globalstats.print_stats()
-#
-# # ps.print_stats()
-# # print s.getvalue()
-
-#last line. displays any diagrams generated. must be run after profiling
-# if params.verbose:
-#     pylab.show()

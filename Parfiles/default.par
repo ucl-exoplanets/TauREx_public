@@ -53,39 +53,10 @@ plot_contour = False
 # posterior plots colour (matplotlib colormaps)
 plot_colour = Blues
 
-[Preselector]
-
-# Run preselector module to automatically estimate number and types of molecules present in spectrum.
-# If run, the following parameters will be automatically determined and overwritten by the pre-selector:
-# [Input]: atm_file, abs_path (overwritten by cross_path), abs_files
-# [Input]: use_ATMfile = False,
-# [Planet]: temp, molec, (mu not yet)
-# [T-P profile]: num_gas
-# not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
-
-#run preselector
-run_pre = False
-#Path of spectral library folder
-speclib_path = Preselector/speclib/
-#Path of PCA preselector .pkl file
-pca_path = Preselector/
-#(re)generate spectral library
-generate_speclib = True
-#restrict temperature range for cross-section lists
-restrict_temp = True
-#setting temperature range (K) if restrict_temp = True : low, high
-temp_range = 800, 1600
-#mixing ratios for which spectra are computed
-mixing_ratio = 1e-5,1e-4,1e-3,1e-2
-#(re)compute PCA preselector file
-generate_pca = True
-#masking threshold
-mask_thres = 0.6
-#force preselector to include following list of molecules
-mol_force_on = True
-#list of molecules to be added
-#naming convention must be same as cross-section file, comma separated
-mol_force = CO, H2O
+# calculate one sigma of fitted spectrum
+sigma_spectrum = False
+# fraction of total samples from which to calculate the one sigma spectrum
+sigma_spectrum_frac = 0.1
 
 [Star]
 
@@ -165,10 +136,8 @@ cia_pairs = H2-H2, H2-He
 
 # include cloud opacities. True/False
 clouds = False
-# cloud refractive index (m) and particle size (a) in microns. Comma separated
-cld_params = 1.5, 1.0
-# cloud pressure in Pascal, lower and upper bounds. Comma separated
-cld_pressure = 1e3, 1.e6
+# cloud top pressure in Pascal
+cld_topP = 1e3
 
 # metallicity (1 = solar metallicity, 10 = 10x solar metallicity etc)
 ace_metallicity = 1
@@ -347,16 +316,3 @@ evidence_tolerance = 0.5
 mode_tolerance = -1e90
 # importance nested sampling
 imp_sampling = False
-# detect different modes in multinest output using clustering algorithm. It overrides detected modes if multimodes=True
-cluster_analysis = False
-
-
-[Housekeeping]
-#lets you run an external script (py or sh) in subshell at the end of TauREx. Usefull to automatically transfer data or delete tmp files
-
-# run housekeeping
-run = False
-# Name of script in TauREx base dir
-script_name = transfer2home.py
-# Save used parameter file to Output
-save_used_params = True

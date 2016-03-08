@@ -7,13 +7,11 @@
 
 '''
 
-from base import base
 from ConfigParser import SafeConfigParser
 import numpy as np
-from numpy import genfromtxt,arange,size
-from StringIO import StringIO
-import ast, logging, os
-
+import logging
+import os
+import inspect
 
 try:
     from mpi4py import MPI
@@ -31,11 +29,12 @@ else:
 
 from library_constants import *
 
-class parameters(base):
-#instantiation
+class parameters(object):
+
     def __init__(self, parfile='Parfiles/default.par'):
         '''
-        a parameter file is parsed and initial parameter values are set.  
+
+        a parameter file is parsed and initial parameter values are set.
         to add a new parameter edit this file and the input .par file.
         '''
 
@@ -106,6 +105,9 @@ class parameters(base):
         self.out_plot_contour      = self.getpar('Output','plot_contour', 'bool')
         self.out_plot_colour       = self.getpar('Output','plot_colour')
 
+        self.out_sigma_spectrum        = self.getpar('Output', 'sigma_spectrum', 'bool')
+        self.out_sigma_spectrum_frac   = self.getpar('Output', 'sigma_spectrum_frac', 'float')
+
         # section Star
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
         self.star_temp             = self.getpar('Star','temp', 'float')
@@ -141,12 +143,7 @@ class parameters(base):
         self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
         self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
         self.atm_clouds             = self.getpar('Atmosphere','clouds', 'bool')
-        self.atm_cld_params         = self.getpar('Atmosphere','cld_params', 'list-float')
-        self.atm_cld_m              = self.atm_cld_params[0]
-        self.atm_cld_a              = self.atm_cld_params[1]
-        self.atm_cld_pressure       = self.getpar('Atmosphere','cld_pressure', 'list-float')
-        self.atm_cld_lower_P        = self.atm_cld_pressure[0]
-        self.atm_cld_upper_P        = self.atm_cld_pressure[1]
+        self.atm_cld_topP           = self.getpar('Atmosphere','cld_topP', 'float')
         self.atm_ace_metallicity    = self.getpar('Atmosphere', 'ace_metallicity', 'float')
         self.atm_ace_co             = self.getpar('Atmosphere', 'ace_co', 'float')
 
@@ -155,19 +152,6 @@ class parameters(base):
         self.ven_TP_profile_path = self.getpar('Venot', 'TP_profile_path')
         self.ven_mol_profile_path = self.getpar('Venot', 'mol_profile_path')
         self.ven_exclude_mol = [mol.upper() for mol in self.getpar('Venot','exclude_mol', 'list-str')]
-
-        # section Preselecto/100r
-        self.pre_run               = self.getpar('Preselector','run_pre', 'bool')
-        self.pre_speclib_path      = self.getpar('Preselector','speclib_path')
-        self.pre_pca_path          = self.getpar('Preselector','pca_path')
-        self.pre_gen_speclib       = self.getpar('Preselector','generate_speclib', 'bool')
-        self.pre_restrict_temp     = self.getpar('Preselector','restrict_temp', 'bool')
-        self.pre_temp_range        = self.getpar('Preselector', 'temp_range', 'list-float')
-        self.pre_mixing_ratios     = self.getpar('Preselector', 'mixing_ratio', 'list-float')
-        self.pre_gen_pca           = self.getpar('Preselector','generate_pca', 'bool')
-        self.pre_mask_thres        = self.getpar('Preselector','mask_thres', 'float')
-        self.pre_mol_force_bool    = self.getpar('Preselector','mol_force_on', 'bool')
-        self.pre_mol_force         = self.getpar('Preselector', 'mol_force', 'list-str')
 
         # Section Fit
 
@@ -244,16 +228,6 @@ class parameters(base):
         self.nest_ev_tol           = self.getpar('MultiNest','evidence_tolerance','float')
         self.nest_mode_tol         = self.getpar('MultiNest', 'mode_tolerance', 'float')
         self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
-        self.nest_cluster_analysis = self.getpar('MultiNest','cluster_analysis', 'bool')
-
-        # section Housekeeping ???
-        try:
-            self.clean_run             = self.getpar('Housekeeping','run','bool')
-            self.clean_script          = self.getpar('Housekeeping','script_name')
-            self.clean_save_used_params= self.getpar('Housekeeping','save_used_params','bool')
-        except:
-            self.clean_run             = False
-            pass
 
         #checking that either emission or transmisison is run
         if self.fit_emission and self.fit_transmission:
@@ -315,3 +289,15 @@ class parameters(base):
         except:
             logging.error('Cannot set parameter %s in section %s. Set to None' % (par, sec))
             return None
+
+    def params_to_dict(self):
+
+        # covert param variables to dictionary
+        pr = {}
+        for name in dir(self):
+            value = getattr(self, name)
+            if not name.startswith('__') and not inspect.ismethod(value) and \
+                            name <> 'parser' and name <> 'default_parser' and name <> 'console':
+                pr[name] = value
+        return pr
+

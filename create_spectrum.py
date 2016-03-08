@@ -33,7 +33,7 @@ from ConfigParser import SafeConfigParser
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,fitting,atmosphere,data,preselector
+import parameters,emission,transmission,fitting,atmosphere,data
 from parameters import *
 from emission import *
 from transmission import *
@@ -123,12 +123,6 @@ class create_spectrum(object):
             #add noise to flux values
             if int(self.options.noise) == True:
                 self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
-
-#         self.Pnodes = [self.MAX_P,1e4, 100.0,self.MIN_P]
-        
-#         #get grids
-#         self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(self.options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-#         self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.int_wngrid)
 
         self.spectrum[:,0] = 10000./self.spectrum[:,0]
         return self.spectrum

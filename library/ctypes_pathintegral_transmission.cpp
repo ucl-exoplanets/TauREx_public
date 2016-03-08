@@ -28,6 +28,9 @@ extern "C" {
                        const int nlayers,
                        const int nactive,
                        const int ninactive,
+                       const int rayleigh,
+                       const int cia,
+                       const int clouds,
                        const double * sigma_array,
                        const double * sigma_temp,
                        const int sigma_ntemp,
@@ -38,9 +41,8 @@ extern "C" {
                        const double * sigma_cia,
                        const double * sigma_cia_temp,
                        const int sigma_cia_ntemp,
-                       const int clouds,
-                       const double * sigma_cloud,
-                       const double * clouds_density,
+                       const double cloud_topP,
+                       const double * pressure,
                        const double * density,
                        const double * z,
                        const double * active_mixratio,
@@ -48,12 +50,15 @@ extern "C" {
                        const double * temperature,
                        const double planet_radius,
                        const double star_radius,
-                       void * absorptionv) {
+                       void * absorptionv,
+                       void * tauv) {
 
 
         double * absorption = (double *) absorptionv;
+        double * tau = (double *) tauv;
 
         // setting up arrays and variables
+        //double* tau = new double[nlayers*nwngrid];
         double* dz = new double[nlayers];
         double* dlarray = new double[nlayers*nlayers];
         double* sigma_interp = new double[nwngrid*nlayers*nactive];
@@ -61,10 +66,10 @@ extern "C" {
         double sigma, sigma_l, sigma_r;
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
-        double tau, exptau,  integral;
+        double tautmp, exptau,  integral;
         double cld_factor, cld_rho;
         double p;
-        int count, t_idx;
+        int count, count2, t_idx;
 
         //dz array
         for (int j=0; j<(nlayers); j++) {
@@ -156,53 +161,64 @@ extern "C" {
 
 
         // calculate absorption
+        count2 = 0;
         for (int wn=0; wn < nwngrid; wn++) {
             count = 0;
             integral = 0.0;
             //cout << " integral 0 " << integral << endl;
             //cout << " count 0 " << count << endl;
     		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
-    			tau = 0.0;
+    			tautmp = 0.0;
     			for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                    // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
-    				for (int l=0;l<nactive;l++) {
-                        sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
-                        tau += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
-                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
-                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
-                        tau += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                    }
 
-                    // calculating optical depth due inactive gases (rayleigh scattering)
-                    for (int l=0; l<ninactive; l++) {
-                        //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
-                        tau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                    }
-                    // calculating optical depth due to collision induced absorption
-                    for (int c=0; c<cia_npairs;c++) {
-                        tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x1_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
-                    }
 
                     // calculate optical depth due to clouds
                     if (clouds == 1) {
-                        // = log(cloud density), assuming linear decrease with decreasing in log pressure
-                        // following Ackerman & Marley (2001), Fig. 6
-                        tau += sigma_cloud[wn] * dlarray[count]*1.0e2 * clouds_density[j+k] * 1.0e-6; // convert path lenth from m to cm, and density from g m^-3 to g cm^-3
+                        if (pressure[j+k] > cloud_topP) {
+                            tautmp += 9999;
+                            continue;
+                        }
                     }
 
+                    // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
+    				for (int l=0;l<nactive;l++) {
+                        sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
+                        tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
+                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
+                        //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
+                        if (rayleigh == 1) {
+                            tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                        }
+                    }
 
+                    // calculating optical depth due inactive gases (rayleigh scattering)
+                    if (rayleigh == 1) {
+                        for (int l=0; l<ninactive; l++) {
+                            //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
+                            tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                        }
+                    }
+                    // calculating optical depth due to collision induced absorption
+                    if (cia == 1) {
+                        for (int c=0; c<cia_npairs;c++) {
+                            tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x1_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
+                        }
+                    }
                     count += 1;
                 }
-                exptau = exp(-tau);
+                exptau = exp(-tautmp);
 		        integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
+                tau[count2] = 1.0 - exptau;
+                //cout << count2 << " " << tau[count2] << endl;
                 //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
+                count2 += 1;
             }
             integral *= 2.0;
             //cout << integral << endl;
             absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
             //cout << wn << " " << absorption[wn] << endl;
         }
-
+//        cout << "END" << endl;
 
         delete dlarray;
         delete sigma_interp;
@@ -210,6 +226,5 @@ extern "C" {
         dlarray = NULL;
         sigma_interp = NULL;
         sigma_cia_interp = NULL;
-
     }
 }

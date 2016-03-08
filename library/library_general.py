@@ -9,16 +9,10 @@ import math
 from library_constants import *
 
 
-def house_keeping(params,options):
-    #does some housekeeping for the final fitting results
-    #copies used parameter file to ./Output
-    if params.clean_save_used_params:
-        subprocess.call('cp '+options.param_filename+' Output/',shell=True)
-    subprocess.call('python '+params.clean_script,shell=True)
 
-def weighted_avg_and_std(values, weights):
+def weighted_avg_and_std(values, weights, axis=None):
     average = np.average(values, weights=weights)
-    variance = np.average((values-average)**2, weights=weights)  # Fast and numerically precise
+    variance = np.average((values-average)**2, weights=weights, axis=axis)  # Fast and numerically precise
     return (average, math.sqrt(variance))
 
 def find_nearest(arr, value):

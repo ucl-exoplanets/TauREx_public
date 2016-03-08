@@ -8,7 +8,6 @@
 '''
 
 #loading libraries   
-import numpy
 import copy
 import itertools
 import time
@@ -21,7 +20,7 @@ import logging
 
 import matplotlib.pylab as plt
 
-class emission():
+class emission(object):
 
     def __init__(self, atmosphere, data=None, params=None):
 
@@ -62,10 +61,11 @@ class emission():
                                                          C.c_void_p]
 
 
-    def ctypes_pathintegral(self):
+    def ctypes_pathintegral(self, return_tau=False):
 
         #setting up output array
         FpFs = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
+        tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
 
         #running c++ path integral
         self.pathintegral_lib.path_integral(self.atmosphere.int_wngrid,
@@ -82,11 +82,35 @@ class emission():
                                              self.atmosphere.planet_radius,
                                              self.params.star_radius,
                                              self.atmosphere.data.star_sed,
-                                             C.c_void_p(FpFs.ctypes.data))
+                                             C.c_void_p(FpFs.ctypes.data),
+                                             C.c_void_p(tau.ctypes.data))
+
+
 
         out = np.zeros((len(FpFs)))
         out[:] = FpFs
 
-        del(FpFs)
+        if return_tau:
 
-        return out
+            tauout = np.zeros((self.atmosphere.int_nwngrid, self.atmosphere.nlayers))
+            count = 0
+            for i in range(self.atmosphere.int_nwngrid):
+                for j in range(1, self.atmosphere.nlayers):
+                    tauout[i,j] = tau[count]
+                    count += 1
+            tauout = np.fliplr(np.rot90(tauout))
+
+            del(FpFs)
+            del(tau)
+
+            return tauout
+
+        else:
+
+            out = np.zeros((len(FpFs)))
+            out[:] = FpFs
+
+            del(FpFs)
+            del(tau)
+
+            return out
