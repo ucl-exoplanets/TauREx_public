@@ -138,6 +138,7 @@ extern "C" {
                 }
                 I_total += (BB_wl * (exp(-1.0*tau))* dtau);
             }
+    		//FpFs[wn] = I_total;
             FpFs[wn] = (I_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
         }
 
