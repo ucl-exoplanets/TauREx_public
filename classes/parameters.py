@@ -172,10 +172,7 @@ class parameters(object):
         self.fit_fit_mu              = self.getpar('Fitting', 'fit_mu', 'bool')
         self.fit_fit_radius          = self.getpar('Fitting', 'fit_radius', 'bool')
         self.fit_fit_P0              = self.getpar('Fitting', 'fit_P0', 'bool')
-        self.fit_fit_clouds_lower_P  = self.getpar('Fitting', 'fit_clouds_lower_P', 'bool')
-        self.fit_fit_clouds_upper_P  = self.getpar('Fitting', 'fit_clouds_upper_P', 'bool')
-        self.fit_fit_clouds_m        = self.getpar('Fitting', 'fit_clouds_m', 'bool')
-        self.fit_fit_clouds_a        = self.getpar('Fitting', 'fit_clouds_a', 'bool')
+        self.fit_fit_clouds_topP     = self.getpar('Fitting', 'fit_clouds_topP', 'bool')
         self.fit_fit_ace_metallicity = self.getpar('Fitting', 'fit_ace_metallicity', 'bool')
         self.fit_fit_ace_co          = self.getpar('Fitting', 'fit_ace_co', 'bool')
 
@@ -186,10 +183,7 @@ class parameters(object):
         self.fit_mu_bounds              = self.getpar('Fitting', 'mu_bounds', 'list-float')
         self.fit_radius_bounds          = self.getpar('Fitting', 'radius_bounds', 'list-float')
         self.fit_P0_bounds              = self.getpar('Fitting', 'P0_bounds', 'list-float')
-        self.fit_clouds_lower_P_bounds  = self.getpar('Fitting', 'clouds_lower_P_bounds', 'list-float')
-        self.fit_clouds_upper_P_bounds  = self.getpar('Fitting', 'clouds_upper_P_bounds', 'list-float')
-        self.fit_clouds_a_bounds        = self.getpar('Fitting', 'clouds_a_bounds', 'list-float')
-        self.fit_clouds_m_bounds        = self.getpar('Fitting', 'clouds_m_bounds', 'list-float')
+        self.fit_clouds_topP_bounds     = self.getpar('Fitting', 'clouds_topP_bounds', 'list-float')
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
 

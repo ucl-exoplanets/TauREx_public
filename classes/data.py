@@ -528,6 +528,9 @@ class data(object):
             self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid, self.int_wlgrid_obs, self.obs_binwidths)
             self.intsp_nbingrid = len(self.obs_wlgrid)
 
+            self.intsp_bingrid_full, self.intsp_bingrididx_full = get_specbingrid(self.obs_wlgrid, self.int_wlgrid_full, self.obs_binwidths)
+            self.intsp_nbingrid_full = len(self.obs_wlgrid)
+
 
     def get_star_SED(self):
 

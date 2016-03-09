@@ -370,33 +370,13 @@ class fitting(object):
         ##########################################################################
         # Cloud parameters. Only if include_clouds = True
         if self.params.atm_clouds:
-            if self.params.fit_fit_clouds_lower_P:
-                self.fit_params_names.append('clouds_lower_P')
-                self.fit_params_texlabels.append('$P_\mathrm{cld,low}$')
-                self.fit_params.append(np.mean((self.params.fit_clouds_lower_P_bounds[0],
-                                                self.params.fit_clouds_lower_P_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_lower_P_bounds[0],
-                                        self.params.fit_clouds_lower_P_bounds[1]))
-
-            if self.params.fit_fit_clouds_upper_P:
-                self.fit_params_names.append('clouds_upper_P')
-                self.fit_params_texlabels.append('$P_\mathrm{cld,up}$')
-                self.fit_params.append(np.mean((self.params.fit_clouds_upper_P_bounds[0],
-                                                self.params.fit_clouds_upper_P_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_upper_P_bounds[0],
-                                        self.params.fit_clouds_upper_P_bounds[1]))
-
-            if self.params.fit_fit_clouds_a:
-                self.fit_params_texlabels.append('$a_\mathrm{cld}$')
-                self.fit_params_names.append('clouds_a')
-                self.fit_params.append(np.mean((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1]))
-
-            if self.params.fit_fit_clouds_m:
-                self.fit_params_texlabels.append('$m_\mathrm{cld}$')
-                self.fit_params_names.append('clouds_m')
-                self.fit_params.append(np.mean((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1]))
+            if self.params.fit_fit_clouds_topP:
+                self.fit_params_names.append('clouds_topP')
+                self.fit_params_texlabels.append('$P_\mathrm{cld,top}$')
+                self.fit_params.append(np.mean((np.log10(self.params.fit_clouds_topP_bounds[0]),
+                                                np.log10(self.params.fit_clouds_topP_bounds[1]))))
+                self.fit_bounds.append((np.log10(self.params.fit_clouds_topP_bounds[0]),
+                                        np.log10(self.params.fit_clouds_topP_bounds[1])))
 
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
@@ -470,14 +450,14 @@ class fitting(object):
                 if self.params.fit_fit_active:
                     for idx, gasname in enumerate(self.params.atm_active_gases):
                         if self.params.fit_X_log: # fit in log space
-                            self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = power(10, fit_params[count])
+                            self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = np.power(10, fit_params[count])
                         else:
                             self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = fit_params[count]
                         count += 1
                 if self.params.fit_fit_inactive:
                     for idx, gasname in enumerate(self.params.atm_inactive_gases):
                         if self.params.fit_X_log: # fit in log space
-                            self.forwardmodel.atmosphere.inactive_mixratio_profile[idx, :] = power(10, fit_params[count])
+                            self.forwardmodel.atmosphere.inactive_mixratio_profile[idx, :] = np.power(10, fit_params[count])
                         else:
                             self.forwardmodel.atmosphere.inactive_mixratio_profile[idx, :] = fit_params[count]
                         count += 1
@@ -550,23 +530,14 @@ class fitting(object):
         #####################################################
         # Surface pressure
         if self.params.fit_fit_P0:
-            self.forwardmodel.atmosphere.max_pressure = power(10, fit_params[count])
+            self.forwardmodel.atmosphere.max_pressure = np.power(10, fit_params[count])
             count += 1
 
         ##########################################################################
         # Cloud parameters. Only if include_clouds = True
         if self.params.atm_clouds:
-            if self.params.fit_fit_clouds_lower_P:
-                self.forwardmodel.atmosphere.clouds_lower_P = power(10, fit_params[count])
-                count += 1
-            if self.params.fit_fit_clouds_upper_P:
-                self.forwardmodel.atmosphere.clouds_upper_P = power(10, fit_params[count])
-                count += 1
-            if self.params.fit_fit_clouds_a:
-                self.forwardmodel.atmosphere.clouds_a = fit_params[count]
-                count += 1
-            if self.params.fit_fit_clouds_m:
-                self.forwardmodel.atmosphere.clouds_m = fit_params[count]
+            if self.params.fit_fit_clouds_topP:
+                self.forwardmodel.atmosphere.clouds_topP = np.power(10, fit_params[count])
                 count += 1
 
         if self.params.fit_fit_P0:
@@ -607,7 +578,7 @@ class fitting(object):
         #
         #
         # ion()
-#         figure(1)
+        # figure(1)
         # clf()
         # plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
         # gca().invert_yaxis()
@@ -619,7 +590,7 @@ class fitting(object):
         # clf()
         # #
         # # #
-        #
+        # #
         # ion()
         # clf()
         # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])

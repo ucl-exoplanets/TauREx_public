@@ -245,10 +245,10 @@ class output(object):
 
     def add_data_from_solutions(self, fitting_out):
 
-        # load model using full wavenumber range
-        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
 
         for idx, solution in enumerate(fitting_out['solutions']):
+
+            logging.info('Solution %i' % idx)
 
             fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
             solution = fitting_out['solutions'][idx]
@@ -267,7 +267,27 @@ class output(object):
 
     def get_spectra(self, solution):
 
+        fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
+
+        # update atmospheric parameters to current solution
+        self.fitting.update_atmospheric_parameters(fit_params)
+
         # calculate spectrum for current solution
+        model = self.fitting.forwardmodel.model()
+
+        # store observed spectrum
+        solution['obs_spectrum'] = np.zeros((self.data.obs_nwlgrid, 6))
+        solution['obs_spectrum'][:,:2] = self.data.obs_spectrum[:,:2]
+
+        # append fitted spectrum to observed spectrum array
+        solution['obs_spectrum'][:,3] = np.asarray([model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)])
+
+        # load model using full wavenumber range
+        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+
+        # update atmospheric parameters to current solution
+        self.fitting.update_atmospheric_parameters(fit_params)
+
         model = self.fitting.forwardmodel.model()
 
         solution['fit_spectrum_xsecres'] = np.zeros((self.data.int_nwlgrid_full, 3))
@@ -275,21 +295,14 @@ class output(object):
         solution['fit_spectrum_xsecres'][:,1] = model
         if self.params.out_sigma_spectrum:
             # calculate 1 sigma spectrum
-            solution['fit_spectrum_xsecres'][:,2] = self.get_one_sigma_spectrum(solution)
+            sigmasp = self.get_one_sigma_spectrum(solution)
+            solution['fit_spectrum_xsecres'][:,2] = sigmasp
+            solution['obs_spectrum'][:,4] = np.asarray([std_spectrum[self.data.intsp_bingrididx_full == i].mean()
+                                                        for i in xrange(1, self.data.intsp_nbingrid_full+1)])
 
         # calculate contribution function
         contrib_func = self.fitting.forwardmodel.model(return_tau=True)
         solution['contrib_func'] = contrib_func
-
-        # store observed spectrum
-        solution['obs_spectrum'] = np.zeros((self.data.obs_nwlgrid, 6))
-        solution['obs_spectrum'][:,:2] = self.data.obs_spectrum[:,:2]
-        solution['obs_spectrum'][:,3] = self.data.obs_spectrum[:,3] if shape(self.data.obs_spectrum)[1] == 4 else np.zeros(self.data.obs_nwlgrid)
-        # append fitted spectrum to observed spectrum array
-        solution['obs_spectrum'][:,4] = np.asarray([model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)])
-        if self.params.out_sigma_spectrum:
-            std_spectrum = solution['fit_spectrum_xsecres'][:,2]
-            solution['obs_spectrum'][:,5] = np.asarray([std_spectrum[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)])
 
         # calculate spectral contribution from individual opacity sources
         solution['opacity_contrib'] = {}

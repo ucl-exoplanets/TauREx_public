@@ -201,7 +201,6 @@ class atmosphere(object):
         self.cia_idx = self.get_cia_idx()
 
         # get clouds specific parameters
-        self.clouds = 1 if self.params.atm_clouds else 0
         self.clouds_topP = self.params.atm_cld_topP
 
     def get_coupled_planet_mu(self):
