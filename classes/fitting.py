@@ -566,7 +566,7 @@ class fitting(object):
         if cythonised:
             model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
         else:
-            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(0, self.data.intsp_nbingrid)]
+            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
 
 
         # get chi2
