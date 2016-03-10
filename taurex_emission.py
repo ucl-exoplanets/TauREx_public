@@ -20,8 +20,6 @@ from output import *
 from fitting import *
 from atmosphere import *
 from data import *
-from preselector import *
-
 
 #loading libraries
 sys.path.append('./library')
@@ -63,13 +61,17 @@ def run(params):
         fittingob.multinest_fit() # Nested sampling fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
-    # loading output module for stage 0
-    outputob = output(fittingob,out_path=os.path.join(out_path_orig, 'stage_0'))
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        outputob = output(fittingob, out_path=os.path.join(out_path_orig, 'stage_0'))
+
+    exit()
+
+    # todo fix stage 2
 
     # generating TP profile covariance from previous fit
     Cov_array = generate_tp_covariance(outputob)
 
-    #saving covariance
+    # saving covariance
     if MPIimport and MPI.COMM_WORLD.Get_rank() is 0 or MPIimport is False:
         np.savetxt(os.path.join(params.out_path, 'tp_covariance.dat'), Cov_array)
 

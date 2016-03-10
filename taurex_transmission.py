@@ -35,13 +35,15 @@ def run(params):
     fittingob = fitting(forwardmodelob)
         
     #fit data
-    if params.downhill_run:
-        fittingob.downhill_fit()    #simplex downhill fit
-        
+    if params.downhill_run and MPI.COMM_WORLD.Get_rank() == 0:
+        fittingob.downhill_fit() # simplex downhill fit, only on first core
+
+    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+
     if params.mcmc_run and pymc_import:
         fittingob.mcmc_fit() # MCMC fit
-        MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
-        
+        MPI.COMM_WORLD.Barrier()
+
     if params.nest_run and multinest_import:
         fittingob.multinest_fit() # Nested sampling fit
         

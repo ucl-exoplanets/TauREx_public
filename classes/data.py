@@ -88,7 +88,7 @@ class data(object):
             os.system('rm library/ctypes_pathintegral_emission.so')
             os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission.so library/ctypes_pathintegral_emission.cpp')
         if  self.params.gen_ace:
-            os.system('rm library/ACE/ACE.so')
+            #os.system('rm library/ACE/ACE.so')
             os.system('gfortran -shared -fPIC  -o library/ACE/ACE.so library/ACE/Md_ACE.f90 library/ACE/Md_Constantes.f90 '
                       'library/ACE/Md_Types_Numeriques.f90 library/ACE/Md_Utilitaires.f90 library/ACE/Md_numerical_recipes.f90')
 
@@ -261,43 +261,49 @@ class data(object):
                     # wno_max_idx = np.where(np.abs(wno - np.max(self.int_wngrid)) < self.params.in_xsec_dnu)[0][0]+1
 
                     # restrict temperature range
-                    Tmin = 0
-                    Tmax = 5000
-                    if self.params.ven_load:
-                        Tmax = np.max(self.ven_temperature)
-                        Tmin = np.min(self.ven_temperature)
-                    elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                        if self.params.atm_tp_type == 'isothermal':
-                            Tmax = self.params.fit_tp_iso_bounds[1]
-                            Tmin = self.params.fit_tp_iso_bounds[0]
-                    elif self.params.atm_tp_type == 'isothermal':
-                        Tmin = Tmax = self.params.atm_tp_iso_temp
 
-                    if Tmax > np.max(t) or Tmin < np.min(t):
-                        logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
-                        logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
-                        logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
-
-                    # get idx of the temperature boundaries in the cross sections
-                    # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
-
-                    if Tmax > np.max(t):
+                    if self.params.in_xsec_alltemp:
+                        sigma_dict['t'] = t
                         Tmax_idx = len(t)
-                    else:
-                        Tmax_diff = Tmax - t # t is sigma_tmp['t']
-                        Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
-
-                    if Tmin < np.min(t):
                         Tmin_idx = 0
                     else:
-                        Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
-                        Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+                        Tmin = 0
+                        Tmax = 5000
+                        if self.params.ven_load:
+                            Tmax = np.max(self.ven_temperature)
+                            Tmin = np.min(self.ven_temperature)
+                        elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+                            if self.params.atm_tp_type == 'isothermal':
+                                Tmax = self.params.fit_tp_iso_bounds[1]
+                                Tmin = self.params.fit_tp_iso_bounds[0]
+                        elif self.params.atm_tp_type == 'isothermal':
+                            Tmin = Tmax = self.params.atm_tp_iso_temp
 
-                    if Tmin > np.max(t) and Tmax > np.max(t):
-                        sigma_dict['t'] = np.asarray([t[-1]])
-                        Tmax_idx = len(t)
-                    else:
-                        sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
+                        if Tmax > np.max(t) or Tmin < np.min(t):
+                            logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
+                            logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
+                            logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
+
+                        # get idx of the temperature boundaries in the cross sections
+                        # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
+
+                        if Tmax > np.max(t):
+                            Tmax_idx = len(t)
+                        else:
+                            Tmax_diff = Tmax - t # t is sigma_tmp['t']
+                            Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
+
+                        if Tmin < np.min(t):
+                            Tmin_idx = 0
+                        else:
+                            Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
+                            Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+
+                        if Tmin > np.max(t) and Tmax > np.max(t):
+                            sigma_dict['t'] = np.asarray([t[-1]])
+                            Tmax_idx = len(t)
+                        else:
+                            sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
 
                     sigma_dict['p'] = p
 
@@ -416,43 +422,50 @@ class data(object):
                 logging.warning('CIA cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
                 logging.warning('Assume xsec to be zero outside the cia range')
 
-            Tmin = 0
-            Tmax = 5000
-            if self.params.ven_load:
-                Tmax = np.max(self.ven_temperature)
-                Tmin = np.min(self.ven_temperature)
-            elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-                if self.params.atm_tp_type == 'isothermal':
-                    Tmax = self.params.fit_tp_iso_bounds[1]
-                    Tmin = self.params.fit_tp_iso_bounds[0]
-            elif self.params.atm_tp_type == 'isothermal':
-                Tmin = Tmax = self.params.atm_tp_iso_temp
 
-            if Tmax > np.max(t) or Tmin < np.min(t):
-                logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
-                logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
-                logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
-
-            # get idx of the temperature boundaries in the cross sections
-            # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
-
-            if Tmax > np.max(t):
+            # restrict temperature range
+            if self.params.in_xsec_alltemp:
+                sigma_dict['t'] = t
                 Tmax_idx = len(t)
-            else:
-                Tmax_diff = Tmax - t # t is sigma_tmp['t']
-                Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
-
-            if Tmin < np.min(t):
                 Tmin_idx = 0
             else:
-                Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
-                Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+                Tmin = 0
+                Tmax = 5000
+                if self.params.ven_load:
+                    Tmax = np.max(self.ven_temperature)
+                    Tmin = np.min(self.ven_temperature)
+                elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+                    if self.params.atm_tp_type == 'isothermal':
+                        Tmax = self.params.fit_tp_iso_bounds[1]
+                        Tmin = self.params.fit_tp_iso_bounds[0]
+                elif self.params.atm_tp_type == 'isothermal':
+                    Tmin = Tmax = self.params.atm_tp_iso_temp
 
-            if Tmin > np.max(t) and Tmax > np.max(t):
-                sigma_dict['t'] = np.asarray([t[-1]])
-                Tmax_idx = len(t)
-            else:
-                sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
+                if Tmax > np.max(t) or Tmin < np.min(t):
+                    logging.warning('The atmospheric temperature profile falls outside the temperature range of the cross sections')
+                    logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
+                    logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
+
+                # get idx of the temperature boundaries in the cross sections
+                # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
+
+                if Tmax > np.max(t):
+                    Tmax_idx = len(t)
+                else:
+                    Tmax_diff = Tmax - t # t is sigma_tmp['t']
+                    Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
+
+                if Tmin < np.min(t):
+                    Tmin_idx = 0
+                else:
+                    Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
+                    Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
+
+                if Tmin > np.max(t) and Tmax > np.max(t):
+                    sigma_dict['t'] = np.asarray([t[-1]])
+                    Tmax_idx = len(t)
+                else:
+                    sigma_dict['t'] = t[Tmin_idx:Tmax_idx]
 
             sigma_dict['wno'] = self.int_wngrid_full
             sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid_full))

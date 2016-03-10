@@ -76,6 +76,9 @@ class output(object):
 
             for idx, val in enumerate(types):
                 if run[idx]:
+
+                    logging.info('Storing %s solution' % val)
+
                     outdb = self.initialize_output(val)
                     outdb = func_types[idx](outdb)
                     outdb = self.add_data_from_solutions(outdb)
@@ -84,7 +87,7 @@ class output(object):
 
     def initialize_output(self, fitting_type):
 
-        outdb = {'fit_type': fitting_type,
+        outdb = {'type': fitting_type,
                  'obs_spectrum': self.data.obs_spectrum,
                  'params': self.params.params_to_dict(),
                  'fit_params_names': self.fitting.fit_params_names,
@@ -94,7 +97,7 @@ class output(object):
 
         return outdb
 
-    def store_downhill_solution(self):
+    def store_downhill_solution(self, DOWN_out):
 
         logging.info('Store the DOWNHILL results')
 
@@ -102,9 +105,11 @@ class output(object):
         for idx, param_name in enumerate(self.fitting.fit_params_names):
             dict[param_name] = {'value': self.fitting.DOWN_fit_output[idx] }
 
-        DOWN_out = [{'fit_type': self.params.downhill_type, 'fit_params': dict}]
+        DOWN_out['solutions'].append({'type': 'DOWN', 'fit_params': dict})
 
-    def store_mcmc_solutions(self):
+        return DOWN_out
+
+    def store_mcmc_solutions(self, MCMC_out):
 
         logging.info('Store the MCMC results')
 
@@ -114,7 +119,7 @@ class output(object):
             tracedata = [np.loadtxt(trace) for trace in chainlist]
         tracedata = np.transpose(tracedata)
 
-        # todo ...
+        # todo MCMC output not supported at the moment...
 
     def store_nest_solutions(self, NEST_out):
 
@@ -166,7 +171,8 @@ class output(object):
 
         for nmode in range(len(modes)):
 
-            dict = {'local_logE': (NEST_out['NEST_stats']['modes'][0]['local log-evidence'],  NEST_out['NEST_stats']['modes'][0]['local log-evidence error']),
+            dict = {'type': 'NEST',
+                    'local_logE': (NEST_out['NEST_stats']['modes'][0]['local log-evidence'],  NEST_out['NEST_stats']['modes'][0]['local log-evidence error']),
                     'weights': modes_weights[nmode],
                     'tracedata': modes_array[nmode],
                     'fit_params': {}}
@@ -253,17 +259,12 @@ class output(object):
             fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
             solution = fitting_out['solutions'][idx]
 
-            # update atmospheric parameters to current solution
-            self.fitting.update_atmospheric_parameters(fit_params)
-
-            if fitting_out['fit_type'] == 'MCMC' or fitting_out['fit_type'] == 'NEST':
-                solution = self.get_spectra(solution)
-                solution = self.get_one_sigma_profiles(solution)
+            solution = self.get_spectra(solution)  # compute spectra, contribution from opacities, and contribution function
+            solution = self.get_profiles(solution) # compute mixing ratio and tp profiles
 
             fitting_out['solutions'][idx] = solution
 
         return fitting_out
-
 
     def get_spectra(self, solution):
 
@@ -277,7 +278,9 @@ class output(object):
 
         # store observed spectrum
         solution['obs_spectrum'] = np.zeros((self.data.obs_nwlgrid, 6))
-        solution['obs_spectrum'][:,:2] = self.data.obs_spectrum[:,:2]
+        solution['obs_spectrum'][:,0] = self.data.obs_spectrum[:,0]
+        solution['obs_spectrum'][:,1] = self.data.obs_spectrum[:,1]
+        solution['obs_spectrum'][:,2] = self.data.obs_spectrum[:,2]
 
         # append fitted spectrum to observed spectrum array
         solution['obs_spectrum'][:,3] = np.asarray([model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)])
@@ -293,8 +296,9 @@ class output(object):
         solution['fit_spectrum_xsecres'] = np.zeros((self.data.int_nwlgrid_full, 3))
         solution['fit_spectrum_xsecres'][:,0] = self.data.int_wlgrid_full
         solution['fit_spectrum_xsecres'][:,1] = model
-        if self.params.out_sigma_spectrum:
-            # calculate 1 sigma spectrum
+
+        # calculate 1 sigma spectrum
+        if self.params.out_sigma_spectrum and solution['type'] == 'NEST':
             sigmasp = self.get_one_sigma_spectrum(solution)
             solution['fit_spectrum_xsecres'][:,2] = sigmasp
             solution['obs_spectrum'][:,4] = np.asarray([std_spectrum[self.data.intsp_bingrididx_full == i].mean()
@@ -315,90 +319,68 @@ class output(object):
         for idx, val in enumerate(self.atmosphere.active_gases):
             mask = np.ones(len(self.atmosphere.active_gases), dtype=bool)
             mask[idx] = 0
-            active_mixratio_profile[mask, :] = 0
-            self.fitting.forwardmodel.atmosphere.active_mixratio_profile = active_mixratio_profile
+
+            active_mixratio_profile_mask = np.copy(active_mixratio_profile)
+            active_mixratio_profile_mask[mask, :] = 0
+            self.fitting.forwardmodel.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
             self.fitting.forwardmodel.params.atm_rayleigh = False
             self.fitting.forwardmodel.params.atm_cia = False
             self.fitting.forwardmodel.params.atm_clouds = False
-            model = self.fitting.forwardmodel.model()
             solution['opacity_contrib'][val] = np.zeros((self.data.int_nwlgrid_full, 2))
             solution['opacity_contrib'][val][:,0] = self.data.int_wlgrid_full
-            solution['opacity_contrib'][val][:,1] = model
+            solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model()
 
-        # opacity from rayleigh
-        if atm_rayleigh:
+        self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
+
+        if self.params.gen_type == 'transmission':
+
             self.fitting.forwardmodel.atmosphere.active_mixratio_profile[:, :] = 0
-            self.fitting.forwardmodel.params.atm_rayleigh = True
-            self.fitting.forwardmodel.params.atm_cia = False
-            self.fitting.forwardmodel.params.atm_clouds = False
-            model = self.fitting.forwardmodel.model()
-            solution['opacity_contrib']['rayleigh'] = np.zeros((self.data.int_nwlgrid_full, 2))
-            solution['opacity_contrib']['rayleigh'][:,0] = self.data.int_wlgrid_full
-            solution['opacity_contrib']['rayleigh'][:,1] = model
 
-        # opacity from cia
-        if atm_cia:
-            self.fitting.forwardmodel.atmosphere.active_mixratio_profile[:, :] = 0
-            self.fitting.forwardmodel.params.atm_rayleigh = False
-            self.fitting.forwardmodel.params.atm_cia = True
-            self.fitting.forwardmodel.params.atm_clouds = False
-            model = self.fitting.forwardmodel.model()
-            solution['opacity_contrib']['cia'] = np.zeros((self.data.int_nwlgrid_full, 2))
-            solution['opacity_contrib']['cia'][:,0] = self.data.int_wlgrid_full
-            solution['opacity_contrib']['cia'][:,1] = model
+            # opacity from rayleigh
+            if atm_rayleigh:
+                self.fitting.forwardmodel.params.atm_rayleigh = True
+                self.fitting.forwardmodel.params.atm_cia = False
+                self.fitting.forwardmodel.params.atm_clouds = False
+                solution['opacity_contrib']['rayleigh'] = np.zeros((self.data.int_nwlgrid_full, 2))
+                solution['opacity_contrib']['rayleigh'][:,0] = self.data.int_wlgrid_full
+                solution['opacity_contrib']['rayleigh'][:,1] = self.fitting.forwardmodel.model()
 
-        # opacity from clouds
-        if atm_clouds:
-            self.fitting.forwardmodel.atmosphere.active_mixratio_profile[:, :] = 0
-            self.fitting.forwardmodel.params.atm_rayleigh = False
-            self.fitting.forwardmodel.params.atm_cia = False
-            self.fitting.forwardmodel.params.atm_clouds = True
-            model = self.fitting.forwardmodel.model()
-            solution['opacity_contrib']['clouds'] = np.zeros((self.data.int_nwlgrid_full, 2))
-            solution['opacity_contrib']['clouds'][:,0] = self.data.int_wlgrid_full
-            solution['opacity_contrib']['clouds'][:,1] = model
+            # opacity from cia
+            if atm_cia:
+                self.fitting.forwardmodel.params.atm_rayleigh = False
+                self.fitting.forwardmodel.params.atm_cia = True
+                self.fitting.forwardmodel.params.atm_clouds = False
+                solution['opacity_contrib']['cia'] = np.zeros((self.data.int_nwlgrid_full, 2))
+                solution['opacity_contrib']['cia'][:,0] = self.data.int_wlgrid_full
+                solution['opacity_contrib']['cia'][:,1] = self.fitting.forwardmodel.model()
 
-        self.fitting.forwardmodel.atmosphere.active_mixratio_profile = active_mixratio_profile
+            # opacity from clouds
+            if atm_clouds:
+                self.fitting.forwardmodel.params.atm_rayleigh = False
+                self.fitting.forwardmodel.params.atm_cia = False
+                self.fitting.forwardmodel.params.atm_clouds = True
+                solution['opacity_contrib']['clouds'] = np.zeros((self.data.int_nwlgrid_full, 2))
+                solution['opacity_contrib']['clouds'][:,0] = self.data.int_wlgrid_full
+                solution['opacity_contrib']['clouds'][:,1] = self.fitting.forwardmodel.model()
+
+            self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
+
         self.fitting.forwardmodel.params.atm_rayleigh = atm_rayleigh
         self.fitting.forwardmodel.params.atm_cia = atm_cia
         self.fitting.forwardmodel.params.atm_clouds = atm_clouds
 
         return solution
 
-    def get_one_sigma_profiles(self, solution):
+    def get_profiles(self, solution):
 
-        logging.info('Compute 1 sigma TP profile and 1 sigma mixing ratios')
+        logging.info('Store TP profile and mixing ratios')
 
         # best solution
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
 
-        sol_tracedata = solution['tracedata']
-        sol_weights = solution['weights']
-
-        nprofiles = len(sol_tracedata)
-        tpprofiles = np.zeros((nprofiles, self.atmosphere.nlayers))
-        molprofiles_active = np.zeros((nprofiles, self.atmosphere.nactivegases, self.atmosphere.nlayers))
-        molprofiles_inactive = np.zeros((nprofiles, self.atmosphere.ninactivegases, self.atmosphere.nlayers))
-
-        for i in range(nprofiles):
-            fit_params_iter = sol_tracedata[i]
-            self.fitting.update_atmospheric_parameters(fit_params_iter)
-            tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
-            for j in range(self.atmosphere.nactivegases):
-                molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[j,:]
-            for j in range(self.atmosphere.ninactivegases):
-                molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[j,:]
-
-            std_tpprofiles = np.zeros((self.atmosphere.nlayers))
-
-        std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
-        std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
-        for i in xrange(self.atmosphere.nlayers):
-            std_tpprofiles[i] = weighted_avg_and_std(tpprofiles[:,i], weights=sol_weights, axis=0)[1]
-            for j in range(self.atmosphere.nactivegases):
-                std_molprofiles_active[j,i] = weighted_avg_and_std(molprofiles_active[:,j,i], weights=sol_weights, axis=0)[1]
-            for j in range(self.atmosphere.ninactivegases):
-                std_molprofiles_inactive[j,i] = weighted_avg_and_std(molprofiles_inactive[:,j,i], weights=sol_weights, axis=0)[1]
+        if solution['type'] == 'NEST':
+            # compute standard deviation for mixing ratio and tp profiles
+            std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive = self.get_one_sigma_profiles(solution)
 
         # update atmospheric parameters to best solution
         self.fitting.update_atmospheric_parameters(fit_params)
@@ -407,7 +389,8 @@ class output(object):
         solution['tp_profile'] = np.zeros((self.atmosphere.nlayers, 3))
         solution['tp_profile'][:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
         solution['tp_profile'][:,1] = self.fitting.forwardmodel.atmosphere.temperature_profile
-        solution['tp_profile'][:,2] = std_tpprofiles
+        if solution['type'] == 'NEST':
+            solution['tp_profile'][:,2] = std_tpprofiles
 
         # mixing ratios
         solution['active_mixratio_profile'] = np.zeros((len(self.atmosphere.active_gases), self.atmosphere.nlayers, 3))
@@ -415,11 +398,13 @@ class output(object):
         for i in range(len(self.atmosphere.active_gases)):
             solution['active_mixratio_profile'][i,:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
             solution['active_mixratio_profile'][i,:,1] =  self.fitting.forwardmodel.atmosphere.active_mixratio_profile[i,:]
-            solution['active_mixratio_profile'][i,:,2] =  std_molprofiles_active[i,:]
+            if solution['type'] == 'NEST':
+                solution['active_mixratio_profile'][i,:,2] =  std_molprofiles_active[i,:]
         for i in range(len(self.atmosphere.inactive_gases)):
             solution['inactive_mixratio_profile'][i,:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
             solution['inactive_mixratio_profile'][i,:,1] =  self.fitting.forwardmodel.atmosphere.inactive_mixratio_profile[i,:]
-            solution['inactive_mixratio_profile'][i,:,2] =  std_molprofiles_inactive[i,:]
+            if solution['type'] == 'NEST':
+                solution['inactive_mixratio_profile'][i,:,2] =  std_molprofiles_inactive[i,:]
 
         return solution
 
@@ -455,3 +440,33 @@ class output(object):
 
         return std_spectrum
 
+
+    def get_one_sigma_profiles(self, solution):
+
+        logging.info('Compute 1 sigma mixing ratios and tp profiles')
+
+        sol_tracedata = solution['tracedata']
+        sol_weights = solution['weights']
+        nprofiles = len(sol_tracedata)
+        tpprofiles = np.zeros((nprofiles, self.atmosphere.nlayers))
+        molprofiles_active = np.zeros((nprofiles, self.atmosphere.nactivegases, self.atmosphere.nlayers))
+        molprofiles_inactive = np.zeros((nprofiles, self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+        for i in range(nprofiles):
+            fit_params_iter = sol_tracedata[i]
+            self.fitting.update_atmospheric_parameters(fit_params_iter)
+            tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
+            for j in range(self.atmosphere.nactivegases):
+                molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[j,:]
+            for j in range(self.atmosphere.ninactivegases):
+                molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[j,:]
+            std_tpprofiles = np.zeros((self.atmosphere.nlayers))
+        std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
+        std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+        for i in xrange(self.atmosphere.nlayers):
+            std_tpprofiles[i] = weighted_avg_and_std(tpprofiles[:,i], weights=sol_weights, axis=0)[1]
+            for j in range(self.atmosphere.nactivegases):
+                std_molprofiles_active[j,i] = weighted_avg_and_std(molprofiles_active[:,j,i], weights=sol_weights, axis=0)[1]
+            for j in range(self.atmosphere.ninactivegases):
+                std_molprofiles_inactive[j,i] = weighted_avg_and_std(molprofiles_inactive[:,j,i], weights=sol_weights, axis=0)[1]
+
+        return std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive

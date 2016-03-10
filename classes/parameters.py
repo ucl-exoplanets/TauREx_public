@@ -92,6 +92,7 @@ class parameters(object):
             self.in_spectrum_file = False
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
+        self.in_xsec_alltemp       = False
         self.in_xsec_path          = self.getpar('Input','xsec_path')
         self.in_xsec_dnu           = self.getpar('Input','xsec_dnu', 'float')
         self.in_cia_path           = self.getpar('Input','cia_path')

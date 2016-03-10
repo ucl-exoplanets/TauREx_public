@@ -566,7 +566,7 @@ class fitting(object):
         if cythonised:
             model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
         else:
-            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
+            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(0, self.data.intsp_nbingrid)]
 
 
         # get chi2
@@ -574,7 +574,7 @@ class fitting(object):
         res = np.nansum(res*res)
         if res == 0:
             res = np.nan
-
+        #
         #
         #
         # ion()
@@ -590,7 +590,7 @@ class fitting(object):
         # clf()
         # #
         # # #
-        # #
+        #
         # ion()
         # clf()
         # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
@@ -606,6 +606,7 @@ class fitting(object):
         #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
         #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
         #     fit_params #fit_params
+        #
 
         return res
 

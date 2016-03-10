@@ -11,7 +11,7 @@ manual_waverange = False
 # short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.4
 # long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 29.0
+wavemax = 20.0
 # specturm type (emission, transmission)
 type = transmission
 # chemically consistent model ACE (Atmospheric Chemical Equilibrium)

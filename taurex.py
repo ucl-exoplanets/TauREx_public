@@ -97,10 +97,10 @@ if options.cluster_dictionary is not "None":
     c.read_dict(dict_name=options.cluster_dictionary)
     params = c.modify_params(params,options.cluster_procid)
 
-if params.gen_type == 'transmission' or params.fit_transmission:
-    from taurex_transmission import run
 
-elif params.gen_type == 'emission' or params.fit_emission:
+if params.gen_type == 'transmission':
+    from taurex_transmission import run
+elif params.gen_type == 'emission':
     from taurex_emission import run
 else:
     logging.error('Forward model selected is ambiguous')
