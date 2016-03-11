@@ -107,6 +107,8 @@ for param in params_dict:
             value *= RJUP
         if param == 'star_radius':
             value *= RSOL
+        if param == 'atm_mu':
+            value *= AMU
         setattr(params, param, value)
 
 # MPI related message

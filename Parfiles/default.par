@@ -25,6 +25,8 @@ compile_cpp = False
 
 #Observed spectrum to be fitted (three columns: wavelength (micron), (Rp/R*)^2, error
 spectrum_file = False
+# append SPECTRUM_out.db to output. Useful to keep track of synthetic observations created with TauREx
+spectrum_db = False
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
 atm_file = Input/profile.atm
@@ -48,8 +50,6 @@ save_plots = True
 sigma_spectrum = False
 # fraction of total samples from which to calculate the one sigma spectrum
 sigma_spectrum_frac = 0.1
-# append SPECTRUM_out.db. Useful to keep track of synthetic observations created with TauREx
-spectrum_out_db = False
 
 [Star]
 

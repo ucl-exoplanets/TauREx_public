@@ -105,8 +105,8 @@ class output(object):
                  'fit_params_texlabels': self.fitting.fit_params_texlabels,
                  'solutions': []}
 
-        if os.path.isfile(self.params.out_spectrum_out_db):
-            SPECTRUM_db = pickle.load(open(self.params.out_spectrum_out_db))
+        if os.path.isfile(self.params.in_spectrum_db):
+            SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db))
             outdb['SPECTRUM_db'] = SPECTRUM_db
 
         return outdb

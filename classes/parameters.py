@@ -92,7 +92,8 @@ class parameters(object):
         # section Input
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
         if self.in_spectrum_file == 'False':
-            self.in_spectrum_file = False
+            self.in_spectrum_file  = False
+        self.in_spectrum_db        = self.getpar('Input', 'spectrum_db')
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')
         self.in_xsec_alltemp       = False
@@ -106,7 +107,6 @@ class parameters(object):
         self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
         self.out_sigma_spectrum        = self.getpar('Output', 'sigma_spectrum', 'bool')
         self.out_sigma_spectrum_frac   = self.getpar('Output', 'sigma_spectrum_frac', 'float')
-        self.out_spectrum_out_db   = self.getpar('Output', 'spectrum_out_db')
 
         # section Star
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL

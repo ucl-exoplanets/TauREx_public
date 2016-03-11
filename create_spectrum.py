@@ -216,6 +216,8 @@ if __name__ == '__main__':
                 value *= RJUP
             if param == 'star_radius':
                 value *= RSOL
+            if param == 'atm_mu':
+                value *= AMU
             setattr(params, param, value)
 
     spectrumob = create_spectrum(params=params)
