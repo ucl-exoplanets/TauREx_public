@@ -73,6 +73,9 @@ class output(object):
                           self.store_mcmc_solutions,
                           self.store_nest_solutions]
             run = [self.fitting.DOWN, self.fitting.MCMC, self.fitting.NEST]
+            out_filenames = [self.params.downhill_out_filename,
+                             self.params.mcmc_out_filename,
+                             self.params.nest_out_filename]
 
             for idx, val in enumerate(types):
                 if run[idx]:
@@ -83,7 +86,14 @@ class output(object):
                     outdb = func_types[idx](outdb)
                     outdb = self.add_data_from_solutions(outdb)
 
-                    pickle.dump(outdb, open(os.path.join(self.params.out_path, '%s_out.db' % types[idx]), 'wb'))
+                    if out_filenames[idx] == 'default':
+                        filename = os.path.join(self.params.out_path, '%s_out.db' % types[idx])
+                    else:
+                        filename = out_filenames[idx]
+
+                    pickle.dump(outdb, open(filename, 'wb'))
+
+        logging.info('Output object correctly initialised')
 
     def initialize_output(self, fitting_type):
 
@@ -94,6 +104,10 @@ class output(object):
                  'fit_params_bounds': self.fitting.fit_bounds,
                  'fit_params_texlabels': self.fitting.fit_params_texlabels,
                  'solutions': []}
+
+        if os.path.isfile(self.params.out_spectrum_out_db):
+            SPECTRUM_db = pickle.load(open(self.params.out_spectrum_out_db))
+            outdb['SPECTRUM_db'] = SPECTRUM_db
 
         return outdb
 

@@ -10,8 +10,7 @@
 # loading libraries
 import  sys
 import os
-import optparse
-from ConfigParser import SafeConfigParser
+import argparse
 import logging
 
 # setting some parameters to global
@@ -51,38 +50,64 @@ except:
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters
 from parameters import *
+from library_constants import *
+
 
 #loading parameter file parser
-parser = optparse.OptionParser()
-parser.add_option('-p', '--parfile',
-                  dest="param_filename",
-                  default="Parfiles/exonest.par"
+parser = argparse.ArgumentParser()
+parser.add_argument('-p',
+                    dest='param_filename',
+                    default='Parfiles/default.par'
+                   )
+
+
+parser.add_argument('-c', '--cluster',
+                  dest='cluster_dictionary',
+                  default='None',
+                  action='store'
                   )
-parser.add_option('-v', '--verbose',
-                  dest="verbose",
-                  default=False,
-                  action="store_true"
-                  )
-                  
-parser.add_option('-c', '--cluster',
-                  dest="cluster_dictionary",
-                  default="None",
-                  type = "string",
-                  action="store"         
-                  )
-parser.add_option('-i', '--cluster_index',
-                  dest="cluster_procid",
-                  default="None",
-                  type = "string",
-                  action="store"         
+parser.add_argument('-i', '--cluster_index',
+                  dest='cluster_procid',
+                  default='None',
+                  type = str,
                   )
 
-options, remainder = parser.parse_args()
+# add command line interface to parameter file
+
+params_tmp = parameters()
+params_dict = params_tmp.params_to_dict() # get all param names
+for param in params_dict:
+    if type(params_dict[param]) == list:
+        # manage lists
+        parser.add_argument('--%s' % param,
+                            action='append',
+                            dest=param,
+                            default=None,
+                            type = type(params_dict[param][0])
+                            )
+    else:
+        parser.add_argument('--%s' % param,
+                            dest=param,
+                            default=None,
+                            type = type(params_dict[param])
+                            )
+options = parser.parse_args()
 
 # Initialise parameters instance
 params = parameters(options.param_filename)
+
+# Override params object from command line input
+for param in params_dict:
+    if getattr(options, param) != None:
+        value = getattr(options, param)
+        if param == 'planet_mass':
+            value *= MJUP
+        if param == 'planet_radius':
+            value *= RJUP
+        if param == 'star_radius':
+            value *= RSOL
+        setattr(params, param, value)
 
 # MPI related message
 if MPIimport:
@@ -91,7 +116,7 @@ else:
     logging.info('MPI disabled')
 
 # modifying parameters object if running in cluster mode (see cluster class for docu)
-if options.cluster_dictionary is not "None":
+if options.cluster_dictionary is not 'None':
     from cluster import cluster
     c = cluster()
     c.read_dict(dict_name=options.cluster_dictionary)

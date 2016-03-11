@@ -42,21 +42,14 @@ star_path = Input/star_spectra
 
 #path for output files
 path = Output/
-#save internal model to file. Useful for when only creating transmission/emisison model
-dump_internal = False
-#internal model name save as
-internal_name = internal_model.dat
 #save plots to .pdf
 save_plots = True
-#plotting contours onto densities in posterior plots
-plot_contour = False
-# posterior plots colour (matplotlib colormaps)
-plot_colour = Blues
-
 # calculate one sigma of fitted spectrum
 sigma_spectrum = False
 # fraction of total samples from which to calculate the one sigma spectrum
 sigma_spectrum_frac = 0.1
+# append SPECTRUM_out.db. Useful to keep track of synthetic observations created with TauREx
+spectrum_out_db = False
 
 [Star]
 
@@ -258,8 +251,12 @@ run = False
 type = L-BFGS-B
 # Supply extra parameters using options parameter. See scipy docu
 options = {‘verbose’:False}
+# pickle DOWN_out location (default params.out_path/DOWN_out.db)
+out_filename = default
 
 [MCMC]
+
+###### MCMC OUTPUT CURRENTLY NOT SUPPORTED ######
 
 # Defines MCMC specific parameters
 
@@ -277,6 +274,8 @@ thin = 1
 verbose = True
 # show progress bar
 progressbar = True
+# pickle MCMC_out location (default params.out_path/NEST_out.db)
+out_filename = default
 
 [MultiNest]
 
@@ -307,3 +306,5 @@ evidence_tolerance = 0.5
 mode_tolerance = -1e90
 # importance nested sampling
 imp_sampling = False
+# pickle NEST_out location (default params.out_path/NEST_out.db)
+out_filename = default

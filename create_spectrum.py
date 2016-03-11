@@ -10,15 +10,13 @@
 # loading libraries
 import  sys
 import os
-import optparse
-from ConfigParser import SafeConfigParser
+import argparse
 import logging
 
 # loading classes
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters, emission, transmission, output, fitting, atmosphere, data
 from parameters import *
 from transmission import *
 from emission import *
@@ -29,7 +27,7 @@ from data import *
 
 class create_spectrum(object):
 
-    def __init__(self, options=None, params=None, param_filename=None):
+    def __init__(self, params=None, param_filename=None):
 
         if hasattr(options, 'param_filename'):
             self.params = parameters(options.param_filename)
@@ -170,20 +168,55 @@ class create_spectrum(object):
 if __name__ == '__main__':
 
     #loading parameter file parser
-    parser = optparse.OptionParser()
-    parser.add_option('-p', '--parfile',
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-p',
                       dest='param_filename',
                       default='Parfiles/default.par'
                       )
-    parser.add_option('-s', '--save',
+    parser.add_argument('-s', '--save',
                       action='store_true',
                       dest='save_spectrum',
                       default=False)
-    parser.add_option('-n', '--filename',
+    parser.add_argument('-n', '--filename',
                       dest='save_filename',
                       default=False)
 
-    options, remainder = parser.parse_args()
+    # add command line interface to parameter file
 
-    spectrumob = create_spectrum(options)
+    params_tmp = parameters()
+    params_dict = params_tmp.params_to_dict() # get all param names
+    for param in params_dict:
+        if type(params_dict[param]) == list:
+            # manage lists
+            parser.add_argument('--%s' % param,
+                                action='append',
+                                dest=param,
+                                default=None,
+                                type = type(params_dict[param][0])
+                                )
+        else:
+            parser.add_argument('--%s' % param,
+                                dest=param,
+                                default=None,
+                                type = type(params_dict[param])
+                                )
+    options = parser.parse_args()
+
+    # Initialise parameters instance
+    params = parameters(options.param_filename)
+
+    # Override params object from command line input
+    for param in params_dict:
+        if getattr(options, param) != None:
+            value = getattr(options, param)
+            if param == 'planet_mass':
+                value *= MJUP
+            if param == 'planet_radius':
+                value *= RJUP
+            if param == 'star_radius':
+                value *= RSOL
+            setattr(params, param, value)
+
+    spectrumob = create_spectrum(params=params)
     spectrumob.save_spectrum(filename=options.save_filename)

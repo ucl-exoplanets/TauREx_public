@@ -12,6 +12,7 @@ import numpy as np
 import logging
 import os
 import inspect
+import subprocess
 
 try:
     from mpi4py import MPI
@@ -69,13 +70,15 @@ class parameters(object):
                 logging.getLogger().addHandler(self.console)
                 logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
 
+        self.version = subprocess.check_output(["git", "describe"])
+        logging.info('Running TauREx %s' % self.version)
+
         logging.info('Initialise parameters object')
 
         # list of all molecules for which we have cross sections
         self.all_absorbing_gases = ['H2O', 'HCN', 'CH4', 'CO2', 'CO', 'NH3', 'C2H2']
         # list of all inactive gases we take care of
         self.all_inactive_gases = ['He', 'H2', 'N2']
-
 
         # section General
         self.gen_manual_waverange  = self.getpar('General','manual_waverange', 'bool')
@@ -100,14 +103,10 @@ class parameters(object):
 
         # section Output
         self.out_path              = self.getpar('Output','path')
-        self.out_dump_internal     = self.getpar('Output','dump_internal', 'bool')
-        self.out_internal_name     = self.getpar('Output','internal_name')
         self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
-        self.out_plot_contour      = self.getpar('Output','plot_contour', 'bool')
-        self.out_plot_colour       = self.getpar('Output','plot_colour')
-
         self.out_sigma_spectrum        = self.getpar('Output', 'sigma_spectrum', 'bool')
         self.out_sigma_spectrum_frac   = self.getpar('Output', 'sigma_spectrum_frac', 'float')
+        self.out_spectrum_out_db   = self.getpar('Output', 'spectrum_out_db')
 
         # section Star
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
@@ -199,6 +198,7 @@ class parameters(object):
         # section Downhill
         self.downhill_run          = self.getpar('Downhill','run', 'bool')
         self.downhill_type         = self.getpar('Downhill', 'type')
+        self.downhill_out_filename = self.getpar('Downhill','out_filename')
 
         # section MCMC
         self.mcmc_run              = self.getpar('MCMC','run', 'bool')
@@ -208,6 +208,7 @@ class parameters(object):
         self.mcmc_thin             = self.getpar('MCMC', 'thin', 'float')
         self.mcmc_verbose          = self.getpar('MCMC', 'verbose', 'bool')
         self.mcmc_progressbar      = self.getpar('MCMC', 'progressbar', 'bool')
+        self.mcmc_out_filename     = self.getpar('MCMC','out_filename')
 
         # section Nest
         self.nest_run              = self.getpar('MultiNest','run', 'bool')
@@ -223,6 +224,7 @@ class parameters(object):
         self.nest_ev_tol           = self.getpar('MultiNest','evidence_tolerance','float')
         self.nest_mode_tol         = self.getpar('MultiNest', 'mode_tolerance', 'float')
         self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
+        self.nest_out_filename     = self.getpar('MultiNest','out_filename')
 
         #checking that either emission or transmisison is run
         if self.fit_emission and self.fit_transmission:
