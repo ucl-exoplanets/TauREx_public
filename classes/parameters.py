@@ -91,8 +91,6 @@ class parameters(object):
 
         # section Input
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
-        if self.in_spectrum_file == 'False':
-            self.in_spectrum_file  = False
         self.in_spectrum_db        = self.getpar('Input', 'spectrum_db')
         self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
         self.in_atm_file           = self.getpar('Input','atm_file')

@@ -139,10 +139,10 @@ class data(object):
     def load_input_spectrum(self):
 
         # set observed spectrum specific variables (only if spectrum is provided)
-        if self.params.in_spectrum_file:
+        if self.params.in_spectrum_file != 'False':
 
             # read spectrum from file
-            logging.info('Reading spectrum from file: '+self.params.in_spectrum_file)
+            logging.info('Reading spectrum from file: %s ' % self.params.in_spectrum_file)
             self.obs_spectrum = np.loadtxt(self.params.in_spectrum_file)
 
             self.obs_wlgrid = self.obs_spectrum[:,0] # grid in micron
