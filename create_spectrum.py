@@ -29,10 +29,10 @@ class create_spectrum(object):
 
     def __init__(self, params=None, param_filename=None):
 
-        if hasattr(options, 'param_filename'):
-            self.params = parameters(options.param_filename)
-        elif params:
+        if params:
             self.params = params
+        elif hasattr(options, 'param_filename'):
+            self.params = parameters(options.param_filename)
         elif param_filename:
             self.params = parameters(param_filename)
 
@@ -45,7 +45,7 @@ class create_spectrum(object):
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
 
-    def generate_spectrum(self, filename=None):
+    def generate_spectrum(self, save_db=False, db_filename=None):
 
         # this function returns the SPECTRUM_out dictionary
         # if filename is not specified, store in out_path/SPECTRUM_out.db
@@ -60,6 +60,10 @@ class create_spectrum(object):
         outdata['spectrum'] = np.zeros((self.dataob.int_nwlgrid_obs, 3))
         outdata['spectrum'][:,0] = self.dataob.int_wlgrid_obs
         outdata['spectrum'][:,1] = self.fmob.model()
+
+        # freeze the mixing ratio profiles, disable gen_ace
+        if self.fmob.params.gen_ace:
+            self.fmob.params.gen_ace = False
 
         # compute contribution function
         outdata['contrib_func'] = self.fmob.model(return_tau=True)
@@ -80,7 +84,7 @@ class create_spectrum(object):
             self.fmob.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
             self.fmob.params.atm_rayleigh = False
             self.fmob.params.atm_cia = False
-            self.fmob.params.atm_clouds = False
+            #self.fmob.params.atm_clouds = False
             outdata['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
             outdata['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
             outdata['opacity_contrib'][val][:,1] = self.fmob.model()
@@ -95,7 +99,7 @@ class create_spectrum(object):
             if atm_rayleigh:
                 self.fmob.params.atm_rayleigh = True
                 self.fmob.params.atm_cia = False
-                self.fmob.params.atm_clouds = False
+                #self.fmob.params.atm_clouds = False
                 outdata['opacity_contrib']['rayleigh'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
                 outdata['opacity_contrib']['rayleigh'][:,0] = self.dataob.int_wlgrid_obs
                 outdata['opacity_contrib']['rayleigh'][:,1] = self.fmob.model()
@@ -104,7 +108,7 @@ class create_spectrum(object):
             if atm_cia:
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = True
-                self.fmob.params.atm_clouds = False
+                #self.fmob.params.atm_clouds = False
                 outdata['opacity_contrib']['cia'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
                 outdata['opacity_contrib']['cia'][:,0] = self.dataob.int_wlgrid_obs
                 outdata['opacity_contrib']['cia'][:,1] = self.fmob.model()
@@ -145,23 +149,23 @@ class create_spectrum(object):
 
         self.SPECTRUM_out = outdb
 
-        if not filename:
-            filename = os.path.join(self.params.out_path, 'SPECTRUM_out.db')
+        if save_db:
+            if not db_filename:
+                db_filename = os.path.join(self.params.out_path, 'SPECTRUM_out.db')
 
-        pickle.dump(outdb, open(filename, 'wb'))
+            pickle.dump(outdb, open(db_filename, 'wb'))
 
         return outdb
 
-    def save_spectrum(self, filename=None):
+    def save_spectrum(self, sp_filename=None):
 
         if not hasattr(self, 'SPECTRUM_out'):
             self.generate_spectrum()
 
-        if not filename:
-            filename = os.path.join(self.params.out_path , 'create_spectrum.dat')
+        if not sp_filename:
+            sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.dat')
 
-        np.savetxt(filename, self.SPECTRUM_out['data']['spectrum'])
-
+        np.savetxt(sp_filename, self.SPECTRUM_out['data']['spectrum'])
 
 
 # gets called when running from command line
@@ -174,12 +178,23 @@ if __name__ == '__main__':
                       dest='param_filename',
                       default='Parfiles/default.par'
                       )
-    parser.add_argument('-s', '--save',
+    parser.add_argument('--save_sp',
                       action='store_true',
-                      dest='save_spectrum',
+                      dest='save_sp',
                       default=False)
-    parser.add_argument('-n', '--filename',
-                      dest='save_filename',
+    parser.add_argument('--save_db',
+                      action='store_true',
+                      dest='save_db',
+                      default=False)
+    parser.add_argument('--sp_filename',
+                      dest='sp_filename',
+                      default=False)
+    parser.add_argument('--db_filename',
+                      dest='db_filename',
+                      default=False)
+    parser.add_argument('--plot',
+                      dest='plot_spectrum',
+                      action='store_true',
                       default=False)
 
     # add command line interface to parameter file
@@ -209,6 +224,7 @@ if __name__ == '__main__':
     # Override params object from command line input
     for param in params_dict:
         if getattr(options, param) != None:
+
             value = getattr(options, param)
             if param == 'planet_mass':
                 value *= MJUP
@@ -221,4 +237,14 @@ if __name__ == '__main__':
             setattr(params, param, value)
 
     spectrumob = create_spectrum(params=params)
-    spectrumob.save_spectrum(filename=options.save_filename)
+
+    spectrumob.generate_spectrum(save_db=options.save_db, db_filename=options.db_filename)
+
+    if options.save_sp:
+        spectrumob.save_spectrum(sp_filename=options.sp_filename)
+
+    if options.plot_spectrum:
+        sp = spectrumob.SPECTRUM_out['data']['spectrum']
+        plt.plot(sp[:,0], sp[:,1])
+        plt.xscale('log')
+        plt.show()

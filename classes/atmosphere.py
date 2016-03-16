@@ -57,6 +57,8 @@ class atmosphere(object):
             # active and inactive gas names and mixing ratios
             self.active_gases = self.data.ven_active_gases
             self.inactive_gases = self.data.ven_inactive_gases
+            self.params.atm_active_gases = self.active_gases
+            self.params.atm_inactive_gases = self.inactive_gases
 
             # set mixing ratios profiles of active and inactive gases
             self.active_mixratio_profile = np.zeros((len(self.active_gases), self.nlayers))
@@ -318,14 +320,15 @@ class atmosphere(object):
         # used to get the mixing ratios of the individual molecules in the cpp pathintegral
         # the index refers to the full array of active_gas + inactive_gas
         cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=np.int)
-        c = 0
-        for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
-            for mol_idx, mol_val in enumerate(pair_val.split('-')):
-                try:
-                    cia_idx[c] = self.active_gases.index(mol_val)
-                except ValueError:
-                    cia_idx[c] = self.nactivegases + self.inactive_gases.index(mol_val)
-                c += 1
+        if self.params.atm_cia:
+            c = 0
+            for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
+                for mol_idx, mol_val in enumerate(pair_val.split('-')):
+                    try:
+                        cia_idx[c] = self.active_gases.index(mol_val)
+                    except ValueError:
+                        cia_idx[c] = self.nactivegases + self.inactive_gases.index(mol_val)
+                    c += 1
         return cia_idx
 
     def set_ace_params(self):
@@ -437,7 +440,7 @@ class atmosphere(object):
         gamma_1 = kappa_v1/(kappa_ir + 1e-10); gamma_2 = kappa_v2/(kappa_ir + 1e-10)
         tau = kappa_ir * self.pressure_profile / planet_grav
 
-        T_int = 200 # todo internal heat parameter looks suspicious... needs looking at.
+        T_int = 100 # todo internal heat parameter looks suspicious... needs looking at.
 
         def eta(gamma, tau):
             part1 = 2.0/3.0 + 2.0 / (3.0*gamma) * (1.0 + (gamma*tau/2.0 - 1.0) * np.exp(-1.0 * gamma * tau))

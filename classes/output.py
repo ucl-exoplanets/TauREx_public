@@ -339,7 +339,7 @@ class output(object):
             self.fitting.forwardmodel.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
             self.fitting.forwardmodel.params.atm_rayleigh = False
             self.fitting.forwardmodel.params.atm_cia = False
-            self.fitting.forwardmodel.params.atm_clouds = False
+            #self.fitting.forwardmodel.params.atm_clouds = False
             solution['opacity_contrib'][val] = np.zeros((self.data.int_nwlgrid_full, 2))
             solution['opacity_contrib'][val][:,0] = self.data.int_wlgrid_full
             solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model()
@@ -354,7 +354,7 @@ class output(object):
             if atm_rayleigh:
                 self.fitting.forwardmodel.params.atm_rayleigh = True
                 self.fitting.forwardmodel.params.atm_cia = False
-                self.fitting.forwardmodel.params.atm_clouds = False
+                #self.fitting.forwardmodel.params.atm_clouds = False
                 solution['opacity_contrib']['rayleigh'] = np.zeros((self.data.int_nwlgrid_full, 2))
                 solution['opacity_contrib']['rayleigh'][:,0] = self.data.int_wlgrid_full
                 solution['opacity_contrib']['rayleigh'][:,1] = self.fitting.forwardmodel.model()
@@ -363,7 +363,7 @@ class output(object):
             if atm_cia:
                 self.fitting.forwardmodel.params.atm_rayleigh = False
                 self.fitting.forwardmodel.params.atm_cia = True
-                self.fitting.forwardmodel.params.atm_clouds = False
+                #self.fitting.forwardmodel.params.atm_clouds = False
                 solution['opacity_contrib']['cia'] = np.zeros((self.data.int_nwlgrid_full, 2))
                 solution['opacity_contrib']['cia'][:,0] = self.data.int_wlgrid_full
                 solution['opacity_contrib']['cia'][:,1] = self.fitting.forwardmodel.model()
