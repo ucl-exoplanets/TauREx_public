@@ -315,7 +315,7 @@ class output(object):
         if self.params.out_sigma_spectrum and solution['type'] == 'NEST':
             sigmasp = self.get_one_sigma_spectrum(solution)
             solution['fit_spectrum_xsecres'][:,2] = sigmasp
-            solution['obs_spectrum'][:,4] = np.asarray([std_spectrum[self.data.intsp_bingrididx_full == i].mean()
+            solution['obs_spectrum'][:,4] = np.asarray([sigmasp[self.data.intsp_bingrididx_full == i].mean()
                                                         for i in xrange(1, self.data.intsp_nbingrid_full+1)])
 
         # calculate contribution function
