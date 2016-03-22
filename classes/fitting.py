@@ -368,15 +368,14 @@ class fitting(object):
             self.fit_bounds.append((np.log10(self.params.fit_P0_bounds[0]), np.log10(self.params.fit_P0_bounds[1]))) # in log[Pascal]
 
         ##########################################################################
-        # Cloud parameters. Only if include_clouds = True
-        if self.params.atm_clouds:
-            if self.params.fit_fit_clouds_topP:
-                self.fit_params_names.append('clouds_topP')
-                self.fit_params_texlabels.append('$P_\mathrm{cld,top}$')
-                self.fit_params.append(np.mean((np.log10(self.params.fit_clouds_topP_bounds[0]),
-                                                np.log10(self.params.fit_clouds_topP_bounds[1]))))
-                self.fit_bounds.append((np.log10(self.params.fit_clouds_topP_bounds[0]),
-                                        np.log10(self.params.fit_clouds_topP_bounds[1])))
+        # Cloud parameters
+        if self.params.fit_fit_clouds_topP:
+            self.fit_params_names.append('clouds_topP')
+            self.fit_params_texlabels.append('$P_\mathrm{cld,top}$')
+            self.fit_params.append(np.mean((np.log10(self.params.fit_clouds_topP_bounds[0]),
+                                            np.log10(self.params.fit_clouds_topP_bounds[1]))))
+            self.fit_bounds.append((np.log10(self.params.fit_clouds_topP_bounds[0]),
+                                    np.log10(self.params.fit_clouds_topP_bounds[1])))
 
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
@@ -534,11 +533,10 @@ class fitting(object):
             count += 1
 
         ##########################################################################
-        # Cloud parameters. Only if include_clouds = True
-        if self.params.atm_clouds:
-            if self.params.fit_fit_clouds_topP:
-                self.forwardmodel.atmosphere.clouds_topP = np.power(10, fit_params[count])
-                count += 1
+        # Cloud parameters
+        if self.params.fit_fit_clouds_topP:
+            self.forwardmodel.atmosphere.clouds_topP = np.power(10, fit_params[count])
+            count += 1
 
         if self.params.fit_fit_P0:
             self.forwardmodel.atmosphere.pressure_profile = self.forwardmodel.atmosphere.get_pressure_profile()
@@ -568,7 +566,6 @@ class fitting(object):
         else:
             model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
 
-
         # get chi2
         res = ((data - model_binned) / datastd)
         res = np.nansum(res*res)
@@ -591,22 +588,22 @@ class fitting(object):
         # #
         # # #
         #
-        # ion()
-        # clf()
-        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-        # plot(self.data.obs_spectrum[:,0], model_binned)
-        # xlabel('Wavelength (micron)')
-        # ylabel('Transit depth')
-        # xscale('log')
-        # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-        # draw()
-        # pause(0.0001)
-        #
-        # print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
-        #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
-        #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
-        #     fit_params #fit_params
-        #
+        ion()
+        clf()
+        errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        plot(self.data.obs_spectrum[:,0], model_binned)
+        xlabel('Wavelength (micron)')
+        ylabel('Transit depth')
+        xscale('log')
+        xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
+        draw()
+        pause(0.0001)
+
+        print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+            self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
+            self.forwardmodel.atmosphere.planet_radius/RJUP), \
+            fit_params #fit_params
+
 
         return res
 

@@ -97,6 +97,8 @@ options = parser.parse_args()
 # Initialise parameters instance
 params = parameters(options.param_filename)
 
+params.gen_manual_waverange = False
+
 # Override params object from command line input
 for param in params_dict:
     if getattr(options, param) != None:
@@ -110,6 +112,7 @@ for param in params_dict:
         if param == 'atm_mu':
             value *= AMU
         setattr(params, param, value)
+
 
 # MPI related message
 if MPIimport:
