@@ -36,7 +36,7 @@ extern "C" {
                        const int sigma_ntemp,
                        const double * sigma_rayleigh,
                        const int cia_npairs,
-                       const int * cia_idx,
+                       const double * cia_idx,
                        const int cia_nidx,
                        const double * sigma_cia,
                        const double * sigma_cia_temp,
@@ -146,19 +146,20 @@ extern "C" {
         }
 
         // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
-         for (int c=0; c<cia_npairs;c++) {
-             if (cia_idx[c*2] >= nactive) {
-                for (int j=0;j<nlayers;j++) { x1_idx[c][j] = inactive_mixratio[j+nlayers*(cia_idx[c*2]-nactive)]; }
+        for (int c=0; c<cia_npairs;c++) {
+             if (int(cia_idx[c*2]) >= nactive) {
+                for (int j=0;j<nlayers;j++) {
+
+                    x1_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2])-nactive)];
+                    x2_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2+1])-nactive)];
+                }
              } else {
-                for (int j=0;j<nlayers;j++) { x1_idx[c][j] = active_mixratio[j+nlayers*cia_idx[c*2]]; }
-             }
-             if (cia_idx[c*2] >= nactive) {
-                for (int j=0;j<nlayers;j++) { x2_idx[c][j] = inactive_mixratio[j+nlayers*(cia_idx[c*2+1]-nactive)]; }
-             } else {
-                for (int j=0;j<nlayers;j++) { x2_idx[c][j] = active_mixratio[j+nlayers*cia_idx[c*2+1]]; }
+                for (int j=0;j<nlayers;j++) {
+                    x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
+                    x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
+                }
              }
          }
-
 
         // calculate absorption
         count2 = 0;
@@ -202,13 +203,14 @@ extern "C" {
                         if (rayleigh == 1) {
                             for (int l=0; l<ninactive; l++) {
                                 //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
+                                //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
                                 tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
                             }
                         }
                         // calculating optical depth due to collision induced absorption
                         if (cia == 1) {
                             for (int c=0; c<cia_npairs;c++) {
-                                tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x1_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
+                                tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
                             }
                         }
 
@@ -229,9 +231,9 @@ extern "C" {
         }
 //        cout << "END" << endl;
 
-        delete dlarray;
-        delete sigma_interp;
-        delete sigma_cia_interp;
+        delete[] dlarray;
+        delete[] sigma_interp;
+        delete[] sigma_cia_interp;
         dlarray = NULL;
         sigma_interp = NULL;
         sigma_cia_interp = NULL;

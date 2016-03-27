@@ -58,7 +58,7 @@ class transmission(object):
                                                         C.c_int,
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
-                                                        np.ctypeslib.ndpointer(dtype=np.int, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
@@ -128,7 +128,6 @@ class transmission(object):
 
         #running c++ path integral
 
-
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,
                                             self.atmosphere.nactivegases,
@@ -141,7 +140,7 @@ class transmission(object):
                                             len(self.data.sigma_dict['t']),
                                             self.atmosphere.sigma_rayleigh_array_flat,
                                             len(self.data.sigma_cia_dict['xsecarr']),
-                                            self.atmosphere.cia_idx,
+                                            np.asarray(self.atmosphere.cia_idx, dtype=np.float),
                                             len(self.atmosphere.cia_idx),
                                             self.atmosphere.sigma_cia_array_flat,
                                             self.data.sigma_cia_dict['t'],
