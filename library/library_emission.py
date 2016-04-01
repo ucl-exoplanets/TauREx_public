@@ -4,7 +4,6 @@ import numpy as np
 import ctypes as C
 from scipy.stats.mstats_basic import tmean
 
-
 def black_body(lamb, temp):
     #small function calculating plank black body
     #input: microns, kelvin
@@ -57,16 +56,15 @@ def black_body_to_temp(wave,flux):
     T = (h*c)/(wave*k) * 1.0/ logpart
     return T
 
-
 def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function,iterate=True):
     '''
     function iterating through all lower and upper bounds of parameters
-    to determine which combination gives the lowest/highest attainable 
+    to determine which combination gives the lowest/highest attainable
     TP profile. Returns mean TP profile with errorbars on each pressure level
-    ''' 
+    '''
     Tmean = TP_function(TP_params)
 
-    bounds = [] #list of lower and upper parameter bounds 
+    bounds = [] #list of lower and upper parameter bounds
     lowpar = []
     highpar= []
     for i in xrange(len(TP_params)):
@@ -78,32 +76,32 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function,iterate=
             low = TP_bounds[i][0]+1e-10
         if high > TP_bounds[i][1]:
             high = TP_bounds[i][1]-1e-10
-            
+
         bounds.append((low,high))
-    
-    
+
+
     if iterate:
         iterlist = list(itertools.product(*bounds))
         iter_num = np.shape(iterlist)[0] #number of possible combinations
-        
+
         T_iter   = np.zeros((len(Tmean), iter_num))
         T_minmax = np.zeros((len(Tmean), 2))
-        
+
         for i in range(iter_num):
             T_iter[:,i]  = TP_function(iterlist[i])
-    
+
         Tmean = np.mean(T_iter,1)
         T_minmax[:,0] = np.min(T_iter,1)
         T_minmax[:,1] = np.max(T_iter,1)
         T_sigma = (T_minmax[:,1] - T_minmax[:,0])/2.0
 #         T_sigma = np.std(T_iter,1)
-        
+
     else:
         Tmin = TP_function(lowpar)
         Tmax = TP_function(highpar)
         T_sigma = Tmax-Tmin
         T_sigma /= 2.0
-      
+
     return Tmean, T_sigma
 
 
@@ -112,7 +110,9 @@ def generate_tp_covariance(outob):
     Function generating TP_profile covariance matrix from previous best fit. 
     This can be used by _TP_rodgers200 or _TP_hybrid TP profiles in a second stage fit.
     '''
-    
+
+    # todo needs to be adapted to new output class
+
     #translating fitting parameters to mean temperature and lower/upper bounds
     fit_TPparam_bounds = outob.fitting.fit_bounds[outob.fitting.fit_X_nparams:]
     if outob.NEST:

@@ -9,9 +9,6 @@
 
 #loading libraries   
 import numpy
-import copy
-import itertools
-import time
 import ctypes as C
 import numpy as np
 
@@ -21,7 +18,7 @@ import logging
 
 import matplotlib.pylab as plt
 
-class transmission():
+class transmission(object):
 
     def __init__(self, atmosphere, data=None, params=None):
 
@@ -53,18 +50,20 @@ class transmission():
                                                         C.c_int,
                                                         C.c_int,
                                                         C.c_int,
-                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
-                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
-                                                        np.ctypeslib.ndpointer(dtype=np.int, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_int,
+                                                        np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_int,
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                                                        C.c_int,
+                                                        C.c_double,
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
@@ -73,10 +72,11 @@ class transmission():
                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                         C.c_double,
                                                         C.c_double,
+                                                        C.c_void_p,
                                                         C.c_void_p]
 
 
-    def ctypes_pathintegral(self):
+    def ctypes_pathintegral(self, return_tau=False):
 
         if self.params.gen_ace:
 
@@ -124,26 +124,29 @@ class transmission():
 
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
-
+        tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
 
         #running c++ path integral
+
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,
                                             self.atmosphere.nactivegases,
                                             self.atmosphere.ninactivegases,
+                                            self.params.atm_rayleigh,
+                                            self.params.atm_cia,
+                                            self.params.atm_clouds,
                                             self.atmosphere.sigma_array_flat,
                                             self.data.sigma_dict['t'],
                                             len(self.data.sigma_dict['t']),
                                             self.atmosphere.sigma_rayleigh_array_flat,
                                             len(self.data.sigma_cia_dict['xsecarr']),
-                                            self.atmosphere.cia_idx,
+                                            np.asarray(self.atmosphere.cia_idx, dtype=np.float),
                                             len(self.atmosphere.cia_idx),
                                             self.atmosphere.sigma_cia_array_flat,
                                             self.data.sigma_cia_dict['t'],
                                             len(self.data.sigma_cia_dict['t']),
-                                            self.atmosphere.clouds,
-                                            self.atmosphere.sigma_clouds_array_flat,
-                                            self.atmosphere.clouds_density_profile,
+                                            self.atmosphere.clouds_topP,
+                                            self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,
                                             self.atmosphere.altitude_profile,
                                             self.atmosphere.active_mixratio_profile.flatten(),
@@ -151,32 +154,31 @@ class transmission():
                                             self.atmosphere.temperature_profile,
                                             self.atmosphere.planet_radius,
                                             self.params.star_radius,
-                                            C.c_void_p(absorption.ctypes.data))
+                                            C.c_void_p(absorption.ctypes.data),
+                                            C.c_void_p(tau.ctypes.data))
 
         out = np.zeros((len(absorption)))
         out[:] = absorption
 
-        del(absorption)
+        if return_tau:
 
-        return out
+            tauout = np.zeros((self.atmosphere.int_nwngrid, self.atmosphere.nlayers))
+            count = 0
+            for i in range(self.atmosphere.int_nwngrid):
+                for j in range(self.atmosphere.nlayers):
+                    tauout[i,j] = tau[count]
+                    count += 1
+            tauout = np.fliplr(np.rot90(tauout))
 
+            del(absorption)
+            del(tau)
 
+            return tauout
 
+        else:
 
+            del(absorption)
+            del(tau)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            return out
 

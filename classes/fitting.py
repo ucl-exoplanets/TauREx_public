@@ -1,39 +1,29 @@
-################################################
-#class fitting
-#
-# Class containing fitting interfaces to pymc and multinest.
-# All likelihoods are defined here.  
-#
-# Input: -parameter object
-#        -data object
-#        -
-#
-#
-# Output: -data object containing relevant data in dictionary 
-#         format  
-#
-#
-# Modification History:
-#   - v1.0 : first definition, Ingo Waldmann, Apr 2013 
-#
-################################################
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
+
+    Fitting class
+
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
+'''
+
 
 #loading libraries     
-from base import base
-import numpy, pylab, os, sys, math, warnings, threading, subprocess, gzip, pickle, shutil, logging, time
-from pylab import *
-from numpy import *
+import os
+import sys
+import shutil
+import logging
+
 import numpy as np
-from StringIO import StringIO
-from scipy.interpolate import interp1d
-from scipy.optimize import fmin
 from scipy.optimize import minimize
 
 from library_constants import *
 from library_general import *
 
+from matplotlib.pylab import *
 
-try: 
+
+try:
     import pymultinest
     multinest_import = True
 except:
@@ -63,14 +53,11 @@ cythonised = False # currently disabelling cythonised functions
 from library_constants import *
 from library_general import *
 
-class fitting(base):
+class fitting(object):
 
-    ##@profile
     def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None):
 
-        # note that forwardmodel can be either the transmission or the emission object
-
-        self.__ID__ = 'fitting'
+        # forwardmodel can be either the transmission or the emission object
 
         logging.info('Initialise object fitting')
 
@@ -286,23 +273,23 @@ class fitting(base):
 
                 self.fit_params_names.append('kappa_irr')
                 self.fit_params_texlabels.append('$k_\mathrm{irr}$')
-                self.fit_bounds.append((0.0,0.1))
-                self.fit_params.append(np.mean((0.0,0.1)))
+                self.fit_bounds.append((self.params.fit_tp_guillot_kappa_irr_bounds[0], self.params.fit_tp_guillot_kappa_irr_bounds[1]))
+                self.fit_params.append(np.mean((self.params.fit_tp_guillot_kappa_irr_bounds[0], self.params.fit_tp_guillot_kappa_irr_bounds[1])))
 
                 self.fit_params_names.append('kappa_v1') #
                 self.fit_params_texlabels.append('$k_\mathrm{1}$')
-                self.fit_bounds.append((0.0,0.1))
-                self.fit_params.append(np.mean((0.0,0.1)))
+                self.fit_bounds.append((self.params.fit_tp_guillot_kappa_v1_bounds[0], self.params.fit_tp_guillot_kappa_v1_bounds[1]))
+                self.fit_params.append(np.mean((self.params.fit_tp_guillot_kappa_v1_bounds[0], self.params.fit_tp_guillot_kappa_v1_bounds[1])))
 
                 self.fit_params_names.append('kappa_v2')
                 self.fit_params_texlabels.append('$k_\mathrm{2}$')
-                self.fit_bounds.append((0.0,0.1))
-                self.fit_params.append(np.mean((0.0,0.1)))
+                self.fit_bounds.append((self.params.fit_tp_guillot_kappa_v2_bounds[0], self.params.fit_tp_guillot_kappa_v2_bounds[1]))
+                self.fit_params.append(np.mean((self.params.fit_tp_guillot_kappa_v2_bounds[0], self.params.fit_tp_guillot_kappa_v2_bounds[1])))
 
                 self.fit_params_names.append('alpha')
                 self.fit_params_texlabels.append('$\\alpha$')
-                self.fit_bounds.append((0.0,1.0))
-                self.fit_params.append(np.mean((0.0,0.01)))
+                self.fit_bounds.append((self.params.fit_tp_guillot_alpha_bounds[0], self.params.fit_tp_guillot_alpha_bounds[1]))
+                self.fit_params.append(np.mean((self.params.fit_tp_guillot_alpha_bounds[0], self.params.fit_tp_guillot_alpha_bounds[1])))
 
             elif self.forwardmodel.atmosphere.TP_type == '2point':
 
@@ -381,35 +368,14 @@ class fitting(base):
             self.fit_bounds.append((np.log10(self.params.fit_P0_bounds[0]), np.log10(self.params.fit_P0_bounds[1]))) # in log[Pascal]
 
         ##########################################################################
-        # Cloud parameters. Only if include_clouds = True
-        if self.params.atm_clouds:
-            if self.params.fit_fit_clouds_lower_P:
-                self.fit_params_names.append('clouds_lower_P')
-                self.fit_params_texlabels.append('$P_\mathrm{cld,low}$')
-                self.fit_params.append(np.mean((self.params.fit_clouds_lower_P_bounds[0],
-                                                self.params.fit_clouds_lower_P_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_lower_P_bounds[0],
-                                        self.params.fit_clouds_lower_P_bounds[1]))
-
-            if self.params.fit_fit_clouds_upper_P:
-                self.fit_params_names.append('clouds_upper_P')
-                self.fit_params_texlabels.append('$P_\mathrm{cld,up}$')
-                self.fit_params.append(np.mean((self.params.fit_clouds_upper_P_bounds[0],
-                                                self.params.fit_clouds_upper_P_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_upper_P_bounds[0],
-                                        self.params.fit_clouds_upper_P_bounds[1]))
-
-            if self.params.fit_fit_clouds_a:
-                self.fit_params_texlabels.append('$a_\mathrm{cld}$')
-                self.fit_params_names.append('clouds_a')
-                self.fit_params.append(np.mean((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_a_bounds[0], self.params.fit_clouds_a_bounds[1]))
-
-            if self.params.fit_fit_clouds_m:
-                self.fit_params_texlabels.append('$m_\mathrm{cld}$')
-                self.fit_params_names.append('clouds_m')
-                self.fit_params.append(np.mean((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1])))
-                self.fit_bounds.append((self.params.fit_clouds_m_bounds[0], self.params.fit_clouds_m_bounds[1]))
+        # Cloud parameters
+        if self.params.fit_fit_clouds_topP:
+            self.fit_params_names.append('clouds_topP')
+            self.fit_params_texlabels.append('$P_\mathrm{cld,top}$')
+            self.fit_params.append(np.mean((np.log10(self.params.fit_clouds_topP_bounds[0]),
+                                            np.log10(self.params.fit_clouds_topP_bounds[1]))))
+            self.fit_bounds.append((np.log10(self.params.fit_clouds_topP_bounds[0]),
+                                    np.log10(self.params.fit_clouds_topP_bounds[1])))
 
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
@@ -483,14 +449,14 @@ class fitting(base):
                 if self.params.fit_fit_active:
                     for idx, gasname in enumerate(self.params.atm_active_gases):
                         if self.params.fit_X_log: # fit in log space
-                            self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = power(10, fit_params[count])
+                            self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = np.power(10, fit_params[count])
                         else:
                             self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = fit_params[count]
                         count += 1
                 if self.params.fit_fit_inactive:
                     for idx, gasname in enumerate(self.params.atm_inactive_gases):
                         if self.params.fit_X_log: # fit in log space
-                            self.forwardmodel.atmosphere.inactive_mixratio_profile[idx, :] = power(10, fit_params[count])
+                            self.forwardmodel.atmosphere.inactive_mixratio_profile[idx, :] = np.power(10, fit_params[count])
                         else:
                             self.forwardmodel.atmosphere.inactive_mixratio_profile[idx, :] = fit_params[count]
                         count += 1
@@ -563,24 +529,14 @@ class fitting(base):
         #####################################################
         # Surface pressure
         if self.params.fit_fit_P0:
-            self.forwardmodel.atmosphere.max_pressure = power(10, fit_params[count])
+            self.forwardmodel.atmosphere.max_pressure = np.power(10, fit_params[count])
             count += 1
 
         ##########################################################################
-        # Cloud parameters. Only if include_clouds = True
-        if self.params.atm_clouds:
-            if self.params.fit_fit_clouds_lower_P:
-                self.forwardmodel.atmosphere.clouds_lower_P = power(10, fit_params[count])
-                count += 1
-            if self.params.fit_fit_clouds_upper_P:
-                self.forwardmodel.atmosphere.clouds_upper_P = power(10, fit_params[count])
-                count += 1
-            if self.params.fit_fit_clouds_a:
-                self.forwardmodel.atmosphere.clouds_a = fit_params[count]
-                count += 1
-            if self.params.fit_fit_clouds_m:
-                self.forwardmodel.atmosphere.clouds_m = fit_params[count]
-                count += 1
+        # Cloud parameters
+        if self.params.fit_fit_clouds_topP:
+            self.forwardmodel.atmosphere.clouds_topP = np.power(10, fit_params[count])
+            count += 1
 
         if self.params.fit_fit_P0:
             self.forwardmodel.atmosphere.pressure_profile = self.forwardmodel.atmosphere.get_pressure_profile()
@@ -615,11 +571,11 @@ class fitting(base):
         res = np.nansum(res*res)
         if res == 0:
             res = np.nan
-#         print res
+        #
         #
         #
         # ion()
-#         figure(1)
+        # figure(1)
         # clf()
         # plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
         # gca().invert_yaxis()
@@ -631,23 +587,23 @@ class fitting(base):
         # clf()
         # #
         # # #
+        #
         # ion()
         # clf()
-#         errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-#         plot(self.data.obs_spectrum[:,0], model_binned)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         show()
+        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        # plot(self.data.obs_spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
         # xscale('log')
         # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-        # ion()
         # draw()
         # pause(0.0001)
         #
-        # # #
         # print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
         #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
-        #     self.forwardmodel.atmosphere.planet_radius/RJUP), self.forwardmodel.atmosphere.active_mixratio_profile[:,20] #fit_params
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
+        #     fit_params #fit_params
+
 
         return res
 
@@ -680,7 +636,6 @@ class fitting(base):
     ###############################################################################
     #Markov Chain Monte Carlo algorithm
 
-    #@profile #line-by-line profiling decorator
     def mcmc_fit(self):
     # fitting using adaptive Markov Chain Monte Carlo
 
@@ -693,7 +648,7 @@ class fitting(base):
 
         data = self.data.obs_spectrum[:,1] #observed data
         datastd = self.data.obs_spectrum[:,2] #data error
-        
+
         # setting prior distributions
         # master thread (MPIrank =0) will start from ideal solution (from downhill fitting)
         # slave threads (MPIrank != 0) will start from randomised points.
@@ -803,13 +758,6 @@ class fitting(base):
                         except Exception, e:
                             logging.error('Cannot remove files in %s' % self.dir_multinest)
 
-        def show(filepath): 
-            # open the output (pdf) file for the user
-            if os.name == 'mac':
-                subprocess.call(('open', filepath))
-            elif os.name == 'nt':
-                os.startfile(filepath) #@todo possible error here but noone has windows anyways...
-
         def multinest_loglike(cube, ndim, nparams):
             # log-likelihood function called by multinest
             fit_params_container = asarray([cube[i] for i in xrange(len(self.fit_params))])
@@ -828,8 +776,6 @@ class fitting(base):
         datastd_mean = mean(datastd)
         ndim = len(self.fit_params)
 
-        #progress = pymultinest.ProgressPlotter(n_params = len(self.fit_params)); progress.start()
-        #threading.Timer(60, show, ["chains/1-phys_live.points.pdf"]).start() # delayed opening
         logging.info('Multinest output dir is %s' % self.dir_multinest)
 
         pymultinest.run(LogLikelihood=multinest_loglike,
@@ -848,7 +794,6 @@ class fitting(base):
                         n_live_points = self.params.nest_nlive,
                         max_iter= self.params.nest_max_iter,
                         init_MPI=False)
-        #progress.stop()
 
         # wait for all threads to synchronise
         MPI.COMM_WORLD.Barrier()

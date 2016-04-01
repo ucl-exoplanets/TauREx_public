@@ -11,7 +11,7 @@ manual_waverange = False
 # short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.4
 # long wavelength cut-off (in microns) if manual_waverange = True
-wavemax = 29.0
+wavemax = 20.0
 # specturm type (emission, transmission)
 type = transmission
 # chemically consistent model ACE (Atmospheric Chemical Equilibrium)
@@ -25,6 +25,8 @@ compile_cpp = False
 
 #Observed spectrum to be fitted (three columns: wavelength (micron), (Rp/R*)^2, error
 spectrum_file = False
+# append SPECTRUM_out.db to output. Useful to keep track of synthetic observations created with TauREx
+spectrum_db = False
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
 atm_file = Input/profile.atm
@@ -42,50 +44,12 @@ star_path = Input/star_spectra
 
 #path for output files
 path = Output/
-#save internal model to file. Useful for when only creating transmission/emisison model
-dump_internal = False
-#internal model name save as
-internal_name = internal_model.dat
 #save plots to .pdf
 save_plots = True
-#plotting contours onto densities in posterior plots
-plot_contour = False
-# posterior plots colour (matplotlib colormaps)
-plot_colour = Blues
-
-[Preselector]
-
-# Run preselector module to automatically estimate number and types of molecules present in spectrum.
-# If run, the following parameters will be automatically determined and overwritten by the pre-selector:
-# [Input]: atm_file, abs_path (overwritten by cross_path), abs_files
-# [Input]: use_ATMfile = False,
-# [Planet]: temp, molec, (mu not yet)
-# [T-P profile]: num_gas
-# not yet but soon: [Fitting]: T_up, T_low, X_up, X_low
-
-#run preselector
-run_pre = False
-#Path of spectral library folder
-speclib_path = Preselector/speclib/
-#Path of PCA preselector .pkl file
-pca_path = Preselector/
-#(re)generate spectral library
-generate_speclib = True
-#restrict temperature range for cross-section lists
-restrict_temp = True
-#setting temperature range (K) if restrict_temp = True : low, high
-temp_range = 800, 1600
-#mixing ratios for which spectra are computed
-mixing_ratio = 1e-5,1e-4,1e-3,1e-2
-#(re)compute PCA preselector file
-generate_pca = True
-#masking threshold
-mask_thres = 0.6
-#force preselector to include following list of molecules
-mol_force_on = True
-#list of molecules to be added
-#naming convention must be same as cross-section file, comma separated
-mol_force = CO, H2O
+# calculate one sigma of fitted spectrum
+sigma_spectrum = False
+# fraction of total samples from which to calculate the one sigma spectrum
+sigma_spectrum_frac = 0.1
 
 [Star]
 
@@ -165,10 +129,8 @@ cia_pairs = H2-H2, H2-He
 
 # include cloud opacities. True/False
 clouds = False
-# cloud refractive index (m) and particle size (a) in microns. Comma separated
-cld_params = 1.5, 1.0
-# cloud pressure in Pascal, lower and upper bounds. Comma separated
-cld_pressure = 1e3, 1.e6
+# cloud top pressure in Pascal
+cld_topP = 1e3
 
 # metallicity (1 = solar metallicity, 10 = 10x solar metallicity etc)
 ace_metallicity = 1
@@ -236,12 +198,8 @@ fit_radius = True
 # fit maximum pressure at surface (defined in T-P Profile > atm_max_pressure). Fit is in log space
 fit_P0 = False
 # fit cloud parameters. Only working if Planet > include_cld is True
-# clouds upper and lower pressure (defined in Planet > cld_pressure
-fit_clouds_lower_P = False
-fit_clouds_upper_P = False
-# cloud particle refractive index (m) and particle size (a) (defined in Planet > cld_params)
-fit_clouds_m = False
-fit_clouds_a = False
+# cloud top pressure
+fit_clouds_topP = False
 # ace: chemical consistent fitting
 fit_ace_metallicity = False
 fit_ace_co = False
@@ -260,13 +218,8 @@ mu_bounds = 0, 10
 radius_bounds = 0.2, 0.3
 #Upper and lower bounds for surface pressure (in Pascal)
 P0_bounds = 1.e2, 1.e8
-# cloud lower and upper pressure bounds ( in Pascal ) ). Fit is in log space
-clouds_lower_P_bounds = 1.e0, 1.e6
-clouds_upper_P_bounds = 1.e4, 1.e6
-
-# cloud refractive index and particle size (micron) bounds
-clouds_m_bounds = 0.8, 1.2
-clouds_a_bounds = 1.3, 1.7
+# cloud top pressure bounds ( in Pascal ) ). Fit is in log space
+clouds_topP_bounds = 1.e0, 1.e6
 
 # tp profile bounds
 
@@ -298,8 +251,12 @@ run = False
 type = L-BFGS-B
 # Supply extra parameters using options parameter. See scipy docu
 options = {‘verbose’:False}
+# pickle DOWN_out location (default params.out_path/DOWN_out.db)
+out_filename = default
 
 [MCMC]
+
+###### MCMC OUTPUT CURRENTLY NOT SUPPORTED ######
 
 # Defines MCMC specific parameters
 
@@ -317,6 +274,8 @@ thin = 1
 verbose = True
 # show progress bar
 progressbar = True
+# pickle MCMC_out location (default params.out_path/NEST_out.db)
+out_filename = default
 
 [MultiNest]
 
@@ -347,16 +306,5 @@ evidence_tolerance = 0.5
 mode_tolerance = -1e90
 # importance nested sampling
 imp_sampling = False
-# detect different modes in multinest output using clustering algorithm. It overrides detected modes if multimodes=True
-cluster_analysis = False
-
-
-[Housekeeping]
-#lets you run an external script (py or sh) in subshell at the end of TauREx. Usefull to automatically transfer data or delete tmp files
-
-# run housekeeping
-run = False
-# Name of script in TauREx base dir
-script_name = transfer2home.py
-# Save used parameter file to Output
-save_used_params = True
+# pickle NEST_out location (default params.out_path/NEST_out.db)
+out_filename = default

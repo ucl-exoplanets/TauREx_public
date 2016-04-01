@@ -38,9 +38,11 @@ extern "C" {
                        const double planet_radius,
                        const double star_radius,
                        const double * star_sed,
-                       void * FpFsv) {
+                       void * FpFsv,
+                       void * tauv) {
 
         double * FpFs = (double *) FpFsv;
+        double * tau_total = (double *) tauv;
 
         // setting up arrays and variables
         double* dz = new double[nlayers];
@@ -48,7 +50,7 @@ extern "C" {
         double sigma, sigma_l, sigma_r;
         double tau, dtau;
         double p;
-        int count, t_idx;
+        int count, count2, t_idx;
         double I_total, BB_wl, exponent;
         double h, c, kb, pi;
 
@@ -103,7 +105,8 @@ extern "C" {
                 }
             }
         }
-                // calculate emission
+        // calculate emission
+        count2 = 0;
         for (int wn=0; wn < nwngrid; wn++) {
 
             tau = 0.0;
@@ -117,7 +120,9 @@ extern "C" {
             }
             exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
             BB_wl = ((pi*2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
- 		    I_total += BB_wl * (exp(-1.0*tau));
+
+            I_total += BB_wl * (exp(-1.0*tau));
+
             //other layers
     		for (int j=1; j<(nlayers); j++) {
     			tau = 0.0;
@@ -131,12 +136,14 @@ extern "C" {
                 for (int l=0;l<nactive;l++) {
                     dtau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
                 }
-                // get blackbody (can be improved (if previous layer k-1 had the same temperature do not recompute)
+                // get blackbody
                 if (temperature[j] != temperature[j-1]) {
                     exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
                     BB_wl = ((pi*2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
                 }
+                tau_total[count2] = (BB_wl * (exp(-1.0*tau))* dtau);
                 I_total += (BB_wl * (exp(-1.0*tau))* dtau);
+                count2 += 1;
             }
     		//FpFs[wn] = I_total;
             FpFs[wn] = (I_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);

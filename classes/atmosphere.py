@@ -12,6 +12,7 @@ import numpy as np
 import scipy.special as spe
 import logging
 import sys
+
 import matplotlib.pylab as plt
 
 from library_constants import *
@@ -42,8 +43,7 @@ class atmosphere(object):
 
         # set pressure profile. This is fixed
 
-        self.pressure_profile = self.get_pressure_profile()
-
+        self.pressure_profile = np.copy(self.get_pressure_profile(), order='C')
 
         logging.info('Atmospheric pressure boundaries from internal model: %f-%f' % (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
@@ -57,6 +57,8 @@ class atmosphere(object):
             # active and inactive gas names and mixing ratios
             self.active_gases = self.data.ven_active_gases
             self.inactive_gases = self.data.ven_inactive_gases
+            self.params.atm_active_gases = self.active_gases
+            self.params.atm_inactive_gases = self.inactive_gases
 
             # set mixing ratios profiles of active and inactive gases
             self.active_mixratio_profile = np.zeros((len(self.active_gases), self.nlayers))
@@ -201,13 +203,7 @@ class atmosphere(object):
         self.cia_idx = self.get_cia_idx()
 
         # get clouds specific parameters
-        self.clouds = 1 if self.params.atm_clouds else 0
-        self.clouds_upP = self.params.atm_cld_upper_P
-        self.clouds_lowP = self.params.atm_cld_lower_P
-        self.clouds_m = self.params.atm_cld_m
-        self.clouds_a = self.params.atm_cld_a
-        self.sigma_clouds_array_flat = self.get_sigma_clouds_array()
-        self.clouds_density_profile = self.get_clouds_density_profile()
+        self.clouds_topP = self.params.atm_cld_topP
 
     def get_coupled_planet_mu(self):
 
@@ -324,44 +320,16 @@ class atmosphere(object):
         # used to get the mixing ratios of the individual molecules in the cpp pathintegral
         # the index refers to the full array of active_gas + inactive_gas
         cia_idx = np.zeros((len(self.params.atm_cia_pairs)*2), dtype=np.int)
-        c = 0
-        for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
-            for mol_idx, mol_val in enumerate(pair_val.split('-')):
-                try:
-                    cia_idx[c] = self.active_gases.index(mol_val)
-                except ValueError:
-                    cia_idx[c] = self.nactivegases + self.inactive_gases.index(mol_val)
-                c += 1
+        if self.params.atm_cia:
+            c = 0
+            for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
+                for mol_idx, mol_val in enumerate(pair_val.split('-')):
+                    try:
+                        cia_idx[c] = self.active_gases.index(mol_val)
+                    except ValueError:
+                        cia_idx[c] = self.nactivegases + self.inactive_gases.index(mol_val)
+                    c += 1
         return cia_idx
-
-    def get_sigma_clouds_array(self):
-
-        if self.params.atm_clouds:
-
-            # calculating could cross sections
-            a = (128.0* pi**5 * self.clouds_a**6)
-            b = (3.0 * (10000./self.int_wngrid)**4) # convert wavenumber grid to wavelength
-            c = ((self.clouds_m**2 -1.0)/(self.clouds_m**2 + 2.0))**2
-            sigma_clouds_array = a / b * c
-
-        else:
-            sigma_clouds_array = np.zeros((self.int_nwngrid))
-
-        return sigma_clouds_array
-
-    def get_clouds_density_profile(self):
-
-        low_P_interp = -6
-        up_P_interp = -1
-
-        clouds_density_profile = np.zeros((self.nlayers))
-
-        for pres_idx, pres_val  in enumerate(self.pressure_profile):
-             if pres_val < self.clouds_upP and pres_val > self.clouds_lowP:
-                cld_factor = (pres_val - self.clouds_lowP)/(self.clouds_upP-self.clouds_lowP)
-                clouds_density_profile[pres_idx] = exp(low_P_interp + (up_P_interp - low_P_interp)*cld_factor)
-
-        return clouds_density_profile
 
     def set_ace_params(self):
 
@@ -472,7 +440,7 @@ class atmosphere(object):
         gamma_1 = kappa_v1/(kappa_ir + 1e-10); gamma_2 = kappa_v2/(kappa_ir + 1e-10)
         tau = kappa_ir * self.pressure_profile / planet_grav
 
-        T_int = 200 # todo internal heat parameter looks suspicious... needs looking at.
+        T_int = 100 # todo internal heat parameter looks suspicious... needs looking at.
 
         def eta(gamma, tau):
             part1 = 2.0/3.0 + 2.0 / (3.0*gamma) * (1.0 + (gamma*tau/2.0 - 1.0) * np.exp(-1.0 * gamma * tau))

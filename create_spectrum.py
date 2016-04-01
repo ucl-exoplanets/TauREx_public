@@ -1,331 +1,250 @@
-#! /usr/bin/python -W ignore
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
 
-###########################################################
-# create_spectrum - running minimal version of TauRex to 
-# create transmission (and later emission) spectra from 
-# parameter file values. 
-#
-# Requirements: -python libraries: pylab, numpy, ConfigParser 
-#             [these are the minimum requirements]
-#
-# Additional requirements: pymc
-#
-# Inputs: minimal or normal parameter file
-#
-# Outputs: spectrum.dat
-#
-# To Run: 
-# ./create_spectrum.py [-p exonest.par] 
-#
-# Modification History:
-#   - v1.0 : first definition, Ingo Waldmann, June 2014      
-#       
-###########################################################
+    TauREx create spectrum
 
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-#loading libraries     
-import sys, os, optparse, time
-import numpy as np #nummerical array library 
-import pylab as pl#science and plotting library for python
-from ConfigParser import SafeConfigParser
+'''
 
-#loading classes
+# loading libraries
+import  sys
+import os
+import argparse
+import logging
+
+# loading classes
 sys.path.append('./classes')
 sys.path.append('./library')
 
-import parameters,emission,transmission,fitting,atmosphere,data,preselector
 from parameters import *
-from emission import *
 from transmission import *
-from fitting import *
+from emission import *
+from output import *
 from atmosphere import *
 from data import *
 
 
-#loading libraries
-import library_emission
-import library_general
-from library_emission import *
-from library_general import *
-
-
 class create_spectrum(object):
-    '''
-    Create_spectrum class allows you to generate transmission/emission forward spectra with custom TP-profiles.
-    Several support functions exist like plotting and saving to ascii. 
-    create_spectrum.py can be run like usually from the command line: python create_spectrum.py [options]
-    but can also be imported to other codes as library. This allows EChOSim, TauNet, etc to have direct 
-    access to TauREx forward spectra. 
-    '''
 
-    def __init__(self,options, params=None):
-        
-        self.options = options
-        if params is None:
-            #initialising parameters object
-            self.params = parameters(options.param_filename)
-        else:
+    def __init__(self, params=None, param_filename=None):
+
+        if params:
             self.params = params
+        elif hasattr(options, 'param_filename'):
+            self.params = parameters(options.param_filename)
+        elif param_filename:
+            self.params = parameters(param_filename)
 
+        # Initialise taurex instances up to forward model
         self.params.gen_manual_waverange = True
-
-        self.params.nest_run = False
-        self.params.mcmc_run = False
-        self.params.downhill_run = False
-
-        # initialising data object
         self.dataob = data(self.params)
-
-        # initialising atmosphere object
         self.atmosphereob = atmosphere(self.dataob)
-
-        # set forward model
         if self.params.gen_type == 'transmission':
             self.fmob = transmission(self.atmosphereob)
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
 
-        #TP-profile stuff
-        self.MAX_P = self.atmosphereob.pressure_profile[0]
-        self.MIN_P = self.atmosphereob.pressure_profile[-1]
+    def generate_spectrum(self, save_db=False, db_filename=None):
 
-        self.wavegrid = self.dataob.int_wngrid_obs
+        # this function returns the SPECTRUM_out dictionary
+        # if filename is not specified, store in out_path/SPECTRUM_out.db
+        # also stored in self.SPECTRUM_out
 
-        self.n_spec_bin_grid = len(self.wavegrid)
+        # create SPECTRUM_out
+        outdb = {'type': 'create_spectrum',
+                 'params': self.params.params_to_dict()}
+        outdata = {}
 
-    def generate_spectrum(self,**kwarg):
+        # compute spectrum
+        outdata['spectrum'] = np.zeros((self.dataob.int_nwlgrid_obs, 3))
+        outdata['spectrum'][:,0] = self.dataob.int_wlgrid_obs
+        outdata['spectrum'][:,1] = self.fmob.model()
 
-        #run forward model and bin it down
+        # freeze the mixing ratio profiles, disable gen_ace
+        if self.fmob.params.gen_ace:
+            self.fmob.params.gen_ace = False
 
-        model_int = self.fmob.model(**kwarg)
+        # compute contribution function
+        outdata['contrib_func'] = self.fmob.model(return_tau=True)
 
-        if self.options.bin == 'resolution' or self.options.bin == 'dlambda' or self.options.bin == 'spectrum' or self.options.bin == 'file':
-            model = [model_int[self.spec_bin_grid_idx == i].mean() for i in xrange(1,self.n_spec_bin_grid+1)]
-        else:
-            model = model_int
- 
-        if self.options.error == 0:
-            #saving binned model to array: wavelength, flux
-            self.spectrum = np.zeros((len(model),2))
-            self.spectrum[:,0] = self.wavegrid
-            self.spectrum[:,1] = model
-        else:
-            #saving binned model to array: wavelength, flux, errorbar
-            self.spectrum = np.zeros((len(model),3))
-            self.spectrum[:,0] = self.wavegrid
-            self.spectrum[:,1] = model
+        # calculate opacity contributions
+        outdata['opacity_contrib'] = {}
+        active_mixratio_profile = self.fmob.atmosphere.active_mixratio_profile
+        atm_rayleigh = self.fmob.params.atm_rayleigh
+        atm_cia = self.fmob.params.atm_cia
+        atm_clouds = self.fmob.params.atm_clouds
 
-            if self.options.error == 'file':
-                self.spectrum[:,2] += np.loadtxt(options.bin_file)[:,2]
-            else:
-                self.spectrum[:,2] += float(self.options.error) * 1e-6
+        # opacity from molecules
+        for idx, val in enumerate(self.atmosphereob.active_gases):
+            mask = np.ones(len(self.atmosphereob.active_gases), dtype=bool)
+            mask[idx] = 0
+            active_mixratio_profile_mask = np.copy(active_mixratio_profile)
+            active_mixratio_profile_mask[mask, :] = 0
+            self.fmob.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
+            self.fmob.params.atm_rayleigh = False
+            self.fmob.params.atm_cia = False
+            #self.fmob.params.atm_clouds = False
+            outdata['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+            outdata['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
+            outdata['opacity_contrib'][val][:,1] = self.fmob.model()
 
-            #add noise to flux values
-            if int(self.options.noise) == True:
-                self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
+        self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
 
-#         self.Pnodes = [self.MAX_P,1e4, 100.0,self.MIN_P]
-        
-#         #get grids
-#         self.wavegrid, self.dlamb_grid = self.dataob.get_specgrid(R=int(self.options.resolution),lambda_min=self.params.gen_wavemin,lambda_max=self.params.gen_wavemax)
-#         self.spec_bin_grid, self.spec_bin_grid_idx = self.dataob.get_specbingrid(self.wavegrid, self.dataob.int_wngrid)
-
-        self.spectrum[:,0] = 10000./self.spectrum[:,0]
-        return self.spectrum
-    
-    
-   
-    def reset(self,options,params=None):
-        #allows to reset the original instance to reflect changes in the data instance
-        #this avoids an initialisation of a separate instance.
-        self.__init__(options,params)
-        
-#     def generate_spectrum(self):
-#         #run forward model and bin it down 
-#         self.fmob.atmosphere.update_atmosphere()
-#         model = self.fmob.model()
-#         model_binned = [model[self.spec_bin_grid_idx == i].mean() for i in xrange(1,len(self.spec_bin_grid))]
-#         
-#         #saving binned model to array: wavelength, flux, errorbar 
-#         self.spectrum = np.zeros((len(self.wavegrid),3))
-#         self.spectrum[:,0] = self.wavegrid
-#         self.spectrum[:,1] = model_binned
-#         self.spectrum[:,2] += float(self.options.error) * 1e-6
-# 
-#         #add noise to flux values
-#         if int(self.options.noise) == 1:
-#             self.spectrum[:,1] += np.random.normal(0, float(self.options.error) * 1e-6, len(self.wavegrid))
-#         
-# 
-#         return self.spectrum
-    def set_mixing_ratios(self,X):
-        #wrapper to set absorbing_gases_X in atmosphere object and update it.
-        self.fmob.atmosphere.absorbing_gases_X = X
-        self.fmob.atmosphere.set_mixing_ratios()
-    
-    def generate_tp_profile_1(self,Tnodes,Pnodes=None,smooth_window=10):
-        #generates ad-hoc TP profile given pressure and temperature nodes
-        if Pnodes is None:
-            Pnodes = self.Pnodes
-    
-        TP = np.interp((np.log(self.atmosphereob.pressure_profile[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
-        #smoothing T-P profile
-        wsize = self.atmosphereob.nlayers*(smooth_window/100.0)
-        if (wsize %2 == 0):
-            wsize += 1
-        TP_smooth = self.movingaverage(TP,wsize)
-        border = np.int((len(TP) - len(TP_smooth))/2)
-        
-        #set atmosphere object
-        foo = TP[::-1]
-        foo[border:-border] = TP_smooth[::-1]
-
-        self.fmob.atmosphere.temperature_profile = np.copy( foo , order='C')
-
-        #self.fmob.atmosphere.temperature_profile[border:-border] = TP_smooth[::-1]
-            
-        logging.info('The mean temperature is %i' % int(np.average(self.fmob.atmosphere.temperature_profile)))
-
-    def generate_tp_profile_2(self,tp_params,tp_type='2point'):
-        #generates tp profile from functions available in atmosphere class
-        self.fmob.atmosphere.set_TP_profile(profile=tp_type)
-        self.fmob.atmosphere.temperature_profile = self.atmosphereob.TP_profile(fit_params=tp_params)
-      
-        
-    def save_tp_profile(self,filename='TP_profile.dat'):
-        #saves TP profile currently held in atmosphere object 
-        out = np.zeros((len(self.fmob.atmosphere.temperature_profile),2))
-        out[:,0] = self.fmob.atmosphere.temperature_profile
-        out[:,1] = self.fmob.atmosphere.pressure_profile
-        np.savetxt(os.path.join(self.params.out_path, filename), out)
-        
-    def save_spectrum(self,filename='spectrum.dat'):
-
-        #saves spectrum to ascii file
-        np.savetxt(os.path.join(self.params.out_path, filename),  self.spectrum)
-        
-    def plot_tp_profile(self):
-        #plotting TP-profile
-        T = self.fmob.atmosphere.temperature_profile
-        P = self.fmob.atmosphere.pressure_profile
-        pl.figure()
-        pl.plot(T, P)
-        pl.xlim(np.min(T)-np.min(T)*0.1,np.max(T)+np.max(T)*0.1)
-        pl.yscale('log')
-        pl.xlabel('Temperature')
-        pl.ylabel('Pressure (Pa)')
-        pl.gca().invert_yaxis()
-    
-    def plot_spectrum(self):
-        #plotting spectrum
-        pl.figure()
-
-        if self.options.error == 0:
-            pl.plot(self.spectrum[:,0], self.spectrum[:,1])
-        else:
-            pl.errorbar(self.spectrum[:,0], self.spectrum[:,1], self.spectrum[:,2])
-
-        pl.xscale('log')
-        pl.xlim(np.min(self.spectrum[:,0])-0.1, np.max(self.spectrum[:,0])+1)
-
-        pl.xlabel(r'Wavelength $\mu$m')
         if self.params.gen_type == 'transmission':
-            pl.ylabel(r'$(R_{p}/R_{\ast})^2$')
-        elif self.params.gen_type == 'emission':
-            pl.ylabel(r'$F_{p}/F_{\ast}$')
 
-    def movingaverage(self,values,window):
-        weigths = np.repeat(1.0, window)/window
-        smas = np.convolve(values, weigths, 'valid')
-        return smas #smas2[::-1] # as a numpy array
+            self.fmob.atmosphere.active_mixratio_profile[:, :] = 0
+
+            # opacity from rayleigh
+            if atm_rayleigh:
+                self.fmob.params.atm_rayleigh = True
+                self.fmob.params.atm_cia = False
+                #self.fmob.params.atm_clouds = False
+                outdata['opacity_contrib']['rayleigh'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                outdata['opacity_contrib']['rayleigh'][:,0] = self.dataob.int_wlgrid_obs
+                outdata['opacity_contrib']['rayleigh'][:,1] = self.fmob.model()
+
+            # opacity from cia
+            if atm_cia:
+                self.fmob.params.atm_rayleigh = False
+                self.fmob.params.atm_cia = True
+                #self.fmob.params.atm_clouds = False
+                outdata['opacity_contrib']['cia'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                outdata['opacity_contrib']['cia'][:,0] = self.dataob.int_wlgrid_obs
+                outdata['opacity_contrib']['cia'][:,1] = self.fmob.model()
+
+            # opacity from clouds
+            if atm_clouds:
+                self.fmob.params.atm_rayleigh = False
+                self.fmob.params.atm_cia = False
+                self.fmob.params.atm_clouds = True
+                outdata['opacity_contrib']['clouds'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                outdata['opacity_contrib']['clouds'][:,0] = self.dataob.int_wlgrid_obs
+                outdata['opacity_contrib']['clouds'][:,1] = self.fmob.model()
+
+            self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
+
+        # tp profile
+        outdata['tp_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        outdata['tp_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        outdata['tp_profile'][:,1] = self.fmob.atmosphere.temperature_profile
+
+        # mixing ratios
+        outdata['active_mixratio_profile'] = np.zeros((len(self.atmosphereob.active_gases), self.atmosphereob.nlayers, 2))
+        outdata['inactive_mixratio_profile'] = np.zeros((len(self.atmosphereob.inactive_gases), self.atmosphereob.nlayers, 2))
+        for i in range(len(self.atmosphereob.active_gases)):
+            outdata['active_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
+            outdata['active_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.active_mixratio_profile[i,:]
+        for i in range(len(self.atmosphereob.inactive_gases)):
+            outdata['inactive_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
+            outdata['inactive_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.inactive_mixratio_profile[i,:]
+
+        self.fmob.params.atm_rayleigh = atm_rayleigh
+        self.fmob.params.atm_cia = atm_cia
+        self.fmob.params.atm_clouds = atm_clouds
+        self.fmob.atmosphere.inactive_mixratio_profile = np.copy(active_mixratio_profile)
+
+        # store data
+        outdb['data'] = outdata
+
+        self.SPECTRUM_out = outdb
+
+        if save_db:
+            if not db_filename:
+                db_filename = os.path.join(self.params.out_path, 'SPECTRUM_out.db')
+
+            pickle.dump(outdb, open(db_filename, 'wb'))
+
+        return outdb
+
+    def save_spectrum(self, sp_filename=None):
+
+        if not hasattr(self, 'SPECTRUM_out'):
+            self.generate_spectrum()
+
+        if not sp_filename:
+            sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.dat')
+
+        np.savetxt(sp_filename, self.SPECTRUM_out['data']['spectrum'])
 
 
-
-#gets called when running from command line 
+# gets called when running from command line
 if __name__ == '__main__':
-    
-    parser = optparse.OptionParser()
-    parser.add_option('-p', '--parfile',
-                      dest="param_filename",
-                      default="Parfiles/default.par",
-    )
 
-    # binning type, it can be:
-    #  - 'resolution': bin to given resolution. See opt -r
-    #  - 'dlambda': bin to fixed delta lambda. See opt -d
-    #  - 'file': bin to external file. See opt -f
-    #  - 'none': no binning
-    parser.add_option('-b', '--bin',
-                      dest="bin",
-                      default='',
-    )
-    parser.add_option('-r', '--res',    # binning resolution
-                      dest="resolution",
-                      default=1000,
-    )
-    parser.add_option('-d', '--dlambda', # delta lambda for binning in micron
-                      dest="dlambda",
-                      default=0.005,
-    )
-    parser.add_option('-n', '--noise',
-                      dest="noise",
-                      default=False,
-    )
+    #loading parameter file parser
+    parser = argparse.ArgumentParser()
 
-    # Can be 'file' or integer value (error in ppm). If 'file' see option -f
-    parser.add_option('-e', '--error',
-                      dest="error",
-                      default=0,
-    )
+    parser.add_argument('-p',
+                      dest='param_filename',
+                      default='Parfiles/default.par'
+                      )
+    parser.add_argument('--save_sp',
+                      action='store_true',
+                      dest='save_sp',
+                      default=False)
+    parser.add_argument('--save_db',
+                      action='store_true',
+                      dest='save_db',
+                      default=False)
+    parser.add_argument('--sp_filename',
+                      dest='sp_filename',
+                      default=False)
+    parser.add_argument('--db_filename',
+                      dest='db_filename',
+                      default=False)
+    parser.add_argument('--plot',
+                      dest='plot_spectrum',
+                      action='store_true',
+                      default=False)
 
-    # input file for wavelength grid (1st column), bin widths (2nd column) and errors (3rd column)
-    parser.add_option('-f', '--file',
-                      dest="bin_file",
-                      default='Input/wavelength_grid.dat',
-    )
+    # add command line interface to parameter file
 
-    parser.add_option('-T', '--T_profile',
-                      dest="tp_profile",
-                      default=False,
-                      action="store_true",
-    )
-    parser.add_option('-v', '--verbose',
-                      dest="verbose",
-                      default=True,
-                      action="store_true",
-    )
-    parser.add_option('-s', '--spectrum_filename',
-                      dest='specfilename',
-                      default='spectrum.dat'
-    )
-    parser.add_option('-t', '--tp_filename',
-                      dest='tpfilename',
-                      default='tp_profile.dat'
-    )
-    options, remainder = parser.parse_args()
-    
-    
-    #loading object
-    createob = create_spectrum(options)
+    params_tmp = parameters()
+    params_dict = params_tmp.params_to_dict() # get all param names
+    for param in params_dict:
+        if type(params_dict[param]) == list:
+            # manage lists
+            parser.add_argument('--%s' % param,
+                                action='append',
+                                dest=param,
+                                default=None,
+                                type = type(params_dict[param][0])
+                                )
+        else:
+            parser.add_argument('--%s' % param,
+                                dest=param,
+                                default=None,
+                                type = type(params_dict[param])
+                                )
+    options = parser.parse_args()
 
-    #setup TP profile 
-    if options.tp_profile:
-        Pnodes = [createob.MAX_P, 1e4, 100.0, createob.MIN_P]
-        Tnodes = [2200, 2200, 1800, 1800]
-        createob.generate_tp_profile_1(Tnodes,Pnodes)
+    # Initialise parameters instance
+    params = parameters(options.param_filename)
 
-    #generating spectrum
-    createob.generate_spectrum()
+    # Override params object from command line input
+    for param in params_dict:
+        if getattr(options, param) != None:
 
-    #saving spectrum
-    createob.save_spectrum(filename=options.specfilename)
+            value = getattr(options, param)
+            if param == 'planet_mass':
+                value *= MJUP
+            if param == 'planet_radius':
+                value *= RJUP
+            if param == 'star_radius':
+                value *= RSOL
+            if param == 'atm_mu':
+                value *= AMU
+            setattr(params, param, value)
 
-    #saving TP profile
-    if options.tp_profile:
-        createob.save_tp_profile(filename=options.tpfilename)
-    
-    if options.verbose:
-        createob.plot_spectrum()
-        if options.tp_profile:
-            createob.plot_tp_profile()
-        pl.show()
+    spectrumob = create_spectrum(params=params)
+
+    spectrumob.generate_spectrum(save_db=options.save_db, db_filename=options.db_filename)
+
+    if options.save_sp:
+        spectrumob.save_spectrum(sp_filename=options.sp_filename)
+
+    if options.plot_spectrum:
+        sp = spectrumob.SPECTRUM_out['data']['spectrum']
+        plt.plot(sp[:,0], sp[:,1])
+        plt.xscale('log')
+        plt.show()

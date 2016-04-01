@@ -19,12 +19,8 @@
 #
 ################################################
 
-
 import numpy as np
 import datetime,getpass,json,base64, socket, random
-
-
-
 
 class license_manager(object):
     def __init__(self):
@@ -37,7 +33,6 @@ class license_manager(object):
         
 #         self.generate_license_file(FULLACCESS=False,USER='ingowaldmann',DATE='2014-10-10')
 #         self.generate_license_file(FULLACCESS=True)
-
 
         
     def run(self):
@@ -52,8 +47,7 @@ class license_manager(object):
         print 'Ingo Waldmann (ingo@star.ucl.ac.uk)'
         print '--------'
         print 'Good bye'
-        
-        
+
     
     def verify(self):
         #checking if license is valid or not

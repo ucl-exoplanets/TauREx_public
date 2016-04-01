@@ -1,26 +1,30 @@
-###########################################################
-# TauREx emission execution code.     
-###########################################################
-#loading libraries     
-import sys,os, logging
-import numpy as np #nummerical array library 
-import pylab as pl #science and plotting library for python
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
+
+    TauREx emission execution code
+
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
+'''
+# loading libraries
+import os
+import sys
+import logging
+import numpy as np
 
 #loading classes
 sys.path.append('./classes')
-import emission, output, fitting, atmosphere, data, preselector
+import emission, output, fitting, atmosphere, data
 from emission import *
 from output import *
 from fitting import *
 from atmosphere import *
 from data import *
-from preselector import *
-
-import pickle
 
 #loading libraries
 sys.path.append('./library')
-import library_emission as emlib 
+
+from library_emission import *
 
 def run(params):
 
@@ -48,8 +52,7 @@ def run(params):
     #fit data for stage 1
     if params.downhill_run:
         fittingob.downhill_fit()    #simplex downhill fit
-#     fittingob.downhill_fit()    #simplex downhill fit
-# 
+
     if params.mcmc_run and pymc_import:
         fittingob.mcmc_fit() # MCMC fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
@@ -58,19 +61,19 @@ def run(params):
         fittingob.multinest_fit() # Nested sampling fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
-    
-    #loading output module for stage 0
-    outputob = output(fittingob,out_path=os.path.join(out_path_orig, 'stage_0'))
-    
-    
-    
-    #generating TP profile covariance from previous fit
-    Cov_array = emlib.generate_tp_covariance(outputob)
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        outputob = output(fittingob, out_path=os.path.join(out_path_orig, 'stage_0'))
 
-    #saving covariance
+    exit()
+
+    # todo fix stage 2
+
+    # generating TP profile covariance from previous fit
+    Cov_array = generate_tp_covariance(outputob)
+
+    # saving covariance
     if MPIimport and MPI.COMM_WORLD.Get_rank() is 0 or MPIimport is False:
         np.savetxt(os.path.join(params.out_path, 'tp_covariance.dat'), Cov_array)
-    # Cov_array = np.loadtxt(os.path.join(params.out_path, 'tp_covariance.dat'))
 
     ###############################
     # STAGE 2
@@ -109,32 +112,8 @@ def run(params):
     
     #forcing slave processes to exit at this stage
     if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
-        #MPI.MPI_Finalize()
         exit()
         
     #initiating output instance with fitted data from fitting class
     if params.fit_emission_stage2:
         outputob1 = output(fittingob1,out_path=os.path.join(out_path_orig, 'stage_1'))
-
-    #plotting fits and data
-    logging.info('Plotting and saving results')
-
-    if params.verbose or params.out_save_plots:
-        outputob.plot_all(save2pdf=params.out_save_plots,
-                          params_names=fittingob.fit_params_names[:fittingob.fit_X_nparams])
-        if params.fit_emission_stage2:
-            outputob1.plot_all(save2pdf=params.out_save_plots,
-                               params_names=fittingob.fit_params_names[:fittingob.fit_X_nparams])
-     
-
-
-    outputob.save_ascii_spectra()       #saving models to ascii
-    if params.fit_emission_stage2:
-        outputob1.save_ascii_spectra()       #saving models to ascii
-
-    # save and plot TP profile (plotting only if save2pdf=True)
-    outputob.save_TP_profile(save2pdf=params.out_save_plots)  #saving TP profile
-    if params.fit_emission_stage2:
-        outputob1.save_TP_profile(save2pdf=params.out_save_plots)
-
-
