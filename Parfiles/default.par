@@ -107,7 +107,7 @@ active_gases_mixratios = 1e-5
 # The mixing ratios are relative to the remainder of the amtosphere (1 - active_gases_mixratios)
 # Hence sum(inactive gases) must be 1
 inactive_gases = H2, He
-inactive_gases_mixratios = 0.85, 15
+inactive_gases_mixratios = 0.85, 0.15
 
 # mean molecular weight of the atmosphere (see also next param couple_mu)
 mu = 2.3
