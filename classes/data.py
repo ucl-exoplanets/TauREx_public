@@ -206,7 +206,6 @@ class data(object):
                 if gasname in self.ven_molecules:
                     self.ven_inactive_gases.append(gasname)
                     self.ven_inactive_gases_idx.append(self.ven_molecules.index(gasname))
-
             logging.info('Inactive gases: %s' %  self.ven_inactive_gases)
 
     def load_sigma_dict(self):
@@ -320,7 +319,7 @@ class data(object):
         logging.info('Temperature range: %s' % sigma_dict['t'] )
         logging.info('Pressure range: %s ' % sigma_dict['p'])
 
-        logging.info('The full wavenumber range is %.2f - %.2f in steps of %.2f' % (np.min(wno), np.max(wno), np.unique(np.diff(wno))))
+        logging.info('The full wavenumber range is %.2f - %.2f with %i points' % (np.min(wno), np.max(wno), len(wno)))
 
         self.int_wngrid_full = wno # full wavenumber range
         self.int_nwngrid_full = len(wno)
@@ -389,9 +388,19 @@ class data(object):
                 n_formula = False
                 logging.warning('There is no formula for the refractive index of %s. Cannot compute the cross section' % gasname)
 
+
             if n_formula: # only if the refractive index was computed
                 Ns = 2.6867805e25 # in m^-3
                 sigma =  ( 24.*np.pi**3/ (Ns**2) ) * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / ((10000./wn) * 1.e-6)**4
+
+                # if gasname == 'H2':
+                #     wave = (1/wn)*1E8
+                #     sigma = ((8.14E-13)*(wave**(-4.))*(1+(1.572E6)*(wave**(-2.))+(1.981E12)*(wave**(-4.))))*1E-4
+                # if gasname == 'HE':
+                #     wave = (1/wn)*1E8
+                #     sigma =  ((5.484E-14)*(wave**(-4.))*(1+(2.44E5)*(wave**(-2.))))*1E-4
+                #     sigma[:] = 0
+
                 logging.info('Rayleigh scattering cross section of %s correctly computed' % (gasname))
                 sigma_rayleigh_dict[gasname] = sigma
             else:
@@ -527,10 +536,10 @@ class data(object):
         self.int_wngrid_obs = self.int_wngrid_full[self.int_wngrid_obs_idxmin:self.int_wngrid_obs_idxmax]
         self.int_nwngrid_obs = len(self.int_wngrid_obs)
 
-        logging.info('Internal wavenumber grid is %.2f - %.2f in steps of %.2f, resulting in %i points' %
+        logging.info('Internal wavenumber grid is %.2f - %.2f with %i points' %
                      (self.int_wngrid_full[self.int_wngrid_obs_idxmin],
                       self.int_wngrid_full[self.int_wngrid_obs_idxmax-1],
-                      np.unique(np.diff(self.int_wngrid_full)), self.int_nwngrid_obs))
+                      self.int_nwngrid_obs))
 
         # convert wavenumber grid to wavelenght grid
         self.int_wlgrid_obs = 10000./self.int_wngrid_obs
