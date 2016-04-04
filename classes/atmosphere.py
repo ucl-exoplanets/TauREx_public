@@ -111,6 +111,15 @@ class atmosphere(object):
                 logging.info('kappa_v1 = %.3f' % self.params.atm_tp_guillot_kappa_v1)
                 logging.info('kappa_v2 = %.3f' % self.params.atm_tp_guillot_kappa_v2)
                 logging.info('alpha = %.3f' % self.params.atm_tp_guillot_alpha)
+            elif self.params.atm_tp_type == '2point':
+                TP_params = [self.params.atm_tp_2point_T_surf,
+                             self.params.atm_tp_2point_T_trop_diff,
+                             self.params.atm_tp_2point_P_trop]
+                self.temperature_profile[:] = self._TP_2point(TP_params)
+                logging.info('Set TP profile using 2point model')
+                logging.info('T_surface = {0}'.format(self.params.atm_tp_2point_T_surf))
+                logging.info('T_tropo_diff = {0}'.format(self.params.atm_tp_2point_T_trop_diff))
+                logging.info('P_tropo = {0}'.format(self.params.atm_tp_2point_P_trop))
             else: # if not guillot, always assume isothermal in forward model (i.e. create_spectrum)
                 self.temperature_profile[:] = self.params.atm_tp_iso_temp
                 logging.info('Set isothermal profile with T = %.2f' % self.params.atm_tp_iso_temp)

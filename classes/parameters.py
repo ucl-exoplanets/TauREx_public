@@ -127,7 +127,11 @@ class parameters(object):
         self.atm_tp_guillot_kappa_v1  = self.getpar('Atmosphere', 'tp_guillot_kappa_v1', 'float' )
         self.atm_tp_guillot_kappa_v2  = self.getpar('Atmosphere', 'tp_guillot_kappa_v2', 'float' )
         self.atm_tp_guillot_alpha     = self.getpar('Atmosphere', 'tp_guillot_alpha', 'float' )
+        self.atm_tp_2point_T_surf     = self.getpar('Atmosphere', 'tp_2point_T_surf', 'float')
+        self.atm_tp_2point_T_trop_diff= self.getpar('Atmosphere', 'tp_2point_T_trop_diff', 'float')
+        self.atm_tp_2point_P_trop     = self.getpar('Atmosphere', 'tp_2point_P_trop', 'float')
         self.atm_tp_corr_length       = self.getpar('Atmosphere', 'tp_corr_length','float')
+        
 
         self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
         self.atm_active_gases_mixratios = self.getpar('Atmosphere','active_gases_mixratios', 'list-float')

@@ -96,6 +96,16 @@ tp_guillot_kappa_v1 = 0.05
 tp_guillot_kappa_v2 = 0.05
 tp_guillot_alpha = 0.005
 
+#2point params
+#surface temperature 
+tp_2point_T_surf = 1500
+#troposphere temperature as difference to surface 
+#T_trop = T_surf - T_trop_diff
+tp_2point_T_trop_diff = 500
+#troposphere pressure (PA)
+tp_2point_P_trop = 100
+
+
 # correlation length of TP profile for Rodgers2000 and Hybrid
 tp_corr_length = 5.0
 
