@@ -130,6 +130,9 @@ class parameters(object):
         self.atm_tp_2point_T_surf     = self.getpar('Atmosphere', 'tp_2point_T_surf', 'float')
         self.atm_tp_2point_T_trop_diff= self.getpar('Atmosphere', 'tp_2point_T_trop_diff', 'float')
         self.atm_tp_2point_P_trop     = self.getpar('Atmosphere', 'tp_2point_P_trop', 'float')
+        self.atm_tp_Npoint_T_list     = self.getpar('Atmosphere', 'tp_Npoint_T_list', 'list-float')
+        self.atm_tp_Npoint_P_list     = self.getpar('Atmosphere', 'tp_Npoint_P_list', 'list-float')
+        self.atm_tp_Npoint_smooth     = self.getpar('Atmosphere', 'tp_Npoint_smooth', 'int')
         self.atm_tp_corr_length       = self.getpar('Atmosphere', 'tp_corr_length','float')
         
 

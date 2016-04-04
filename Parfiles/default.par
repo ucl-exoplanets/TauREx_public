@@ -83,7 +83,7 @@ max_pressure = 1e6
 min_pressure = 1e-4
 
 # TP profile type to be selected (only sets for emission, tranmission = isothermal)
-# available profiles are: isothermal, guillot, hybrid, 2point, 3point
+# available profiles are: isothermal, guillot, hybrid, 2point, 3point,Npoint
 tp_type = isothermal
 
 # isothermal temperature
@@ -104,6 +104,16 @@ tp_2point_T_surf = 1500
 tp_2point_T_trop_diff = 500
 #troposphere pressure (PA)
 tp_2point_P_trop = 100
+
+#Npoint params (accepts arbitrary lists of Temp. Pressure. nodes)
+#list of temperature points (surface -> top) 
+tp_Npoint_T_list = 2500, 2200, 1800, 1800
+#list of corresponding pressure points (Pa)
+#if first and last points are set to -1, it replaces these with 
+#the maximum and minimum pressure grid values in TauREx
+tp_Npoint_P_list = -1, 1e4, 100.0, -1
+#smoothing factor (no. of layers)
+tp_Npoint_smooth = 10
 
 
 # correlation length of TP profile for Rodgers2000 and Hybrid

@@ -8,7 +8,10 @@ import math
 
 from library_constants import *
 
-
+def movingaverage(values,window):
+        weigths = np.repeat(1.0, window)/window
+        smas = np.convolve(values, weigths, 'valid')
+        return smas 
 
 def weighted_avg_and_std(values, weights, axis=None):
     average = np.average(values, weights=weights)
