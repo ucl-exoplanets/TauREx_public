@@ -83,7 +83,7 @@ max_pressure = 1e6
 min_pressure = 1e-4
 
 # TP profile type to be selected (only sets for emission, tranmission = isothermal)
-# available profiles are: isothermal, guillot, hybrid, 2point, 3point
+# available profiles are: isothermal, guillot, hybrid, 2point, 3point,Npoint
 tp_type = isothermal
 
 # isothermal temperature
@@ -96,6 +96,26 @@ tp_guillot_kappa_v1 = 0.05
 tp_guillot_kappa_v2 = 0.05
 tp_guillot_alpha = 0.005
 
+#2point params
+#surface temperature 
+tp_2point_T_surf = 1500
+#troposphere temperature as difference to surface 
+#T_trop = T_surf - T_trop_diff
+tp_2point_T_trop_diff = 500
+#troposphere pressure (PA)
+tp_2point_P_trop = 100
+
+#Npoint params (accepts arbitrary lists of Temp. Pressure. nodes)
+#list of temperature points (surface -> top) 
+tp_Npoint_T_list = 2500, 2200, 1800, 1800
+#list of corresponding pressure points (Pa)
+#if first and last points are set to -1, it replaces these with 
+#the maximum and minimum pressure grid values in TauREx
+tp_Npoint_P_list = -1, 1e4, 100.0, -1
+#smoothing factor (no. of layers)
+tp_Npoint_smooth = 10
+
+
 # correlation length of TP profile for Rodgers2000 and Hybrid
 tp_corr_length = 5.0
 
@@ -107,7 +127,7 @@ active_gases_mixratios = 1e-5
 # The mixing ratios are relative to the remainder of the amtosphere (1 - active_gases_mixratios)
 # Hence sum(inactive gases) must be 1
 inactive_gases = H2, He
-inactive_gases_mixratios = 0.85, 15
+inactive_gases_mixratios = 0.85, 0.15
 
 # mean molecular weight of the atmosphere (see also next param couple_mu)
 mu = 2.3

@@ -97,23 +97,43 @@ class atmosphere(object):
                 self.inactive_mixratio_profile[i, :] = mixratio_remainder*self.params.atm_inactive_gases_mixratios[i]
 
             # set initial temperature profile (mainly used for create_spectrum)
-            self.temperature_profile = np.zeros((self.nlayers))
             if self.params.atm_tp_type == 'guillot':
                 TP_params = [self.params.atm_tp_guillot_T_irr,
                              self.params.atm_tp_guillot_kappa_irr,
                              self.params.atm_tp_guillot_kappa_v1,
                              self.params.atm_tp_guillot_kappa_v2,
                              self.params.atm_tp_guillot_alpha]
-                self.temperature_profile[:] = self._TP_guillot2010(TP_params)
                 logging.info('Set TP profile using Guillot model')
                 logging.info('T_irr = %.2f' % self.params.atm_tp_guillot_T_irr)
                 logging.info('kappa_irr = %.3f' % self.params.atm_tp_guillot_kappa_irr)
                 logging.info('kappa_v1 = %.3f' % self.params.atm_tp_guillot_kappa_v1)
                 logging.info('kappa_v2 = %.3f' % self.params.atm_tp_guillot_kappa_v2)
                 logging.info('alpha = %.3f' % self.params.atm_tp_guillot_alpha)
+            elif self.params.atm_tp_type == '2point':
+                TP_params = [self.params.atm_tp_2point_T_surf,
+                             self.params.atm_tp_2point_T_trop_diff,
+                             self.params.atm_tp_2point_P_trop]
+                logging.info('Set TP profile using 2point model')
+                logging.info('T_surface = {0}'.format(self.params.atm_tp_2point_T_surf))
+                logging.info('T_tropo_diff = {0}'.format(self.params.atm_tp_2point_T_trop_diff))
+                logging.info('P_tropo = {0}'.format(self.params.atm_tp_2point_P_trop))
+            elif self.params.atm_tp_type == 'Npoint':
+                TP_params = [self.params.atm_tp_Npoint_T_list,
+                             self.params.atm_tp_Npoint_P_list,
+                             self.params.atm_tp_Npoint_smooth]
+                logging.info('Set TP profile using Npoint model')
+                logging.info('T_nodes = {0}'.format(self.params.atm_tp_Npoint_T_list))
+                logging.info('P_nodes = {0}'.format(self.params.atm_tp_Npoint_P_list))
+                logging.info('TP smoothing range = {0}'.format(self.params.atm_tp_Npoint_smooth))
             else: # if not guillot, always assume isothermal in forward model (i.e. create_spectrum)
-                self.temperature_profile[:] = self.params.atm_tp_iso_temp
+                TP_params = [self.params.atm_tp_iso_temp]
                 logging.info('Set isothermal profile with T = %.2f' % self.params.atm_tp_iso_temp)
+
+            #setting TP-profile and populating temperature grid 
+            self.set_TP_profile(profile=self.params.atm_tp_type)
+            self.temperature_profile = np.zeros((self.nlayers))
+            self.temperature_profile[:] = self.TP_profile(TP_params)
+
 
         self.nallgases = len(self.active_gases) + len(self.inactive_gases)
         self.nactivegases = len(self.active_gases)
@@ -367,6 +387,8 @@ class atmosphere(object):
             _profile = self._TP_isothermal
         elif self.TP_type == 'guillot':
             _profile = self._TP_guillot2010
+        elif self.TP_type == 'Npoint':
+            _profile = self._TP_Npoint
         elif self.TP_type == 'rodgers':
             _profile = self._TP_rodgers2000
         elif self.TP_type == 'hybrid':
@@ -392,7 +414,7 @@ class atmosphere(object):
         fit_params depend on TP_profile selected.
         INDEX splits column densities from TP_profile parameters, INDEX = [Chi, TP]
         '''
-
+      
         #generating TP profile given input TP_function
         T = TP_function(TP_params, **kwargs)
 
@@ -603,7 +625,8 @@ class atmosphere(object):
         Fixed parameters:
             - Pressure grid (self.pressure_profile)
         '''
-
+        print 'BLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'
+        
         maxP = np.max(self.pressure_profile)
         minP = np.min(self.pressure_profile)
 
@@ -645,4 +668,40 @@ class atmosphere(object):
         T = np.interp(np.log(self.pressure_profile[::-1]), np.log(P_params[::-1]), T_params[::-1])
 
         return T[::-1]
+    
+    def _TP_Npoint(self,TP_params):
+        '''
+        Same as 2point TP profile but accepts N number of temperature and pressure nodes. Also includes smoothing. 
+        Currently not used for fitting.
+        
+        Free parameters required:
+            - T_array = list [] of temperature points (surface -> top)
+            - P_array = list [] of corresponding pressure points (PA)
+            - smooth_window = smoothing window (no. of layers)
+        '''
+        Tnodes = TP_params[0]
+        Pnodes = TP_params[1]
+        smooth_window = TP_params[2]
+        
+        #if first and last pressure input is -1, it replaces with P_MAX and P_MIN from 
+        #atmosphere pressure grid 
+        if int(Pnodes[0]) == -1 and int(Pnodes[-1]) == -1:
+            Pnodes[0] = self.pressure_profile[0]
+            Pnodes[-1] = self.pressure_profile[-1]          
+        
+        TP = np.interp((np.log(self.pressure_profile[::-1])), np.log(Pnodes[::-1]), Tnodes[::-1])
+        #smoothing T-P profile
+        wsize = self.nlayers*(smooth_window/100.0)
+        if (wsize %2 == 0):
+            wsize += 1
+        TP_smooth = movingaverage(TP,wsize)
+        border = np.int((len(TP) - len(TP_smooth))/2)
+        
+        #set atmosphere object
+        foo = TP[::-1]
+        foo[border:-border] = TP_smooth[::-1]
 
+        return np.copy( foo , order='C')
+
+
+        
