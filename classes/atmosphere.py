@@ -625,8 +625,7 @@ class atmosphere(object):
         Fixed parameters:
             - Pressure grid (self.pressure_profile)
         '''
-        print 'BLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'
-        
+
         maxP = np.max(self.pressure_profile)
         minP = np.min(self.pressure_profile)
 
