@@ -97,7 +97,7 @@ class fitting(object):
         self.dir_multinest = os.path.join(self.params.out_path, 'multinest')
 
         if self.MPIrank == 0:
-            folders = [self.params.out_path, self.dir_mcmc, self.dir_multinest]
+            folders = [self.params.out_path, self.dir_multinest]
             for f in folders:
                 if not os.path.isdir(f):
                     logging.info('Create folder %s' % f)

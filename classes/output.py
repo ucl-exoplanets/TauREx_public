@@ -68,7 +68,7 @@ class output(object):
 
         if fitting is not None:
 
-            types = ['DOWN', 'MCMC', 'NEST']
+            types = ['downhill', 'mcmc', 'nest']
             func_types = [self.store_downhill_solution,
                           self.store_mcmc_solutions,
                           self.store_nest_solutions]
@@ -76,7 +76,7 @@ class output(object):
             out_filenames = [self.params.downhill_out_filename,
                              self.params.mcmc_out_filename,
                              self.params.nest_out_filename]
-
+            self.dbfilename = {}
             for idx, val in enumerate(types):
                 if run[idx]:
 
@@ -90,7 +90,7 @@ class output(object):
                         filename = os.path.join(self.params.out_path, '%s_out.db' % types[idx])
                     else:
                         filename = out_filenames[idx]
-
+                    self.dbfilename[val] = filename
                     pickle.dump(outdb, open(filename, 'wb'))
 
         logging.info('Output object correctly initialised')
@@ -113,13 +113,13 @@ class output(object):
 
     def store_downhill_solution(self, DOWN_out):
 
-        logging.info('Store the DOWNHILL results')
+        logging.info('Store the downhill results')
 
         dict = {}
         for idx, param_name in enumerate(self.fitting.fit_params_names):
             dict[param_name] = {'value': self.fitting.DOWN_fit_output[idx] }
 
-        DOWN_out['solutions'].append({'type': 'DOWN', 'fit_params': dict})
+        DOWN_out['solutions'].append({'type': 'down', 'fit_params': dict})
 
         return DOWN_out
 
@@ -137,7 +137,7 @@ class output(object):
 
     def store_nest_solutions(self, NEST_out):
 
-        logging.info('Store the MULTINEST results')
+        logging.info('Store the multinest results')
 
         data = np.loadtxt(os.path.join(self.fitting.dir_multinest, '1-.txt'))
 
@@ -185,7 +185,7 @@ class output(object):
 
         for nmode in range(len(modes)):
 
-            dict = {'type': 'NEST',
+            dict = {'type': 'nest',
                     'local_logE': (NEST_out['NEST_stats']['modes'][0]['local log-evidence'],  NEST_out['NEST_stats']['modes'][0]['local log-evidence error']),
                     'weights': modes_weights[nmode],
                     'tracedata': modes_array[nmode],
@@ -312,7 +312,7 @@ class output(object):
         solution['fit_spectrum_xsecres'][:,1] = model
 
         # calculate 1 sigma spectrum
-        if self.params.out_sigma_spectrum and solution['type'] == 'NEST':
+        if self.params.out_sigma_spectrum and solution['type'] == 'nest':
             sigmasp = self.get_one_sigma_spectrum(solution)
             solution['fit_spectrum_xsecres'][:,2] = sigmasp
             solution['obs_spectrum'][:,4] = np.asarray([sigmasp[self.data.intsp_bingrididx_full == i].mean()
@@ -392,7 +392,7 @@ class output(object):
         # best solution
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
 
-        if solution['type'] == 'NEST':
+        if solution['type'] == 'nest':
             # compute standard deviation for mixing ratio and tp profiles
             std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive = self.get_one_sigma_profiles(solution)
 
@@ -403,7 +403,7 @@ class output(object):
         solution['tp_profile'] = np.zeros((self.atmosphere.nlayers, 3))
         solution['tp_profile'][:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
         solution['tp_profile'][:,1] = self.fitting.forwardmodel.atmosphere.temperature_profile
-        if solution['type'] == 'NEST':
+        if solution['type'] == 'nest':
             solution['tp_profile'][:,2] = std_tpprofiles
 
         # mixing ratios
@@ -412,12 +412,12 @@ class output(object):
         for i in range(len(self.atmosphere.active_gases)):
             solution['active_mixratio_profile'][i,:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
             solution['active_mixratio_profile'][i,:,1] =  self.fitting.forwardmodel.atmosphere.active_mixratio_profile[i,:]
-            if solution['type'] == 'NEST':
+            if solution['type'] == 'nest':
                 solution['active_mixratio_profile'][i,:,2] =  std_molprofiles_active[i,:]
         for i in range(len(self.atmosphere.inactive_gases)):
             solution['inactive_mixratio_profile'][i,:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
             solution['inactive_mixratio_profile'][i,:,1] =  self.fitting.forwardmodel.atmosphere.inactive_mixratio_profile[i,:]
-            if solution['type'] == 'NEST':
+            if solution['type'] == 'nest':
                 solution['inactive_mixratio_profile'][i,:,2] =  std_molprofiles_inactive[i,:]
 
         return solution

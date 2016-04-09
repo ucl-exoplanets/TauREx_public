@@ -231,3 +231,12 @@ def tex_gas_label(gasname):
         return 'H$_2$S'
     else:
         return gasname
+
+
+def chi2_sigma(dof):
+    sigma = np.arange(1, 10, 0.1)
+    conf_int = [ scipy.stats.chi2.cdf( s**2,1) for s in sigma ]
+    dof = 24
+    chi_squared = [ scipy.stats.chi2.ppf( ci, dof) for ci in conf_int ]
+    for sigma_idx, sigma_val in enumerate(sigma):
+        print 'sigma = %.1f, chi2 = %.1f' % (sigma_val, chi_squared[sigma_idx])

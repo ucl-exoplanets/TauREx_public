@@ -53,3 +53,5 @@ def run(params):
         
     #initiating output instance with fitted data from fitting class
     outputob = output(fittingob)
+
+    return outputob

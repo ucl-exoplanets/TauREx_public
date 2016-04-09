@@ -73,6 +73,22 @@ parser.add_argument('-i', '--cluster_index',
                   type = str,
                   )
 
+# plotting parameters
+parser.add_argument('--no_plot',
+                      action='store_true',
+                      dest='no_plot',
+                      default=False)
+parser.add_argument('--plot_title',
+                      dest='plot_title',
+                      default=False)
+parser.add_argument('--plot_prefix',
+                      dest='plot_prefix',
+                      default=False)
+parser.add_argument('--plot_out_folder',
+                      dest='plot_out_folder',
+                      default=False)
+
+
 # add command line interface to parameter file
 
 params_tmp = parameters()
@@ -141,4 +157,21 @@ else:
 MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 #running Tau-REx
-run(params)
+outputob = run(params)
+
+# plotting
+if not options.no_plot:
+    sys.path.append('./tools')
+    from taurex_plots import taurex_plots
+    for val in outputob.dbfilename:
+        logging.info('Initialising plotting')
+        dbfilename = outputob.dbfilename[val]
+        plot = taurex_plots(dbfilename, options.plot_title, options.plot_prefix, options.plot_out_folder)
+        logging.info('Plot posterior distributions')
+        plot.plot_posteriors()
+        logging.info('Plot fitted spectrum')
+        plot.plot_fitted_spectrum()
+        if params.gen_type == 'emission' or params.gen_ace:
+            logging.info('Plot mixing ratio profiles and temperature pressure profile')
+            plot.plot_fitted_xprofiles()
+            plot.plot_fitted_tp()

@@ -22,7 +22,7 @@ import matplotlib.pylab as plt
 
 class emission(object):
 
-    def __init__(self, atmosphere, data=None, params=None):
+    def __init__(self, atmosphere, stage=0, data=None, params=None):
 
         logging.info('Initialise object emission')
 
@@ -36,6 +36,8 @@ class emission(object):
             self.data = atmosphere.data    # get data object from atmosphere
 
         self.atmosphere = atmosphere
+
+        self.stage = 0
 
         #loading c++ pathintegral library for faster computation
         self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)

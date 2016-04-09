@@ -44,7 +44,7 @@ def run(params):
     atmosphereob = atmosphere(dataob)
 
     #initialising emission radiative transfer code instance
-    forwardmodelob = emission(atmosphereob)
+    forwardmodelob = emission(atmosphereob, stage=0)
 
     #initialising fitting object
     fittingob = fitting(forwardmodelob)
@@ -63,6 +63,8 @@ def run(params):
 
     if MPI.COMM_WORLD.Get_rank() == 0:
         outputob = output(fittingob, out_path=os.path.join(out_path_orig, 'stage_0'))
+
+    return outputob
 
     exit()
 
@@ -117,3 +119,4 @@ def run(params):
     #initiating output instance with fitted data from fitting class
     if params.fit_emission_stage2:
         outputob1 = output(fittingob1,out_path=os.path.join(out_path_orig, 'stage_1'))
+
