@@ -240,3 +240,27 @@ def chi2_sigma(dof):
     chi_squared = [ scipy.stats.chi2.ppf( ci, dof) for ci in conf_int ]
     for sigma_idx, sigma_val in enumerate(sigma):
         print 'sigma = %.1f, chi2 = %.1f' % (sigma_val, chi_squared[sigma_idx])
+
+def quantile_corner(x, q, weights=None):
+    """
+
+    * Taken from corner.py
+    __author__ = "Dan Foreman-Mackey (danfm@nyu.edu)"
+    __copyright__ = "Copyright 2013-2015 Daniel Foreman-Mackey"
+
+    Like numpy.percentile, but:
+
+    * Values of q are quantiles [0., 1.] rather than percentiles [0., 100.]
+    * scalar q not supported (q must be iterable)
+    * optional weights on x
+
+    """
+    if weights is None:
+        return np.percentile(x, [100. * qi for qi in q])
+    else:
+        idx = np.argsort(x)
+        xsorted = x[idx]
+        cdf = np.add.accumulate(weights[idx])
+        cdf /= cdf[-1]
+        return np.interp(q, cdf, xsorted).tolist()
+

@@ -60,7 +60,7 @@ class taurex_plots(object):
 
     def plot_posteriors(self):
 
-        if self.type == 'nest':
+        if self.type.upper() == 'NEST':
 
             labels = self.db['fit_params_texlabels']
 
@@ -72,10 +72,11 @@ class taurex_plots(object):
                 for param_idx, param_val in enumerate(self.db['fit_params_names']):
 
                     val = solution_val['fit_params'][param_val]['value']
-                    sigma = solution_val['fit_params'][param_val]['sigma']
+                    sigma_m = solution_val['fit_params'][param_val]['sigma_m']
+                    sigma_p = solution_val['fit_params'][param_val]['sigma_p']
                     ranges_all[solution_idx, param_idx, 0] = val
-                    ranges_all[solution_idx, param_idx, 1] = val - 5*sigma
-                    ranges_all[solution_idx, param_idx, 2] = val + 5*sigma
+                    ranges_all[solution_idx, param_idx, 1] = val - 5*sigma_m
+                    ranges_all[solution_idx, param_idx, 2] = val + 5*sigma_p
 
             ranges = []
             for param_idx, param_val in enumerate(self.db['fit_params_names']):
@@ -112,6 +113,7 @@ class taurex_plots(object):
                                       scale_hist=True,
                                       truths=truths,
                                       quantiles=[0.16, 0.5, 0.84],
+                                      show_titles=True,
                                       #quantiles=[0.16, 0.5],
                                       range=ranges,
                                       ret=True,
@@ -125,7 +127,7 @@ class taurex_plots(object):
                       ha="center", va="top", fontsize=14)
 
                 figs.append(fig)
-
+            print os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type))
             plt.savefig(os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type)))
 
     def plot_fitted_spectrum(self):
@@ -350,10 +352,14 @@ if __name__ == '__main__':
     plot = taurex_plots(options.db_filename, options.title, options.prefix, options.out_folder)
 
     if options.plot_all or options.plot_posteriors:
+        print 'Plotting posteriors'
         plot.plot_posteriors()
     if options.plot_all or options.plot_spectrum:
+        print 'Plotting fitted spectrum'
         plot.plot_fitted_spectrum()
     if options.plot_all or options.plot_tp:
+        print 'Plotting mixing ratio profiles'
         plot.plot_fitted_xprofiles()
     if options.plot_all or options.plot_x:
+        print 'Plotting pressure-temperature profile'
         plot.plot_fitted_tp()

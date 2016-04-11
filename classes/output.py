@@ -183,6 +183,8 @@ class output(object):
             modes_array = [data[:,2:]]
             chains_weights = [data[:,0]]
 
+        modes_weights = np.asarray(modes_weights)
+
         for nmode in range(len(modes)):
 
             dict = {'type': 'nest',
@@ -190,13 +192,20 @@ class output(object):
                     'weights': modes_weights[nmode],
                     'tracedata': modes_array[nmode],
                     'fit_params': {}}
+
             for idx, param_name in enumerate(self.fitting.fit_params_names):
+
+                trace = modes_array[nmode][:,idx]
+                q_16, q_50, q_84 = quantile_corner(trace, [0.16, 0.5, 0.84],
+                            weights=modes_weights[nmode])
                 dict['fit_params'][param_name] = {
-                    'value': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
-                    'map': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
-                    'mean': NEST_stats['modes'][nmode]['mean'][idx],
-                    'sigma': NEST_stats['modes'][nmode]['sigma'][idx],
-                    'trace': modes_array[nmode][:,idx],
+                    'value' : q_50,
+                    'sigma_m' : q_50-q_16,
+                    'sigma_p' : q_84-q_50,
+                    'nest_map': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
+                    'nest_mean': NEST_stats['modes'][nmode]['mean'][idx],
+                    'nest_sigma': NEST_stats['modes'][nmode]['sigma'][idx],
+                    'trace': trace,
                 }
 
             if self.params.fit_clr_trans == True:
