@@ -39,11 +39,15 @@ class atmosphere(object):
         self.planet_mass = self.params.planet_mass
 
         self.nlayers = self.params.atm_nlayers
+        self.nlevels = self.nlayers + 1
+
         self.max_pressure = self.params.atm_max_pres
 
-        # set pressure profile. This is fixed
-
-        self.pressure_profile = np.copy(self.get_pressure_profile(), order='C')
+        # set pressure profile of layer boundaries
+        self.pressure_profile_levels = np.copy(self.get_pressure_profile(), order='C')
+        # get mid point pressure between levels (i.e. get layer pressure) computing geometric average between pressure at n and n+1 level
+        self.pressure_profile = np.power(10, np.log10(self.pressure_profile_levels)[:-1]+
+                                         np.diff(np.log10(self.pressure_profile_levels))/2.)
 
         logging.info('Atmospheric pressure boundaries from internal model: %f-%f' % (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
@@ -52,7 +56,6 @@ class atmosphere(object):
             #self.temperature_profile = self.data.ven_temperature_int(self.pressure_profile)
             self.temperature_profile = np.interp(self.pressure_profile[::-1], self.data.ven_pressure[::-1], self.data.ven_temperature[::-1])[::-1]
             self.temperature_profile = np.asarray(self.temperature_profile, order='C')
-
 
             # active and inactive gas names and mixing ratios
             self.active_gases = self.data.ven_active_gases
@@ -65,12 +68,10 @@ class atmosphere(object):
             self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
             for mol_idx, mol_val in enumerate(self.active_gases):
                 ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-                #self.active_mixratio_profile[mol_idx, :] = self.data.ven_molprof_mixratios_int[ven_molprof_idx](self.pressure_profile)
                 self.active_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,ven_molprof_idx][::-1])[::-1]
                 self.active_mixratio_profile[mol_idx, :] = np.asarray(self.active_mixratio_profile[mol_idx, :], order='C')
             for mol_idx, mol_val in enumerate(self.inactive_gases):
                 ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-                #self.inactive_mixratio_profile[mol_idx, :] = self.data.ven_molprof_mixratios_int[ven_molprof_idx](self.pressure_profile)
                 self.inactive_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,ven_molprof_idx][::-1])[::-1]
                 self.inactive_mixratio_profile[mol_idx, :] = np.asarray(self.inactive_mixratio_profile[mol_idx, :], order='C')
         else:
@@ -96,44 +97,7 @@ class atmosphere(object):
             for i in xrange(len(self.inactive_gases)):
                 self.inactive_mixratio_profile[i, :] = mixratio_remainder*self.params.atm_inactive_gases_mixratios[i]
 
-            # set initial temperature profile (mainly used for create_spectrum)
-            if self.params.atm_tp_type == 'guillot':
-                TP_params = [self.params.atm_tp_guillot_T_irr,
-                             self.params.atm_tp_guillot_kappa_irr,
-                             self.params.atm_tp_guillot_kappa_v1,
-                             self.params.atm_tp_guillot_kappa_v2,
-                             self.params.atm_tp_guillot_alpha]
-                logging.info('Set TP profile using Guillot model')
-                logging.info('T_irr = %.2f' % self.params.atm_tp_guillot_T_irr)
-                logging.info('kappa_irr = %.3f' % self.params.atm_tp_guillot_kappa_irr)
-                logging.info('kappa_v1 = %.3f' % self.params.atm_tp_guillot_kappa_v1)
-                logging.info('kappa_v2 = %.3f' % self.params.atm_tp_guillot_kappa_v2)
-                logging.info('alpha = %.3f' % self.params.atm_tp_guillot_alpha)
-            elif self.params.atm_tp_type == '2point':
-                TP_params = [self.params.atm_tp_2point_T_surf,
-                             self.params.atm_tp_2point_T_trop_diff,
-                             self.params.atm_tp_2point_P_trop]
-                logging.info('Set TP profile using 2point model')
-                logging.info('T_surface = {0}'.format(self.params.atm_tp_2point_T_surf))
-                logging.info('T_tropo_diff = {0}'.format(self.params.atm_tp_2point_T_trop_diff))
-                logging.info('P_tropo = {0}'.format(self.params.atm_tp_2point_P_trop))
-            elif self.params.atm_tp_type == 'Npoint':
-                TP_params = [self.params.atm_tp_Npoint_T_list,
-                             self.params.atm_tp_Npoint_P_list,
-                             self.params.atm_tp_Npoint_smooth]
-                logging.info('Set TP profile using Npoint model')
-                logging.info('T_nodes = {0}'.format(self.params.atm_tp_Npoint_T_list))
-                logging.info('P_nodes = {0}'.format(self.params.atm_tp_Npoint_P_list))
-                logging.info('TP smoothing range = {0}'.format(self.params.atm_tp_Npoint_smooth))
-            else: # if not guillot, always assume isothermal in forward model (i.e. create_spectrum)
-                TP_params = [self.params.atm_tp_iso_temp]
-                logging.info('Set isothermal profile with T = %.2f' % self.params.atm_tp_iso_temp)
-
-            #setting TP-profile and populating temperature grid 
-            self.set_TP_profile(profile=self.params.atm_tp_type)
-            self.temperature_profile = np.zeros((self.nlayers))
-            self.temperature_profile[:] = self.TP_profile(TP_params)
-
+            self.temperature_profile  = self.get_temperature_profile()
 
         self.nallgases = len(self.active_gases) + len(self.inactive_gases)
         self.nactivegases = len(self.active_gases)
@@ -166,14 +130,10 @@ class atmosphere(object):
         else:
             self.TP_type = tp_profile_type
 
-        # setting up TP profile
-        self.set_TP_profile()
-
         # set non-linear sampling grid for hybrid model
         if tp_profile_type == 'hybrid':
             self.hybrid_covmat = covariance
             self.get_TP_sample_grid(covariance, delta=0.05)
-
 
         # load opacity arrays (gas, rayleigh, cia)
         self.load_opacity_arrays(wngrid='obs_spectrum')
@@ -254,15 +214,50 @@ class atmosphere(object):
         if not Pmin:
             Pmin = self.params.atm_min_pres
 
-        P = np.linspace(np.log(Pmin), np.log(Pmax), self.nlayers)
+        P = np.linspace(np.log(Pmin), np.log(Pmax), self.nlevels)
 
         return np.exp(P)[::-1]
 
-    # altitude, gravity and scale height profile
-    def get_altitude_gravity_scaleheight_profile(self, P=None):
+    def get_temperature_profile(self):
+        # set initial temperature profile (mainly used for create_spectrum) # todo move to separate function!
+        if self.params.atm_tp_type == 'guillot':
+            TP_params = [self.params.atm_tp_guillot_T_irr,
+                         self.params.atm_tp_guillot_kappa_irr,
+                         self.params.atm_tp_guillot_kappa_v1,
+                         self.params.atm_tp_guillot_kappa_v2,
+                         self.params.atm_tp_guillot_alpha]
+            logging.info('Set TP profile using Guillot model')
+            logging.info('T_irr = %.2f' % self.params.atm_tp_guillot_T_irr)
+            logging.info('kappa_irr = %.3f' % self.params.atm_tp_guillot_kappa_irr)
+            logging.info('kappa_v1 = %.3f' % self.params.atm_tp_guillot_kappa_v1)
+            logging.info('kappa_v2 = %.3f' % self.params.atm_tp_guillot_kappa_v2)
+            logging.info('alpha = %.3f' % self.params.atm_tp_guillot_alpha)
+        elif self.params.atm_tp_type == '2point':
+            TP_params = [self.params.atm_tp_2point_T_surf,
+                         self.params.atm_tp_2point_T_trop_diff,
+                         self.params.atm_tp_2point_P_trop]
+            logging.info('Set TP profile using 2point model')
+            logging.info('T_surface = {0}'.format(self.params.atm_tp_2point_T_surf))
+            logging.info('T_tropo_diff = {0}'.format(self.params.atm_tp_2point_T_trop_diff))
+            logging.info('P_tropo = {0}'.format(self.params.atm_tp_2point_P_trop))
+        elif self.params.atm_tp_type == 'Npoint':
+            TP_params = [self.params.atm_tp_Npoint_T_list,
+                         self.params.atm_tp_Npoint_P_list,
+                         self.params.atm_tp_Npoint_smooth]
+            logging.info('Set TP profile using Npoint model')
+            logging.info('T_nodes = {0}'.format(self.params.atm_tp_Npoint_T_list))
+            logging.info('P_nodes = {0}'.format(self.params.atm_tp_Npoint_P_list))
+            logging.info('TP smoothing range = {0}'.format(self.params.atm_tp_Npoint_smooth))
+        else: # if not guillot, always assume isothermal in forward model (i.e. create_spectrum)
+            TP_params = [self.params.atm_tp_iso_temp]
+            logging.info('Set isothermal profile with T = %.2f' % self.params.atm_tp_iso_temp)
 
-        if P is None:
-            P = self.pressure_profile
+        self.set_TP_profile(profile=self.params.atm_tp_type)
+
+        return np.asarray(self.TP_profile(TP_params), order='C')
+
+    # altitude, gravity and scale height profile
+    def get_altitude_gravity_scaleheight_profile(self):
 
         # build the altitude profile from the bottom up
 
@@ -274,7 +269,7 @@ class atmosphere(object):
         H[0] = (KBOLTZ*self.temperature_profile[0])/(self.planet_mu[0]*g[0]) # scaleheight at the surface (0th layer)
 
         for i in xrange(1, self.nlayers):
-            deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile[i]/self.pressure_profile[i-1])
+            deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile_levels[i]/self.pressure_profile_levels[i-1])
             z[i] = z[i-1] + deltaz # altitude at the i-th layer
             g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
             H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
@@ -284,12 +279,7 @@ class atmosphere(object):
     # get the density profile
     def get_density_profile(self, T=None, P=None):
 
-        if P is None:
-            P = self.pressure_profile
-        if T is None:
-            T = self.temperature_profile
-
-        return (P)/(KBOLTZ*T)
+        return (self.pressure_profile)/(KBOLTZ*self.temperature_profile)
 
     # calculates non-linear sampling grid for TP profile from provided covariance
     def get_TP_sample_grid(self, covmat, delta=0.02):

@@ -151,7 +151,6 @@ class taurex_plots(object):
 
             # add 1 sigma spread
             if self.db['params']['out_sigma_spectrum']:
-                print 'FILLLLL'
                 plt.fill_between(solution_val['fit_spectrum_xsecres'][:,0][rangeidx],
                 solution_val['fit_spectrum_xsecres'][:,1][rangeidx]-solution_val['fit_spectrum_xsecres'][:,2][rangeidx],
                 solution_val['fit_spectrum_xsecres'][:,1][rangeidx]+solution_val['fit_spectrum_xsecres'][:,2][rangeidx],

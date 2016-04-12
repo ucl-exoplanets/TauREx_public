@@ -393,13 +393,14 @@ class data(object):
                 Ns = 2.6867805e25 # in m^-3
                 sigma =  ( 24.*np.pi**3/ (Ns**2) ) * (((ns**2 - 1.)/(ns**2 + 2.))**2) * king / ((10000./wn) * 1.e-6)**4
 
-                # if gasname == 'H2':
-                #     wave = (1/wn)*1E8
-                #     sigma = ((8.14E-13)*(wave**(-4.))*(1+(1.572E6)*(wave**(-2.))+(1.981E12)*(wave**(-4.))))*1E-4
-                # if gasname == 'HE':
-                #     wave = (1/wn)*1E8
-                #     sigma =  ((5.484E-14)*(wave**(-4.))*(1+(2.44E5)*(wave**(-2.))))*1E-4
-                #     sigma[:] = 0
+                # override H2 and He sigma with formulae from M Line
+                if gasname == 'H2':
+                    wave = (1/wn)*1E8
+                    sigma = ((8.14E-13)*(wave**(-4.))*(1+(1.572E6)*(wave**(-2.))+(1.981E12)*(wave**(-4.))))*1E-4
+                if gasname == 'HE':
+                    wave = (1/wn)*1E8
+                    sigma =  ((5.484E-14)*(wave**(-4.))*(1+(2.44E5)*(wave**(-2.))))*1E-4
+                    sigma[:] = 0
 
                 logging.info('Rayleigh scattering cross section of %s correctly computed' % (gasname))
                 sigma_rayleigh_dict[gasname] = sigma
