@@ -197,7 +197,7 @@ class output(object):
 
                 trace = modes_array[nmode][:,idx]
                 q_16, q_50, q_84 = quantile_corner(trace, [0.16, 0.5, 0.84],
-                            weights=modes_weights[nmode])
+                            weights=np.asarray(modes_weights[nmode]))
                 dict['fit_params'][param_name] = {
                     'value' : q_50,
                     'sigma_m' : q_50-q_16,
