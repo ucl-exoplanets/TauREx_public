@@ -452,7 +452,7 @@ class output(object):
             models[i, :] = self.fitting.forwardmodel.model()
 
         models = models[1:,:] # exclude 1st spectrum, for some reasons is made of nan
-        weights = weights[1:]
+        weights = np.asarray(weights[1:])
 
         std_spectrum = np.zeros((self.data.int_nwngrid_full))
         for i in xrange(self.data.int_nwngrid_full):

@@ -123,7 +123,7 @@ class atmosphere(object):
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
         logging.info('Atmospheric max pressure: %.3f bar' % (self.max_pressure/1e5))
- 
+
         # selecting TP profile to use
         if tp_profile_type is None:
             self.TP_type = self.params.atm_tp_type
@@ -154,36 +154,50 @@ class atmosphere(object):
 
     def load_opacity_arrays(self, wngrid='obs_spectrum'):
 
-        # select the wavenumber grid
-        if wngrid == 'obs_spectrum':
-            self.int_nwngrid = self.data.int_nwngrid_obs
-            self.int_wngrid = self.data.int_wngrid_obs
-            self.int_wngrid_idxmin = self.data.int_wngrid_obs_idxmin
-            self.int_wngrid_idxmax = self.data.int_wngrid_obs_idxmax
+        if self.opacity_wngrid != wngrid:
 
-        elif wngrid == 'full':
-            self.int_nwngrid = self.data.int_nwngrid_full
-            self.int_wngrid = self.data.int_wngrid_full
-            self.int_wngrid_idxmin = 0
-            self.int_wngrid_idxmax = self.data.int_nwngrid_full
+            logging.info('Loading opacity arrays for grid `%s`' % wngrid)
 
-        # get sigma array (and interpolate sigma array to pressure profile)
-        self.sigma_array = self.get_sigma_array()
-        self.sigma_array_flat = self.sigma_array.flatten()
+            # select the wavenumber grid
+            if wngrid == 'obs_spectrum':
+                self.int_nwngrid = self.data.int_nwngrid_obs
+                self.int_wngrid = self.data.int_wngrid_obs
+                self.int_wngrid_idxmin = self.data.int_wngrid_obs_idxmin
+                self.int_wngrid_idxmax = self.data.int_wngrid_obs_idxmax
 
-        # get sigma rayleigh array (for active and inactive absorbers)
-        self.sigma_rayleigh_array = self.get_sigma_rayleigh_array()
-        self.sigma_rayleigh_array_flat = self.sigma_rayleigh_array.flatten()
+            elif wngrid == 'full':
+                self.int_nwngrid = self.data.int_nwngrid_full
+                self.int_wngrid = self.data.int_wngrid_full
+                self.int_wngrid_idxmin = 0
+                self.int_wngrid_idxmax = self.data.int_nwngrid_full
 
-        # get collision induced absorption cross sections
-        self.sigma_cia_array = self.get_sigma_cia_array()
-        self.sigma_cia_array_flat = self.sigma_cia_array.flatten()
+            else:
 
-        # get the gas indexes of the molecules inside the pairs
-        self.cia_idx = self.get_cia_idx()
+                logging.error('Cannot load the opacity arrays for grid `%s`' % wngrid)
+                exit()
 
-        # get clouds specific parameters
-        self.clouds_topP = self.params.atm_cld_topP
+            self.opacity_wngrid = wngrid
+
+            # get sigma array (and interpolate sigma array to pressure profile)
+            self.sigma_array = self.get_sigma_array()
+            self.sigma_array_flat = self.sigma_array.flatten()
+
+            # get sigma rayleigh array (for active and inactive absorbers)
+            self.sigma_rayleigh_array = self.get_sigma_rayleigh_array()
+            self.sigma_rayleigh_array_flat = self.sigma_rayleigh_array.flatten()
+
+            # get collision induced absorption cross sections
+            self.sigma_cia_array = self.get_sigma_cia_array()
+            self.sigma_cia_array_flat = self.sigma_cia_array.flatten()
+
+            # get the gas indexes of the molecules inside the pairs
+            self.cia_idx = self.get_cia_idx()
+
+            # get clouds specific parameters
+            self.clouds_topP = self.params.atm_cld_topP
+
+        else:
+            logging.info('Opacity for grid `%s` already loaded' % wngrid)
 
     def get_coupled_planet_mu(self):
 
