@@ -136,6 +136,7 @@ class atmosphere(object):
             self.get_TP_sample_grid(covariance, delta=0.05)
 
         # load opacity arrays (gas, rayleigh, cia)
+        self.opacity_wngrid = ''
         self.load_opacity_arrays(wngrid='obs_spectrum')
 
         # initialise ACE specific parameters
