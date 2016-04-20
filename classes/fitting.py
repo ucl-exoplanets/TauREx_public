@@ -453,6 +453,11 @@ class fitting(object):
                         else:
                             self.forwardmodel.atmosphere.active_mixratio_profile[idx, :] = fit_params[count]
                         count += 1
+
+                    mixratio_remainder = 1. - np.sum(self.forwardmodel.atmosphere.active_mixratio_profile[:,0], axis=0)
+                    for i in xrange(len(self.forwardmodel.atmosphere.inactive_gases)):
+                        self.forwardmodel.atmosphere.inactive_mixratio_profile[i, :] = mixratio_remainder*self.params.atm_inactive_gases_mixratios[i]
+
                 if self.params.fit_fit_inactive:
                     for idx, gasname in enumerate(self.params.atm_inactive_gases):
                         if self.params.fit_X_log: # fit in log space
