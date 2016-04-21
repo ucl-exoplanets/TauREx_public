@@ -143,8 +143,9 @@ class data(object):
 
             # read spectrum from file
             logging.info('Reading spectrum from file: %s ' % self.params.in_spectrum_file)
-            self.obs_spectrum = np.loadtxt(self.params.in_spectrum_file)
-
+            spectrum = np.loadtxt(self.params.in_spectrum_file)
+            spectrum = spectrum[spectrum[:,0].argsort(axis=0)]
+            self.obs_spectrum = spectrum
             self.obs_wlgrid = self.obs_spectrum[:,0] # grid in micron
             self.obs_wngrid = 10000./self.obs_spectrum[:,0] # grid in wavenumbers
             self.obs_nwlgrid = len(self.obs_spectrum[:,0]) # number of datapoints in spectrum
