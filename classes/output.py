@@ -293,10 +293,12 @@ class output(object):
 
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
 
+        # load model using full wavenumber range
+        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+
         # update atmospheric parameters to current solution
         self.fitting.update_atmospheric_parameters(fit_params)
 
-        # calculate spectrum for current solution
         model = self.fitting.forwardmodel.model()
 
         # store observed spectrum
@@ -306,15 +308,8 @@ class output(object):
         solution['obs_spectrum'][:,2] = self.data.obs_spectrum[:,2]
 
         # append fitted spectrum to observed spectrum array
-        solution['obs_spectrum'][:,3] = np.asarray([model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)])
-
-        # load model using full wavenumber range
-        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
-
-        # update atmospheric parameters to current solution
-        self.fitting.update_atmospheric_parameters(fit_params)
-
-        model = self.fitting.forwardmodel.model()
+        solution['obs_spectrum'][:,3] = np.asarray([model[self.data.intsp_bingrididx_full == i].mean()
+                                                   for i in xrange(1, self.data.intsp_nbingrid_full+1)])
 
         solution['fit_spectrum_xsecres'] = np.zeros((self.data.int_nwlgrid_full, 3))
         solution['fit_spectrum_xsecres'][:,0] = self.data.int_wlgrid_full
@@ -351,7 +346,7 @@ class output(object):
             #self.fitting.forwardmodel.params.atm_clouds = False
             solution['opacity_contrib'][val] = np.zeros((self.data.int_nwlgrid_full, 2))
             solution['opacity_contrib'][val][:,0] = self.data.int_wlgrid_full
-            solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model()
+            solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model(mixratio_mask=mask)
 
         self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
 

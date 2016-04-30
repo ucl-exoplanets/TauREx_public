@@ -76,7 +76,7 @@ class transmission(object):
                                                         C.c_void_p]
 
 
-    def ctypes_pathintegral(self, return_tau=False):
+    def ctypes_pathintegral(self, return_tau=False, mixratio_mask=False):
 
         if self.params.gen_ace:
 
@@ -110,6 +110,9 @@ class transmission(object):
 
             for mol_idx, mol_val in enumerate(self.params.atm_inactive_gases):
                 self.atmosphere.inactive_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_inactive_gases_idx[mol_idx]]
+
+            if isinstance(mixratio_mask, (np.ndarray, np.generic)):
+                self.atmosphere.active_mixratio_profile[mixratio_mask, :] = 0
 
             del(y_out)
             del(a_apt)

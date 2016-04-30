@@ -25,7 +25,7 @@ import matplotlib.patches
 mpl.rcParams['axes.linewidth'] = 1 #set the value globally
 mpl.rcParams['text.antialiased'] = True
 #rc('text', usetex=True) # use tex in plots
-rc('font', **{'family':'serif','serif':['Palatino'],'size'   : 12})
+rc('font', **{'family':'serif','serif':['Palatino'],'size'   : 11})
 
 phi = 1.618
 
@@ -71,6 +71,11 @@ class taurex_plots(object):
                 self.out_folder = self.db['params']['out_path']
             elif multinest_dir:
                 self.out_folder = multinest_dir
+
+        try:
+            os.makedirs(self.out_folder)
+        except:
+            print 'Cannot create output directory: %s' % self.out_folder
 
 
     def plot_posteriors(self, **kwargs):
@@ -127,8 +132,12 @@ class taurex_plots(object):
                     for param_idx, param_val in enumerate(self.db['fit_params_names']):
 
                         val = solution_val['fit_params'][param_val]['value']
-                        sigma_m = solution_val['fit_params'][param_val]['sigma_m']
-                        sigma_p = solution_val['fit_params'][param_val]['sigma_p']
+                        try:
+                            sigma_m = solution_val['fit_params'][param_val]['sigma_m']
+                            sigma_p = solution_val['fit_params'][param_val]['sigma_p']
+                        except:
+                            sigma_m = sigma_p = solution_val['fit_params'][param_val]['sigma']
+
                         ranges_all[solution_idx, param_idx, 0] = val
                         ranges_all[solution_idx, param_idx, 1] = val - 5*sigma_m
                         ranges_all[solution_idx, param_idx, 2] = val + 5*sigma_p
@@ -182,13 +191,13 @@ class taurex_plots(object):
                           ha="center", va="top", fontsize=14)
 
                     figs.append(fig)
-                print os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type))
+
                 plt.savefig(os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type)))
 
     def plot_fitted_spectrum(self, plot_contrib=True):
 
         # fitted model
-        fig = plt.figure(figsize=(7,7/phi))
+        fig = plt.figure(figsize=(5.3, 3.5))
         ax = fig.add_subplot(111)
         obs = self.db['obs_spectrum']
         plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
@@ -222,9 +231,9 @@ class taurex_plots(object):
         if np.max(obs[:,0]) - np.min(obs[:,1]) > 5:
             plt.xscale('log')
             plt.tick_params(axis='x', which='minor')
-            ax.xaxis.set_minor_formatter(FormatStrFormatter("%.1f"))
-            ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
-        plt.legend(loc='auto', ncol=2, frameon=False, prop={'size':12})
+            ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
+            ax.xaxis.set_major_formatter(FormatStrFormatter("%i"))
+        plt.legend(loc='auto', ncol=2, frameon=False, prop={'size':11})
         if self.title:
             plt.title(self.title, fontsize=14)
         plt.tight_layout()
@@ -234,13 +243,13 @@ class taurex_plots(object):
         if plot_contrib:
             N = len(self.db['solutions'][0]['opacity_contrib'])
             for solution_idx, solution_val in enumerate(self.db['solutions']):
-                fig = plt.figure(figsize=(7,7/phi))
+                fig = plt.figure(figsize=(7,3.5))
                 ax = fig.add_subplot(111)
                 rangeidx = np.logical_and(fit_highres[:,0] > np.min(obs[:,0])-0.05*np.min(obs[:,0]), fit_highres[:,0] < np.max(obs[:,0])+0.05*np.max(obs[:,0]))
                 plt.plot(fit_highres[:,0][rangeidx], fit_highres[:,1][rangeidx], alpha=0.7, color='black', label='Fitted model')
                 plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
-                for idx, val in enumerate(self.db['solutions'][0]['opacity_contrib']):
-                    sp = self.db['solutions'][0]['opacity_contrib'][val]
+                for idx, val in enumerate(self.db['solutions'][solution_idx]['opacity_contrib']):
+                    sp = self.db['solutions'][solution_idx]['opacity_contrib'][val]
                     plt.plot(sp[:,0][rangeidx], sp[:,1][rangeidx], color=self.cmap(float(idx)/N), label=val)
                 plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
                 plt.xlabel('Wavelength ($\mu$m)')
@@ -250,21 +259,20 @@ class taurex_plots(object):
                 if np.max(obs[:,0]) - np.min(obs[:,1]) > 5:
                     plt.xscale('log')
                     plt.tick_params(axis='x', which='minor')
-                    ax.xaxis.set_minor_formatter(FormatStrFormatter("%.1f"))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
-                legend = plt.legend(loc='upper left', ncol=1, prop={'size':12})
-                legend.get_frame().set_facecolor('white')
-                legend.get_frame().set_edgecolor('white')
-                legend.get_frame().set_alpha(0.8)
+                    ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter("%i"))
+                plt.tight_layout()
+                box = ax.get_position()
+                ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+                ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
                 if self.title:
                     plt.title(self.title, fontsize=14)
-                plt.tight_layout()
                 plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum_contrib_sol%i.pdf' % (self.prefix, self.type, solution_idx)))
 
     def plot_fitted_tp(self):
 
         # fitted model
-        fig = plt.figure(figsize=(7,7/phi))
+        fig = plt.figure(figsize=(5,3.5))
         ax = fig.add_subplot(111)
         N = len(self.db['solutions'])
         for solution_idx, solution_val in enumerate(self.db['solutions']):
@@ -286,7 +294,7 @@ class taurex_plots(object):
         plt.xlabel('Temperature (K)')
         plt.ylabel('Pressure (bar)')
         plt.tight_layout()
-        legend = plt.legend(loc='upper left', ncol=1, prop={'size':12})
+        legend = plt.legend(loc='upper left', ncol=1, prop={'size':11})
         legend.get_frame().set_facecolor('white')
         legend.get_frame().set_edgecolor('white')
         legend.get_frame().set_alpha(0.8)
@@ -301,35 +309,44 @@ class taurex_plots(object):
             fig = plt.figure(figsize=(7,7/phi))
             ax = fig.add_subplot(111)
             N = len(self.db['params']['atm_active_gases']+self.db['params']['atm_inactive_gases'])
+            cols_mol = {}
             for mol_idx, mol_val in enumerate(self.db['params']['atm_active_gases']):
+                cols_mol[mol_val] = self.cmap(float(mol_idx)/N)
                 prof = solution_val['active_mixratio_profile'][mol_idx]
-                plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(mol_idx)/N), label=mol_val)
+                plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], label=mol_val)
                 #plt.fill_betweenx(prof[:,0]/1e5,  prof[:,1]-prof[:,2],  prof[:,1]+prof[:,2], color=self.cmap(float(mol_idx)/N), alpha=0.5)
             for mol_idx, mol_val in enumerate(self.db['params']['atm_inactive_gases']):
+                cols_mol[mol_val] = self.cmap(float(mol_idx+len(self.db['params']['atm_inactive_gases']))/N)
                 prof = solution_val['inactive_mixratio_profile'][mol_idx]
-                plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(mol_idx+len(self.db['params']['atm_inactive_gases']))/N), label=mol_val)
+                plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], label=mol_val)
                 #plt.fill_betweenx(prof[:,0]/1e5,  prof[:,1]-prof[:,2],  prof[:,1]+prof[:,2], color=self.cmap(float(mol_idx)/N), alpha=0.5)
 
         # add input spectrum param if available
         if 'SPECTRUM_db' in self.db:
-            for mol_idx, mol_val in enumerate(self.db['params']['atm_active_gases']):
+            for mol_idx, mol_val in enumerate(self.db['SPECTRUM_db']['params']['atm_active_gases']):
                 prof = self.db['SPECTRUM_db']['data']['active_mixratio_profile'][mol_idx]
-                plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(mol_idx)/N), ls='dashed')
-            for mol_idx, mol_val in enumerate(self.db['params']['atm_inactive_gases']):
+                if mol_val in cols_mol:
+                    plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], ls='dashed')
+                else:
+                    plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(len(self.db['params']['atm_active_gases'])+len(self.db['params']['atm_inactive_gases'])+mol_idx)/N), label=mol_val, ls='dashed')
+
+            for mol_idx, mol_val in enumerate(self.db['SPECTRUM_db']['params']['atm_inactive_gases']):
                 prof = self.db['SPECTRUM_db']['data']['inactive_mixratio_profile'][mol_idx]
-                plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(mol_idx+len(self.db['params']['atm_inactive_gases']))/N), ls='dashed')
+                if mol_val in cols_mol:
+                    plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], ls='dashed')
+                else:
+                    plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(len(self.db['params']['atm_active_gases'])+len(self.db['params']['atm_inactive_gases'])+mol_idx)/N), label=mol_val, ls='dashed')
 
         plt.gca().invert_yaxis()
         plt.yscale('log')
         plt.xscale('log')
-        plt.xlim(1e-12, 1)
+        plt.xlim(1e-12, 3)
         plt.xlabel('Mixing ratio')
         plt.ylabel('Pressure (bar)')
         plt.tight_layout()
-        legend = plt.legend(loc='upper left', ncol=1, prop={'size':12})
-        legend.get_frame().set_facecolor('white')
-        legend.get_frame().set_edgecolor('white')
-        legend.get_frame().set_alpha(0.8)
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
         if self.title:
             plt.title(self.title, fontsize=14)
         plt.savefig(os.path.join(self.out_folder, '%s%s_mixratio.pdf' % (self.prefix, self.type)))
@@ -372,6 +389,9 @@ if __name__ == '__main__':
     parser.add_argument('--db_filename',
                           dest='db_filename',
                           default=False)
+    parser.add_argument('--db_dir',
+                          dest='db_dir',
+                          default=False)
     parser.add_argument('--multinest_dir',
                           dest='multinest_dir',
                           default=False)
@@ -410,30 +430,35 @@ if __name__ == '__main__':
 
     options = parser.parse_args()
 
-    if options.db_filename:
-        db_filename = options.db_filename
 
-        multinest_dir = options.multinest_dir
+    if options.db_dir:
+        db_filenames = glob.glob(os.path.join(options.db_dir, '*.db'))
+        out_folders = [val[:-3] for val in db_filenames]
+    else:
+        db_filenames = [options.db_filename]
+        out_folders = [options.out_folder]
 
-    plot = taurex_plots(dbfname=options.db_filename,
-                        multinest_dir = options.multinest_dir,
-                        multinest_prefix = options.multinest_prefix,
-                        title=options.title,
-                        prefix=options.prefix,
-                        out_folder=options.out_folder)
+    for db_idx, db_val in enumerate(db_filenames):
 
-    if options.plot_all or options.plot_posteriors:
-        print 'Plotting posteriors'
-        plot.plot_posteriors()
+        plot = taurex_plots(dbfname=db_val,
+                            multinest_dir = options.multinest_dir,
+                            multinest_prefix = options.multinest_prefix,
+                            title=options.title,
+                            prefix=options.prefix,
+                            out_folder=out_folders[db_idx])
 
-    if options.db_filename:
+        if options.plot_all or options.plot_posteriors:
+            print 'Plotting posteriors'
+            plot.plot_posteriors()
 
-        if options.plot_all or options.plot_spectrum:
-            print 'Plotting fitted spectrum'
-            plot.plot_fitted_spectrum()
-        if options.plot_all or options.plot_tp:
-            print 'Plotting mixing ratio profiles'
-            plot.plot_fitted_xprofiles()
-        if options.plot_all or options.plot_x:
-            print 'Plotting pressure-temperature profile'
-            plot.plot_fitted_tp()
+        if options.db_dir or options.db_filename:
+
+            if options.plot_all or options.plot_spectrum:
+                print 'Plotting fitted spectrum'
+                plot.plot_fitted_spectrum()
+            if options.plot_all or options.plot_x:
+                print 'Plotting mixing ratio profiles'
+                plot.plot_fitted_xprofiles()
+            if options.plot_all or options.plot_tp:
+                print 'Plotting pressure-temperature profile'
+                plot.plot_fitted_tp()
