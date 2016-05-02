@@ -146,8 +146,11 @@ class data(object):
             spectrum = np.loadtxt(self.params.in_spectrum_file)
             spectrum = spectrum[spectrum[:,0].argsort(axis=0)]
             self.obs_spectrum = spectrum
-            self.obs_wlgrid = self.obs_spectrum[:,0] # grid in micron
-            self.obs_wngrid = 10000./self.obs_spectrum[:,0] # grid in wavenumbers
+            self.obs_wlgrid = self.obs_spectrum[:,0] # grid in micron/wavenumbers
+            if self.params.in_spectrum_micron:
+                self.obs_wngrid = 10000./self.obs_spectrum[:,0] # grid in wavenumbers
+            else:
+                self.obs_wngrid = self.obs_spectrum[:,0]
             self.obs_nwlgrid = len(self.obs_spectrum[:,0]) # number of datapoints in spectrum
             self.obs_binwidths = self.obs_spectrum[:,3]   if shape(self.obs_spectrum)[1] == 4 else None # bin widths
         else:
