@@ -93,7 +93,7 @@ tp_iso_temp = 1500
 
 # guillot params
 tp_guillot_T_irr = 1500
-tp_guillot_kappa_irr = 0.05
+tp_guillot_kappa_ir = 0.05
 tp_guillot_kappa_v1 = 0.05
 tp_guillot_kappa_v2 = 0.05
 tp_guillot_alpha = 0.005
@@ -248,12 +248,12 @@ clouds_topP_bounds = 1.e0, 1.e6
 #isothermal
 tp_iso_bounds  = 1300, 1500
 
-# guillot
-tp_guillot_T_irr_bounds = 1300, 1500
-tp_guillot_kappa_irr_bounds = 0., 0.1
-tp_guillot_kappa_v1_bounds = 0., 0.1
-tp_guillot_kappa_v2_bounds = 0., 0.1
-tp_guillot_alpha_bounds = 0., 0.01
+# guillot [kappa params fitted in log space, don't set to zero]
+tp_guillot_T_irr_bounds = 1300, 2500
+tp_guillot_kappa_ir_bounds = 1e-10, 10
+tp_guillot_kappa_v1_bounds =  1e-10, 10
+tp_guillot_kappa_v2_bounds =  1e-10, 10
+tp_guillot_alpha_bounds = 0., 1.
 
 #lower and upper bounds for TP-profile hybrid alpha parameter
 hybrid_alpha_bounds  = 0.0, 1.0

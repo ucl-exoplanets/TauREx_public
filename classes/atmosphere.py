@@ -237,13 +237,13 @@ class atmosphere(object):
         # set initial temperature profile (mainly used for create_spectrum) # todo move to separate function!
         if self.params.atm_tp_type == 'guillot':
             TP_params = [self.params.atm_tp_guillot_T_irr,
-                         self.params.atm_tp_guillot_kappa_irr,
-                         self.params.atm_tp_guillot_kappa_v1,
-                         self.params.atm_tp_guillot_kappa_v2,
+                         np.log10(self.params.atm_tp_guillot_kappa_ir),
+                         np.log10(self.params.atm_tp_guillot_kappa_v1),
+                         np.log10(self.params.atm_tp_guillot_kappa_v2),
                          self.params.atm_tp_guillot_alpha]
             logging.info('Set TP profile using Guillot model')
             logging.info('T_irr = %.2f' % self.params.atm_tp_guillot_T_irr)
-            logging.info('kappa_irr = %.3f' % self.params.atm_tp_guillot_kappa_irr)
+            logging.info('kappa_ir = %.3f' % self.params.atm_tp_guillot_kappa_ir)
             logging.info('kappa_v1 = %.3f' % self.params.atm_tp_guillot_kappa_v1)
             logging.info('kappa_v2 = %.3f' % self.params.atm_tp_guillot_kappa_v2)
             logging.info('alpha = %.3f' % self.params.atm_tp_guillot_alpha)
@@ -457,9 +457,9 @@ class atmosphere(object):
 
         # assigning fitting parameters
         T_irr = TP_params[0];
-        kappa_ir = TP_params[1];
-        kappa_v1 = TP_params[2];
-        kappa_v2 = TP_params[3];
+        kappa_ir = np.power(10, TP_params[1]);
+        kappa_v1 = np.power(10, TP_params[2]);
+        kappa_v2 = np.power(10, TP_params[3]);
         alpha = TP_params[4]
 
         planet_grav = (G * self.planet_mass) / (self.planet_radius**2) # surface gravity
