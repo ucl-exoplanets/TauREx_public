@@ -128,7 +128,7 @@ class parameters(object):
         self.atm_tp_type              = self.getpar('Atmosphere', 'tp_type')
         self.atm_tp_iso_temp          = self.getpar('Atmosphere', 'tp_iso_temp', 'float' )
         self.atm_tp_guillot_T_irr     = self.getpar('Atmosphere', 'tp_guillot_T_irr', 'float' )
-        self.atm_tp_guillot_kappa_irr = self.getpar('Atmosphere', 'tp_guillot_kappa_irr', 'float' )
+        self.atm_tp_guillot_kappa_ir = self.getpar('Atmosphere', 'tp_guillot_kappa_ir', 'float' )
         self.atm_tp_guillot_kappa_v1  = self.getpar('Atmosphere', 'tp_guillot_kappa_v1', 'float' )
         self.atm_tp_guillot_kappa_v2  = self.getpar('Atmosphere', 'tp_guillot_kappa_v2', 'float' )
         self.atm_tp_guillot_alpha     = self.getpar('Atmosphere', 'tp_guillot_alpha', 'float' )
@@ -199,7 +199,7 @@ class parameters(object):
 
         self.fit_tp_iso_bounds               = self.getpar('Fitting', 'tp_iso_bounds', 'list-float')
         self.fit_tp_guillot_T_irr_bounds     = self.getpar('Fitting', 'tp_guillot_T_irr_bounds', 'list-float')
-        self.fit_tp_guillot_kappa_irr_bounds = self.getpar('Fitting', 'tp_guillot_kappa_irr_bounds', 'list-float')
+        self.fit_tp_guillot_kappa_ir_bounds = self.getpar('Fitting', 'tp_guillot_kappa_ir_bounds', 'list-float')
         self.fit_tp_guillot_kappa_v1_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_v1_bounds', 'list-float')
         self.fit_tp_guillot_kappa_v2_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_v2_bounds', 'list-float')
         self.fit_tp_guillot_alpha_bounds     = self.getpar('Fitting', 'tp_guillot_alpha_bounds', 'list-float')

@@ -271,20 +271,20 @@ class fitting(object):
                 self.fit_bounds.append((self.params.fit_tp_guillot_T_irr_bounds[0], self.params.fit_tp_guillot_T_irr_bounds[1]))
                 self.fit_params.append(np.mean((self.params.fit_tp_guillot_T_irr_bounds[0], self.params.fit_tp_guillot_T_irr_bounds[1])))
 
-                self.fit_params_names.append('kappa_irr')
-                self.fit_params_texlabels.append('$k_\mathrm{irr}$')
-                self.fit_bounds.append((self.params.fit_tp_guillot_kappa_irr_bounds[0], self.params.fit_tp_guillot_kappa_irr_bounds[1]))
-                self.fit_params.append(np.mean((self.params.fit_tp_guillot_kappa_irr_bounds[0], self.params.fit_tp_guillot_kappa_irr_bounds[1])))
+                self.fit_params_names.append('kappa_ir')
+                self.fit_params_texlabels.append('$k_\mathrm{ir}$')
+                self.fit_bounds.append((np.log10(self.params.fit_tp_guillot_kappa_ir_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_ir_bounds[1])))
+                self.fit_params.append(np.mean((np.log10(self.params.fit_tp_guillot_kappa_ir_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_ir_bounds[1]))))
 
                 self.fit_params_names.append('kappa_v1') #
                 self.fit_params_texlabels.append('$k_\mathrm{1}$')
-                self.fit_bounds.append((self.params.fit_tp_guillot_kappa_v1_bounds[0], self.params.fit_tp_guillot_kappa_v1_bounds[1]))
-                self.fit_params.append(np.mean((self.params.fit_tp_guillot_kappa_v1_bounds[0], self.params.fit_tp_guillot_kappa_v1_bounds[1])))
+                self.fit_bounds.append((np.log10(self.params.fit_tp_guillot_kappa_v1_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_v1_bounds[1])))
+                self.fit_params.append(np.mean((np.log10(self.params.fit_tp_guillot_kappa_v1_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_v1_bounds[1]))))
 
                 self.fit_params_names.append('kappa_v2')
                 self.fit_params_texlabels.append('$k_\mathrm{2}$')
-                self.fit_bounds.append((self.params.fit_tp_guillot_kappa_v2_bounds[0], self.params.fit_tp_guillot_kappa_v2_bounds[1]))
-                self.fit_params.append(np.mean((self.params.fit_tp_guillot_kappa_v2_bounds[0], self.params.fit_tp_guillot_kappa_v2_bounds[1])))
+                self.fit_bounds.append((np.log10(self.params.fit_tp_guillot_kappa_v2_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_v2_bounds[1])))
+                self.fit_params.append(np.mean((np.log10(self.params.fit_tp_guillot_kappa_v2_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_v2_bounds[1]))))
 
                 self.fit_params_names.append('alpha')
                 self.fit_params_texlabels.append('$\\alpha$')
