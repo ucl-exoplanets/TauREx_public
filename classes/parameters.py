@@ -70,8 +70,12 @@ class parameters(object):
                 logging.getLogger().addHandler(self.console)
                 logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
 
-        self.version = subprocess.check_output(["git", "describe"])
-        logging.info('Running TauREx %s' % self.version)
+        try:
+            self.version = subprocess.check_output(["git", "describe"])
+            logging.info('Running TauREx %s' % self.version)
+        except:
+            pass
+        
 
         logging.info('Initialise parameters object')
 
