@@ -286,8 +286,11 @@ class atmosphere(object):
         for i in xrange(1, self.nlayers):
             deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile_levels[i]/self.pressure_profile_levels[i-1])
             z[i] = z[i-1] + deltaz # altitude at the i-th layer
-            g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
-            H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
+            
+            with np.errstate(over='ignore'):
+                g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
+            with np.errstate(divide='ignore'):
+                H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
 
         return z, H, g
 
