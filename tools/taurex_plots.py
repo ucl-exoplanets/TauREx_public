@@ -20,6 +20,9 @@ import matplotlib.pylab as plt
 from matplotlib import rc
 import matplotlib.patches
 
+import warnings
+warnings.filterwarnings("ignore", module="matplotlib")
+
 
 #some global matplotlib vars
 mpl.rcParams['axes.linewidth'] = 1 #set the value globally
@@ -233,7 +236,7 @@ class taurex_plots(object):
             plt.tick_params(axis='x', which='minor')
             ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
             ax.xaxis.set_major_formatter(FormatStrFormatter("%i"))
-        plt.legend(loc='auto', ncol=2, frameon=False, prop={'size':11})
+        plt.legend(loc='best', ncol=2, frameon=False, prop={'size':11})
         if self.title:
             plt.title(self.title, fontsize=14)
         plt.tight_layout()
