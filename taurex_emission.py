@@ -60,13 +60,16 @@ def run(params):
     if params.nest_run and multinest_import:
         fittingob.multinest_fit() # Nested sampling fit
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+        
+    if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
+        exit()
 
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        outputob = output(fittingob, out_path=os.path.join(out_path_orig, 'stage_0'))
+    
+    outputob = output(fittingob, out_path=os.path.join(out_path_orig, 'stage_0'))
 
     return outputob
 
-    exit()
+#     exit()
 
     # todo fix stage 2
 

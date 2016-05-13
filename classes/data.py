@@ -515,7 +515,7 @@ class data(object):
             lambdamin = self.obs_wlgrid[0]
             lambdamax = self.obs_wlgrid[-1]
             # Expand to half a bin up, and half a bin down to properly model edges
-            if self.obs_binwidths == None:
+            if self.obs_binwidths is None:
                 # if bin widths are *not* provided in the input spectrum
                 bin_up =  (self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.
                 bin_low = (self.obs_wlgrid[1]-self.obs_wlgrid[0])/2.

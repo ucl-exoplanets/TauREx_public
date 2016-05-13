@@ -229,7 +229,10 @@ class taurex_plots(object):
 
         plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
         plt.xlabel('Wavelength ($\mu$m)')
-        plt.ylabel('$(R_p/R_*)^2$')
+        if self.db['params']['fit_emission']:
+            plt.ylabel('$F_p/F_*$')
+        else:
+            plt.ylabel('$(R_p/R_*)^2$')
         # set log scale only if interval is greater than 5 micron
         if np.max(obs[:,0]) - np.min(obs[:,1]) > 5:
             plt.xscale('log')
