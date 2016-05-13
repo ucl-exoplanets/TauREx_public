@@ -101,7 +101,7 @@ class fitting(object):
             for f in folders:
                 if not os.path.isdir(f):
                     logging.info('Create folder %s' % f)
-                    os.mkdir(f)
+                    os.makedirs(f)
 
         # set priors, starting values, and fitting parameters
         self.fit_params_names = [] # machine names

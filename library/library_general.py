@@ -113,7 +113,7 @@ def round_base(x, base=.05):
 def binspectrum(spectrum_in, resolution):
     wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))
     spec_bin_grid, spec_bin_grid_idx = get_specbingrid(wavegrid, spectrum_in[:,0])
-    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
+    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in xrange(1,len(spectrum_in[:,0]))]
     return transpose(vstack((spec_bin_grid[:-1], spectrum_binned)))
 
 def get_specgrid( R=5000, lambda_min=0.1, lambda_max=20.0):
