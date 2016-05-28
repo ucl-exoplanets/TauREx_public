@@ -38,6 +38,10 @@ class create_spectrum(object):
 
         # Initialise taurex instances up to forward model
         self.params.gen_manual_waverange = True
+        self.params.nest_run = False
+        self.params.mcmc_run = False
+        self.params.downhill_run = False
+
         self.dataob = data(self.params)
         self.atmosphereob = atmosphere(self.dataob)
         if self.params.gen_type == 'transmission':
