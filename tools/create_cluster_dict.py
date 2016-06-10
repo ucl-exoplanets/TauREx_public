@@ -31,7 +31,7 @@ import numpy as np
 import glob
 import string
 
-sys.path.append('./classes')
+sys.path.append('../classes')
 from cluster import cluster
 
 
@@ -41,9 +41,10 @@ from cluster import cluster
 # alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
 # alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
-datalist = glob.glob('Input/observations/riemann_hd209/*')
+datalist = glob.glob('../Input/observations/riemann_hd209_wfc3/*')
 
-# print datalist
+# print datalist[0][3:]
+# exit()
 
 with open('datalist.txt','wb') as ofile:
     for name in datalist:
@@ -55,23 +56,23 @@ RNUM = len(datalist)
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
-GENERAL['CPUS']       = 24
-GENERAL['WALLTIME']   = '10:00:00'
-GENERAL['MEMORY']     = 100
-GENERAL['PARFILE']    = 'Parfiles/riemann_largespec.par'
-GENERAL['CLUSTER']    = 'cobweb'
+GENERAL['CPUS']       = 12
+GENERAL['WALLTIME']   = '5:00:00'
+GENERAL['MEMORY']     = 10
+GENERAL['PARFILE']    = 'Parfiles/riemann/riemann_hd209_wfc3.par'
+GENERAL['CLUSTER']    = 'legion'
 GENERAL['USERNAME']   = 'ucapipw'
 GENERAL['DISKMEM']    = 10
 
 if GENERAL['CLUSTER'] is 'legion':
     #legion directories (all must be absolute paths)
     #legion does not require a scratch path, handled by $TMPDIR variable
-    GENERAL['DATA_DIR']   = '/home/ucapipw/Scratch/taurex'
-    GENERAL['OUTPUT_DIR'] = '/home/ucapipw/Scratch/riemann_output'
+    GENERAL['DATA_DIR']   = '/home/ucapipw/Scratch/TauREx'
+    GENERAL['OUTPUT_DIR'] = '/home/ucapipw/Scratch/riemann/hd209_wfc3'
 
 elif GENERAL['CLUSTER'] is 'cobweb':
     #cobweb directories (all must be absolute paths)
-    GENERAL['DATA_DIR']   = '/share/data/ingo/repos/taurex_cluster'
+    GENERAL['DATA_DIR']   = '/share/data/ingo/repos/TauREx'
     GENERAL['SCRATCH_DIR']= '/scratch/ingo/run'
     GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/riemann_hd209'
     
@@ -86,8 +87,9 @@ for i in range(RNUM): #this may be changed with a more informative ID... e.g. da
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
     DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']
-    DICT[ID]['in_spectrum_file'] = datalist[i]  #setting parameter for run
-#     DICT[ID]['out_path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID) #must be provided for legion but not for cobweb
+    DICT[ID]['in_spectrum_file'] = datalist[i][3:]  #setting parameter for run
+    if GENERAL['CLUSTER'] is 'legion':
+        DICT[ID]['out_path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID) #must be provided for legion but not for cobweb
     ID += 1
 
 # ID = 0
@@ -101,5 +103,5 @@ for i in range(RNUM): #this may be changed with a more informative ID... e.g. da
 
 #writing dictionary to ascii. Use function provided by cluster for compatibility reasons. 
 cluster().write_dict(DICT,DICTNAME='run_taurex.dict')
-
+print 'DONE'
     
