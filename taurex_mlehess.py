@@ -113,7 +113,7 @@ class statistics(object):
         #initialising fitting object 
         self.fitting = fitting(self.fmob)
         
-    def load_traces_likelihood(nest_db_fname,solution_idx=0):
+    def load_traces_likelihood(self,nest_db_fname,solution_idx=0):
         '''
         loading following files from TauREx output: 
           NEST_tracedata.txt
