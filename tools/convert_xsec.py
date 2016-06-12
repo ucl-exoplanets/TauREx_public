@@ -35,12 +35,14 @@ python convert_xsec.py -s 'sourcce_sigma'
 
 '''
 
-import sys, os, optparse, string, pickle, glob
+import sys, os, argparse, string, pickle, glob
 import numpy as np
 #from scipy.inteprolate import interp2d
 from time import gmtime, strftime
 
 import matplotlib.pylab as plt
+
+import multiprocessing
 
 ### support functions
 def binspectrum(spectrum_in, resolution):
@@ -103,53 +105,53 @@ def get_specbingrid(wavegrid, specgrid, binwidths=None):
 
 
 
-parser = optparse.OptionParser()
-parser.add_option('-s', '--source_sigma',
-                  dest='source_sigma',
-                  default=None,
-)
-parser.add_option('-o', '--output_filename',
-                  dest='output_filename',
-                  default='sigma_array.db',
-)
-parser.add_option('-p', '--pressure_list',
-                  dest='pressure_list',
-                  default=None,
-                  )
-parser.add_option('-t', '--temperature_list',
-                  dest='temperature_list',
-                  default=None,
-                  )
-parser.add_option('-w', '--wavenumber_range',
-                  dest='wavenumber_range',
-                  default=None,
-                  )
-parser.add_option('-l', '--lambda_range',
-                  dest='lambda_range',
-                  default=None,
-                  )
-parser.add_option('-m', '--binning_method',
-                  dest='binning_method',
-                  default=None,
-)
-parser.add_option('-b', '--binning_resolution',
-                  dest='binning_resolution',
-                  default=None,
-)
-parser.add_option('-a', '--binning_method',
-                  dest='binning_method',
-                  default='random_sample',
-)
-parser.add_option('-r', '--input_resolution',
-                  dest='input_resolution',
-                  default=None,
-)
-parser.add_option('-n', '--molecule_name',
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--molecule_name',
                   dest='molecule_name',
                   default=None,
 )
+parser.add_argument('-s', '--source_sigma',
+                  dest='source_sigma',
+                  default=None,
+)
+parser.add_argument('-o', '--output_filename',
+                  dest='output_filename',
+                  default='sigma_array.db',
+)
+parser.add_argument('-p', '--pressure_list',
+                  dest='pressure_list',
+                  default=None,
+                  )
+parser.add_argument('-t', '--temperature_list',
+                  dest='temperature_list',
+                  default=None,
+                  )
+parser.add_argument('-w', '--wavenumber_range',
+                  dest='wavenumber_range',
+                  default=None,
+                  )
+parser.add_argument('-l', '--lambda_range',
+                  dest='lambda_range',
+                  default=None,
+                  )
 
-options, remainder = parser.parse_args()
+parser.add_argument('--binning_method',
+                  dest='binning_method',
+                  default='const_wn', # const_wn (constant wavenumber spacing) or const_res (constant resolution in wavelength)
+)
+parser.add_argument('--binning_resolution',
+                  dest='binning_resolution',
+                  default=None,
+)
+parser.add_argument('--sampling_method',
+                  dest='sampling_method',
+                  default='random_sample',
+)
+parser.add_argument('--input_resolution',
+                  dest='input_resolution',
+                  default=None,
+)
+options = parser.parse_args()
 
 if not options.source_sigma or \
    not options.output_filename:
@@ -242,21 +244,21 @@ if options.pressure_list:
             print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
             for wno_idx, wno_val in enumerate(full_wngrid):
                 sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
-                print pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx]
+
 # lastly, bin if needed.
-# For now, only linear binning available. Ideally implement optimal binning for input resolution.
-if options.binning_method == 'resolution':
+
+if options.sampling_method == 'const_res':
 
     print 'Constant resolution in lambda R=%.2f binning' % float(options.binning_resolution)
     comments.append('Constant resolution in lambda R=%.2f binning' % float(options.binning_resolution))
 
-    if options.binning_method == 'geometric_average':
+    if options.sampling_method == 'geometric_average':
         comments.append('Linear binning: use geometric average.' )
-    elif options.binning_method == 'algebraic_average':
+    elif options.sampling_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
-    elif options.binning_method == 'random_sample':
+    elif options.sampling_method == 'random_sample':
         comments.append('Linear binning: use random sample.' )
-    elif options.binning_method == 'first_sample':
+    elif options.sampling_method == 'first_sample':
         comments.append('Linear binning: use first sample.' )
 
     if wnmin == 0:
@@ -269,25 +271,26 @@ if options.binning_method == 'resolution':
     for pressure_idx, pressure_val in enumerate(pressures):
         for temperature_idx, temperature_val in enumerate(temperatures):
 
-            print 'Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
 
+
+            print 'Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
             sigma = sigma_array[pressure_idx, temperature_idx]
-            if options.binning_method == 'geometric_average':
+            if options.sampling_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 sigma_rev = sigma[::-1] # reverse array
                 logval = np.log(sigma_rev)
                 values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(wavegrid)+1)])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
-            elif options.binning_method == 'algebraic_average':
+            elif options.sampling_method == 'algebraic_average':
                 # algebraic average
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.asarray([np.average(sigma_rev[bingrid_idx == i]) for i in xrange(1,len(wavegrid)+1)])
                 values[np.isnan(values)] = 0
-            elif options.binning_method == 'random_sample':
+            elif options.sampling_method == 'random_sample':
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.asarray([np.random.choice(sigma_rev[bingrid_idx == i], 1)[0] for i in xrange(1,len(wavegrid)+1)])
-            elif options.binning_method == 'first_sample':
+            elif options.sampling_method == 'first_sample':
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
 
@@ -296,7 +299,7 @@ if options.binning_method == 'resolution':
     sigma_array_out = sigma_array_bin
     wno_out = 10000./wavegrid[::-1]
 
-elif options.binning_method == 'wavenumber':
+elif options.binning_method == 'const_wn':
 
     print 'Constant dwno=%.2f binning' % float(options.binning_resolution)
 
@@ -306,13 +309,13 @@ elif options.binning_method == 'wavenumber':
 
     comments.append('Constant dwno=%.2f binning' % float(options.binning_resolution))
 
-    if options.binning_method == 'geometric_average':
+    if options.sampling_method == 'geometric_average':
         comments.append('Linear binning: use geometric average.' )
-    elif options.binning_method == 'algebraic_average':
+    elif options.sampling_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
-    elif options.binning_method == 'random_sample':
+    elif options.sampling_method == 'random_sample':
         comments.append('Linear binning: use random sample.' )
-    elif options.binning_method == 'first_sample':
+    elif options.sampling_method == 'first_sample':
         comments.append('Linear binning: use first sample.' )
 
 
@@ -323,20 +326,20 @@ elif options.binning_method == 'wavenumber':
             print 'Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
 
             sigma = sigma_array[pressure_idx, temperature_idx]
-            if options.binning_method == 'geometric_average':
+            if options.sampling_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 logval = np.log(sigma)
                 values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid+1))])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
-            elif options.binning_method == 'algebraic_average':
+            elif options.sampling_method == 'algebraic_average':
                 # algebraic average
                 values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid+1))])
                 values[np.isnan(values)] = 0
-            elif options.binning_method == 'random_sample':
-                values = np.asarray([np.random.choice(sigma_rev[bingrid_idx == i], 1)[0] for i in xrange(1,len(wavegrid)+1)])
-            elif options.binning_method == 'first_sample':
-                values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
+            elif options.sampling_method == 'random_sample':
+                values = np.asarray([np.random.choice(sigma[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
+            elif options.sampling_method == 'first_sample':
+                values = np.asarray([sigma[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
             sigma_array_bin[pressure_idx, temperature_idx, :] = values
     sigma_array_out = sigma_array_bin
     wno_out = bin_wngrid
