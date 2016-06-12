@@ -46,7 +46,10 @@ class taurex_plots(object):
 
         if dbfname:
             self.db = pickle.load(open(dbfname))
-            self.type = self.db['type']
+            try:
+                self.type = self.db['type']
+            except:
+                self.type = 'nest'
         elif multinest_dir:
             self.db = False
             self.type = 'nest'
@@ -181,8 +184,8 @@ class taurex_plots(object):
                                           truths=truths,
                                           quantiles=[0.16, 0.5, 0.84],
                                           show_titles=True,
-                                          #quantiles=[0.16, 0.5],
                                           range=ranges,
+                                          #quantiles=[0.16, 0.5],
                                           ret=True,
                                           fill_contours=True,
                                           color=self.cmap(float(solution_idx)/N),

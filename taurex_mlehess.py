@@ -92,7 +92,7 @@ class statistics(object):
         self.stats = {}
         
         #loading data from TauREx NEST output 
-        self.load_traces_likelihood('NEST_tracedata.txt', 'NEST_likelihood.txt', 'NEST_out.db')
+        self.load_traces_likelihood('nest_out.db')
         
         #loading parameter list 
         self.parameters = np.loadtxt(os.path.join(self.dir,'parameters.txt'),dtype='str')
@@ -113,7 +113,7 @@ class statistics(object):
         #initialising fitting object 
         self.fitting = fitting(self.fmob)
         
-    def load_traces_likelihood(self,trace_fname,like_fname,nest_db_fname):
+    def load_traces_likelihood(self,nest_db_fname,solution_idx=0):
         '''
         loading following files from TauREx output: 
           NEST_tracedata.txt
@@ -121,10 +121,13 @@ class statistics(object):
           NEST_out.db
         '''
         
-        self.NEST_trace = np.loadtxt(os.path.join(self.dir,trace_fname))
-        self.NEST_like  = np.loadtxt(os.path.join(self.dir,like_fname))
+#         self.NEST_trace = np.loadtxt(os.path.join(self.dir,trace_fname))
+#         self.NEST_like  = np.loadtxt(os.path.join(self.dir,like_fname))
         with open(os.path.join(self.dir,nest_db_fname),'r') as file:
             self.NEST_db = pkl.load(file)
+            
+        self.NEST_trace = self.NEST_db['solutions'][solution_idx]['tracedata']
+        self.NEST_like = self.NEST_db['solutions'][solution_idx]['weights']
             
         #getting maximum likelihood values 
         self.mle_values = self.NEST_trace[-1,:]
