@@ -94,8 +94,8 @@ def read_filename(fname, filetype=1):
 
     elif filetype.upper() == 'EX':
         s = fname.split('_')
-        pressure = float(s[1][1:])
-        temperature = float(s[2][1:])
+        pressure = float(s[2][1:])
+        temperature = float(s[3][1:])
         resolution = 0.01 # assume this resolution...
 
     return temperature, pressure, resolution
@@ -156,6 +156,10 @@ if options.linear_binning:
         comments.append('Linear binning: use geometric average.' )
     elif options.binning_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
+    elif options.binning_method == 'random_sample':
+        comments.append('Linear binning: use random sample.' )
+    elif options.binning_method == 'first_sample':
+        comments.append('Linear binning: use first sample.' )
 
 for pressure_idx, pressure_val in enumerate(pressures):
     for temperature_idx, temperature_val in enumerate(temperatures):
@@ -181,13 +185,17 @@ for pressure_idx, pressure_val in enumerate(pressures):
                     if options.binning_method == 'geometric_average':
                         # geometric average (i.e. log-average)
                         logval = np.log(sigma_in)
-                        values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid))+1])
+                        values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid)+1)])
                         values = np.exp(values)
                         values[np.isnan(values)] = 0
                     elif options.binning_method == 'algebraic_average':
                         # algebraic average
                         values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid)+1)])
                         values[np.isnan(values)] = 0
+                    elif options.binning_method == 'random_sample':
+                        values = np.asarray([np.random.choice(sigma_rev[bingrid_idx == i], 1)[0] for i in xrange(1,len(wavegrid)+1)])
+                    elif options.binning_method == 'first_sample':
+                        values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
 
                     out = np.zeros((len(values), 2))
                     out[:,0] = wngrid
