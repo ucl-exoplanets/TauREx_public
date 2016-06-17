@@ -161,6 +161,8 @@ def worker(file_id):
             values = np.asarray([np.random.choice(sigma_in[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
         elif options.binning_method == 'first_sample':
             values = np.asarray([sigma_in[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
+        elif options.sampling_method == 'interp_sample':
+            values = np.interp(wngrid, sigma_in['wno'], sigma_in)
 
         out = np.zeros((len(values), 2))
         out[:,0] = wngrid

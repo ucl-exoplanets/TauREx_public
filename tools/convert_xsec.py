@@ -238,7 +238,9 @@ if options.binning_method == 'const_res':
         wnmin = 1
 
     wavegrid, dlamb_grid = get_specgrid(R=float(options.binning_resolution),lambda_min=lambdamin,lambda_max=lambdamax)
-    spec_bin_grid, bingrid_idx = get_specbingrid(wavegrid, 10000./sigma_in['wno'][::-1])
+
+    if options.sampling_method == 'geometric_average' or options.sampling_method == 'algebraic_average':
+        spec_bin_grid, bingrid_idx = get_specbingrid(wavegrid, 10000./sigma_in['wno'][::-1])
 
     sigma_array_bin = np.zeros((len(sigma_in['p']), len(sigma_in['t']), len(wavegrid)))
     for pressure_idx, pressure_val in enumerate(sigma_in['p']):
@@ -264,6 +266,9 @@ if options.binning_method == 'const_res':
             elif options.sampling_method == 'first_sample':
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
+            elif options.sampling_method == 'interp_sample':
+                sigma_rev = sigma[::-1] # reverse array
+                values = np.interp(wavegrid, 10000./sigma_in['wno'][::-1], sigma_rev)
 
             sigma_array_bin[pressure_idx, temperature_idx, :] = values[::-1] # reverse array back to original
 
@@ -311,6 +316,10 @@ elif options.binning_method == 'const_wn':
                 values = np.asarray([np.random.choice(sigma[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
             elif options.sampling_method == 'first_sample':
                 values = np.asarray([sigma[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
+            elif options.sampling_method == 'interp_sample':
+                values = np.interp(bin_wngrid, sigma_in['wno'], sigma)
+
+
             sigma_array_bin[pressure_idx, temperature_idx, :] = values
     sigma_array_out = sigma_array_bin
     wno_out = bin_wngrid

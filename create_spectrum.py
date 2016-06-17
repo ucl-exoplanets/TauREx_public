@@ -24,10 +24,17 @@ from output import *
 from atmosphere import *
 from data import *
 
+try:
+    from mpi4py import MPI
+    MPIrank = MPI.COMM_WORLD.Get_rank()
+except:
+    MPIrank = 0
+    pass
 
 class create_spectrum(object):
 
     def __init__(self, params=None, param_filename=None):
+
 
         if params:
             self.params = params
@@ -185,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_sp',
                       action='store_true',
                       dest='save_sp',
-                      default=False)
+                      default=True)
     parser.add_argument('--save_db',
                       action='store_true',
                       dest='save_db',
