@@ -35,7 +35,13 @@ python convert_xsec.py -s 'sourcce_sigma'
 
 '''
 
-import sys, os, argparse, string, pickle, glob
+import sys, os, argparse, string, glob
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
 import numpy as np
 #from scipy.inteprolate import interp2d
 from time import gmtime, strftime
@@ -45,6 +51,16 @@ import matplotlib.pylab as plt
 import multiprocessing
 
 ### support functions
+
+def fast_nearest_interp(xi, x, y):
+    """Assumes that x is monotonically increasing!!."""
+    # Shift x points to centers
+    spacing = np.diff(x) / 2
+    x = x + np.hstack([spacing, spacing[-1]])
+    # Append the last point in y twice for ease of use
+    y = np.hstack([y, y[-1]])
+    return y[np.searchsorted(x, xi)]
+
 def binspectrum(spectrum_in, resolution):
     wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))
     spec_bin_grid, spec_bin_grid_idx = get_specbingrid(wavegrid, spectrum_in[:,0])
@@ -240,7 +256,7 @@ if options.binning_method == 'const_res':
     wavegrid, dlamb_grid = get_specgrid(R=float(options.binning_resolution),lambda_min=lambdamin,lambda_max=lambdamax)
 
     if options.sampling_method == 'geometric_average' or options.sampling_method == 'algebraic_average':
-        spec_bin_grid, bingrid_idx = get_specbingrid(wavegrid, 10000./sigma_in['wno'][::-1])
+        spec_bin_grid, bingrid_idx = get_specbingrid(wavegrid, 10000./full_wngrid[::-1])
 
     sigma_array_bin = np.zeros((len(sigma_in['p']), len(sigma_in['t']), len(wavegrid)))
     for pressure_idx, pressure_val in enumerate(sigma_in['p']):
@@ -268,7 +284,7 @@ if options.binning_method == 'const_res':
                 values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
             elif options.sampling_method == 'interp_sample':
                 sigma_rev = sigma[::-1] # reverse array
-                values = np.interp(wavegrid, 10000./sigma_in['wno'][::-1], sigma_rev)
+                values = np.interp(wavegrid, 10000./full_wngrid[::-1], sigma_rev)
 
             sigma_array_bin[pressure_idx, temperature_idx, :] = values[::-1] # reverse array back to original
 
@@ -317,7 +333,7 @@ elif options.binning_method == 'const_wn':
             elif options.sampling_method == 'first_sample':
                 values = np.asarray([sigma[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
             elif options.sampling_method == 'interp_sample':
-                values = np.interp(bin_wngrid, sigma_in['wno'], sigma)
+                values = np.interp(bin_wngrid, full_wngrid, sigma)
 
 
             sigma_array_bin[pressure_idx, temperature_idx, :] = values
@@ -372,4 +388,4 @@ sigma_out = {
     'comments': comments
 }
 
-pickle.dump(sigma_out, open(options.output_filename, 'wb'))
+pickle.dump(sigma_out, open(options.output_filename, 'wb'), protocol=2)

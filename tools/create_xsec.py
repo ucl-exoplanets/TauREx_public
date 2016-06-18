@@ -29,7 +29,12 @@ python create_xsec.py -s 'source_directory'
                       -e 'file_extension'
 '''
 
-import sys, os, optparse, string, pickle, glob
+import sys, os, optparse, string, glob
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
 import numpy as np
 from time import gmtime, strftime
 
@@ -196,4 +201,4 @@ sigma_out = {
     'comments': comments
 }
 
-pickle.dump(sigma_out, open(options.output_filename, 'wb'))
+pickle.dump(sigma_out, open(options.output_filename, 'wb'), protocol=2)

@@ -164,7 +164,7 @@ class create_spectrum(object):
             if not db_filename:
                 db_filename = os.path.join(self.params.out_path, 'SPECTRUM_out.db')
 
-            pickle.dump(outdb, open(db_filename, 'wb'))
+            pickle.dump(outdb, open(db_filename, 'wb'), protocol=2)
 
         return outdb
 

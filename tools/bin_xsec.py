@@ -1,35 +1,10 @@
 '''
 
-Create pickled high resolution sigma array for given molecule from ascii files
+Bin cross sections
 
-Fileformat is exomol v1 or v2 (zero pressure or pressure broadened).
-
-NB:
-
-- Use the highest resolution available (<=0.01)
-
-- The pressure and temperature grids are the ones provided by the input files.
-
-- For pressure broadened xsec, temperatures and pressures need to be
-  consistent. E.g. same temperatures for all pressures and viceversa.
-
-- If you want to reinterpolate to a different pressure/temperature grid, firstly
-  use this script to convert exomol xsec to a pickled xsec, then use convert_xsec.py.
-
-- Similarly, if you want to bin these high res xsec to a different wavenumber grid
-  (linear or nonlinear), firstly use this script, then use convert_xsec.py.
-
-
-Usage:
-
-python create_xsec.py -s 'source_directory'
-                      -o 'output_filename'
-                      -n 'molecule_name'
-                      -v 'exomol_file_version' (1: zero pressure, 2: pressure broadened)
-                      -e 'file_extension'
 '''
 
-import sys, os, optparse, string, pickle, glob
+import sys, os, optparse, string, glob
 import numpy as np
 from time import gmtime, strftime
 import multiprocessing
@@ -145,7 +120,9 @@ def worker(file_id):
         print 'Skip file %i/%i: %s' %  (file_id+1, len(files), fname)
     else:
         print 'Bin file %i/%i: %s' %  (file_id+1, len(files), fname)
-        sigma_in = np.loadtxt(fname)[:,1]
+
+        loadf = np.loadtxt(fname)
+        sigma_in = loadf[:,1]
 
         if options.binning_method == 'geometric_average':
             # geometric average (i.e. log-average)
@@ -161,8 +138,8 @@ def worker(file_id):
             values = np.asarray([np.random.choice(sigma_in[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
         elif options.binning_method == 'first_sample':
             values = np.asarray([sigma_in[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
-        elif options.sampling_method == 'interp_sample':
-            values = np.interp(wngrid, sigma_in['wno'], sigma_in)
+        elif options.binning_method == 'interp_sample':
+            values = np.interp(bin_wngrid, loadf[:,0], sigma_in)
 
         out = np.zeros((len(values), 2))
         out[:,0] = wngrid
