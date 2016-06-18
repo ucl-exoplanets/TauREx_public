@@ -285,6 +285,9 @@ if options.binning_method == 'const_res':
             elif options.sampling_method == 'interp_sample':
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.interp(wavegrid, 10000./full_wngrid[::-1], sigma_rev)
+            elif options.sampling_method == 'interp_nearest_sample':
+                sigma_rev = sigma[::-1] # reverse array
+                values = fast_nearest_interp(wavegrid, 10000./full_wngrid[::-1], sigma_rev)
 
             sigma_array_bin[pressure_idx, temperature_idx, :] = values[::-1] # reverse array back to original
 
@@ -334,6 +337,10 @@ elif options.binning_method == 'const_wn':
                 values = np.asarray([sigma[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
             elif options.sampling_method == 'interp_sample':
                 values = np.interp(bin_wngrid, full_wngrid, sigma)
+            elif options.sampling_method == 'interp_nearest_sample':
+                values = fast_nearest_interp(bin_wngrid, full_wngrid, sigma)
+
+
 
 
             sigma_array_bin[pressure_idx, temperature_idx, :] = values

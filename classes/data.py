@@ -11,7 +11,10 @@
 import numpy
 import os
 import glob
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import logging
 import numpy as np
 

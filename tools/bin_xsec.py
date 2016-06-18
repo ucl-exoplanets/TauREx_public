@@ -53,6 +53,16 @@ if not options.linear_binning:
     print 'Select a binning resolution                                        '
     exit()
 
+
+def fast_nearest_interp(xi, x, y):
+    """Assumes that x is monotonically increasing!!."""
+    # Shift x points to centers
+    spacing = np.diff(x) / 2
+    x = x + np.hstack([spacing, spacing[-1]])
+    # Append the last point in y twice for ease of use
+    y = np.hstack([y, y[-1]])
+    return y[np.searchsorted(x, xi)]
+
 # compatibility with exomol filename formats
 def read_filename(fname, filetype=1):
 
@@ -140,6 +150,8 @@ def worker(file_id):
             values = np.asarray([sigma_in[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
         elif options.binning_method == 'interp_sample':
             values = np.interp(bin_wngrid, loadf[:,0], sigma_in)
+        elif options.binning_method == 'interp_nearest_sample':
+            values = fast_nearest_interp(bin_wngrid, loadf[:,0], sigma_in)
 
         out = np.zeros((len(values), 2))
         out[:,0] = wngrid
