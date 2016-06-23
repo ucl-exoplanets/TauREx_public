@@ -140,6 +140,26 @@ class create_spectrum(object):
         outdata['tp_profile'][:,0] = self.fmob.atmosphere.pressure_profile
         outdata['tp_profile'][:,1] = self.fmob.atmosphere.temperature_profile
 
+        # altitude
+        outdata['altitude_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        outdata['altitude_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        outdata['altitude_profile'][:,1] = self.fmob.atmosphere.altitude_profile
+
+        # planet_grav
+        outdata['gravity_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        outdata['gravity_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        outdata['gravity_profile'][:,1] = self.fmob.atmosphere.planet_grav
+
+        # scale_height
+        outdata['scale_height_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        outdata['scale_height_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        outdata['scale_height_profile'][:,1] = self.fmob.atmosphere.scale_height
+
+        # mu profile
+        outdata['mu_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        outdata['mu_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        outdata['mu_profile'][:,1] = self.fmob.atmosphere.planet_mu
+
         # mixing ratios
         outdata['active_mixratio_profile'] = np.zeros((len(self.atmosphereob.active_gases), self.atmosphereob.nlayers, 2))
         outdata['inactive_mixratio_profile'] = np.zeros((len(self.atmosphereob.inactive_gases), self.atmosphereob.nlayers, 2))
