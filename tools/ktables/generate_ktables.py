@@ -170,12 +170,27 @@ for filenm in files:
         kdist_out['weights'] = weights
         kdist_out['ngauss'] = ngauss
         kdist_out['kcoeff'] = ktable
+
         if options.t_idx or options.p_idx:
             split = os.path.splitext(os.path.basename(filenm))[0].split('_')
         if options.p_idx:
-            kdist_out['p'] = float(split[int(options.p_idx)])
+            try:
+                kdist_out['p'] = float(split[int(options.p_idx)])
+            except:
+                try:
+                    kdist_out['p'] = float(split[int(options.p_idx)][1:])
+                except:
+                    pass
         if options.t_idx:
-            kdist_out['t'] = float(split[int(options.t_idx)])
+            try:
+                print split[int(options.t_idx)]
+                kdist_out['t'] = float(split[int(options.t_idx)])
+            except:
+                try:
+                    print split[int(options.t_idx)][1:]
+                    kdist_out['t'] = float(split[int(options.t_idx)][1:])
+                except:
+                    pass
 
         end = time.time()
         print 'Done in %.3f s' % (end-start)
@@ -196,7 +211,7 @@ for filenm in files:
         end = time.time()
         print 'Done in %.3f s' % (end-start)
     except:
-        print "Unexpected error:", sys.exc_info()[0]
+        print "Unexpected error:", sys.exc_info()
         pass
 
 endall = time.time()
