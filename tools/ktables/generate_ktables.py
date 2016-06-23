@@ -55,10 +55,7 @@ parser.add_argument('--output_file',
                       default=False,
                     )
 
-parser.add_argument('--input_ext',
-                      dest='input_ext',
-                      default=False,
-                    )
+
 parser.add_argument('--output_folder',  # can be pickle or ascii
                       dest='output_folder',
                       default=False
@@ -90,11 +87,10 @@ parser.add_argument('--t_idx',
                       dest='t_idx',
                       default=False,
                     )
-parser.add_argument('--cores',
-                      dest='cores',
-                      default=1,
+parser.add_argument('--molecule_name',  # can be pickle or ascii
+                      dest='molecule_name',
+                      default=''
                     )
-
 options = parser.parse_args()
 
 if not options.input_file and not options.input_files:
@@ -118,14 +114,22 @@ start = startall = time.time()
 
 if options.wlrange:
     lambda_min, lambda_max = options.wlrange.split(',')
+    wlrange = (lambda_min, lambda_max)
     wl_grid = get_specgrid(int(options.resolution), float(lambda_min), float(lambda_max))[0] # build bin grid in wavelength
     wn_grid = np.sort(10000./wl_grid) # convert to wavenumber and sort
     bincentres = np.sort(10000./(0.5*(wl_grid[1:] + wl_grid[:-1]))) # get the bin centres
+else:
+    wlrange = False
 
-elif options.wnrange:
+if options.wnrange:
     wn_min, wn_max = options.wnrange.split(',')
+    wnrange = (wn_min, wn_max)
     wn_grid = np.arange(float(wn_min), float(wn_max), float(options.resolution))
     bincentres = 0.5*(wn_grid[1:] + wn_grid[:-1]) # get the bin centres
+else:
+    wnrange = False
+
+
 ngauss = int(options.ngauss)
 gauss = np.polynomial.legendre.leggauss(ngauss) # get the legendre-gauss sample points and weights
 samples = gauss[0]
@@ -165,11 +169,16 @@ for filenm in files:
                 ktable[i-1,:]  = kcoeff
 
         kdist_out = {}
-        kdist_out['wno'] = bincentres
-        kdist_out['resolution'] = options.resolution
-        kdist_out['weights'] = weights
+        kdist_out['bin_centers'] = bincentres
+        kdist_out['bin_edges'] = wn_grid
+        kdist_out['resolution'] = float(options.resolution)
+        kdist_out['wnrange'] = options.wnrange
+        kdist_out['wlrange'] = options.wlrange
+        kdist_out['weights'] = weights/2.
         kdist_out['ngauss'] = ngauss
+        kdist_out['method'] = 'polynomial.legendre.leggauss'
         kdist_out['kcoeff'] = ktable
+        kdist_out['name'] = options.molecule_name
 
         if options.t_idx or options.p_idx:
             split = os.path.splitext(os.path.basename(filenm))[0].split('_')
@@ -183,7 +192,6 @@ for filenm in files:
                     pass
         if options.t_idx:
             try:
-                print split[int(options.t_idx)]
                 kdist_out['t'] = float(split[int(options.t_idx)])
             except:
                 try:
