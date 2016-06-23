@@ -175,6 +175,7 @@ for filenm in files:
         kdist_out['wnrange'] = options.wnrange
         kdist_out['wlrange'] = options.wlrange
         kdist_out['weights'] = weights/2.
+        kdist_out['samples'] = (samples+1.)/2.
         kdist_out['ngauss'] = ngauss
         kdist_out['method'] = 'polynomial.legendre.leggauss'
         kdist_out['kcoeff'] = ktable

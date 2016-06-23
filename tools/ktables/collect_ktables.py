@@ -46,20 +46,24 @@ for filenm in files:
 
     ktables.append(ktable)
 
-wno  = ktables[0]['wno']
+
+
+bin_centers  = ktables[0]['bin_centers']
+bin_edges  = ktables[0]['bin_edges']
 resolution  = ktables[0]['resolution']
-weights  = ktables[0]['weights']
-ngauss  = ktables[0]['ngauss']
-name  = ktables[0]['name']
-wlrange  = ktables[0]['wlrange']
 wnrange  = ktables[0]['wnrange']
+wlrange  = ktables[0]['wlrange']
+weights  = ktables[0]['weights']
+samples  = ktables[0]['samples']
+ngauss  = ktables[0]['ngauss']
 method  = ktables[0]['method']
+name  = ktables[0]['name']
 
 pressures = []
 temperatures = []
 
 for idx, ktable in enumerate(ktables):
-    if len(ktable['wno']) != len(wno) or ktable['resolution'] != resolution or \
+    if len(ktable['bin_centers']) != len(bin_centers) or ktable['resolution'] != resolution or \
     len(ktable['weights']) != len(weights) or ktable['ngauss'] != ngauss or ktable['name'] != name or \
      ktable['wlrange'] != wlrange or ktable['wnrange'] != wnrange or ktable['method'] != method:
         print 'Something is not right with %s' % files[idx]
@@ -81,16 +85,18 @@ for idx, ktable in enumerate(ktables):
     kcoeff[p_idx, t_idx, :, :] = ktable['kcoeff']
 
 ktable_out = {}
-ktable_out['wno'] = wno
+ktable_out['bin_centers'] = bin_centers
+ktable_out['bin_edges'] = bin_edges
 ktable_out['resolution'] = resolution
+ktable_out['wnrange'] = wnrange
+ktable_out['wlrange'] = wlrange
 ktable_out['weights'] = weights
+ktable_out['samples'] = samples
 ktable_out['ngauss'] = ngauss
+ktable_out['method'] = method
 ktable_out['kcoeff'] = kcoeff
 ktable_out['name'] = name
 ktable_out['t'] = temperatures
 ktable_out['p'] = pressures
-ktable_out['wlrange'] = wlrange
-ktable_out['wnrange'] = wnrange
-ktable_out['method'] = method
 
 pickle.dump(ktable_out, open(options.output_file, 'wb'), protocol=2)

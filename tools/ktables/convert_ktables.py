@@ -92,13 +92,18 @@ else:
 
 ktable_out = {}
 ktable_out = {}
-ktable_out['wno'] = ktable['wno']
+ktable_out['bin_centers'] = ktable['bin_centers']
+ktable_out['bin_edges'] = ktable['bin_edges']
 ktable_out['resolution'] = ktable['resolution']
+ktable_out['wnrange'] = ktable['wnrange']
+ktable_out['wlrange'] = ktable['wlrange']
 ktable_out['weights'] = ktable['weights']
+ktable_out['samples'] = ktable['samples']
 ktable_out['ngauss'] = ktable['ngauss']
+ktable_out['method'] = ktable['method']
 ktable_out['kcoeff'] = kcoeff_tmp_2
 ktable_out['name'] = ktable['name']
-ktable_out['p'] = pressures
 ktable_out['t'] = temperatures
+ktable_out['p'] = pressures
 
 pickle.dump(ktable_out, open(options.output_file, 'wb'), protocol=2)
