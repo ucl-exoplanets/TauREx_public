@@ -14,6 +14,7 @@ from ConfigParser import SafeConfigParser
 import argparse
 import time
 import glob
+import sys
 
 # support functions
 def get_specgrid( R=5000, lambda_min=0.1, lambda_max=20.0):
@@ -63,7 +64,6 @@ parser.add_argument('--output_folder',  # can be pickle or ascii
                       default=False
                     )
 
-
 parser.add_argument('--wl',
                       dest='wlrange',
                       default=False,
@@ -82,9 +82,20 @@ parser.add_argument('--ngauss',
                       default=20,
                     )
 
+parser.add_argument('--p_idx',
+                      dest='p_idx',
+                      default=False,
+                    )
+parser.add_argument('--t_idx',
+                      dest='t_idx',
+                      default=False,
+                    )
+parser.add_argument('--cores',
+                      dest='cores',
+                      default=1,
+                    )
 
 options = parser.parse_args()
-
 
 if not options.input_file and not options.input_files:
     print 'You need to specify an input file or folder'
@@ -104,7 +115,6 @@ if not options.resolution:
 
 
 start = startall = time.time()
-print 'Create binning grids... ',
 
 if options.wlrange:
     lambda_min, lambda_max = options.wlrange.split(',')
@@ -121,78 +131,73 @@ gauss = np.polynomial.legendre.leggauss(ngauss) # get the legendre-gauss sample 
 samples = gauss[0]
 weights = gauss[1]
 end = time.time()
-print 'Done in %.3f s' % (end-start)
 
-start = time.time()
-print 'Load cross sections...',
-
-xsecs = []
 files = []
 
 if options.input_file:
     files.append(options.input_file)
-    try:
-        xsecs.append(pickle.load(open(options.input_file)))
-    except:
-        xsecs.append(np.loadtxt(options.input_file))
 else:
-
-    lsfiles = glob.glob(os.path.join(options.input_files))
-    for filenm in lsfiles:
-        files.append(filenm)
-        try:
-            xsecs.append(pickle.load(open(filenm)))
-        except:
-            xsecs.append(np.loadtxt(filenm))
-
-
-end = time.time()
-print 'Done in %.3f s (%i xsec loaded)' % (end-start, len(xsecs))
+    files = glob.glob(os.path.join(options.input_files))
 
 start = time.time()
 
-for idx, xsec in enumerate(xsecs):
+for filenm in files:
 
-    print 'Process %s...' % files[idx],
+    try:
+        xsec = pickle.load(open(filenm))
+    except:
+        xsec = np.loadtxt(filenm)
 
-    bingrid_idx = np.digitize(xsec[:,0] ,wn_grid) # get the indexes for bins
+    print 'Process %s...' % filenm,
+    try:
+        bingrid_idx = np.digitize(xsec[:,0] ,wn_grid) # get the indexes for bins
 
-    # build the k table
-    ktable = np.zeros((len(wn_grid)-1, ngauss))
+        # build the k table
+        ktable = np.zeros((len(wn_grid)-1, ngauss))
 
-    for i in range(1, len(wn_grid)):
-        x = xsec[:,0][bingrid_idx == i]
-        abs = xsec[:,1][bingrid_idx == i]
-        sort_bin = np.sort(abs)
-        if len(np.unique(sort_bin)) > 1:
-            norm_x = ((x-np.min(x))/(np.max(x) - np.min(x)))*2 - 1
-            kcoeff = np.interp(gauss[0], norm_x, sort_bin)
-            ktable[i-1,:]  = kcoeff
+        for i in range(1, len(wn_grid)):
+            x = xsec[:,0][bingrid_idx == i]
+            abs = xsec[:,1][bingrid_idx == i]
+            sort_bin = np.sort(abs)
+            if len(np.unique(sort_bin)) > 1:
+                norm_x = ((x-np.min(x))/(np.max(x) - np.min(x)))*2 - 1
+                kcoeff = np.interp(gauss[0], norm_x, sort_bin)
+                ktable[i-1,:]  = kcoeff
 
-    kdist_out = {}
-    kdist_out['wno'] = bincentres
-    kdist_out['weights'] = weights
-    kdist_out['ngauss'] = ngauss
-    kdist_out['kcoeff'] = ktable
+        kdist_out = {}
+        kdist_out['wno'] = bincentres
+        kdist_out['resolution'] = options.resolution
+        kdist_out['weights'] = weights
+        kdist_out['ngauss'] = ngauss
+        kdist_out['kcoeff'] = ktable
+        if options.t_idx or options.p_idx:
+            split = os.path.splitext(os.path.basename(filenm))[0].split('_')
+        if options.p_idx:
+            kdist_out['p'] = float(split[int(options.p_idx)])
+        if options.t_idx:
+            kdist_out['t'] = float(split[int(options.t_idx)])
 
-    end = time.time()
-    print 'Done in %.3f s' % (end-start)
+        end = time.time()
+        print 'Done in %.3f s' % (end-start)
 
-    if options.output_filename and options.input_file and not options.input_files:
-        out_filename = options.output_filename
-    else:
-        out_filename = '%s.ktable' % os.path.basename(os.path.splitext(files[idx])[0])
+        if options.output_filename and options.input_file and not options.input_files:
+            out_filename = options.output_filename
+        else:
+            out_filename = '%s.ktable' % os.path.basename(os.path.splitext(filenm)[0])
 
-    if options.output_folder:
-        out_filename = os.path.join(os.path.abspath(options.output_folder), out_filename)
-    elif not options.input_files:
-        out_filename = os.path.join(os.path.dirname(os.path.abspath(options.input_file)), out_filename)
+        if options.output_folder:
+            out_filename = os.path.join(os.path.abspath(options.output_folder), out_filename)
+        elif not options.input_files:
+            out_filename = os.path.join(os.path.dirname(os.path.abspath(options.input_file)), out_filename)
 
-    start = time.time()
-    print 'Dump ktable to %s...' % out_filename,
-    pickle.dump(kdist_out, open(out_filename, 'wb'), protocol=2)
-    end = time.time()
-    print 'Done in %.3f s' % (end-start)
+        start = time.time()
+        print 'Dump ktable to %s...' % out_filename,
+        pickle.dump(kdist_out, open(out_filename, 'wb'), protocol=2)
+        end = time.time()
+        print 'Done in %.3f s' % (end-start)
+    except:
+        print "Unexpected error:", sys.exc_info()[0]
+        pass
 
 endall = time.time()
 
