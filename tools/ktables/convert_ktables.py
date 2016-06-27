@@ -67,10 +67,10 @@ temperatures = np.sort(temperatures)
 kcoeff = ktable['kcoeff']
 
 if options.temperature_list:
-    kcoeff_tmp_1 = np.zeros((len(ktable['p']), len(temperatures), len(ktable['wno']), ktable['ngauss']))
+    kcoeff_tmp_1 = np.zeros((len(ktable['p']), len(temperatures), len(ktable['bin_centers']), ktable['ngauss']))
     for pressure_idx, pressure_val in enumerate(ktable['p']):
         for temperature_idx, temperature_val in enumerate(temperatures):
-            for wno_idx, wno_val in enumerate(ktable['wno']):
+            for wno_idx, wno_val in enumerate(ktable['bin_centers']):
                 for kcoeff_idx in range(ktable['ngauss']):
                     kcoeff_tmp_1[pressure_idx, temperature_idx, wno_idx, kcoeff_idx] = \
                         np.interp(np.log10(temperature_val), np.log10(ktable['t']), kcoeff[pressure_idx, :, wno_idx, kcoeff_idx])
@@ -79,10 +79,10 @@ else:
     kcoeff_tmp_1 = kcoeff
 
 if options.pressure_list:
-    kcoeff_tmp_2 = np.zeros((len(pressures), len(temperatures), len(ktable['wno']), ktable['ngauss']))
+    kcoeff_tmp_2 = np.zeros((len(pressures), len(temperatures), len(ktable['bin_centers']), ktable['ngauss']))
     for pressure_idx, pressure_val in enumerate(pressures):
         for temperature_idx, temperature_val in enumerate(temperatures):
-            for wno_idx, wno_val in enumerate(ktable['wno']):
+            for wno_idx, wno_val in enumerate(ktable['bin_centers']):
                 for kcoeff_idx in range(ktable['ngauss']):
                     kcoeff_tmp_2[pressure_idx, temperature_idx, wno_idx, kcoeff_idx] = \
                         np.interp(np.log10(pressure_val), np.log10(ktable['p']), kcoeff_tmp_1[:, temperature_idx, wno_idx, kcoeff_idx])

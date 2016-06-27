@@ -75,7 +75,7 @@ for idx, ktable in enumerate(ktables):
 pressures = np.sort(np.unique(pressures))
 temperatures = np.sort(np.unique(temperatures))
 
-kcoeff = np.zeros((len(pressures), len(temperatures), len(wno), ngauss))
+kcoeff = np.zeros((len(pressures), len(temperatures), len(bin_centers), ngauss))
 
 for idx, ktable in enumerate(ktables):
 
