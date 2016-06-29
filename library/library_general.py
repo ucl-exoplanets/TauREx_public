@@ -146,7 +146,6 @@ def get_specbingrid(wavegrid, specgrid, binwidths=None):
         bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
         bingrid_idx = np.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
     else:
-        # this bingrid is actually useless, as it doesn't allow for gaps in the data
         bingrid = []
         for i in range(len(wavegrid)):
             bingrid.append(wavegrid[i]-binwidths[i]/2.)
@@ -264,3 +263,12 @@ def quantile_corner(x, q, weights=None):
         cdf /= cdf[-1]
         return np.interp(q, cdf, xsorted).tolist()
 
+
+def fast_nearest_interp(xi, x, y):
+    """Assumes that x is monotonically increasing!!."""
+    # Shift x points to centers
+    spacing = np.diff(x) / 2
+    x = x + np.hstack([spacing, spacing[-1]])
+    # Append the last point in y twice for ease of use
+    y = np.hstack([y, y[-1]])
+    return y[np.searchsorted(x, xi)]

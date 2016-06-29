@@ -32,9 +32,16 @@ spectrum_db = False
 #use T-P profile and mixing ratios ATM file
 use_ATMfile = False
 atm_file = Input/profile.atm
+
+# opacity computation method: 'xsec' or 'ktables'
+opacity_method = ktables
+
 # path to pickled cross sections and dnu
-xsec_path = Input/xsec_10wno/
-xsec_dnu  = 10
+xsec_path = Input/xsec/R7000
+
+# path to pickled ktables
+ktab_path = Input/ktables/R100/
+
 # Path where cia pairs are stored as pickled files
 cia_path = Input/cia/HITRAN/
 #Path to Phoenix/Atlas stellar models (required by emission code)
