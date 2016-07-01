@@ -86,10 +86,13 @@ extern "C" {
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
-            for (int k=1; k < (nlayers - j); k++) {
-                p = pow((z[j]+planet_radius),2);
-                dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius),2) - p) -  sqrt(pow((z[k-1+j]+planet_radius),2) - p));
-                //cout << dlarray[count] << " " << p << " " << count << endl;
+            for (int k=0; k < (nlayers - j); k++) {
+                p = pow((z[j]+planet_radius+dz[j]/2.),2);
+                if (k == 0) {
+                    dlarray[count] = 2.0 * sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p);
+                } else {
+                    dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p) -  sqrt(pow((z[k+j-1]+planet_radius+dz[j]/2.),2) - p));
+                }
                 count += 1;
             }
         }
@@ -186,7 +189,7 @@ extern "C" {
 
                 if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
                     //cout << j << " YES " << pressure[j] << endl;
-                    for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                         count += 1;
                     }
                     //exptau = exp(-tautmp);
@@ -203,7 +206,7 @@ extern "C" {
                         for (int g=0; g<ngauss; g++) {
                             count = count_orig;
                             tautmp = 0;
-                            for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                            for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                                 // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
                                 sigma = ktab_interp[g + ngauss*(wn + nwngrid*((k+j) + l*nlayers))];
                                 tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
@@ -219,7 +222,7 @@ extern "C" {
                     // firstly get tau
                     count = count_orig;
                     tautmp = 0.;
-                    for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                         if (rayleigh == 1) {
                            for (int l=0;l<nactive;l++) {
                                 tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];

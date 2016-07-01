@@ -272,7 +272,8 @@ class data(object):
         for mol_idx, mol_val in enumerate(molecules):
 
             # check that ktable for given molecule exists
-            molpath = glob.glob(os.path.join(self.params.in_ktab_path, '%s*' % mol_val))
+            molpath = glob.glob(os.path.join(self.params.in_ktab_path, '%s_*' % mol_val))+\
+                      glob.glob(os.path.join(self.params.in_ktab_path, '%s.*' % mol_val))
             if len(molpath) > 0:
                 molpath = molpath[0]
             else:
@@ -348,41 +349,46 @@ class data(object):
 
         for mol_idx, mol_val in enumerate(molecules):
 
-            molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
-            if not os.path.isfile(molpath):
-                logging.error('There is no cross section for %s. Path: %s ' % (mol_val, molpath))
-                exit()
+            # check that xsec for given molecule exists
+            molpath = glob.glob(os.path.join(self.params.in_xsec_path, '%s_*' % mol_val))+\
+                      glob.glob(os.path.join(self.params.in_xsec_path, '%s.*' % mol_val))
+            if len(molpath) > 0:
+                molpath = molpath[0]
             else:
-                sigma_tmp = pickle.load(open(molpath)) # load pickled cross section array for molecule mol_val
+                logging.error('There is no cross section for %s. Path: %s ' % (mol_val, self.params.in_xsec_path))
+                exit()
 
-                # check that the wavenumber, temperature and pressure grid are the same for all cross sections
-                if mol_idx > 0:
-                    if np.unique(sigma_tmp['wno'] - wno) != 0:
-                        logging.error('The cross section of %s has a different wavenumber grid than the one of %s' %
-                                      (molecules[mol_idx], molecules[mol_idx-1]))
-                        exit()
-                    if np.unique(sigma_tmp['t'] - t) != 0:
-                        logging.error('The cross section of %s has a different temperature grid than the one of %s' %
-                                      (molecules[mol_idx], molecules[mol_idx-1]))
-                        exit()
-                    if np.unique(sigma_tmp['p'] - p) != 0:
-                        logging.error('The cross section of %s has a different pressure grid than the one of %s' %
-                                      (molecules[mol_idx], molecules[mol_idx-1]))
-                        exit()
+            # load cross sections
+            sigma_tmp = pickle.load(open(molpath))
 
-                t = sigma_tmp['t']
-                p = sigma_tmp['p']
-                wno = sigma_tmp['wno']
+            # check that the wavenumber, temperature and pressure grid are the same for all cross sections
+            if mol_idx > 0:
+                if np.unique(sigma_tmp['wno'] - wno) != 0:
+                    logging.error('The cross section of %s has a different wavenumber grid than the one of %s' %
+                                  (molecules[mol_idx], molecules[mol_idx-1]))
+                    exit()
+                if np.unique(sigma_tmp['t'] - t) != 0:
+                    logging.error('The cross section of %s has a different temperature grid than the one of %s' %
+                                  (molecules[mol_idx], molecules[mol_idx-1]))
+                    exit()
+                if np.unique(sigma_tmp['p'] - p) != 0:
+                    logging.error('The cross section of %s has a different pressure grid than the one of %s' %
+                                  (molecules[mol_idx], molecules[mol_idx-1]))
+                    exit()
 
-                if mol_idx == 0:
+            t = sigma_tmp['t']
+            p = sigma_tmp['p']
+            wno = sigma_tmp['wno']
 
-                    # restrict temperature range
-                    T_list, Tmin_idx, Tmax_idx = self.get_temp_range_idx(t)
-                    sigma_dict['t'] = T_list
-                    sigma_dict['p'] = p
-                    sigma_dict['wno'] = sigma_tmp['wno'] # check: this should be identical to internal model!
+            if mol_idx == 0:
 
-                sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx] / 10000. # from cm^-2 to m^-2
+                # restrict temperature range
+                T_list, Tmin_idx, Tmax_idx = self.get_temp_range_idx(t)
+                sigma_dict['t'] = T_list
+                sigma_dict['p'] = p
+                sigma_dict['wno'] = sigma_tmp['wno'] # check: this should be identical to internal model!
+
+            sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx] / 10000. # from cm^-2 to m^-2
         logging.info('Temperature range: %s' % sigma_dict['t'] )
         logging.info('Pressure range: %s ' % sigma_dict['p'])
 
@@ -608,13 +614,13 @@ class data(object):
         if Tmax > np.max(t):
             Tmax_idx = len(t)
         else:
-            Tmax_diff = Tmax - t # t is sigma_tmp['t']
+            Tmax_diff = Tmax - np.asarray(t) # t is sigma_tmp['t']
             Tmax_idx = len(Tmax_diff) - np.argmax(Tmax_diff[::-1][Tmax_diff<=0])
 
         if Tmin < np.min(t):
             Tmin_idx = 0
         else:
-            Tmin_diff = Tmin - t # t is sigma_tmp['t'], the list of temperature
+            Tmin_diff = Tmin - np.asarray(t) # t is sigma_tmp['t'], the list of temperature
             Tmin_idx = np.argmin(Tmin_diff[Tmin_diff>=0])
 
         if Tmin > np.max(t) and Tmax > np.max(t):
