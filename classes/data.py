@@ -92,9 +92,12 @@ class data(object):
         logging.info('Compiling shared libraries')
 
         if  self.params.gen_type == 'transmission':
-            os.system('rm library/ctypes_pathintegral_transmission.so')
-            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission.so '
-                      'library/ctypes_pathintegral_transmission.cpp')
+            os.system('rm library/ctypes_pathintegral_transmission_xsec.so')
+            os.system('rm library/ctyped_pathintegral_transmission_ktab.so')
+            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission_xsec.so '
+                      'library/ctypes_pathintegral_transmission_xsec.cpp')
+            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_transmission_ktab.so '
+                      'library/ctypes_pathintegral_transmission_ktab.cpp')
         elif  self.params.gen_type == 'emission':
             os.system('rm library/ctypes_pathintegral_emission.so')
             os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission.so '
