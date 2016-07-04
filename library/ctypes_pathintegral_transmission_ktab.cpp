@@ -6,7 +6,8 @@
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission.so ctypes_pathintegral_transmission.cpp
+    Compile with:
+    g++ -fPIC -shared -o ctypes_pathintegral_transmission_ktab.so ctypes_pathintegral_transmission_ktab.cpp
 
  */
 
@@ -31,9 +32,11 @@ extern "C" {
                        const int rayleigh,
                        const int cia,
                        const int clouds,
-                       const double * sigma_array,
-                       const double * sigma_temp,
-                       const int sigma_ntemp,
+                       const double * ktab_array,
+                       const double * ktab_temp,
+                       const int ktab_ntemp,
+                       const int ngauss,
+                       const double * ktab_weights,
                        const double * sigma_rayleigh,
                        const int cia_npairs,
                        const double * cia_idx,
@@ -61,15 +64,15 @@ extern "C" {
         //double* tau = new double[nlayers*nwngrid];
         double* dz = new double[nlayers];
         double* dlarray = new double[nlayers*nlayers];
-        double* sigma_interp = new double[nwngrid*nlayers*nactive];
+        double* ktab_interp = new double[ngauss*nwngrid*nlayers*nactive];
         double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
-        double tautmp, exptau,  integral;
+        double tautmp, transtmp, transtot, exptau,  integral;
         double cld_factor, cld_rho;
         double p;
-        int count, count2, t_idx;
+        int count, count_orig, count2, t_idx;
 
         //dz array
         for (int j=0; j<(nlayers); j++) {
@@ -83,44 +86,55 @@ extern "C" {
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
-            for (int k=1; k < (nlayers - j); k++) {
-                p = pow((z[j]+planet_radius),2);
-                dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius),2) - p) - sqrt(pow((z[k-1+j]+planet_radius),2) - p));
-                //cout << dlarray[count] << " " << p << " " << count << endl;
+            for (int k=0; k < (nlayers - j); k++) {
+                p = pow((z[j]+planet_radius+dz[j]/2.),2);
+                if (k == 0) {
+                    dlarray[count] = 2.0 * sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p);
+                } else {
+                    dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p) -  sqrt(pow((z[k+j-1]+planet_radius+dz[j]/2.),2) - p));
+                }
                 count += 1;
             }
         }
 
-        // interpolate sigma array to the temperature profile
+        // interpolate ktab array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
+            if (temperature[j] > ktab_temp[ktab_ntemp-1]) { // temperature higher than ktab
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
-                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
+                        for (int g=0; g<ngauss; g++) {
+                            ktab_interp[g + ngauss*(wn + nwngrid*(j + l*nlayers))] =  ktab_array[g + ngauss*(wn + nwngrid*(ktab_ntemp-1 + ktab_ntemp*(j + l*nlayers)))];
+                        }
                     }
                 }
-            } else if (temperature[j] < sigma_temp[0]) {
+            } else if (temperature[j] < ktab_temp[0]) { // temperature lower than ktab
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
-                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
+                        for (int g=0; g<ngauss; g++) {
+                            ktab_interp[g + ngauss*(wn + nwngrid*(j + l*nlayers))] = ktab_array[g + ngauss*(wn + nwngrid*(ktab_ntemp*(j + l*nlayers)))];
+                        }
                     }
                 }
             } else {
-                if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
+                if (ktab_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
-                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
+                            for (int g=0; g<ngauss; g++) {
+                                ktab_interp[g + ngauss * (wn + nwngrid*(j + l*nlayers))] = ktab_array[g + ngauss*(wn + nwngrid*(ktab_ntemp*(j + l*nlayers)))];
+                            }
                         }
                     }
                 } else {
-                    for (int t=1; t<sigma_ntemp; t++) {
-                        if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+                    for (int t=1; t<ktab_ntemp; t++) {
+                        if ((temperature[j] >= ktab_temp[t-1]) && (temperature[j] < ktab_temp[t])) {
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
-                                    sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
-                                    sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
-                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
-                                    sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                                    for (int g=0; g<ngauss; g++) {
+                                        sigma_l = ktab_array[g + ngauss*(wn + nwngrid*(t-1 + ktab_ntemp*(j + l*nlayers)))];
+                                        sigma_r = ktab_array[g + ngauss*(wn + nwngrid*(t + ktab_ntemp*(j + l*nlayers)))];
+                                        sigma = sigma_l + (sigma_r-sigma_l)*(log10(temperature[j])-log10(ktab_temp[t-1]))/(log10(ktab_temp[t])-log10(ktab_temp[t-1]));
+                                        ktab_interp[g + ngauss*(wn + nwngrid*(j + l*nlayers))] = sigma;
+                                     }
                                 }
                             }
                         }
@@ -137,7 +151,7 @@ extern "C" {
                         for (int l=0;l<cia_npairs;l++) {
                             sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
                             sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-ktab_temp[t-1])/(ktab_temp[t]-ktab_temp[t-1]);
                             sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
                         }
                     }
@@ -161,6 +175,7 @@ extern "C" {
              }
          }
 
+
         // calculate absorption
         count2 = 0;
         for (int wn=0; wn < nwngrid; wn++) {
@@ -169,10 +184,12 @@ extern "C" {
             //cout << " integral 0 " << integral << endl;
             //cout << " count 0 " << count << endl;
     		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
-    			tautmp = 0.0;
+
+                count_orig = count;
+
                 if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
                     //cout << j << " YES " << pressure[j] << endl;
-                    for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                         count += 1;
                     }
                     //exptau = exp(-tautmp);
@@ -182,44 +199,50 @@ extern "C" {
                     //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
                     count2 += 1;
                 } else {
-                    //cout << j << " NO " << pressure[j] << endl;
 
-                    for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-
-
-                        // calculate optical depth due to clouds
-                        // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
-                        for (int l=0;l<nactive;l++) {
-                            sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
-                            tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
-                            //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
-                            //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
-                            if (rayleigh == 1) {
-                                tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                    transtot = 1.;
+                    for (int l=0;l<nactive;l++) {
+                        transtmp = 0;
+                        for (int g=0; g<ngauss; g++) {
+                            count = count_orig;
+                            tautmp = 0;
+                            for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                                // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
+                                sigma = ktab_interp[g + ngauss*(wn + nwngrid*((k+j) + l*nlayers))];
+                                tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
+                                count += 1;
                             }
+                            //cout << tautmp << " " << exp(-tautmp) << " " << ktab_weights[g] << endl;
+                            transtmp += exp(-tautmp) * ktab_weights[g];
                         }
+                        transtot *= transtmp;
+                    }
 
-                        // calculating optical depth due inactive gases (rayleigh scattering)
+                    // calculate rayleigh and cia separtely from cross sections
+                    // firstly get tau
+                    count = count_orig;
+                    tautmp = 0.;
+                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                         if (rayleigh == 1) {
-                            for (int l=0; l<ninactive; l++) {
-                                //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
-                                //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                           for (int l=0;l<nactive;l++) {
+                                tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                           }
+                           for (int l=0; l<ninactive; l++) {
                                 tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                            }
+                           }
                         }
-                        // calculating optical depth due to collision induced absorption
                         if (cia == 1) {
                             for (int c=0; c<cia_npairs;c++) {
                                 tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
                             }
                         }
-
                         count += 1;
                     }
-                    exptau = exp(-tautmp);
-                    integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
-                    tau[count2] = 1.0 - exptau;
-                    //cout << count2 << " " << tau[count2] << endl;
+                    transtot *= exp(-tautmp);
+
+                    integral += ((planet_radius+z[j])*(1.0-transtot)*dz[j]);
+                    tau[count2] = 1.0 - transtot;
+                    //cout << count2 << " " << transtot << endl;
                     //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
                     count2 += 1;
                 }
@@ -228,14 +251,16 @@ extern "C" {
             //cout << integral << endl;
             absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
             //cout << wn << " " << absorption[wn] << endl;
+
+
         }
 //        cout << "END" << endl;
 
         delete[] dlarray;
-        delete[] sigma_interp;
+        delete[] ktab_interp;
         delete[] sigma_cia_interp;
         dlarray = NULL;
-        sigma_interp = NULL;
+        ktab_interp = NULL;
         sigma_cia_interp = NULL;
     }
 }

@@ -35,14 +35,32 @@ python convert_xsec.py -s 'sourcce_sigma'
 
 '''
 
-import sys, os, optparse, string, pickle, glob
+import sys, os, argparse, string, glob
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
 import numpy as np
 #from scipy.inteprolate import interp2d
 from time import gmtime, strftime
 
 import matplotlib.pylab as plt
 
+import multiprocessing
+
 ### support functions
+
+def fast_nearest_interp(xi, x, y):
+    """Assumes that x is monotonically increasing!!."""
+    # Shift x points to centers
+    spacing = np.diff(x) / 2
+    x = x + np.hstack([spacing, spacing[-1]])
+    # Append the last point in y twice for ease of use
+    y = np.hstack([y, y[-1]])
+    return y[np.searchsorted(x, xi)]
+
 def binspectrum(spectrum_in, resolution):
     wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))
     spec_bin_grid, spec_bin_grid_idx = get_specbingrid(wavegrid, spectrum_in[:,0])
@@ -103,53 +121,53 @@ def get_specbingrid(wavegrid, specgrid, binwidths=None):
 
 
 
-parser = optparse.OptionParser()
-parser.add_option('-s', '--source_sigma',
-                  dest='source_sigma',
-                  default=None,
-)
-parser.add_option('-o', '--output_filename',
-                  dest='output_filename',
-                  default='sigma_array.db',
-)
-parser.add_option('-p', '--pressure_list',
-                  dest='pressure_list',
-                  default=None,
-                  )
-parser.add_option('-t', '--temperature_list',
-                  dest='temperature_list',
-                  default=None,
-                  )
-parser.add_option('-w', '--wavenumber_range',
-                  dest='wavenumber_range',
-                  default=None,
-                  )
-parser.add_option('-l', '--lambda_range',
-                  dest='lambda_range',
-                  default=None,
-                  )
-parser.add_option('-m', '--binning_method',
-                  dest='binning_method',
-                  default=None,
-)
-parser.add_option('-b', '--binning_resolution',
-                  dest='binning_resolution',
-                  default=None,
-)
-parser.add_option('-a', '--average_method',
-                  dest='average_method',
-                  default='geometric_average',
-)
-parser.add_option('-r', '--input_resolution',
-                  dest='input_resolution',
-                  default=None,
-)
-parser.add_option('-n', '--molecule_name',
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--molecule_name',
                   dest='molecule_name',
                   default=None,
 )
+parser.add_argument('-s', '--source_sigma',
+                  dest='source_sigma',
+                  default=None,
+)
+parser.add_argument('-o', '--output_filename',
+                  dest='output_filename',
+                  default='sigma_array.db',
+)
+parser.add_argument('-p', '--pressure_list',
+                  dest='pressure_list',
+                  default=None,
+                  )
+parser.add_argument('-t', '--temperature_list',
+                  dest='temperature_list',
+                  default=None,
+                  )
+parser.add_argument('-w', '--wavenumber_range',
+                  dest='wavenumber_range',
+                  default=None,
+                  )
+parser.add_argument('-l', '--lambda_range',
+                  dest='lambda_range',
+                  default=None,
+                  )
 
-options, remainder = parser.parse_args()
+parser.add_argument('--binning_method',
+                  dest='binning_method',
+                  default='const_wn', # const_wn (constant wavenumber spacing) or const_res (constant resolution in wavelength)
+)
+parser.add_argument('--binning_resolution',
+                  dest='binning_resolution',
+                  default=None,
+)
+parser.add_argument('--sampling_method',
+                  dest='sampling_method',
+                  default='random_sample',
+)
+parser.add_argument('--input_resolution',
+                  dest='input_resolution',
+                  default=None,
+)
+options = parser.parse_args()
 
 if not options.source_sigma or \
    not options.output_filename:
@@ -215,76 +233,68 @@ for pressure_idx, pressure_val in enumerate(sigma_in['p']):
     for temperature_idx, temperature_val in enumerate(sigma_in['t']):
         sigma_array[pressure_idx, temperature_idx] =  np.interp(full_wngrid, sigma_in['wno'], sigma_in['xsecarr'][pressure_idx, temperature_idx], left=0, right=0)
 
-# interpolate to new temperature and pressure grids. Note that it is better to interpolate to the temperature
-# grid in log space, and to the new pressure grid in linear space... so split interpolation in two steps
-# note that the interpolation of pressures is not great, so it is better to keep a fine grid.
 
-# interpolation of temperatures in log space
-if options.temperature_list:
-    sigma_array_tmp = np.zeros((len(sigma_in['p']), len(temperatures), len(full_wngrid)))
-    comments.append('Interpolation to new temperature grid in log space')
-    print 'Interpolation to new temperature grid in log space'
-    for pressure_idx, pressure_val in enumerate(sigma_in['p']):
-        for temperature_idx, temperature_val in enumerate(temperatures):
-            print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
-            for wno_idx, wno_val in enumerate(full_wngrid):
-                sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array[pressure_idx,:,wno_idx])))
-                if np.isnan(sigma_array_tmp[pressure_idx, temperature_idx, wno_idx]):
-                    sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = 0
+# bin if requested
 
-# interpolation of pressures in linear space
-if options.pressure_list:
-    comments.append('Interpolation to new pressure grid in linear space')
-    sigma_array = np.zeros((len(pressures), len(temperatures), len(full_wngrid)))
-    for pressure_idx, pressure_val in enumerate(pressures):
-        for temperature_idx, temperature_val in enumerate(temperatures):
-            print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
-            for wno_idx, wno_val in enumerate(full_wngrid):
-                sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
-
-# lastly, bin if needed.
-# For now, only linear binning available. Ideally implement optimal binning for input resolution.
-if options.binning_method == 'resolution':
+if options.binning_method == 'const_res':
 
     print 'Constant resolution in lambda R=%.2f binning' % float(options.binning_resolution)
     comments.append('Constant resolution in lambda R=%.2f binning' % float(options.binning_resolution))
 
-    if options.average_method == 'geometric_average':
+    if options.sampling_method == 'geometric_average':
         comments.append('Linear binning: use geometric average.' )
-    elif options.average_method == 'algebraic_average':
+    elif options.sampling_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
+    elif options.sampling_method == 'random_sample':
+        comments.append('Linear binning: use random sample.' )
+    elif options.sampling_method == 'first_sample':
+        comments.append('Linear binning: use first sample.' )
 
     if wnmin == 0:
         wnmin = 1
 
     wavegrid, dlamb_grid = get_specgrid(R=float(options.binning_resolution),lambda_min=lambdamin,lambda_max=lambdamax)
-    spec_bin_grid, bingrid_idx = get_specbingrid(wavegrid, 10000./sigma_in['wno'][::-1])
 
-    sigma_array_bin = np.zeros((len(pressures), len(temperatures), len(wavegrid)))
-    for pressure_idx, pressure_val in enumerate(pressures):
-        for temperature_idx, temperature_val in enumerate(temperatures):
+    if options.sampling_method == 'geometric_average' or options.sampling_method == 'algebraic_average':
+        spec_bin_grid, bingrid_idx = get_specbingrid(wavegrid, 10000./full_wngrid[::-1])
+
+    sigma_array_bin = np.zeros((len(sigma_in['p']), len(sigma_in['t']), len(wavegrid)))
+    for pressure_idx, pressure_val in enumerate(sigma_in['p']):
+        for temperature_idx, temperature_val in enumerate(sigma_in['t']):
 
             print 'Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
-
             sigma = sigma_array[pressure_idx, temperature_idx]
-            if options.average_method == 'geometric_average':
+            if options.sampling_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 sigma_rev = sigma[::-1] # reverse array
                 logval = np.log(sigma_rev)
                 values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(wavegrid)+1)])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
-            elif options.average_method == 'algebraic_average':
+            elif options.sampling_method == 'algebraic_average':
                 # algebraic average
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.asarray([np.average(sigma_rev[bingrid_idx == i]) for i in xrange(1,len(wavegrid)+1)])
                 values[np.isnan(values)] = 0
+            elif options.sampling_method == 'random_sample':
+                sigma_rev = sigma[::-1] # reverse array
+                values = np.asarray([np.random.choice(sigma_rev[bingrid_idx == i], 1)[0] for i in xrange(1,len(wavegrid)+1)])
+            elif options.sampling_method == 'first_sample':
+                sigma_rev = sigma[::-1] # reverse array
+                values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
+            elif options.sampling_method == 'interp_sample':
+                sigma_rev = sigma[::-1] # reverse array
+                values = np.interp(wavegrid, 10000./full_wngrid[::-1], sigma_rev)
+            elif options.sampling_method == 'interp_nearest_sample':
+                sigma_rev = sigma[::-1] # reverse array
+                values = fast_nearest_interp(wavegrid, 10000./full_wngrid[::-1], sigma_rev)
+
             sigma_array_bin[pressure_idx, temperature_idx, :] = values[::-1] # reverse array back to original
 
     sigma_array_out = sigma_array_bin
     wno_out = 10000./wavegrid[::-1]
 
-elif options.binning_method == 'wavenumber':
+elif options.binning_method == 'const_wn':
 
     print 'Constant dwno=%.2f binning' % float(options.binning_resolution)
 
@@ -294,29 +304,43 @@ elif options.binning_method == 'wavenumber':
 
     comments.append('Constant dwno=%.2f binning' % float(options.binning_resolution))
 
-    if options.average_method == 'geometric_average':
+    if options.sampling_method == 'geometric_average':
         comments.append('Linear binning: use geometric average.' )
-    elif options.average_method == 'algebraic_average':
+    elif options.sampling_method == 'algebraic_average':
         comments.append('Linear binning: use algebraic average.' )
+    elif options.sampling_method == 'random_sample':
+        comments.append('Linear binning: use random sample.' )
+    elif options.sampling_method == 'first_sample':
+        comments.append('Linear binning: use first sample.' )
 
-    sigma_array_bin = np.zeros((len(pressures), len(temperatures), len(bin_wngrid)))
-    for pressure_idx, pressure_val in enumerate(pressures):
-        for temperature_idx, temperature_val in enumerate(temperatures):
 
-            print 'Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
+    sigma_array_bin = np.zeros((len(sigma_in['p']), len(sigma_in['t']), len(bin_wngrid)))
+    for pressure_idx, pressure_val in enumerate(sigma_in['p']):
+        for temperature_idx, temperature_val in enumerate(sigma_in['t']):
+
+            print 'Binning: Compute temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
 
             sigma = sigma_array[pressure_idx, temperature_idx]
-            if options.average_method == 'geometric_average':
+            if options.sampling_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 logval = np.log(sigma)
                 values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid+1))])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
-            elif options.average_method == 'algebraic_average':
+            elif options.sampling_method == 'algebraic_average':
                 # algebraic average
                 values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid+1))])
                 values[np.isnan(values)] = 0
-            # here you can try other methods, such as random sampling
+            elif options.sampling_method == 'random_sample':
+                values = np.asarray([np.random.choice(sigma[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
+            elif options.sampling_method == 'first_sample':
+                values = np.asarray([sigma[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
+            elif options.sampling_method == 'interp_sample':
+                values = np.interp(bin_wngrid, full_wngrid, sigma)
+            elif options.sampling_method == 'interp_nearest_sample':
+                values = fast_nearest_interp(bin_wngrid, full_wngrid, sigma)
+
+
 
 
             sigma_array_bin[pressure_idx, temperature_idx, :] = values
@@ -324,16 +348,51 @@ elif options.binning_method == 'wavenumber':
     wno_out = bin_wngrid
 else:
     comments.append('No binning of the cross section was performed.')
+    print 'No binning of the cross section was performed.'
     sigma_array_out =  sigma_array
     wno_out = full_wngrid
+
+
+
+# interpolate to new temperature and pressure grids. Note that it is better to interpolate to the temperature
+# grid in log space, and to the new pressure grid in linear space... so split interpolation in two steps
+# note that the interpolation of pressures is not great, so it is better to keep a fine grid.
+
+# interpolation of temperatures in log space
+if options.temperature_list:
+    sigma_array_tmp = np.zeros((len(sigma_in['p']), len(temperatures), len(wno_out)))
+    comments.append('Interpolation to new temperature grid in log space')
+    print 'Interpolation to new temperature grid in log space'
+    for pressure_idx, pressure_val in enumerate(sigma_in['p']):
+        for temperature_idx, temperature_val in enumerate(temperatures):
+            print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
+            for wno_idx, wno_val in enumerate(wno_out):
+                sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = np.exp(np.interp(temperature_val, sigma_in['t'], np.log(sigma_array_out[pressure_idx,:,wno_idx])))
+                if np.isnan(sigma_array_tmp[pressure_idx, temperature_idx, wno_idx]):
+                    sigma_array_tmp[pressure_idx, temperature_idx, wno_idx] = 0
+else:
+    sigma_array_tmp = sigma_array_out
+
+# interpolation of pressures in linear space
+if options.pressure_list:
+    comments.append('Interpolation to new pressure grid in linear space')
+    print 'Interpolation to new pressure grid in linear space'
+    sigma_array = np.zeros((len(pressures), len(temperatures), len(wno_out)))
+    for pressure_idx, pressure_val in enumerate(pressures):
+        for temperature_idx, temperature_val in enumerate(temperatures):
+            print 'Interpolate temperature %.1f, pressure %.3e' % (temperature_val, pressure_val)
+            for wno_idx, wno_val in enumerate(wno_out):
+                sigma_array[pressure_idx, temperature_idx, wno_idx] = np.interp(pressure_val, sigma_in['p'], sigma_array_tmp[:,temperature_idx,wno_idx])
+else:
+    sigma_array = sigma_array_tmp
 
 sigma_out = {
     'name': options.molecule_name,
     'p': pressures,
     't': temperatures,
     'wno': wno_out,
-    'xsecarr': sigma_array_out,
+    'xsecarr': sigma_array,
     'comments': comments
 }
 
-pickle.dump(sigma_out, open(options.output_filename, 'wb'))
+pickle.dump(sigma_out, open(options.output_filename, 'wb'), protocol=2)

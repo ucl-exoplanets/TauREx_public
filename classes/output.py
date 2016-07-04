@@ -11,7 +11,10 @@
 import copy
 import ctypes as C
 import numpy as np
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 from library_constants import *
 from library_general import *
@@ -91,7 +94,7 @@ class output(object):
                     else:
                         filename = out_filenames[idx]
                     self.dbfilename[val] = filename
-                    pickle.dump(outdb, open(filename, 'wb'))
+                    pickle.dump(outdb, open(filename, 'wb'), protocol=2)
 
         logging.info('Output object correctly initialised')
 

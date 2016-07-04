@@ -12,6 +12,7 @@ import numpy as np
 import scipy.special as spe
 import logging
 import sys
+import ctypes as C
 
 import matplotlib.pylab as plt
 
@@ -45,16 +46,19 @@ class atmosphere(object):
 
         # set pressure profile of layer boundaries
         self.pressure_profile_levels = np.copy(self.get_pressure_profile(), order='C')
-        # get mid point pressure between levels (i.e. get layer pressure) computing geometric average between pressure at n and n+1 level
+        # get mid point pressure between levels (i.e. get layer pressure) computing geometric
+        # average between pressure at n and n+1 level
         self.pressure_profile = np.power(10, np.log10(self.pressure_profile_levels)[:-1]+
                                          np.diff(np.log10(self.pressure_profile_levels))/2.)
 
-        logging.info('Atmospheric pressure boundaries from internal model: %f-%f' % (np.min(self.pressure_profile), np.max(self.pressure_profile)))
+        logging.info('Atmospheric pressure boundaries from internal model: %f-%f' %
+                     (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
         if self.params.ven_load:
 
             #self.temperature_profile = self.data.ven_temperature_int(self.pressure_profile)
-            self.temperature_profile = np.interp(self.pressure_profile[::-1], self.data.ven_pressure[::-1], self.data.ven_temperature[::-1])[::-1]
+            self.temperature_profile = np.interp(self.pressure_profile[::-1],
+                                                 self.data.ven_pressure[::-1], self.data.ven_temperature[::-1])[::-1]
             self.temperature_profile = np.asarray(self.temperature_profile, order='C')
 
             # active and inactive gas names and mixing ratios
@@ -68,12 +72,20 @@ class atmosphere(object):
             self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
             for mol_idx, mol_val in enumerate(self.active_gases):
                 ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-                self.active_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,ven_molprof_idx][::-1])[::-1]
-                self.active_mixratio_profile[mol_idx, :] = np.asarray(self.active_mixratio_profile[mol_idx, :], order='C')
+                self.active_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1],
+                                                                      self.data.ven_molprof_pressure[::-1],
+                                                                      self.data.ven_molprof_mixratios\
+                                                                          [:,ven_molprof_idx][::-1])[::-1]
+                self.active_mixratio_profile[mol_idx, :] = np.asarray(self.active_mixratio_profile[mol_idx, :],
+                                                                      order='C')
             for mol_idx, mol_val in enumerate(self.inactive_gases):
                 ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-                self.inactive_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,ven_molprof_idx][::-1])[::-1]
-                self.inactive_mixratio_profile[mol_idx, :] = np.asarray(self.inactive_mixratio_profile[mol_idx, :], order='C')
+                self.inactive_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1],
+                                                                        self.data.ven_molprof_pressure[::-1],
+                                                                        self.data.ven_molprof_mixratios\
+                                                                            [:,ven_molprof_idx][::-1])[::-1]
+                self.inactive_mixratio_profile[mol_idx, :] = np.asarray(self.inactive_mixratio_profile[mol_idx, :],
+                                                                        order='C')
         else:
 
             # temperature, altitude, pressure mixing ratio profiles are computed using the planet parameters found in
@@ -88,9 +100,11 @@ class atmosphere(object):
             for i in xrange(len(self.active_gases)):
                 self.active_mixratio_profile[i, :] = self.params.atm_active_gases_mixratios[i]
 
-            # calculate mix ratio of inactive gases. Note that values specified in the param file are for remainder of the atmosphere (i.e. 1 - sum(active gases))
+            # calculate mix ratio of inactive gases. Note that values specified in the param file
+            # are for remainder of the atmosphere (i.e. 1 - sum(active gases))
             if np.sum(self.params.atm_inactive_gases_mixratios) != 1.:
-                logging.error('The sum of the mixing ratios of the inactive gases must be one (%.3f at the moment). Fix it and run TauREx again' % np.sum(self.params.atm_inactive_gases_mixratios))
+                logging.error('The sum of the mixing ratios of the inactive gases must be one (%.3f at the moment). '
+                              'Fix it and run TauREx again' % np.sum(self.params.atm_inactive_gases_mixratios))
                 exit()
             self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
             mixratio_remainder = 1. - np.sum(self.active_mixratio_profile[:,0], axis=0)
@@ -118,7 +132,8 @@ class atmosphere(object):
         logging.info('Star radius: %.3f RSUN = %.9e m' % (self.params.star_radius/RSOL, self.params.star_radius))
         logging.info('Planet radius: %.3f RJUP = %.9e m' % (self.planet_radius/RJUP, self.planet_radius))
         logging.info('Planet mass: %.3f MJUP = %.9e kg' % (self.planet_mass/MJUP, self.planet_mass))
-        logging.info('Planet gravity (log g) (1st layer): %.3f cgs = %.3f m/s2' % (np.log10(self.planet_grav[0]*100.), self.planet_grav[0]))
+        logging.info('Planet gravity (log g) (1st layer): %.3f cgs = %.3f m/s2' % (np.log10(self.planet_grav[0]*100.),
+                                                                                   self.planet_grav[0]))
         logging.info('Mean molecular weight (1st layer): %.5f AMU' % (self.planet_mu[0]/AMU))
         logging.info('Scale height (1st layer): %.1f km' % (self.scale_height[0]/1000.))
         logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
@@ -141,6 +156,10 @@ class atmosphere(object):
 
         # initialise ACE specific parameters
         if self.params.gen_ace:
+
+            # loading Fortran code for chemically consistent model
+            self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
+
             # set solar elemental abundances. H and He are always set to solar and never change.
             self.ace_H_solar = 12.
             self.ace_He_solar = 10.93
@@ -179,9 +198,14 @@ class atmosphere(object):
 
             self.opacity_wngrid = wngrid
 
-            # get sigma array (and interpolate sigma array to pressure profile)
-            self.sigma_array = self.get_sigma_array()
-            self.sigma_array_flat = self.sigma_array.flatten()
+            if self.params.in_opacity_method in ['xsec']:
+                # get sigma array (and interpolate sigma array to pressure profile)
+                self.sigma_array = self.get_sigma_array()
+                self.sigma_array_flat = self.sigma_array.flatten()
+            elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+                # get sigma array (and interpolate sigma array to pressure profile)
+                self.ktables_array = self.get_ktables_array()
+                self.ktables_array_flat = self.ktables_array.flatten()
 
             # get sigma rayleigh array (for active and inactive absorbers)
             self.sigma_rayleigh_array = self.get_sigma_rayleigh_array()
@@ -205,7 +229,9 @@ class atmosphere(object):
         if self.params.ven_load:
             mu = np.zeros(self.nlayers)
             for mol_idx, mol_val in enumerate(self.data.ven_molecules):
-                ven_molprof_mixratio = np.interp(self.pressure_profile[::-1], self.data.ven_molprof_pressure[::-1], self.data.ven_molprof_mixratios[:,mol_idx][::-1])[::-1]
+                ven_molprof_mixratio = np.interp(self.pressure_profile[::-1],
+                                                 self.data.ven_molprof_pressure[::-1],
+                                                 self.data.ven_molprof_mixratios[:,mol_idx][::-1])[::-1]
                 mu[:] += ven_molprof_mixratio* self.data.ven_molweight[mol_idx]*AMU
             mu = np.asarray(mu, order='C')
         else:
@@ -234,7 +260,8 @@ class atmosphere(object):
         return np.exp(P)[::-1]
 
     def get_temperature_profile(self):
-        # set initial temperature profile (mainly used for create_spectrum) # todo move to separate function!
+
+        # set initial temperature profile (mainly used for create_spectrum)
         if self.params.atm_tp_type == 'guillot':
             TP_params = [self.params.atm_tp_guillot_T_irr,
                          np.log10(self.params.atm_tp_guillot_kappa_ir),
@@ -319,28 +346,55 @@ class atmosphere(object):
         logging.info('Interpolate sigma array to pressure profile')
 
         pressure_profile_bar = self.pressure_profile/1e5
-        sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']), self.int_nwngrid))
+        sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']),
+                                self.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.active_gases):
             sigma_in = self.data.sigma_dict['xsecarr'][mol_val]
             for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
                 for temperature_idx, temperature_val in enumerate(self.data.sigma_dict['t']):
                     for wno_idx, wno_val in enumerate(self.int_wngrid):
                         sigma_array[mol_idx, pressure_idx, temperature_idx, wno_idx] = \
-                            np.interp(pressure_val, self.data.sigma_dict['p'], sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax][:,temperature_idx,wno_idx])
+                            np.interp(pressure_val, self.data.sigma_dict['p'],
+                                      sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]\
+                                          [:,temperature_idx,wno_idx])
         return sigma_array
+
+    def get_ktables_array(self):
+        logging.info('Interpolate ktables array to pressure profile')
+        pressure_profile_bar = self.pressure_profile/1e5
+        kcoeff_array = np.zeros((self.nactivegases, len(self.pressure_profile),
+                                 len(self.data.ktable_dict['t']), self.int_nwngrid,
+                                 len(self.data.ktable_dict['weights'])))
+
+        for mol_idx, mol_val in enumerate(self.active_gases):
+            ktable_in = self.data.ktable_dict['kcoeff'][mol_val]
+            for pressure_idx, pressure_val in enumerate(pressure_profile_bar): # loop through input pressure grid
+                for temperature_idx, temperature_val in enumerate(self.data.ktable_dict['t']):# loop through temps
+                    for wno_idx, wno_val in enumerate(self.int_wngrid): # loop through bins
+                        for kc_idx, kc_val in enumerate(self.data.ktable_dict['weights']): # loop through k-coeff (~20)
+                            # store kcoeff array
+                            # pre-interpolate in pressure and slice in wavenumber to internal grid
+                            kcoeff_array[mol_idx, pressure_idx, temperature_idx, wno_idx, kc_idx] = \
+                                np.interp(pressure_val, self.data.ktable_dict['p'],
+                                          ktable_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax,:]\
+                                                   [:,temperature_idx,wno_idx,kc_idx])
+        return kcoeff_array
 
     def get_sigma_rayleigh_array(self):
         logging.info('Interpolate Ryleigh sigma array to pressure profile')
         sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.active_gases+self.inactive_gases):
-            sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val][self.int_wngrid_idxmin:self.int_wngrid_idxmax]
+            sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val]\
+                [self.int_wngrid_idxmin:self.int_wngrid_idxmax]
         return sigma_rayleigh_array
 
     def get_sigma_cia_array(self):
         logging.info('Interpolate CIA sigma array to pressure profile')
-        sigma_cia_array = np.zeros((len(self.params.atm_cia_pairs), len(self.data.sigma_cia_dict['t']), self.int_nwngrid))
+        sigma_cia_array = np.zeros((len(self.params.atm_cia_pairs),
+                                    len(self.data.sigma_cia_dict['t']), self.int_nwngrid))
         for pair_idx, pair_val in enumerate(self.params.atm_cia_pairs):
-            sigma_cia_array[pair_idx,:,:] = self.data.sigma_cia_dict['xsecarr'][pair_val][:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]
+            sigma_cia_array[pair_idx,:,:] = self.data.sigma_cia_dict['xsecarr'][pair_val]\
+                [:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]
         return sigma_cia_array
 
     def get_cia_idx(self):
@@ -379,6 +433,55 @@ class atmosphere(object):
         self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
         self.density_profile = self.get_density_profile()
 
+    def set_ACE(self, mixratio_mask):
+
+            # chemically consistent model
+            vector = C.c_double*self.nlayers
+            a_apt = vector()
+            p_apt = vector()
+            t_apt = vector()
+            for i in range(self.nlayers):
+               a_apt[i] = self.altitude_profile[i]/1000.
+               p_apt[i] = self.pressure_profile[i]/1.e5
+               t_apt[i] = self.temperature_profile[i]
+
+            # y_out has shape (nlayers, 105). 105 is the total number of molecules computed
+            y_out = ((C.c_double * 105) * self.nlayers)()
+
+            self.ace_lib.ACE(C.byref(C.c_int(self.nlayers)),
+                             C.byref(a_apt),
+                             C.byref(p_apt),
+                             C.byref(t_apt),
+                             C.byref(C.c_double(self.He_abund_dex)),
+                             C.byref(C.c_double(self.C_abund_dex)),
+                             C.byref(C.c_double(self.O_abund_dex)),
+                             C.byref(C.c_double(self.N_abund_dex)),
+                             C.byref(y_out))
+            ace_profiles = np.asarray(y_out)
+
+
+            for mol_idx, mol_val in enumerate(self.params.atm_active_gases):
+                self.active_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_active_gases_idx[mol_idx]]
+
+            for mol_idx, mol_val in enumerate(self.params.atm_inactive_gases):
+                self.inactive_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_inactive_gases_idx[mol_idx]]
+
+            if isinstance(mixratio_mask, (np.ndarray, np.generic)):
+                self.active_mixratio_profile[mixratio_mask, :] = 0
+
+            del(y_out)
+            del(a_apt)
+            del(p_apt)
+            del(t_apt)
+
+            # couple mu to composition
+            self.planet_mu = self.get_coupled_planet_mu()
+
+            # update atmospheric params
+            self.altitude_profile, self.scale_height, self.planet_grav = self.get_altitude_gravity_scaleheight_profile()
+
+
+
     #####################
     # Everything below is related to Temperature Pressure Profiles
 
@@ -412,7 +515,8 @@ class atmosphere(object):
             return self._TP_profile(_profile, fit_params, **kwargs)
 
         self.TP_profile = tpwrap  #setting TP_profile
-        self.TP_setup = True #flag that allows TP profile internal things to be run once only. Sets to False after execution
+        self.TP_setup = True #flag that allows TP profile internal things to be run once only.
+        # Sets to False after execution
 
     def _TP_profile(self, TP_function, TP_params, **kwargs):
         '''
