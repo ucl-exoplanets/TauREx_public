@@ -404,6 +404,9 @@ if __name__ == '__main__':
     parser.add_argument('--multinest_dir',
                           dest='multinest_dir',
                           default=False)
+    parser.add_argument('--multi_folders',
+                           dest='multi_dir',
+                           default=False)
     parser.add_argument('--multinest_prefix',
                           dest='multinest_prefix',
                           default='1-')
@@ -443,6 +446,14 @@ if __name__ == '__main__':
     if options.db_dir:
         db_filenames = glob.glob(os.path.join(options.db_dir, '*.db'))
         out_folders = [val[:-3] for val in db_filenames]
+    elif options.multi_dir:
+        out_folders = glob.glob(os.path.join(options.multi_dir, '*'))
+        db_filenames = []
+        for folder in out_folders:
+            tmp = os.path.join(folder,'nest_out.db')
+            if os.path.exists(tmp):
+                db_filenames.append(tmp)
+        print db_filenames
     else:
         db_filenames = [options.db_filename]
         out_folders = [options.out_folder]
@@ -460,14 +471,14 @@ if __name__ == '__main__':
             print 'Plotting posteriors'
             plot.plot_posteriors()
 
-        if options.db_dir or options.db_filename:
+#         if options.db_dir or options.db_filename:
 
-            if options.plot_all or options.plot_spectrum:
+        if options.plot_all or options.plot_spectrum:
                 print 'Plotting fitted spectrum'
                 plot.plot_fitted_spectrum()
-            if options.plot_all or options.plot_x:
+        if options.plot_all or options.plot_x:
                 print 'Plotting mixing ratio profiles'
                 plot.plot_fitted_xprofiles()
-            if options.plot_all or options.plot_tp:
+        if options.plot_all or options.plot_tp:
                 print 'Plotting pressure-temperature profile'
                 plot.plot_fitted_tp()

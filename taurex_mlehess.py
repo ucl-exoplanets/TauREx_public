@@ -95,8 +95,8 @@ class statistics(object):
         self.load_traces_likelihood('nest_out.db')
         
         #loading parameter list 
-        self.parameters = np.loadtxt(os.path.join(self.dir,'parameters.txt'),dtype='str')
-        self.stats['parameters'] = self.parameters
+#         self.parameters = np.loadtxt(os.path.join(self.dir,'parameters.txt'),dtype='str')
+        self.stats['parameters'] = self.NEST_db['fit_params_names']
         
         # initialising data object
         self.dataob = data(self.params)
@@ -116,8 +116,6 @@ class statistics(object):
     def load_traces_likelihood(self,nest_db_fname,solution_idx=0):
         '''
         loading following files from TauREx output: 
-          NEST_tracedata.txt
-          NEST_likelihood.txt
           NEST_out.db
         '''
         
