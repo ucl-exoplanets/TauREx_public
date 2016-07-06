@@ -156,9 +156,8 @@ def get_specbingrid(wavegrid, specgrid, binwidths=None):
         bingrid_idx[:] = np.NaN
         for i in range(len(specgrid)):
             for j in range(len(wavegrid)):
-                if specgrid[i] >= (wavegrid[j]-binwidths[j]/2.) and specgrid[i] < (wavegrid[j]+binwidths[j]/2.):
+                if specgrid[i] <= (wavegrid[j]-binwidths[j]/2.) and specgrid[i] > (wavegrid[j]+binwidths[j]/2.):
                     bingrid_idx[i] = j+1
-                    break
     return bingrid, bingrid_idx
 
 def plot_bin(spectrum, R, ycol=1, yadg=0., **kwargs):
