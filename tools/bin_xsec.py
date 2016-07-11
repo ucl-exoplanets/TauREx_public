@@ -8,6 +8,9 @@ import sys, os, optparse, string, glob
 import numpy as np
 from time import gmtime, strftime
 import multiprocessing
+from multiprocessing import Pool
+from functools import partial
+
 
 parser = optparse.OptionParser()
 parser.add_option('-s', '--source',
@@ -85,8 +88,8 @@ def read_filename(fname, filetype=1):
 
     elif filetype.upper() == 'EX':
         s = fname.split('_')
-        pressure = float(s[2][1:])
-        temperature = float(s[3][1:])
+        pressure = float(s[1][1:])
+        temperature = float(s[2][1:])
         resolution = 0.01 # assume this resolution...
 
     return temperature, pressure, resolution
@@ -114,11 +117,11 @@ if options.linear_binning:
 
 print 'Done'
 
-def worker(file_id):
+def worker(idx):
 
     files = glob.glob(os.path.join(options.source_files, '*.%s' % options.extension))
 
-    fname = files[file_id]
+    fname = files[idx]
 
     xsec_t, xsec_p, xsec_r = read_filename(fname, options.version)
 
@@ -127,9 +130,9 @@ def worker(file_id):
                                                                                options.molecule_name,
                                                                                float(options.linear_binning)))
     if os.path.isfile(filename):
-        print 'Skip file %i/%i: %s' %  (file_id+1, len(files), fname)
+        print 'Skip file %i/%i: %s' %  (idx+1, len(files), fname)
     else:
-        print 'Bin file %i/%i: %s' %  (file_id+1, len(files), fname)
+        print 'Bin file %i/%i: %s' %  (idx+1, len(files), fname)
 
         loadf = np.loadtxt(fname)
         sigma_in = loadf[:,1]
@@ -158,25 +161,33 @@ def worker(file_id):
         out[:,1] = values
         np.savetxt(filename, out)
 
-nrep = len(files)/int(options.cores)
 
-procs = []
-count = 0
-for i in range(nrep):
-    for n in range(int(options.cores)):
-        p = multiprocessing.Process(target=worker, args=(count, ))
-        p.start()
-        procs.append(p)
-        count += 1
-    for p in procs:
-        p.join()
-    procs = []
 
-for i in range(len(files) % int(options.cores)):
-    for n in range(int(options.cores)):
-        p = multiprocessing.Process(target=worker, args=(count, ))
-        p.start()
-        count += 1
-    for p in procs:
-        p.join()
-    procs = []
+pool = Pool(processes=int(options.cores))      #setting number of cores on which to run
+pool_result = pool.map(worker,[i for i in range(len(files))]) #runnning the stuff
+pool.close()                            #closing the pool 
+pool.join()                             #closing the pool. Needs to be done otherwise createob.reset has no effect.
+
+# 
+# nrep = len(files)/int(options.cores)
+# 
+# procs = []
+# count = 0
+# for i in range(nrep):
+#     for n in range(int(options.cores)):
+#         p = multiprocessing.Process(target=worker, args=(count, ))
+#         p.start()
+#         procs.append(p)
+#         count += 1
+#     for p in procs:
+#         p.join()
+#     procs = []
+# 
+# for i in range(len(files) % int(options.cores)):
+#     for n in range(int(options.cores)):
+#         p = multiprocessing.Process(target=worker, args=(count, ))
+#         p.start()
+#         count += 1
+#     for p in procs:
+#         p.join()
+#     procs = []
