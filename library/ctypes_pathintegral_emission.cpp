@@ -60,12 +60,15 @@ extern "C" {
         pi= 3.14159265359;
 
         //dz array
-        for (int j=0; j<(nlayers); j++) {
-            if ((j+1) == nlayers) {
-                dz[j] = z[j] - z[j-1];
-            } else {
+//        for (int j=0; j<(nlayers); j++) {
+//            if ((j+1) == nlayers) {
+//                dz[j] = z[j] - z[j-1];
+//            } else {
+//                dz[j] = z[j+1] - z[j];
+//            }
+//        }
+        for (int j=0; j<(nlayers-1); j++) {
                 dz[j] = z[j+1] - z[j];
-            }
         }
 
         // interpolate sigma array to the temperature profile
@@ -145,7 +148,7 @@ extern "C" {
                 I_total += (BB_wl * (exp(-1.0*tau))* dtau);
                 count2 += 1;
             }
-    		//FpFs[wn] = I_total;
+//    		FpFs[wn] = I_total;
             FpFs[wn] = (I_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
         }
 

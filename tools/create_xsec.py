@@ -126,7 +126,7 @@ for fname in glob.glob(os.path.join(options.source_files, '*.%s' % options.exten
         resolution = res_file
     else:
         if res_file != resolution:
-            print 'Resolution is not consistent for file %s. Skpping' % os.path.basename(fname)
+            print 'Resolution is not consistent for file %s. Skipping' % os.path.basename(fname)
             continue
 
     print 'Reading %s' % fname
