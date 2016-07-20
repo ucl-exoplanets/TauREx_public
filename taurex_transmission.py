@@ -20,7 +20,8 @@ from fitting import *
 from atmosphere import *
 from data import *
 
-def run(params):
+def run(params, options=False):
+
 
     # initialising data object
     dataob = data(params)
@@ -44,9 +45,13 @@ def run(params):
         fittingob.mcmc_fit() # MCMC fit
         MPI.COMM_WORLD.Barrier()
 
-    if params.nest_run and multinest_import:
+
+    if (not options and params.nest_run and multinest_import) \
+        or (params.nest_run and multinest_import and not options.no_multinest):
         fittingob.multinest_fit() # Nested sampling fit
-        
+    elif options and (params.nest_run and multinest_import and options.no_multinest):
+        fittingob.NEST = True
+
     #forcing slave processes to exit at this stage
     if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
         exit()

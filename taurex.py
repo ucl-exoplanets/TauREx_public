@@ -61,7 +61,7 @@ parser.add_argument('-p',
                     default='Parfiles/default.par'
                    )
 
-
+# cluster parameters
 parser.add_argument('-c', '--cluster',
                   dest='cluster_dictionary',
                   default='None',
@@ -73,10 +73,20 @@ parser.add_argument('-i', '--cluster_index',
                   type = str,
                   )
 
+# misc  parameters
+parser.add_argument('--no_multinest',
+                  dest='no_multinest',
+                  action='store_true',
+                  default=False)
+
 # plotting parameters
 parser.add_argument('--no_plot',
                       action='store_true',
                       dest='no_plot',
+                      default=False)
+parser.add_argument('--plot_profiles',
+                      action='store_true',
+                      dest='plot_profiles',
                       default=False)
 parser.add_argument('--plot_title',
                       dest='plot_title',
@@ -157,7 +167,7 @@ else:
 MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 #running Tau-REx
-outputob = run(params)
+outputob = run(params, options)
 
 # plotting
 if not options.no_plot:
@@ -171,7 +181,7 @@ if not options.no_plot:
         plot.plot_posteriors()
         logging.info('Plot fitted spectrum')
         plot.plot_fitted_spectrum()
-        if params.gen_type == 'emission' or params.gen_ace:
+        if params.gen_type == 'emission' or params.gen_ace or options.plot_profiles:
             logging.info('Plot mixing ratio profiles and temperature pressure profile')
             plot.plot_fitted_xprofiles()
             plot.plot_fitted_tp()

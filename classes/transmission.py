@@ -334,13 +334,10 @@ class transmission(object):
                                             self.params.atm_cia,
                                             self.params.atm_clouds,
                                             self.atmosphere.ktables_array_flat,
-
                                             self.data.ktable_dict['t'],
                                             len(self.data.ktable_dict['t']),
-
                                             self.data.ktable_dict['ngauss'],
                                             self.data.ktable_dict['weights'],
-
                                             self.atmosphere.sigma_rayleigh_array_flat,
                                             len(self.data.sigma_cia_dict['xsecarr']),
                                             np.asarray(self.atmosphere.cia_idx, dtype=np.float),

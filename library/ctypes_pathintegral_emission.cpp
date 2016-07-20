@@ -28,12 +28,20 @@ extern "C" {
                        const int nwngrid,
                        const int nlayers,
                        const int nactive,
+                       const int cia,
                        const double * sigma_array,
                        const double * sigma_temp,
                        const int sigma_ntemp,
+                       const int cia_npairs,
+                       const double * cia_idx,
+                       const int cia_nidx,
+                       const double * sigma_cia,
+                       const double * sigma_cia_temp,
+                       const int sigma_cia_ntemp,
                        const double * density,
                        const double * z,
                        const double * active_mixratio,
+                       const double * inactive_mixratio,
                        const double * temperature,
                        const double planet_radius,
                        const double star_radius,
@@ -47,12 +55,15 @@ extern "C" {
         // setting up arrays and variables
         double* dz = new double[nlayers];
         double* sigma_interp = new double[nwngrid*nlayers*nactive];
+        double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
         double tau, dtau;
         double p;
         int count, count2, t_idx;
         double I_total, BB_wl, exponent;
         double h, c, kb, pi;
+        double x1_idx[cia_npairs][nlayers];
+        double x2_idx[cia_npairs][nlayers];
 
         h = 6.62606957e-34;
         c = 299792458;
@@ -108,6 +119,41 @@ extern "C" {
                 }
             }
         }
+
+
+        // interpolate sigma CIA array to the temperature profile
+        for (int j=0; j<nlayers; j++) {
+            for (int t=1; t<sigma_cia_ntemp; t++) {
+                if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                    for (int wn=0; wn<nwngrid; wn++) {
+                        for (int l=0;l<cia_npairs;l++) {
+                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                            sigma = sigma_l + (sigma_r-sigma_l)*(log10(temperature[j])-log10(sigma_temp[t-1]))/(log10(sigma_temp[t])-log10(sigma_temp[t-1]));
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                        }
+                    }
+                }
+            }
+        }
+
+        // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
+        for (int c=0; c<cia_npairs;c++) {
+             if (int(cia_idx[c*2]) >= nactive) {
+                for (int j=0;j<nlayers;j++) {
+
+                    x1_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2])-nactive)];
+                    x2_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2+1])-nactive)];
+                }
+             } else {
+                for (int j=0;j<nlayers;j++) {
+                    x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
+                    x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
+                }
+            }
+         }
+
+
         // calculate emission
         count2 = 0;
         for (int wn=0; wn < nwngrid; wn++) {
@@ -117,8 +163,13 @@ extern "C" {
 
             // surface layer
             for(int j = 0; j < nlayers; j++){
-    			for (int l=0;l<nactive;l++) {
+    			for (int l=0;l<nactive;l++) { // active gases
                     tau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
+                }
+                if (cia == 1) { // cia
+                    for (int c=0; c<cia_npairs;c++) {
+                        tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+                    }
                 }
             }
             exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
@@ -131,14 +182,27 @@ extern "C" {
     			tau = 0.0;
     			dtau = 0.0;
     			for (int k=j; k < (nlayers); k++) {
-                    for (int l=0;l<nactive;l++) {
+                    for (int l=0;l<nactive;l++) { // active gases
                         tau += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
                     }
+                    if (cia == 1) { // cia
+                        for (int c=0; c<cia_npairs;c++) {
+                            tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+                        }
+                    }
+
+
     			}
     			// get dtau
-                for (int l=0;l<nactive;l++) {
+                for (int l=0;l<nactive;l++) { // active gases
                     dtau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
                 }
+                if (cia == 1) { // cia
+                    for (int c=0; c<cia_npairs;c++) {
+                        dtau += sigma_cia[wn + nwngrid*c] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+                    }
+                }
+
                 // get blackbody
                 if (temperature[j] != temperature[j-1]) {
                     exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));

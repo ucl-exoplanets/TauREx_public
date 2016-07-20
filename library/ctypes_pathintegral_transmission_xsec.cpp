@@ -162,7 +162,7 @@ extern "C" {
                     x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
                     x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
                 }
-         }
+            }
          }
 
         // calculate absorption
