@@ -56,7 +56,7 @@ class create_spectrum(object):
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
 
-    def generate_spectrum(self, save_db=False, db_filename=None):
+    def generate_spectrum(self, save_db=False, db_filename=None, contrib_func=False, opacity_contrib=False):
 
         # this function returns the SPECTRUM_out dictionary
         # if filename is not specified, store in out_path/SPECTRUM_out.db
@@ -77,32 +77,33 @@ class create_spectrum(object):
             self.fmob.params.gen_ace = False
 
         # compute contribution function
-        outdata['contrib_func'] = self.fmob.model(return_tau=True)
+        if  contrib_func:
+            outdata['contrib_func'] = self.fmob.model(return_tau=True)
 
         # calculate opacity contributions
-        outdata['opacity_contrib'] = {}
-        active_mixratio_profile = self.fmob.atmosphere.active_mixratio_profile
-        atm_rayleigh = self.fmob.params.atm_rayleigh
-        atm_cia = self.fmob.params.atm_cia
-        atm_clouds = self.fmob.params.atm_clouds
+        if opacity_contrib:
+            outdata['opacity_contrib'] = {}
+            active_mixratio_profile = self.fmob.atmosphere.active_mixratio_profile
+            atm_rayleigh = self.fmob.params.atm_rayleigh
+            atm_cia = self.fmob.params.atm_cia
+            atm_clouds = self.fmob.params.atm_clouds
 
-        # opacity from molecules
-        for idx, val in enumerate(self.atmosphereob.active_gases):
-            mask = np.ones(len(self.atmosphereob.active_gases), dtype=bool)
-            mask[idx] = 0
-            active_mixratio_profile_mask = np.copy(active_mixratio_profile)
-            active_mixratio_profile_mask[mask, :] = 0
-            self.fmob.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
-            self.fmob.params.atm_rayleigh = False
-            self.fmob.params.atm_cia = False
-            #self.fmob.params.atm_clouds = False
-            outdata['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-            outdata['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
-            outdata['opacity_contrib'][val][:,1] = self.fmob.model()
+            # opacity from molecules
+            for idx, val in enumerate(self.atmosphereob.active_gases):
+                mask = np.ones(len(self.atmosphereob.active_gases), dtype=bool)
+                mask[idx] = 0
+                active_mixratio_profile_mask = np.copy(active_mixratio_profile)
+                active_mixratio_profile_mask[mask, :] = 0
+                self.fmob.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
+                self.fmob.params.atm_rayleigh = False
+                self.fmob.params.atm_cia = False
+                #self.fmob.params.atm_clouds = False
+                outdata['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                outdata['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
+                outdata['opacity_contrib'][val][:,1] = self.fmob.model()
+            self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
 
-        self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
-
-        if self.params.gen_type == 'transmission':
+        if opacity_contrib and self.params.gen_type == 'transmission':
 
             self.fmob.atmosphere.active_mixratio_profile[:, :] = 0
 
@@ -134,6 +135,9 @@ class create_spectrum(object):
                 outdata['opacity_contrib']['clouds'][:,1] = self.fmob.model()
 
             self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
+            self.fmob.params.atm_rayleigh = atm_rayleigh
+            self.fmob.params.atm_cia = atm_cia
+            self.fmob.params.atm_clouds = atm_clouds
 
         # tp profile
         outdata['tp_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
@@ -170,10 +174,6 @@ class create_spectrum(object):
             outdata['inactive_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
             outdata['inactive_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.inactive_mixratio_profile[i,:]
 
-        self.fmob.params.atm_rayleigh = atm_rayleigh
-        self.fmob.params.atm_cia = atm_cia
-        self.fmob.params.atm_clouds = atm_clouds
-        self.fmob.atmosphere.inactive_mixratio_profile = np.copy(active_mixratio_profile)
 
         # store data
         outdb['data'] = outdata
@@ -227,6 +227,17 @@ if __name__ == '__main__':
                       dest='plot_spectrum',
                       action='store_true',
                       default=False)
+    parser.add_argument('--opacity_contrib',
+                      dest='opacity_contrib',
+                      action='store_true',
+                      default=False)
+    parser.add_argument('--contrib_func',
+                      dest='contrib_func',
+                      action='store_true',
+                      default=False)
+
+
+
 
     # add command line interface to parameter file
 
@@ -269,7 +280,10 @@ if __name__ == '__main__':
 
     spectrumob = create_spectrum(params=params)
 
-    spectrumob.generate_spectrum(save_db=options.save_db, db_filename=options.db_filename)
+    spectrumob.generate_spectrum(save_db=options.save_db,
+                                 db_filename=options.db_filename,
+                                 opacity_contrib=options.opacity_contrib,
+                                 contrib_func=options.contrib_func)
 
     if options.save_sp:
         spectrumob.save_spectrum(sp_filename=options.sp_filename)

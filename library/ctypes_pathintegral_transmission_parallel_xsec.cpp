@@ -113,8 +113,8 @@ extern "C" {
                     }
                 }
             } else {
-                #pragma omp parallel for
                 if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
+                    #pragma omp parallel for
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
                             sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
