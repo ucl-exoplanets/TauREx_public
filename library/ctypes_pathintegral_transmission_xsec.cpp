@@ -6,7 +6,7 @@
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission.so ctypes_pathintegral_transmission.cpp
+    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
 
  */
 

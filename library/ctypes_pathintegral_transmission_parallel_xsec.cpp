@@ -6,7 +6,7 @@
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission.so ctypes_pathintegral_transmission.cpp
+    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_parallel_xsec.cpp
 
  */
 
@@ -83,15 +83,18 @@ extern "C" {
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
-
             #pragma omp parallel for
-            for (int k=1; k < (nlayers - j); k++) {
-                p = pow((z[j]+planet_radius),2);
-                dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius),2) - p) - sqrt(pow((z[k-1+j]+planet_radius),2) - p));
-                //cout << dlarray[count] << " " << p << " " << count << endl;
+            for (int k=0; k < (nlayers - j); k++) {
+                p = pow((z[j]+planet_radius+dz[j]/2.),2);
+                if (k == 0) {
+                    dlarray[count] = 2.0 * sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p);
+                } else {
+                    dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p) -  sqrt(pow((z[k+j-1]+planet_radius+dz[j]/2.),2) - p));
+                }
                 count += 1;
             }
         }
+
 
         // interpolate sigma array to the temperature profile
         for (int j=0; j<nlayers; j++) {
@@ -110,17 +113,17 @@ extern "C" {
                     }
                 }
             } else {
+                #pragma omp parallel for
                 if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
-                    #pragma omp parallel for
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
                             sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
                         }
                     }
                 } else {
-                    #pragma omp parallel for
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+                            #pragma omp parallel for
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
                                     sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
@@ -144,7 +147,7 @@ extern "C" {
                         for (int l=0;l<cia_npairs;l++) {
                             sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
                             sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                            sigma = sigma_l + (sigma_r-sigma_l)*(log10(temperature[j])-log10(sigma_temp[t-1]))/(log10(sigma_temp[t])-log10(sigma_temp[t-1]));
                             sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
                         }
                     }
@@ -165,7 +168,7 @@ extern "C" {
                     x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
                     x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
                 }
-             }
+            }
          }
 
         // calculate absorption
@@ -180,7 +183,7 @@ extern "C" {
     			tautmp = 0.0;
                 if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
                     //cout << j << " YES " << pressure[j] << endl;
-                    for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                         count += 1;
                     }
                     //exptau = exp(-tautmp);
@@ -192,7 +195,7 @@ extern "C" {
                 } else {
                     //cout << j << " NO " << pressure[j] << endl;
 
-                    for (int k=1; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
 
 
                         // calculate optical depth due to clouds
