@@ -49,21 +49,21 @@ class create_spectrum(object):
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
 
-    def generate_spectrum(self, save_db=False, db_filename=None, contrib_func=False, opacity_contrib=False):
+    def generate_spectrum(self, save_instance=False, instance_filename=None, contrib_func=False, opacity_contrib=False):
 
-        # this function returns the SPECTRUM_out dictionary
-        # if filename is not specified, store in out_path/SPECTRUM_out.db
-        # also stored in self.SPECTRUM_out
+        # this function returns the SPECTRUM_INSTANCE_out dictionary
+        # if filename is not specified, store in out_path/SPECTRUM_INSTANCE_out.pickle
+        # also stored in self.SPECTRUM_INSTANCE_out
 
         # create SPECTRUM_out
-        outdb = {'type': 'create_spectrum',
+        instance = {'type': 'create_spectrum',
                  'params': self.params.params_to_dict()}
-        outdata = {}
+        instance_data = {}
 
         # compute spectrum
-        outdata['spectrum'] = np.zeros((self.dataob.int_nwlgrid_obs, 3))
-        outdata['spectrum'][:,0] = self.dataob.int_wlgrid_obs
-        outdata['spectrum'][:,1] = self.fmob.model()
+        instance_data['spectrum'] = np.zeros((self.dataob.int_nwlgrid_obs, 3))
+        instance_data['spectrum'][:,0] = self.dataob.int_wlgrid_obs
+        instance_data['spectrum'][:,1] = self.fmob.model()
 
         # freeze the mixing ratio profiles, disable gen_ace
         if self.fmob.params.gen_ace:
@@ -71,11 +71,11 @@ class create_spectrum(object):
 
         # compute contribution function
         if  contrib_func:
-            outdata['contrib_func'] = self.fmob.model(return_tau=True)
+            instance_data['contrib_func'] = self.fmob.model(return_tau=True)
 
         # calculate opacity contributions
         if opacity_contrib:
-            outdata['opacity_contrib'] = {}
+            instance_data['opacity_contrib'] = {}
             active_mixratio_profile = self.fmob.atmosphere.active_mixratio_profile
             atm_rayleigh = self.fmob.params.atm_rayleigh
             atm_cia = self.fmob.params.atm_cia
@@ -91,9 +91,9 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = False
                 #self.fmob.params.atm_clouds = False
-                outdata['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                outdata['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
-                outdata['opacity_contrib'][val][:,1] = self.fmob.model()
+                instance_data['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                instance_data['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib'][val][:,1] = self.fmob.model()
             self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
 
         if opacity_contrib and self.params.gen_type == 'transmission':
@@ -105,27 +105,27 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = True
                 self.fmob.params.atm_cia = False
                 #self.fmob.params.atm_clouds = False
-                outdata['opacity_contrib']['rayleigh'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                outdata['opacity_contrib']['rayleigh'][:,0] = self.dataob.int_wlgrid_obs
-                outdata['opacity_contrib']['rayleigh'][:,1] = self.fmob.model()
+                instance_data['opacity_contrib']['rayleigh'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                instance_data['opacity_contrib']['rayleigh'][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib']['rayleigh'][:,1] = self.fmob.model()
 
             # opacity from cia
             if atm_cia:
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = True
                 #self.fmob.params.atm_clouds = False
-                outdata['opacity_contrib']['cia'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                outdata['opacity_contrib']['cia'][:,0] = self.dataob.int_wlgrid_obs
-                outdata['opacity_contrib']['cia'][:,1] = self.fmob.model()
+                instance_data['opacity_contrib']['cia'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                instance_data['opacity_contrib']['cia'][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib']['cia'][:,1] = self.fmob.model()
 
             # opacity from clouds
             if atm_clouds:
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = False
                 self.fmob.params.atm_clouds = True
-                outdata['opacity_contrib']['clouds'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                outdata['opacity_contrib']['clouds'][:,0] = self.dataob.int_wlgrid_obs
-                outdata['opacity_contrib']['clouds'][:,1] = self.fmob.model()
+                instance_data['opacity_contrib']['clouds'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
+                instance_data['opacity_contrib']['clouds'][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib']['clouds'][:,1] = self.fmob.model()
 
             self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
             self.fmob.params.atm_rayleigh = atm_rayleigh
@@ -133,63 +133,69 @@ class create_spectrum(object):
             self.fmob.params.atm_clouds = atm_clouds
 
         # tp profile
-        outdata['tp_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        outdata['tp_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        outdata['tp_profile'][:,1] = self.fmob.atmosphere.temperature_profile
+        instance_data['tp_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['tp_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['tp_profile'][:,1] = self.fmob.atmosphere.temperature_profile
 
         # altitude
-        outdata['altitude_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        outdata['altitude_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        outdata['altitude_profile'][:,1] = self.fmob.atmosphere.altitude_profile
+        instance_data['altitude_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['altitude_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['altitude_profile'][:,1] = self.fmob.atmosphere.altitude_profile
 
         # planet_grav
-        outdata['gravity_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        outdata['gravity_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        outdata['gravity_profile'][:,1] = self.fmob.atmosphere.planet_grav
+        instance_data['gravity_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['gravity_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['gravity_profile'][:,1] = self.fmob.atmosphere.planet_grav
 
         # scale_height
-        outdata['scale_height_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        outdata['scale_height_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        outdata['scale_height_profile'][:,1] = self.fmob.atmosphere.scale_height
+        instance_data['scale_height_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['scale_height_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['scale_height_profile'][:,1] = self.fmob.atmosphere.scale_height
 
         # mu profile
-        outdata['mu_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        outdata['mu_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        outdata['mu_profile'][:,1] = self.fmob.atmosphere.planet_mu
+        instance_data['mu_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['mu_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['mu_profile'][:,1] = self.fmob.atmosphere.planet_mu
 
         # mixing ratios
-        outdata['active_mixratio_profile'] = np.zeros((len(self.atmosphereob.active_gases), self.atmosphereob.nlayers, 2))
-        outdata['inactive_mixratio_profile'] = np.zeros((len(self.atmosphereob.inactive_gases), self.atmosphereob.nlayers, 2))
+        instance_data['active_mixratio_profile'] = np.zeros((len(self.atmosphereob.active_gases), self.atmosphereob.nlayers, 2))
+        instance_data['inactive_mixratio_profile'] = np.zeros((len(self.atmosphereob.inactive_gases), self.atmosphereob.nlayers, 2))
         for i in range(len(self.atmosphereob.active_gases)):
-            outdata['active_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
-            outdata['active_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.active_mixratio_profile[i,:]
+            instance_data['active_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
+            instance_data['active_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.active_mixratio_profile[i,:]
         for i in range(len(self.atmosphereob.inactive_gases)):
-            outdata['inactive_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
-            outdata['inactive_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.inactive_mixratio_profile[i,:]
+            instance_data['inactive_mixratio_profile'][i,:,0] = self.fmob.atmosphere.pressure_profile
+            instance_data['inactive_mixratio_profile'][i,:,1] =  self.fmob.atmosphere.inactive_mixratio_profile[i,:]
 
 
         # store data
-        outdb['data'] = outdata
+        instance['data'] = instance_data
 
-        self.SPECTRUM_out = outdb
+        self.SPECTRUM_INSTANCE_out = instance
 
-        if save_db:
-            if not db_filename:
-                db_filename = os.path.join(self.params.out_path, 'SPECTRUM_out.db')
+        if save_instance:
+            if not instance_filename:
+                instance_filename = os.path.join(self.params.out_path, 'SPECTRUM_INSTANCE_out.pickle')
 
-            pickle.dump(outdb, open(db_filename, 'wb'), protocol=2)
+            pickle.dump(instance, open(instance_filename, 'wb'), protocol=2)
 
-        return outdb
+        return instance
 
-    def save_spectrum(self, sp_filename=None):
+    def save_spectrum(self, sp_filename=None, pickled=False):
 
-        if not hasattr(self, 'SPECTRUM_out'):
+        if not hasattr(self, 'SPECTRUM_INSTANCE_out'):
             self.generate_spectrum()
 
         if not sp_filename:
-            sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.dat')
+            if pickled:
+                sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.pickle')
+            else:
+                sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.dat')
 
-        np.savetxt(sp_filename, self.SPECTRUM_out['data']['spectrum'])
+        if pickled:
+            pickle.dump(self.SPECTRUM_INSTANCE_out['data']['spectrum'], open(self.SPECTRUM_INSTANCE_out['data']['spectrum'], 'wb'), protocol=2)
+        else:
+            np.savetxt(sp_filename, self.SPECTRUM_INSTANCE_out['data']['spectrum'])
 
 
 # gets called when running from command line
@@ -200,40 +206,74 @@ if __name__ == '__main__':
 
     parser.add_argument('-p',
                       dest='param_filename',
-                      default='Parfiles/default.par'
+                      default='Parfiles/default.par',
+                       help='Input parameter file'
                       )
-    parser.add_argument('--save_sp',
+    # parser.add_argument('--save_sp',       # spectrum is always saved!
+    #                   action='store_true',
+    #                   dest='save_sp',
+    #                   default=True)
+
+    parser.add_argument('--pickle_save_sp', # store spectrum in its pickled version (faster for highres spectra)
                       action='store_true',
-                      dest='save_sp',
-                      default=True)
-    parser.add_argument('--save_db',
-                      action='store_true',
-                      dest='save_db',
-                      default=False)
+                      dest='pickle_save_sp',
+                      default=False,
+                       help='Store the final output spectrum in Python pickle format. This is much faster for high resolution '
+                            'spectra than using ascii files. See also --sp_filename.')
+
     parser.add_argument('--sp_filename',
                       dest='sp_filename',
-                      default=False)
-    parser.add_argument('--db_filename',
-                      dest='db_filename',
-                      default=False)
+                      default=False,
+                      help='Specify a custom file path and filename for the output spectrum (note that the path is relative'
+                           'to the current working folder). Remember that if using --pickle_save_sp the ouput spectrum '
+                           'is stored in Python pickle format.')
+
+    parser.add_argument('--save_instance',
+                      action='store_true',
+                      dest='save_instance',
+                      default=False,
+                      help = 'Save a dictionary in .pickle format containing the full spectrum instance, including mixing ratio and ' \
+                             'temperature profiles used, and all the paramaters used to generate the spectrum.'
+                             'See also the options --opacity__contriv, --contrib_func. Default file path is in the'
+                             'Output folder specified in parameter file, and the default filename is '
+                             'SPECTRUM_INSTANCE_out.pickle. Otherwise see --instance_filename')
+
+    parser.add_argument('--instance_filename',
+                      dest='instance_filename',
+                      default=False,
+                      help = 'Specify a custom file path and filename for the output spectrum instance dictionary (stored'
+                             'in Python pickle format.')
+
     parser.add_argument('--plot',
                       dest='plot_spectrum',
                       action='store_true',
-                      default=False)
-    parser.add_argument('--opacity_contrib',
-                      dest='opacity_contrib',
+                      default=False,
+                      help='Display an instantanous plot after the spectrum is computed.')
+
+    parser.add_argument('--opacity_contrib',  # calculates the opacity contribution for each opacity source.
+                      dest='opacity_contrib', # stored in SPECTRUM_INSTANCE_out.pickle, so use '--save_instance' as well
                       action='store_true',
-                      default=False)
+                      default=False,
+                      help = 'Calculates the opacity contribution for each opacity source. It computes one spectrum for '
+                             'each opacity source, suppressing the contribution from all the other sources. Stored in the instance'
+                             'dictionary (see option --save_instance) under ["data"]["opacity_contrib"][<opacity_source>]')
+
+    # todo find a better name than contrib_func! ALSO NOT WORKING USING PARALLEL VERSION OF CPP CODE!
     parser.add_argument('--contrib_func',
                       dest='contrib_func',
                       action='store_true',
-                      default=False)
+                      default=False,
+                      help = 'In transmission: compute the transmittance as a function of pressure and'
+                             'wavelength, integrated over the path parallel to the line of sight.'
+                             'In emission compute the contribution function as a funciton of pressure and wavelength.'
+                             'The 2d array is stored in the instance dictionary (see option --save_instance), '
+                             'under ["data"]["contrib_func"]. Note that this does not work if you use --nthreads',)
 
-    parser.add_argument('--nthreads',  # run forward model in multithreaded mode (use threading for sigma array interp
-                      dest='nthreads', # and openmp parallel version of cpp code
-                      default=0)
-
-
+    parser.add_argument('--nthreads',  # run forward model in multithreaded mode (use Python multiprocesing for sigma array interpolation
+                       dest='nthreads', # and openmp parallel version of cpp code). You need to spcify the number of cores to use,
+                       default=0,
+                       help = 'Run forward model in multithreaded mode (using NTHREADS cores). NTHREADS should not '
+                              'be larger than the number of cores available.')
     # add command line interface to parameter file
 
     params_tmp = parameters(mpi=False, log=False)
@@ -275,16 +315,16 @@ if __name__ == '__main__':
 
     spectrumob = create_spectrum(params=params, nthreads=options.nthreads)
 
-    spectrumob.generate_spectrum(save_db=options.save_db,
-                                 db_filename=options.db_filename,
+    spectrumob.generate_spectrum(save_instance=options.save_instance,
+                                 instance_filename=options.instance_filename,
                                  opacity_contrib=options.opacity_contrib,
                                  contrib_func=options.contrib_func)
 
-    if options.save_sp:
-        spectrumob.save_spectrum(sp_filename=options.sp_filename)
+
+    spectrumob.save_spectrum(sp_filename=options.sp_filename, pickled=options.pickle_save_sp)
 
     if options.plot_spectrum:
-        sp = spectrumob.SPECTRUM_out['data']['spectrum']
+        sp = spectrumob.SPECTRUM_INSTANCE_out['data']['spectrum']
         plt.plot(sp[:,0], sp[:,1])
         plt.xscale('log')
         plt.show()
