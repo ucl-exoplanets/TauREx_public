@@ -27,6 +27,7 @@ class create_spectrum(object):
 
     def __init__(self, params=None, param_filename=None, nthreads=0):
 
+        logging.info('Initialise object create_spectrum')
 
         if params:
             self.params = params
@@ -190,6 +191,7 @@ class create_spectrum(object):
                 sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.pickle')
             else:
                 sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.dat')
+        logging.info('Store spectrum in %s ' % sp_filename)
 
         if pickled:
             pickle.dump(self.SPECTRUM_INSTANCE_out['data']['spectrum'], open(sp_filename, 'wb'), protocol=2)
@@ -319,10 +321,10 @@ if __name__ == '__main__':
                                  opacity_contrib=options.opacity_contrib,
                                  contrib_func=options.contrib_func)
 
-
     spectrumob.save_spectrum(sp_filename=options.sp_filename, pickled=options.pickle_save_sp)
 
     if options.plot_spectrum:
+        logging.info('Plot spectrum... Close the Plot window to terminate the script.')
         sp = spectrumob.SPECTRUM_INSTANCE_out['data']['spectrum']
         plt.plot(sp[:,0], sp[:,1])
         plt.xscale('log')
