@@ -193,7 +193,7 @@ class create_spectrum(object):
                 sp_filename = os.path.join(self.params.out_path , 'SPECTRUM_out.dat')
 
         if pickled:
-            pickle.dump(self.SPECTRUM_INSTANCE_out['data']['spectrum'], open(self.SPECTRUM_INSTANCE_out['data']['spectrum'], 'wb'), protocol=2)
+            pickle.dump(self.SPECTRUM_INSTANCE_out['data']['spectrum'], open(sp_filename, 'wb'), protocol=2)
         else:
             np.savetxt(sp_filename, self.SPECTRUM_INSTANCE_out['data']['spectrum'])
 
