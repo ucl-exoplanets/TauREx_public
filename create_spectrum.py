@@ -295,7 +295,7 @@ if __name__ == '__main__':
     options = parser.parse_args()
 
     # Initialise parameters instance
-    params = parameters(options.param_filename)
+    params = parameters(options.param_filename, mpi=False)
 
     # Override params object from command line input
     for param in params_dict:
