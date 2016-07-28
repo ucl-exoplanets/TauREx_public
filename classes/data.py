@@ -11,10 +11,12 @@
 import numpy
 import os
 import glob
+
 try:
     import cPickle as pickle
 except:
     import pickle
+
 import logging
 import numpy as np
 
@@ -221,7 +223,7 @@ class data(object):
                 self.ven_molprof_mixratios = table[:,2:] # mixing ratios referring to self.ven_molecules
                 self.ven_molprof_altitude_int = interp1d(self.ven_molprof_pressure, self.ven_molprof_altitude)
                 self.ven_molprof_mixratios_int = [interp1d(self.ven_molprof_pressure, self.ven_molprof_mixratios[:,i])
-                                                  for i in xrange(np.shape(self.ven_molprof_mixratios)[1])]
+                                                  for i in range(np.shape(self.ven_molprof_mixratios)[1])]
                 logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' %
                              (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
 

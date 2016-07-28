@@ -64,7 +64,7 @@ def fast_nearest_interp(xi, x, y):
 def binspectrum(spectrum_in, resolution):
     wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))
     spec_bin_grid, spec_bin_grid_idx = get_specbingrid(wavegrid, spectrum_in[:,0])
-    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in xrange(1,len(spec_bin_grid))]
+    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in range(1,len(spec_bin_grid))]
     return transpose(vstack((wavegrid, spectrum_binned)))
 
 def get_specgrid( R=5000, lambda_min=0.1, lambda_max=20.0):
@@ -268,20 +268,20 @@ if options.binning_method == 'const_res':
                 # geometric average (i.e. log-average)
                 sigma_rev = sigma[::-1] # reverse array
                 logval = np.log(sigma_rev)
-                values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(wavegrid)+1)])
+                values = np.asarray([np.average(logval[bingrid_idx == i]) for i in range(1,len(wavegrid)+1)])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
             elif options.sampling_method == 'algebraic_average':
                 # algebraic average
                 sigma_rev = sigma[::-1] # reverse array
-                values = np.asarray([np.average(sigma_rev[bingrid_idx == i]) for i in xrange(1,len(wavegrid)+1)])
+                values = np.asarray([np.average(sigma_rev[bingrid_idx == i]) for i in range(1,len(wavegrid)+1)])
                 values[np.isnan(values)] = 0
             elif options.sampling_method == 'random_sample':
                 sigma_rev = sigma[::-1] # reverse array
-                values = np.asarray([np.random.choice(sigma_rev[bingrid_idx == i], 1)[0] for i in xrange(1,len(wavegrid)+1)])
+                values = np.asarray([np.random.choice(sigma_rev[bingrid_idx == i], 1)[0] for i in range(1,len(wavegrid)+1)])
             elif options.sampling_method == 'first_sample':
                 sigma_rev = sigma[::-1] # reverse array
-                values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in xrange(1,len(wavegrid)+1)])
+                values = np.asarray([sigma_rev[bingrid_idx == i][0] for i in range(1,len(wavegrid)+1)])
             elif options.sampling_method == 'interp_sample':
                 sigma_rev = sigma[::-1] # reverse array
                 values = np.interp(wavegrid, 10000./full_wngrid[::-1], sigma_rev)
@@ -324,17 +324,17 @@ elif options.binning_method == 'const_wn':
             if options.sampling_method == 'geometric_average':
                 # geometric average (i.e. log-average)
                 logval = np.log(sigma)
-                values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid+1))])
+                values = np.asarray([np.average(logval[bingrid_idx == i]) for i in range(1,len(bin_wngrid+1))])
                 values = np.exp(values)
                 values[np.isnan(values)] = 0
             elif options.sampling_method == 'algebraic_average':
                 # algebraic average
-                values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid+1))])
+                values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in range(1,len(bin_wngrid+1))])
                 values[np.isnan(values)] = 0
             elif options.sampling_method == 'random_sample':
-                values = np.asarray([np.random.choice(sigma[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
+                values = np.asarray([np.random.choice(sigma[bingrid_idx == i], 1)[0] for i in range(1,len(bin_wngrid)+1)])
             elif options.sampling_method == 'first_sample':
-                values = np.asarray([sigma[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
+                values = np.asarray([sigma[bingrid_idx == i][0] for i in range(1,len(bin_wngrid)+1)])
             elif options.sampling_method == 'interp_sample':
                 values = np.interp(bin_wngrid, full_wngrid, sigma)
             elif options.sampling_method == 'interp_nearest_sample':

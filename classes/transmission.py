@@ -16,7 +16,10 @@ from library_constants import *
 from library_general import *
 import logging
 
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 import matplotlib.pylab as plt
 

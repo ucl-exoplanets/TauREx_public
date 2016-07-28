@@ -177,12 +177,12 @@ for pressure_idx, pressure_val in enumerate(pressures):
                     if options.binning_method == 'geometric_average':
                         # geometric average (i.e. log-average)
                         logval = np.log(sigma_in)
-                        values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
+                        values = np.asarray([np.average(logval[bingrid_idx == i]) for i in range(0,len(bin_wngrid))])
                         values = np.exp(values)
                         values[np.isnan(values)] = 0
                     elif options.binning_method == 'algebraic_average':
                         # algebraic average
-                        values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in xrange(0,len(bin_wngrid))])
+                        values = np.asarray([np.average(sigma[bingrid_idx == i]) for i in range(0,len(bin_wngrid))])
                         values[np.isnan(values)] = 0
                 else:
                     values = sigma_in

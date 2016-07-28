@@ -22,6 +22,14 @@ import matplotlib.pylab as plt
 from library_constants import *
 from library_general import *
 
+try:
+    import library_cythonised_functions as cy_fun
+    cythonised = True
+except ImportError:
+    cythonised = False
+
+cythonised = False
+
 class atmosphere(object):
 
     def __init__(self, data, params=None, tp_profile_type=None, covariance=None, nthreads=0):
@@ -102,7 +110,7 @@ class atmosphere(object):
 
             # set mixing ratios profiles of active gases
             self.active_mixratio_profile = np.zeros((len(self.active_gases), self.nlayers))
-            for i in xrange(len(self.active_gases)):
+            for i in range(len(self.active_gases)):
                 self.active_mixratio_profile[i, :] = self.params.atm_active_gases_mixratios[i]
 
             # calculate mix ratio of inactive gases. Note that values specified in the param file
@@ -113,7 +121,7 @@ class atmosphere(object):
                 exit()
             self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
             mixratio_remainder = 1. - np.sum(self.active_mixratio_profile[:,0], axis=0)
-            for i in xrange(len(self.inactive_gases)):
+            for i in range(len(self.inactive_gases)):
                 self.inactive_mixratio_profile[i, :] = mixratio_remainder*self.params.atm_inactive_gases_mixratios[i]
 
             self.temperature_profile  = self.get_temperature_profile()
@@ -243,7 +251,7 @@ class atmosphere(object):
 
             # get mu for each layer
             mu = np.zeros(self.nlayers)
-            for i in xrange(self.nlayers):
+            for i in range(self.nlayers):
                 for idx, gasname in enumerate(self.active_gases):
                     mu[i] += self.active_mixratio_profile[idx, i] * get_molecular_weight(gasname)
                 for idx, gasname in enumerate(self.inactive_gases):
@@ -315,7 +323,7 @@ class atmosphere(object):
         g[0] = (G * self.planet_mass) / (self.planet_radius**2) # surface gravity (0th layer)
         H[0] = (KBOLTZ*self.temperature_profile[0])/(self.planet_mu[0]*g[0]) # scaleheight at the surface (0th layer)
 
-        for i in xrange(1, self.nlayers):
+        for i in range(1, self.nlayers):
             deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile_levels[i]/self.pressure_profile_levels[i-1])
             z[i] = z[i-1] + deltaz # altitude at the i-th layer
             
@@ -359,6 +367,8 @@ class atmosphere(object):
         for mol_idx, mol_val in enumerate(self.active_gases):
 
             sigma_in = self.data.sigma_dict['xsecarr'][mol_val]
+            sigma_in_cut = sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]
+
 
             if  self.nthreads <= 1:
 
@@ -369,8 +379,7 @@ class atmosphere(object):
                         for wno_idx, wno_val in enumerate(self.int_wngrid):
                             sigma_array[mol_idx, pressure_idx, temperature_idx, wno_idx] = \
                                 np.interp(pressure_val, self.data.sigma_dict['p'],
-                                          sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]\
-                                              [:,temperature_idx,wno_idx])
+                                          sigma_in_cut[:,temperature_idx,wno_idx])
 
 
             else:
@@ -413,7 +422,7 @@ class atmosphere(object):
                                                          pressure_profile_bar,
                                                          self.nactivegases,
                                                          self.data.sigma_dict,
-                                                         sigma_in,
+                                                         sigma_in_cut,
                                                          self.active_gases,
                                                          self.int_wngrid,
                                                          self.int_nwngrid,
@@ -682,13 +691,13 @@ class atmosphere(object):
         T_init = TP_params
 
 #         covmatrix = np.zeros((self.nlayers,self.nlayers))
-#         for i in xrange(self.nlayers):
+#         for i in range(self.nlayers):
 #                 covmatrix[i,:] = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
 
         if covmatrix is None: #if covariance not provided, generate
             if self.TP_setup: #run only once and save
                 self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
-                for i in xrange(self.nlayers):
+                for i in range(self.nlayers):
                     self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
         else:
             self.rodgers_covmat = covmatrix
@@ -696,7 +705,7 @@ class atmosphere(object):
         T = np.zeros((self.nlayers)) #temperature array
 
         #correlating temperature grid with covariance matrix
-        for i in xrange(self.nlayers):
+        for i in range(self.nlayers):
 #             covmat  = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
             weights = self.rodgers_covmat[i,:] / np.sum(self.rodgers_covmat[i,:])
             T[i]    = np.sum(weights*T_init)
@@ -709,7 +718,7 @@ class atmosphere(object):
         #sets list of ascii parameter names. This is used in output module to compile parameters.dat
         if self.TP_setup:
             self.TP_params_ascii = []
-            for i in xrange(self.nlayers):
+            for i in range(self.nlayers):
                 self.TP_params_ascii.append('T_{0}'.format(str(i)))
         return T
 
@@ -746,14 +755,14 @@ class atmosphere(object):
 
         if self.TP_setup: #run only once and save
             self.rodgers_covmat = np.zeros((self.nlayers,self.nlayers))
-            for i in xrange(self.nlayers):
+            for i in range(self.nlayers):
                 self.rodgers_covmat[i,:] = np.exp(-1.0* np.abs(np.log(self.pressure_profile[i]/self.pressure_profile[:]))/h)
 
         T[:] = 0.0 #temperature array
         cov_hybrid = (1.0-alpha) * self.rodgers_covmat + alpha * covmatrix
 
         #correlating temperature grid with covariance matrix
-        for i in xrange(self.nlayers):
+        for i in range(self.nlayers):
             weights = cov_hybrid[i,:] / np.sum(cov_hybrid[i,:])
             T[i]    = np.sum(weights*T_interp)
 
@@ -898,7 +907,7 @@ class MultiThread_get_sigma_array(Process):
                  pressure_profile_bar,
                  nactivegases,
                  sigma_dict,
-                 sigma_in,
+                 sigma_in_cut,
                  active_gases,
                  int_wngrid,
                  int_nwngrid,
@@ -912,7 +921,7 @@ class MultiThread_get_sigma_array(Process):
         self.pressure_profile_bar = pressure_profile_bar
         self.nactivegases = nactivegases
         self.sigma_dict = sigma_dict
-        self.sigma_in = sigma_in
+        self.sigma_in_cut = sigma_in_cut
         self.active_gases = active_gases
         self.int_wngrid = int_wngrid
         self.int_nwngrid = int_nwngrid
@@ -921,16 +930,26 @@ class MultiThread_get_sigma_array(Process):
         return
 
     def run(self):
+
         pressure_val = self.pressure_profile_bar[self.pressure_idx]
 
-        sigma_array_partial = np.zeros((len(self.sigma_dict['t']), self.int_nwngrid))
+        if cythonised:
+            sigma_array_partial = cy_fun.get_sigma_array_interp(self.sigma_dict['t'],
+                                                                self.sigma_dict['p'],
+                                                                pressure_val,
+                                                                self.sigma_in_cut,
+                                                                self.int_wngrid,
+                                                                self.int_wngrid_idxmin,
+                                                                self.int_wngrid_idxmax)
+        else:
 
-        for temperature_idx, temperature_val in enumerate(self.sigma_dict['t']):
-            for wno_idx, wno_val in enumerate(self.int_wngrid):
-                sigma_array_partial[temperature_idx, wno_idx] = \
-                    np.interp(pressure_val, self.sigma_dict['p'],
-                              self.sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]\
-                                  [:,temperature_idx,wno_idx])
+            sigma_array_partial = np.zeros((len(self.sigma_dict['t']), self.int_nwngrid))
+
+            for temperature_idx, temperature_val in enumerate(self.sigma_dict['t']):
+                for wno_idx, wno_val in enumerate(self.int_wngrid):
+                    sigma_array_partial[temperature_idx, wno_idx] = \
+                        np.interp(pressure_val, self.sigma_dict['p'], self.sigma_in_cut[:,temperature_idx,wno_idx])
 
         self.queue.put(sigma_array_partial)
+
         return

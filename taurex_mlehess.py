@@ -28,8 +28,16 @@
 import sys, os, optparse, time, scipy
 import numpy as np #nummerical array library 
 import pylab as pl#science and plotting library for python
-from ConfigParser import SafeConfigParser
-import cPickle as pkl
+try:
+    from ConfigParser import SafeConfigParser # python 2
+except:
+    from configparser import SafeConfigParser # python 3
+
+try:
+    import cPickle as pkl
+except:
+    import pickle
+
 import numdifftools as nd
 from mpltools import special
 from mpl_toolkits.mplot3d import axes3d

@@ -140,17 +140,17 @@ def worker(idx):
         if options.binning_method == 'geometric_average':
             # geometric average (i.e. log-average)
             logval = np.log(sigma_in)
-            values = np.asarray([np.average(logval[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid)+1)])
+            values = np.asarray([np.average(logval[bingrid_idx == i]) for i in range(1,len(bin_wngrid)+1)])
             values = np.exp(values)
             values[np.isnan(values)] = 0
         elif options.binning_method == 'algebraic_average':
             # algebraic average
-            values = np.asarray([np.average(sigma_in[bingrid_idx == i]) for i in xrange(1,len(bin_wngrid)+1)])
+            values = np.asarray([np.average(sigma_in[bingrid_idx == i]) for i in range(1,len(bin_wngrid)+1)])
             values[np.isnan(values)] = 0
         elif options.binning_method == 'random_sample':
-            values = np.asarray([np.random.choice(sigma_in[bingrid_idx == i], 1)[0] for i in xrange(1,len(bin_wngrid)+1)])
+            values = np.asarray([np.random.choice(sigma_in[bingrid_idx == i], 1)[0] for i in range(1,len(bin_wngrid)+1)])
         elif options.binning_method == 'first_sample':
-            values = np.asarray([sigma_in[bingrid_idx == i][0] for i in xrange(1,len(bin_wngrid)+1)])
+            values = np.asarray([sigma_in[bingrid_idx == i][0] for i in range(1,len(bin_wngrid)+1)])
         elif options.binning_method == 'interp_sample':
             values = np.interp(bin_wngrid, loadf[:,0], sigma_in)
         elif options.binning_method == 'interp_nearest_sample':

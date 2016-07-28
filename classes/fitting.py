@@ -241,7 +241,7 @@ class fitting(object):
 
                 self.fit_TP_nparams = self.forwardmodel.atmosphere.nlayers
 
-                for i in xrange(self.forwardmodel.atmosphere.nlayers):
+                for i in range(self.forwardmodel.atmosphere.nlayers):
                     self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                     self.fit_params.append(T_mean)
                     self.fit_params_names.append('T_%i' %1)
@@ -256,7 +256,7 @@ class fitting(object):
                 self.fit_bounds.append((self.params.fit_hybrid_alpha_l,self.params.fit_hybrid_alpha_h)) #alpha parameter
                 self.fit_params.append(np.mean((self.params.fit_hybrid_alpha_l,self.params.fit_hybrid_alpha_h)))
 
-                for i in xrange(len(self.forwardmodel.atmosphere.P_index)):
+                for i in range(len(self.forwardmodel.atmosphere.P_index)):
                     self.fit_params_names.append('T_%i' % i)
                     self.fit_params_texlabels.append('$T_{%i}$' % i)
                     self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
@@ -455,7 +455,7 @@ class fitting(object):
                         count += 1
 
                     mixratio_remainder = 1. - np.sum(self.forwardmodel.atmosphere.active_mixratio_profile[:,0], axis=0)
-                    for i in xrange(len(self.forwardmodel.atmosphere.inactive_gases)):
+                    for i in range(len(self.forwardmodel.atmosphere.inactive_gases)):
                         self.forwardmodel.atmosphere.inactive_mixratio_profile[i, :] = mixratio_remainder*self.params.atm_inactive_gases_mixratios[i]
 
                 if self.params.fit_fit_inactive:
@@ -569,7 +569,7 @@ class fitting(object):
         if cythonised:
             model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
         else:
-            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in xrange(1, self.data.intsp_nbingrid+1)]
+            model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in range(1, self.data.intsp_nbingrid+1)]
 
         # get chi2
         res = ((data - model_binned) / datastd)
@@ -765,7 +765,7 @@ class fitting(object):
 
         def multinest_loglike(cube, ndim, nparams):
             # log-likelihood function called by multinest
-            fit_params_container = asarray([cube[i] for i in xrange(len(self.fit_params))])
+            fit_params_container = asarray([cube[i] for i in range(len(self.fit_params))])
             chi_t = self.chisq_trans(fit_params_container, data, datastd)
             loglike = (-1.)*np.sum(np.log(datastd*np.sqrt(2*np.pi))) - 0.5 * chi_t
             return loglike
@@ -773,7 +773,7 @@ class fitting(object):
         def multinest_uniform_prior(cube, ndim, nparams):
             # prior distributions called by multinest. Implements a uniform prior
             # converting parameters from normalised grid to uniform prior
-            for i in xrange(len(self.fit_params)):
+            for i in range(len(self.fit_params)):
                 cube[i] = (cube[i] * (self.fit_bounds[i][1]-self.fit_bounds[i][0])) + self.fit_bounds[i][0]
 
         data = self.data.obs_spectrum[:,1] # observed data

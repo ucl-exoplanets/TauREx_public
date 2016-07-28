@@ -42,11 +42,11 @@ class license_manager(object):
     
     def print_error(self):
         #print error message
-        print 'Error: Invalid or expired license file.'
-        print 'To obtain a new license please contact'
-        print 'Ingo Waldmann (ingo@star.ucl.ac.uk)'
-        print '--------'
-        print 'Good bye'
+        print('Error: Invalid or expired license file.')
+        print('To obtain a new license please contact')
+        print('Ingo Waldmann (ingo@star.ucl.ac.uk)')
+        print('--------')
+        print('Good bye')
 
     
     def verify(self):
@@ -70,7 +70,7 @@ class license_manager(object):
                     validtime = True 
                     diff = (license_date - self.current_time).days
                     if int(diff) < 10:
-                        print 'Warning: License expires in '+str(diff)+' day(s)'
+                        print('Warning: License expires in '+str(diff)+' day(s)')
                 else:
                     validtime = False        
             else:
@@ -116,7 +116,7 @@ class license_manager(object):
             with open(PATH+'license.dat','r') as infile:
                 content = infile.readlines()
         except IOError:
-            print 'Error: No license.dat file found in base directory.'
+            print('Error: No license.dat file found in base directory.')
             exit()
             
         #decoding
@@ -129,7 +129,7 @@ class license_manager(object):
         
         #derandomising        
         random.seed(self.seed)
-        randomidx = random.sample(xrange(len(decoded)),len(decoded))
+        randomidx = random.sample(range(len(decoded)),len(decoded))
         derandomidx = np.argsort(randomidx)
         de_rand = [decoded[i] for i in derandomidx]
         de_randstr = ''.join(de_rand)
@@ -152,7 +152,7 @@ class license_manager(object):
         #if FULLACCESS = False, either User or Date requirement needed
         if FULLACCESS is False:
             if (USER is False) and (DATE is False): 
-                print 'Error: Either User or Date requirement needed if FULLACCESS = False' 
+                print('Error: Either User or Date requirement needed if FULLACCESS = False')
                 exit()
                 
         
@@ -184,7 +184,7 @@ class license_manager(object):
         #parsing dictionary into string 
         dicdump = json.dumps(taurex_license)
         random.seed(self.seed)
-        randomidx = random.sample(xrange(len(dicdump)),len(dicdump))
+        randomidx = random.sample(range(len(dicdump)),len(dicdump))
     
         dicrand = [dicdump[i] for i in randomidx]
         dicrandstr = ''.join(dicrand)

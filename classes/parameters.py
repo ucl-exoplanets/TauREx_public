@@ -6,8 +6,10 @@
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
 '''
-
-from ConfigParser import SafeConfigParser
+try:
+    from ConfigParser import SafeConfigParser # python 2
+except:
+    from configparser import SafeConfigParser # python 3
 import numpy as np
 import logging
 import os
@@ -48,7 +50,10 @@ class parameters(object):
         #config file parser
         if parfile:
             self.parser = SafeConfigParser()
-            self.parser.readfp(open(parfile, 'rb'))
+            try:
+                self.parser.readfp(open(parfile, 'rb')) # python 2
+            except:
+                self.parser.read_file(open(parfile, 'rb')) # python 3
 
         self.parfile = parfile
         self.default_parser = SafeConfigParser()
@@ -270,7 +275,7 @@ class parameters(object):
             elif type == 'float':
                 try:
                     return self.parser.getfloat(sec, par)
-                except Exception,e:
+                except:
                     return self.default_parser.getfloat(sec, par)
 
             elif type == 'bool':
@@ -318,7 +323,7 @@ class parameters(object):
         for name in dir(self):
             value = getattr(self, name)
             if not name.startswith('__') and not inspect.ismethod(value) and \
-                            name <> 'parser' and name <> 'default_parser' and name <> 'console':
+                            name != 'parser' and name != 'default_parser' and name != 'console':
                 pr[name] = value
         return pr
 

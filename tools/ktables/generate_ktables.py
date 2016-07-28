@@ -8,9 +8,15 @@
 '''
 
 import numpy as np
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import os
-from ConfigParser import SafeConfigParser
+try:
+    from ConfigParser import SafeConfigParser # python 2
+except:
+    from configparser import SafeConfigParser # python 3
 import argparse
 import time
 import glob

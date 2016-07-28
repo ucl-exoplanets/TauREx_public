@@ -190,8 +190,6 @@ extern "C" {
                             tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
                         }
                     }
-
-
     			}
     			// get dtau
                 for (int l=0;l<nactive;l++) { // active gases

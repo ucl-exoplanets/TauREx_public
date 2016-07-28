@@ -113,7 +113,7 @@ def round_base(x, base=.05):
 def binspectrum(spectrum_in, resolution):
     wavegrid, dlamb_grid = get_specgrid(R=resolution,lambda_min=np.min(spectrum_in[:,0]),lambda_max=np.max(spectrum_in[:,0]))
     spec_bin_grid, spec_bin_grid_idx = get_specbingrid(wavegrid, spectrum_in[:,0])
-    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in xrange(1,len(spectrum_in[:,0]))]
+    spectrum_binned = [spectrum_in[:,1][spec_bin_grid_idx == i].mean() for i in range(1,len(spectrum_in[:,0]))]
     return transpose(vstack((spec_bin_grid[:-1], spectrum_binned)))
 
 def get_specgrid( R=5000, lambda_min=0.1, lambda_max=20.0):
@@ -237,7 +237,7 @@ def chi2_sigma(dof):
     dof = 24
     chi_squared = [ scipy.stats.chi2.ppf( ci, dof) for ci in conf_int ]
     for sigma_idx, sigma_val in enumerate(sigma):
-        print 'sigma = %.1f, chi2 = %.1f' % (sigma_val, chi_squared[sigma_idx])
+        print('sigma = %.1f, chi2 = %.1f' % (sigma_val, chi_squared[sigma_idx]))
 
 def quantile_corner(x, q, weights=None):
     """
@@ -271,3 +271,4 @@ def fast_nearest_interp(xi, x, y):
     # Append the last point in y twice for ease of use
     y = np.hstack([y, y[-1]])
     return y[np.searchsorted(x, xi)]
+

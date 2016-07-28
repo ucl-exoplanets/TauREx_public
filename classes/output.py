@@ -326,7 +326,7 @@ class output(object):
 
         #append fitted spectrum to observed spectrum array
         solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
-                                                   for i in xrange(1, nbingrid+1)])
+                                                   for i in range(1, nbingrid+1)])
 
         solution['fit_spectrum_xsecres'] = np.zeros((nwavegrid, 3))
         solution['fit_spectrum_xsecres'][:,0] = wavegrid
@@ -338,7 +338,7 @@ class output(object):
             sigmasp = self.get_one_sigma_spectrum(solution)
             solution['fit_spectrum_xsecres'][:,2] = sigmasp
             solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
-                                                        for i in xrange(1, nbingrid+1)])
+                                                        for i in range(1, nbingrid+1)])
 
         # calculate contribution function
         contrib_func = self.fitting.forwardmodel.model(return_tau=True)
@@ -457,7 +457,7 @@ class output(object):
 
         models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
         weights = np.zeros((nspectra))
-        for i in xrange(nspectra):
+        for i in range(nspectra):
             rand_idx = random.randint(0, np.shape(solution['tracedata'])[0])
             fit_params_iter = solution['tracedata'][rand_idx]
             weights[i] = solution['weights'][i]
@@ -469,7 +469,7 @@ class output(object):
         weights = np.asarray(weights[1:])
 
         std_spectrum = np.zeros((self.data.int_nwngrid_full))
-        for i in xrange(self.data.int_nwngrid_full):
+        for i in range(self.data.int_nwngrid_full):
             std_spectrum[i] =  weighted_avg_and_std(models[:,i], weights=weights, axis=0)[1]
 
         # update atmospheric parameters to best solution
@@ -499,7 +499,7 @@ class output(object):
             std_tpprofiles = np.zeros((self.atmosphere.nlayers))
         std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
         std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
-        for i in xrange(self.atmosphere.nlayers):
+        for i in range(self.atmosphere.nlayers):
             std_tpprofiles[i] = weighted_avg_and_std(tpprofiles[:,i], weights=sol_weights, axis=0)[1]
             for j in range(self.atmosphere.nactivegases):
                 std_molprofiles_active[j,i] = weighted_avg_and_std(molprofiles_active[:,j,i], weights=sol_weights, axis=0)[1]

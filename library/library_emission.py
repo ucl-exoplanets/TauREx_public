@@ -67,7 +67,7 @@ def iterate_TP_profile(TP_params, TP_params_std, TP_bounds, TP_function,iterate=
     bounds = [] #list of lower and upper parameter bounds
     lowpar = []
     highpar= []
-    for i in xrange(len(TP_params)):
+    for i in range(len(TP_params)):
         low = TP_params[i]-TP_params_std[i]
         high = TP_params[i]+TP_params_std[i]
         lowpar.append(low)
