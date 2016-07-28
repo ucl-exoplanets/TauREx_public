@@ -214,7 +214,7 @@ if __name__ == '__main__':
     #                   dest='save_sp',
     #                   default=True)
 
-    parser.add_argument('--pickle_save_sp', # store spectrum in its pickled version (faster for highres spectra)
+    parser.add_argument('--pickle', # store spectrum in its pickled version (faster for highres spectra)
                       action='store_true',
                       dest='pickle_save_sp',
                       default=False,
