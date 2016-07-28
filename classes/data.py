@@ -506,7 +506,7 @@ class data(object):
             cia_path = os.path.join(self.params.in_cia_path, '%s.db' % pair_val.upper())
 
             try:
-                sigma_tmp = pickle.load(open(cia_path, 'wb'), encoding='latin1') # python 3
+                sigma_tmp = pickle.load(open(cia_path, 'rb'), encoding='latin1') # python 3
             except:
                 sigma_tmp = pickle.load(open(cia_path)) # python 2
 

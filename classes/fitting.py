@@ -760,7 +760,7 @@ class fitting(object):
                         try:
                             if os.path.isfile(file_path):
                                 os.unlink(file_path)
-                        except Exception, e:
+                        except:
                             logging.error('Cannot remove files in %s' % self.dir_multinest)
 
         def multinest_loglike(cube, ndim, nparams):

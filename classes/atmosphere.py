@@ -389,7 +389,7 @@ class atmosphere(object):
 
                 logging.info('Running inteprolation with  %i threads' % self.nthreads)
 
-                nruns = self.nlayers/self.nthreads
+                nruns = int(self.nlayers/self.nthreads)
                 remainder = self.nlayers % self.nthreads
 
                 for round_idx in range(nruns+1):
