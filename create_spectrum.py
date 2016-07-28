@@ -20,7 +20,6 @@ sys.path.append('./library')
 from parameters import *
 from transmission import *
 from emission import *
-from output import *
 from atmosphere import *
 from data import *
 
