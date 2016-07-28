@@ -24,24 +24,17 @@ from output import *
 from atmosphere import *
 from data import *
 
-try:
-    from mpi4py import MPI
-    MPIrank = MPI.COMM_WORLD.Get_rank()
-except:
-    MPIrank = 0
-    pass
-
 class create_spectrum(object):
 
     def __init__(self, params=None, param_filename=None, nthreads=0):
 
+
         if params:
             self.params = params
         elif hasattr(options, 'param_filename'):
-            self.params = parameters(options.param_filename)
+            self.params = parameters(options.param_filename, mpi=False)
         elif param_filename:
-            self.params = parameters(param_filename)
-
+            self.params = parameters(param_filename, mpi=False)
 
         # Initialise taurex instances up to forward model
         self.params.gen_manual_waverange = True
@@ -243,7 +236,7 @@ if __name__ == '__main__':
 
     # add command line interface to parameter file
 
-    params_tmp = parameters()
+    params_tmp = parameters(mpi=False, log=False)
     params_dict = params_tmp.params_to_dict() # get all param names
     for param in params_dict:
         if type(params_dict[param]) == list:

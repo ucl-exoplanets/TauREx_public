@@ -6,7 +6,7 @@
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_parallel_xsec.cpp
+    Compile with:   g++ -fPIC -shared -fopenmp -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_parallel_xsec.cpp
 
  */
 

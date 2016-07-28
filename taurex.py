@@ -101,7 +101,7 @@ parser.add_argument('--plot_out_folder',
 
 # add command line interface to parameter file
 
-params_tmp = parameters()
+params_tmp = parameters(log=False)
 params_dict = params_tmp.params_to_dict() # get all param names
 for param in params_dict:
     if type(params_dict[param]) == list:

@@ -29,12 +29,6 @@ from license import *
 
 import matplotlib.pylab as plt
 
-try:
-    from mpi4py import MPI
-    MPIrank = MPI.COMM_WORLD.Get_rank()
-except:
-    MPIrank = 0
-    pass
 
 class data(object):
 

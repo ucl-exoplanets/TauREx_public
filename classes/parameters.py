@@ -14,30 +14,36 @@ import os
 import inspect
 import subprocess
 
-try:
-    from mpi4py import MPI
-    MPIimport = True
-except ImportError:
-    MPIimport = False
-    pass
-# MPI support
-if MPIimport:
-    MPIrank     = MPI.COMM_WORLD.Get_rank()
-    MPIsize     = MPI.COMM_WORLD.Get_size()
-else:
-    MPIrank     = 0
-    MPIsize     = 0
 
 from library_constants import *
 
 class parameters(object):
 
-    def __init__(self, parfile='Parfiles/default.par'):
+    def __init__(self, parfile='Parfiles/default.par', mpi=True, log=True): # todo might switch mpi=False as default??
         '''
 
         a parameter file is parsed and initial parameter values are set.
         to add a new parameter edit this file and the input .par file.
         '''
+
+        if mpi == False:
+            MPIimport = False
+            MPIrank     = 0
+            MPIsize     = 0
+        else:
+            try:
+                from mpi4py import MPI
+                MPIimport = True
+            except ImportError:
+                MPIimport = False
+                pass
+            # MPI support
+            if MPIimport:
+                MPIrank     = MPI.COMM_WORLD.Get_rank()
+                MPIsize     = MPI.COMM_WORLD.Get_size()
+            else:
+                MPIrank     = 0
+                MPIsize     = 0
 
         #config file parser
         if parfile:
@@ -64,18 +70,24 @@ class parameters(object):
 
                 # define a Handler which writes INFO messages or higher to the sys.stderr
                 self.console = logging.StreamHandler()
-                self.console.setLevel(logging.DEBUG)
-                formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
+                if MPIsize > 1:
+                    formatter = logging.Formatter('%(asctime)s - Thread ' + str(MPIrank) + ' - %(levelname)s - %(message)s')
+                else:
+                    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
                 self.console.setFormatter(formatter)
                 logging.getLogger().addHandler(self.console)
                 logging.info('Log started. Verbose for all threads: %s' % self.verbose_all_threads)
 
+        if not log:
+            logging.getLogger().disabled = True
+        else:
+            logging.getLogger().disabled = False
+
         try:
-            self.version = subprocess.check_output(["git", "describe"])
-            logging.info('Running TauREx %s' % self.version)
+            self.version = subprocess.check_output(["git", "describe"])[:-1]
+            logging.info('Running TauREx from git respository (%s)' % self.version)
         except:
             pass
-        
 
         logging.info('Initialise parameters object')
 
