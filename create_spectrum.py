@@ -33,8 +33,7 @@ except:
 
 class create_spectrum(object):
 
-    def __init__(self, params=None, param_filename=None):
-
+    def __init__(self, params=None, param_filename=None, nthreads=0):
 
         if params:
             self.params = params
@@ -43,6 +42,7 @@ class create_spectrum(object):
         elif param_filename:
             self.params = parameters(param_filename)
 
+
         # Initialise taurex instances up to forward model
         self.params.gen_manual_waverange = True
         self.params.nest_run = False
@@ -50,7 +50,7 @@ class create_spectrum(object):
         self.params.downhill_run = False
 
         self.dataob = data(self.params)
-        self.atmosphereob = atmosphere(self.dataob)
+        self.atmosphereob = atmosphere(self.dataob, nthreads=nthreads)
         if self.params.gen_type == 'transmission':
             self.fmob = transmission(self.atmosphereob)
         elif self.params.gen_type == 'emission':
@@ -236,7 +236,9 @@ if __name__ == '__main__':
                       action='store_true',
                       default=False)
 
-
+    parser.add_argument('--nthreads',  # run forward model in multithreaded mode (use threading for sigma array interp
+                      dest='nthreads', # and openmp parallel version of cpp code
+                      default=0)
 
 
     # add command line interface to parameter file
@@ -278,7 +280,7 @@ if __name__ == '__main__':
                 value *= AMU
             setattr(params, param, value)
 
-    spectrumob = create_spectrum(params=params)
+    spectrumob = create_spectrum(params=params, nthreads=options.nthreads)
 
     spectrumob.generate_spectrum(save_db=options.save_db,
                                  db_filename=options.db_filename,

@@ -14,6 +14,9 @@ import logging
 import sys
 import ctypes as C
 
+from multiprocessing import Process, Queue
+import time
+
 import matplotlib.pylab as plt
 
 from library_constants import *
@@ -21,7 +24,7 @@ from library_general import *
 
 class atmosphere(object):
 
-    def __init__(self, data, params=None, tp_profile_type=None, covariance=None):
+    def __init__(self, data, params=None, tp_profile_type=None, covariance=None, nthreads=0):
 
         logging.info('Initialising atmosphere object')
 
@@ -30,6 +33,8 @@ class atmosphere(object):
             self.params = params
         else:
             self.params = data.params
+
+        self.nthreads = int(nthreads)
 
         self.data = data
         self.fit_transmission = self.params.fit_transmission
@@ -346,18 +351,87 @@ class atmosphere(object):
         logging.info('Interpolate sigma array to pressure profile')
 
         pressure_profile_bar = self.pressure_profile/1e5
+
+
         sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']),
                                 self.int_nwngrid))
+
         for mol_idx, mol_val in enumerate(self.active_gases):
+
             sigma_in = self.data.sigma_dict['xsecarr'][mol_val]
-            for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
-                for temperature_idx, temperature_val in enumerate(self.data.sigma_dict['t']):
-                    for wno_idx, wno_val in enumerate(self.int_wngrid):
-                        sigma_array[mol_idx, pressure_idx, temperature_idx, wno_idx] = \
-                            np.interp(pressure_val, self.data.sigma_dict['p'],
-                                      sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]\
-                                          [:,temperature_idx,wno_idx])
+
+            if  self.nthreads <= 1:
+
+                # run interpolation on the current thread
+
+                for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
+                    for temperature_idx, temperature_val in enumerate(self.data.sigma_dict['t']):
+                        for wno_idx, wno_val in enumerate(self.int_wngrid):
+                            sigma_array[mol_idx, pressure_idx, temperature_idx, wno_idx] = \
+                                np.interp(pressure_val, self.data.sigma_dict['p'],
+                                          sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]\
+                                              [:,temperature_idx,wno_idx])
+
+
+            else:
+
+                # run interpolation with multiple threads. threads are used to compute separate pressure levels.
+                # Run simultaneously up to NTHREADS pressure levels.
+
+                logging.info('Running inteprolation with  %i threads' % self.nthreads)
+
+                nruns = self.nlayers/self.nthreads
+                remainder = self.nlayers % self.nthreads
+
+                for round_idx in range(nruns+1):
+
+                    gotQueues = dict()
+
+                    def empty_queues(jobs):
+                        for i, job in enumerate(jobs):
+                            if not queues[i].empty():
+                                if i in gotQueues:
+                                    gotQueues[i] += queues[i].get()
+                                else:
+                                    gotQueues[i] = queues[i].get()
+
+                    level_min_idx = self.nthreads*round_idx
+                    if  round_idx == nruns:
+                        if remainder == 0:
+                            break
+                        level_max_idx = self.nlayers
+                    else:
+                        level_max_idx = self.nthreads*(round_idx+1)
+
+                    pressure_profile_bar = self.pressure_profile[level_min_idx:level_max_idx]/1e5
+
+                    queues = [Queue() for pressure_idx, pressure_val in enumerate(pressure_profile_bar)]
+
+                    jobs = [MultiThread_get_sigma_array(queues[pressure_idx],
+                                                         pressure_idx,
+                                                         mol_idx,
+                                                         pressure_profile_bar,
+                                                         self.nactivegases,
+                                                         self.data.sigma_dict,
+                                                         sigma_in,
+                                                         self.active_gases,
+                                                         self.int_wngrid,
+                                                         self.int_nwngrid,
+                                                         self.int_wngrid_idxmin,
+                                                         self.int_wngrid_idxmax) for pressure_idx, pressure_val in enumerate(pressure_profile_bar)]
+
+                    for job in jobs:
+                        job.start()
+
+                    while any([jj.is_alive() for jj in jobs]):
+                        time.sleep(0.01)  # 0.01 Wait a while before next update. Slow down updates for really long runs.
+                        empty_queues(jobs)
+
+                    for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
+                        sigma_array[mol_idx, round_idx*self.nthreads+pressure_idx, :, :] = gotQueues[pressure_idx]
+
         return sigma_array
+
 
     def get_ktables_array(self):
         logging.info('Interpolate ktables array to pressure profile')
@@ -815,4 +889,48 @@ class atmosphere(object):
         return np.copy( foo , order='C')
 
 
-        
+class MultiThread_get_sigma_array(Process):
+
+    def __init__(self,
+                 queue,
+                 pressure_idx,
+                 mol_idx,
+                 pressure_profile_bar,
+                 nactivegases,
+                 sigma_dict,
+                 sigma_in,
+                 active_gases,
+                 int_wngrid,
+                 int_nwngrid,
+                 int_wngrid_idxmin,
+                 int_wngrid_idxmax):
+
+        Process.__init__(self)
+        self.queue = queue
+        self.pressure_idx = pressure_idx
+        self.mol_idx = mol_idx
+        self.pressure_profile_bar = pressure_profile_bar
+        self.nactivegases = nactivegases
+        self.sigma_dict = sigma_dict
+        self.sigma_in = sigma_in
+        self.active_gases = active_gases
+        self.int_wngrid = int_wngrid
+        self.int_nwngrid = int_nwngrid
+        self.int_wngrid_idxmin = int_wngrid_idxmin
+        self.int_wngrid_idxmax = int_wngrid_idxmax
+        return
+
+    def run(self):
+        pressure_val = self.pressure_profile_bar[self.pressure_idx]
+
+        sigma_array_partial = np.zeros((len(self.sigma_dict['t']), self.int_nwngrid))
+
+        for temperature_idx, temperature_val in enumerate(self.sigma_dict['t']):
+            for wno_idx, wno_val in enumerate(self.int_wngrid):
+                sigma_array_partial[temperature_idx, wno_idx] = \
+                    np.interp(pressure_val, self.sigma_dict['p'],
+                              self.sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]\
+                                  [:,temperature_idx,wno_idx])
+
+        self.queue.put(sigma_array_partial)
+        return

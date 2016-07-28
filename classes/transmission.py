@@ -40,7 +40,12 @@ class transmission(object):
         if self.params.in_opacity_method in ['xsec']: # using cross sections
 
             # loading c++ pathintegral library
-            self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
+            if self.atmosphere.nthreads > 1:
+                # load openmp version. Remember to set OMP_NUM_THREADS to number of threads
+                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_parallel_xsec.so', mode=C.RTLD_GLOBAL)
+            else:
+                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
+
             self.model = self.ctypes_pathintegral_xsec
             # set arguments for ctypes libraries
             self.pathintegral_lib.path_integral.argtypes = [

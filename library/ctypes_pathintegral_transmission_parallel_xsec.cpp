@@ -1,4 +1,4 @@
-/* 
+/*
 
     TauREx v2 - Development version - DO NOT DISTRIBUTE
 
@@ -6,7 +6,7 @@
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_parallel_xsec.cpp
+    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_parallel_xsec.cpp
 
  */
 
@@ -83,7 +83,6 @@ extern "C" {
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
-            #pragma omp parallel for
             for (int k=0; k < (nlayers - j); k++) {
                 p = pow((z[j]+planet_radius+dz[j]/2.),2);
                 if (k == 0) {
@@ -123,7 +122,7 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-                            #pragma omp parallel for
+                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
                                     sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
@@ -141,25 +140,31 @@ extern "C" {
         // interpolate sigma CIA array to the temperature profile
         for (int j=0; j<nlayers; j++) {
             for (int t=1; t<sigma_cia_ntemp; t++) {
-                if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-                    #pragma omp parallel for
+                if (temperature[j] == sigma_cia_temp[t]) {
+                   #pragma omp parallel for private(sigma)
+                   for (int wn=0; wn<nwngrid; wn++) {
+                         for (int l=0;l<cia_npairs;l++) {
+                                 sigma = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                                 sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                         }
+                    }
+                } else if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                    #pragma omp parallel for private(sigma_l, sigma_r, sigma)
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<cia_npairs;l++) {
                             sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
                             sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(log10(temperature[j])-log10(sigma_temp[t-1]))/(log10(sigma_temp[t])-log10(sigma_temp[t-1]));
+                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
                             sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
                         }
                     }
                 }
             }
         }
-
         // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
         for (int c=0; c<cia_npairs;c++) {
              if (int(cia_idx[c*2]) >= nactive) {
                 for (int j=0;j<nlayers;j++) {
-
                     x1_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2])-nactive)];
                     x2_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2+1])-nactive)];
                 }
@@ -173,13 +178,13 @@ extern "C" {
 
         // calculate absorption
         count2 = 0;
+        #pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
         for (int wn=0; wn < nwngrid; wn++) {
             count = 0;
             integral = 0.0;
             //cout << " integral 0 " << integral << endl;
             //cout << " count 0 " << count << endl;
-            #pragma omp parallel for schedule(dynamic)
-    		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
+            for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
     			tautmp = 0.0;
                 if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
                     //cout << j << " YES " << pressure[j] << endl;
