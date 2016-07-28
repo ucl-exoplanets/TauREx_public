@@ -49,7 +49,10 @@ class taurex_plots(object):
         self.cmap = cm.get_cmap('Paired')
 
         if dbfname:
-            self.db = pickle.load(open(dbfname))
+            try:
+                self.db = pickle.load(open(dbfname, 'rb'), encoding='latin1')
+            except:
+                self.db = pickle.load(open(dbfname))
             try:
                 self.type = self.db['type']
             except:

@@ -26,8 +26,8 @@ from library_constants import *
 from library_general import *
 from library_emission import *
 
-import license
-from license import *
+#import license
+#from license import *
 
 import matplotlib.pylab as plt
 
@@ -39,7 +39,7 @@ class data(object):
         logging.info('Initialising data object')
 
         #checking taurex license
-        license_manager().run()
+        #license_manager().run()
         
         self.params = params
 
@@ -280,7 +280,10 @@ class data(object):
                 exit()
 
             # load ktable
-            ktable = pickle.load(open(molpath))
+            try:
+                ktable = pickle.load(open(molpath, 'rb'), encoding='latin1') # python 3
+            except:
+                ktable = pickle.load(open(molpath)) # python 2
 
             if mol_idx > 0:
                 # check that ktables are all consistent with each others
@@ -358,7 +361,10 @@ class data(object):
                 exit()
 
             # load cross sections
-            sigma_tmp = pickle.load(open(molpath))
+            try:
+                sigma_tmp = pickle.load(open(molpath, 'rb'), encoding='latin1')
+            except:
+                sigma_tmp = pickle.load(open(molpath))
 
             # check that the wavenumber, temperature and pressure grid are the same for all cross sections
             if mol_idx > 0:
@@ -499,7 +505,10 @@ class data(object):
 
             cia_path = os.path.join(self.params.in_cia_path, '%s.db' % pair_val.upper())
 
-            sigma_tmp = pickle.load(open(cia_path)) # load pickled cross section array
+            try:
+                sigma_tmp = pickle.load(open(cia_path, 'wb'), encoding='latin1') # python 3
+            except:
+                sigma_tmp = pickle.load(open(cia_path)) # python 2
 
             t = sigma_tmp['t']
             wno = sigma_tmp['wno']

@@ -174,8 +174,10 @@ if not options.source_sigma or \
        print 'Wrong input. Retry...'
        exit()
 
-
-sigma_in = pickle.load(open(options.source_sigma))
+try:
+    sigma_in = pickle.load(open(options.source_sigma, 'rb'), encoding='latin1')
+except:
+    sigma_in = pickle.load(open(options.source_sigma))
 
 if not options.pressure_list:
    pressures = sigma_in['p']

@@ -53,7 +53,7 @@ class parameters(object):
             try:
                 self.parser.readfp(open(parfile, 'rb')) # python 2
             except:
-                self.parser.read_file(open(parfile, 'rb')) # python 3
+                self.parser.read_file(open(parfile)) # python 3
 
         self.parfile = parfile
         self.default_parser = SafeConfigParser()

@@ -52,7 +52,10 @@ if not options.output_file:
     print 'You need to specify an output file'
     exit()
 
-ktable = pickle.load(open(options.input_file))
+try:
+    ktable = pickle.load(open(options.input_file, 'rb'), encoding='latin1')
+except:
+    ktable = pickle.load(open(options.input_file))
 
 
 if not options.pressure_list:

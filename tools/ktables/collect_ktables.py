@@ -48,7 +48,10 @@ files = glob.glob(os.path.join(options.input_files))
 ktables = []
 
 for filenm in files:
-    ktable = pickle.load(open(filenm))
+    try:
+        ktable = pickle.load(open(filenm, 'rb'), encoding='latin1')
+    except:
+        ktable = pickle.load(open(filenm))
 
     ktables.append(ktable)
 

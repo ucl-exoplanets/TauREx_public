@@ -132,7 +132,7 @@ class license_manager(object):
         randomidx = random.sample(range(len(decoded)),len(decoded))
         derandomidx = np.argsort(randomidx)
         de_rand = [decoded[i] for i in derandomidx]
-        de_randstr = ''.join(de_rand)
+        de_randstr = ''.join(str(de_rand))
            
         #converting to dictionary
         self.license = eval(de_randstr,{'false': False, 'true': True, 'null': None})
@@ -187,7 +187,7 @@ class license_manager(object):
         randomidx = random.sample(range(len(dicdump)),len(dicdump))
     
         dicrand = [dicdump[i] for i in randomidx]
-        dicrandstr = ''.join(dicrand)
+        dicrandstr = ''.join(str(dicrand))
            
         encoded = base64.b64encode(dicrandstr)
 

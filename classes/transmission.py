@@ -128,9 +128,6 @@ class transmission(object):
         #self.model = self.linebyline_pathintegral
 
 
-
-
-
     def ktables_pathintegral(self):
 
         z = self.atmosphere.altitude_profile
@@ -149,9 +146,9 @@ class transmission(object):
                 dlarray[j, k] = 2.*np.sqrt(np.power(z[k+j]+rp, 2) - p) - np.sqrt(np.power(z[k-1+j]+rp, 2) - p)
 
         # load k table
-        ktable = []
-        ktable.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/ktable_h2o_0.001bar_1500K.kcoeff.pickle')))
-        ktable.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/ktable_co_1bar_1200K.kcoeff.pickle')))
+        #ktable = []
+        #ktable.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/ktable_h2o_0.001bar_1500K.kcoeff.pickle')))
+        #ktable.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/ktable_co_1bar_1200K.kcoeff.pickle')))
 
         mixratio[1, :] = 1e-3
 
@@ -229,7 +226,7 @@ class transmission(object):
 
         #load xsec
         xsec = []
-        xsec.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/1H2-16O__0-30000_1500_0.001_0.01.sig.pickle')))
+        #xsec.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/1H2-16O__0-30000_1500_0.001_0.01.sig.pickle')))
         #xsec.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/12C-16O__0-30000_1200_1.0_0.01.sig.pickle')))
 
         absorption = np.zeros(len(xsec[0][:,0]))

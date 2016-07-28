@@ -109,7 +109,12 @@ class output(object):
                  'solutions': []}
 
         if os.path.isfile(self.params.in_spectrum_db):
-            SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db))
+
+
+            try:
+                SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db, 'rb'), encoding='latin1')
+            except:
+                SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db))
             outdb['SPECTRUM_db'] = SPECTRUM_db
 
         return outdb

@@ -154,7 +154,10 @@ start = time.time()
 for filenm in files:
 
     try:
-        xsec = pickle.load(open(filenm))
+        try:
+            xsec = pickle.load(open(filenm, 'rb'), encoding='latin1')
+        except:
+            xsec = pickle.load(open(filenm))
     except:
         xsec = np.loadtxt(filenm)
 
