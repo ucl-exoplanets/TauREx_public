@@ -268,10 +268,6 @@ class parameters(object):
 
         try:
 
-            # check if it's None or False
-            if self.parser.get(sec, par) == 'None' or self.parser.get(sec, par) == 'False':
-                return None
-
             if type == None:
                 try:
                     return self.parser.get(sec, par)

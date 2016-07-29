@@ -63,7 +63,7 @@ class data(object):
         if self.params.in_opacity_method == 'xsec_lowres':
             self.load_sigma_dict_lowres()
         elif self.params.in_opacity_method == 'xsec_highres':
-            self.load_sigma_dict_lowres()
+            self.load_sigma_dict_highres()
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
             self.load_ktables_dict()
         else:
@@ -343,6 +343,8 @@ class data(object):
 
     def load_sigma_dict_highres(self):
 
+        logging.info('Load high resolution cross sections.')
+
         # preload the absorption cross sections for the input molecules
         if self.params.ven_load:
             molecules = self.ven_active_gases
@@ -355,6 +357,8 @@ class data(object):
         temp_list_check = []
         all_molpaths = []
 
+        logging.info('Check that the same temperatures for all molecules are available.')
+
         for mol_idx, mol_val in enumerate(molecules):
 
             # select xsec for given molecule and all temperatures available
@@ -364,6 +368,7 @@ class data(object):
                 exit()
 
             # get list of temperatures available
+            temp_list = []
             for molpath_idx, molpath_val in enumerate(molpaths):
                 # check filename
                 tempfield = os.path.basename(molpath_val).split('.')[0].split('_')[1]
@@ -391,38 +396,47 @@ class data(object):
             # NOTE that here we assume that the largest file has the finest grid!
 
             for temp in temp_list_cut:
-                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%' % (mol_val, int(temp))))
+                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%i*' % (mol_val, int(temp))))[0]
                 all_molpaths.append(molpath_val)
 
+        logging.info('Beginning loading of cross sections, with interpolation to finest grid. Might take a while...')
+
         # get largest file in all_molpaths, and get the wavenumber grid. All other xsec will be reinterpolated to this grid
-        largest_file = heapq.nlargest(1, filenms, key=os.path.getsize)[0]
+        largest_file = heapq.nlargest(1, all_molpaths, key=os.path.getsize)[0]
         largest_xsec_load = pickle.load(open(largest_file, 'rb'), encoding='latin1')
         wngrid = largest_xsec_load['wno']
-        press_list = largest_xsec_load['p']
+        press_list = np.asarray(largest_xsec_load['p'])
 
         sigma_array = np.zeros((len(press_list), len(temp_list_cut), len(wngrid)))
 
         # loop again through all molecules and temperatures
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
-        sigma_dict['t'] = temp_list_cut
+        sigma_dict['t'] = np.asarray(temp_list_cut)
         sigma_dict['p'] = press_list
         sigma_dict['wno'] = wngrid
 
         for mol_idx, mol_val in enumerate(molecules):
+            logging.info('Doing %s...' % mol_val)
             for temp_idx, temp_val in enumerate(temp_list_cut):
-                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%' % (mol_val, int(temp))))
+                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%i*' % (mol_val, int(temp))))[0]
 
-                xsex_load = pickle.load(open(molpath_val, 'rb'), encoding='latin1')
+                xsec_load = pickle.load(open(molpath_val, 'rb'), encoding='latin1')
+
+                if np.shape(xsec_load['xsecarr'])[1] != 1:
+                    logging.error('This cross section has more than one temperature. For high resolution cross section'
+                                  ' only one temperature per file is required. Filename: %s. ' % os.path.basename(molpath_val))
 
                 # check that all xsec for all molecules and temperatures have the same pressures
 
-                if xsec_load['p'] != press_list:
+                if not np.array_equal(np.asarray(xsec_load['p']), press_list):
                     logging.error('The cross section %s does not share the same pressure list of %s. '
                                   ' %s' % (os.path.basename(molpath_val), os.path.basename(largest_file)))
                     exit()
 
-                sigma_array[press_idx, temp_idx, :] = np.interp(wngrid, xsec_load[:,0], xsec_load[:,1])
+                # inteprolate pressure
+                for press_idx, press_val in enumerate(press_list):
+                    sigma_array[press_idx, temp_idx, :] = np.interp(wngrid, xsec_load['wno'], xsec_load['xsecarr'][press_idx, 0, :])
 
             sigma_dict['xsecarr'][mol_val] = sigma_array / 1000.  # from cm^-2 to m^-2
 
@@ -435,6 +449,8 @@ class data(object):
         self.sigma_dict = sigma_dict
 
     def load_sigma_dict_lowres(self):
+
+        logging.info('Load low resolution cross sections.')
 
         # preload the absorption cross sections for the input molecules
         if self.params.ven_load:
@@ -697,7 +713,7 @@ class data(object):
 
         Tmin = 0
         Tmax = 5000
-        if self.in_custom_temp_range:
+        if self.params.in_custom_temp_range in ['False', 'None']:
             # range defined in parameter file
             Tmin =  self.in_custom_temp_range[0]
             Tmax =  self.in_custom_temp_range[1]
