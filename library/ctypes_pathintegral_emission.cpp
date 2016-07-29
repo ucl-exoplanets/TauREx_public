@@ -57,10 +57,12 @@ extern "C" {
         double* sigma_interp = new double[nwngrid*nlayers*nactive];
         double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
-        double tau, dtau;
+        double tau, tau_cia, dtau, dtau1, tau_sum1, tau_sum2, dtau_cia, mu;
         double p;
+        double mu1, mu2, mu3, mu4, w1, w2, w3, w4;
         int count, count2, t_idx;
-        double I_total, BB_wl, exponent;
+        double F_total, BB_wl, exponent;
+        double I1, I2, I3, I4;
         double h, c, kb, pi;
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
@@ -70,19 +72,24 @@ extern "C" {
         kb = 1.3806488e-23;
         pi= 3.14159265359;
 
-        //dz array
-//        for (int j=0; j<(nlayers); j++) {
-//            if ((j+1) == nlayers) {
-//                dz[j] = z[j] - z[j-1];
-//            } else {
-//                dz[j] = z[j+1] - z[j];
-//            }
-//        }
+        // set the four zenith angles sampled at four gaussian quadrature points
+        mu1 = 0.1834346;
+        mu2 = 0.5255324;
+        mu3 = 0.7966665;
+        mu4 = 0.9602899;
+        // gaussian quadrature weights
+        w1 = 0.3626838;
+        w2 = 0.3137066;
+        w3 = 0.2223810;
+        w4 = 0.1012885;
+
+
+        // calculate dz array
         for (int j=0; j<(nlayers-1); j++) {
                 dz[j] = z[j+1] - z[j];
         }
 
-        // interpolate sigma array to the temperature profile
+        // interpolate sigma array to the temperature profile.
         for (int j=0; j<nlayers; j++) {
             if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
                 for (int wn=0; wn<nwngrid; wn++) {
@@ -122,14 +129,22 @@ extern "C" {
 
 
         // interpolate sigma CIA array to the temperature profile
+        // to do add cases in which we are outside the CIA temperature range
         for (int j=0; j<nlayers; j++) {
             for (int t=1; t<sigma_cia_ntemp; t++) {
-                if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+            	if (temperature[j] == sigma_cia_temp[t]) {
+            	   for (int wn=0; wn<nwngrid; wn++) {
+            	         for (int l=0;l<cia_npairs;l++) {
+            	                 sigma = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+            	                 sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+            	          }
+            	     }
+            	} else if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<cia_npairs;l++) {
                             sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
                             sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(log10(temperature[j])-log10(sigma_temp[t-1]))/(log10(sigma_temp[t])-log10(sigma_temp[t-1]));
+                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
                             sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
                         }
                     }
@@ -155,63 +170,61 @@ extern "C" {
 
 
         // calculate emission
-        count2 = 0;
         for (int wn=0; wn < nwngrid; wn++) {
 
-            tau = 0.0;
-            I_total = 0.0;
+            F_total = 0.0;
 
-            // surface layer
-            for(int j = 0; j < nlayers; j++){
-    			for (int l=0;l<nactive;l++) { // active gases
-                    tau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
-                }
-                if (cia == 1) { // cia
-                    for (int c=0; c<cia_npairs;c++) {
-                        tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
-                    }
-                }
-            }
-            exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
-            BB_wl = ((pi*2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+             // Note that there is no contribution from the surface.
 
-            I_total += BB_wl * (exp(-1.0*tau));
+            I1 = 0;
+            I2 = 0;
+            I3 = 0;
+            I4 = 0;
 
-            //other layers
-    		for (int j=1; j<(nlayers); j++) {
-    			tau = 0.0;
-    			dtau = 0.0;
-    			for (int k=j; k < (nlayers); k++) {
+            // loop through layers from bottom to TOA
+    		for (int j=0; j<(nlayers-1); j++) {
+
+                // calculate BB for temperature of layer j
+                exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
+                BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+
+                // calculate tau from j+1 to TOA
+                tau_sum1 = 0.;
+    			for (int k=j+1; k < nlayers; k++) { // loop through layers to add dtau[k]
                     for (int l=0;l<nactive;l++) { // active gases
-                        tau += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
+                        tau_sum1 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
                     }
                     if (cia == 1) { // cia
                         for (int c=0; c<cia_npairs;c++) {
-                            tau += sigma_cia[wn + nwngrid*c] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+                            tau_sum1 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
                         }
-                    }
-    			}
-    			// get dtau
-                for (int l=0;l<nactive;l++) { // active gases
-                    dtau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
-                }
-                if (cia == 1) { // cia
-                    for (int c=0; c<cia_npairs;c++) {
-                        dtau += sigma_cia[wn + nwngrid*c] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
                     }
                 }
 
-                // get blackbody
-                if (temperature[j] != temperature[j-1]) {
-                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
-                    BB_wl = ((pi*2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+                // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
+                tau_sum2 = tau_sum1;
+                for (int l=0;l<nactive;l++) { // active gases
+                    tau_sum2 += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
                 }
-                tau_total[count2] = (BB_wl * (exp(-1.0*tau))* dtau);
-                I_total += (BB_wl * (exp(-1.0*tau))* dtau);
-                count2 += 1;
+                if (cia == 1) { // cia
+                    for (int c=0; c<cia_npairs;c++) {
+                        tau_sum2 += sigma_cia_interp[wn + nwngrid*(j + c*nlayers)] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+                    }
+                }
+
+                // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+                I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
+                I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
+                I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
+                I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
+
             }
-//    		FpFs[wn] = I_total;
-            FpFs[wn] = (I_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
+            // Integrating over zenith angle by suming the 4 intensities multiplied by the zenith angle and the
+            // four quadrature weights. Get flux by multiplying by 2 pi
+            F_total = (2*pi) * (I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4);
+
+            FpFs[wn] = (F_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
+
         }
 
         delete dz;
@@ -219,3 +232,68 @@ extern "C" {
 
     }
 }
+
+// THE HORROR!
+
+//        count2 = 0;
+//        for (int wn=0; wn < nwngrid; wn++) {
+//
+//            tau = 0.0;
+//            I_total = 0.0;
+//
+//            // surface layer
+//            for(int j = 0; j < nlayers; j++){
+//    			for (int l=0;l<nactive;l++) { // active gases
+//                    tau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
+//                }
+//            }
+//
+//            exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
+//            BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+//
+//            //I_total += BB_wl * (exp(-1.0*(tau+tau_cia)/mu)*(dtau+dtau_cia)/mu); // wtf???
+//            I_total += BB_wl * (exp(-1.0*tau/mu));
+//
+//            //other layers
+//    		for (int j=1; j<(nlayers); j++) {
+//    			tau = 0.0;
+//    			tau_cia = 0.0;
+//    			dtau = 0.0;
+//    			dtau_cia = 0.0;
+//    			for (int k=j; k < (nlayers); k++) {
+//                    for (int l=0;l<nactive;l++) { // active gases
+//                        tau += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
+//                    }
+//                    if (cia == 1) { // cia
+//                        for (int c=0; c<cia_npairs;c++) {
+//                            tau += sigma_cia_interp[wn + nwngrid*(j + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+//                        }
+//                    }
+//
+//
+//    			}
+//    			// get dtau
+//                for (int l=0;l<nactive;l++) { // active gases
+//                    dtau += (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
+//                }
+//                if (cia == 1) { // cia
+//                    for (int c=0; c<cia_npairs;c++) {
+//                        dtau += sigma_cia_interp[wn + nwngrid*(j + c*nlayers)] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+//                    }
+//                }
+//
+//                // get blackbody
+//                if (temperature[j] != temperature[j-1]) {
+//                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
+//                    BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+//                }
+////                tau_total[count2] = (BB_wl * (exp(-1.0*tau)/mu)*(exp(-1.0*tau_cia)) * dtau/mu *dtau_cia);
+//
+//                I_total += (BB_wl * (exp(-1.0*(tau)/mu)) * (dtau)/mu);
+//                count2 += 1;
+//            }
+//    		FpFs[wn] = I_total;
+//    		I_total *= pi;
+//            FpFs[wn] = (I_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
+//        }
+
