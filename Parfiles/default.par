@@ -33,14 +33,21 @@ spectrum_db = False
 use_ATMfile = False
 atm_file = Input/profile.atm
 
-# opacity computation method: 'xsec' or 'ktables'
+# opacity computation method: 'xsec_lowres', 'xsec_highres' or 'ktables'
 opacity_method = ktables
-
 # path to pickled cross sections and dnu
 xsec_path = Input/xsec/R7000
-
 # path to pickled ktables
 ktab_path = Input/ktables/R100/
+
+# force TauREx to load xsec or ktables in this range of temperatures.
+# if set to None or False the temperature range loaded will be automatically determined
+# according to the fitting TP boundaries or the input TP profile (if profile is isothermal).
+# Might be useful when using TP profile different from isothermal, as in this case
+# all available temperatures will be used and loaded into memory.
+# Also useful when using custom TP profiles using the create_spectrum object
+custom_temp_range = None
+
 
 # Path where cia pairs are stored as pickled files
 cia_path = Input/cia/HITRAN/

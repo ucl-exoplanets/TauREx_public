@@ -19,7 +19,7 @@ except:
 
 import logging
 import numpy as np
-
+import heapq
 from scipy.interpolate import interp1d
 
 from library_constants import *
@@ -59,9 +59,11 @@ class data(object):
         self.load_input_spectrum()
 
 
-        if self.params.in_opacity_method in ['xsec']:
-            # Preload the cross sections
-            self.load_sigma_dict()
+        # Preload the cross sections
+        if self.params.in_opacity_method == 'xsec_lowres':
+            self.load_sigma_dict_lowres()
+        elif self.params.in_opacity_method == 'xsec_highres':
+            self.load_sigma_dict_lowres()
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
             self.load_ktables_dict()
         else:
@@ -338,7 +340,101 @@ class data(object):
 
         self.ktable_dict = ktable_dict
 
-    def load_sigma_dict(self):
+
+    def load_sigma_dict_highres(self):
+
+        # preload the absorption cross sections for the input molecules
+        if self.params.ven_load:
+            molecules = self.ven_active_gases
+        else:
+            molecules = self.params.atm_active_gases
+
+        sigma_dict = {}
+        sigma_dict['xsecarr'] = {}
+
+        temp_list_check = []
+        all_molpaths = []
+
+        for mol_idx, mol_val in enumerate(molecules):
+
+            # select xsec for given molecule and all temperatures available
+            molpaths = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T*' % mol_val))
+            if len(molpaths) == 0:
+                logging.error('There is no cross section for %s. Path: %s ' % (mol_val, self.params.in_xsec_path))
+                exit()
+
+            # get list of temperatures available
+            for molpath_idx, molpath_val in enumerate(molpaths):
+                # check filename
+                tempfield = os.path.basename(molpath_val).split('.')[0].split('_')[1]
+                if tempfield[0] != 'T':
+                    logging.error('Filename of the cross section is not valid. Should be of the form H2O_T600.TauREx.pickle.'
+                                  ' Check the filename for %s ' % os.path.basename(molpath_val))
+                    exit()
+                # get temperature of given file
+                temp_list.append(float(tempfield[1:]))
+
+            # restrict list of temperature to those needed
+            temp_list_cut, Tmin_idx, Tmax_idx = self.get_temp_range_idx(np.sort(temp_list))
+
+            # check that the restricted list of temperature is the same for all molecules
+            if mol_idx > 0:
+                if temp_list_cut != temp_list_check:
+                    logging.error('The list of temperatures for all molecules should be the same. %s and %s don\'t share the'
+                                  ' same temperatures for the range needed to compute the spectrum. ' %
+                                  (molecules[mol_idx], molecules[mol_idx-1]))
+                    exit()
+                temp_list_check = temp_list_cut
+
+            # loop through temperature list and load all xsec filenames (for all molecules)  into a list
+            # used to get the largest file, hence the finest wavenumber grid
+            # NOTE that here we assume that the largest file has the finest grid!
+
+            for temp in temp_list_cut:
+                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%' % (mol_val, int(temp))))
+                all_molpaths.append(molpath_val)
+
+        # get largest file in all_molpaths, and get the wavenumber grid. All other xsec will be reinterpolated to this grid
+        largest_file = heapq.nlargest(1, filenms, key=os.path.getsize)[0]
+        largest_xsec_load = pickle.load(open(largest_file, 'rb'), encoding='latin1')
+        wngrid = largest_xsec_load['wno']
+        press_list = largest_xsec_load['p']
+
+        sigma_array = np.zeros((len(press_list), len(temp_list_cut), len(wngrid)))
+
+        # loop again through all molecules and temperatures
+        sigma_dict = {}
+        sigma_dict['xsecarr'] = {}
+        sigma_dict['t'] = temp_list_cut
+        sigma_dict['p'] = press_list
+        sigma_dict['wno'] = wngrid
+
+        for mol_idx, mol_val in enumerate(molecules):
+            for temp_idx, temp_val in enumerate(temp_list_cut):
+                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%' % (mol_val, int(temp))))
+
+                xsex_load = pickle.load(open(molpath_val, 'rb'), encoding='latin1')
+
+                # check that all xsec for all molecules and temperatures have the same pressures
+
+                if xsec_load['p'] != press_list:
+                    logging.error('The cross section %s does not share the same pressure list of %s. '
+                                  ' %s' % (os.path.basename(molpath_val), os.path.basename(largest_file)))
+                    exit()
+
+                sigma_array[press_idx, temp_idx, :] = np.interp(wngrid, xsec_load[:,0], xsec_load[:,1])
+
+            sigma_dict['xsecarr'][mol_val] = sigma_array / 1000.  # from cm^-2 to m^-2
+
+        # set some final variables
+        self.int_wngrid_full = wngrid # full wavenumber range
+        self.int_nwngrid_full = len(wngrid)
+        with np.errstate(divide='ignore'):
+            self.int_wlgrid_full = 10000./wngrid
+        self.int_nwlgrid_full = len(wngrid)
+        self.sigma_dict = sigma_dict
+
+    def load_sigma_dict_lowres(self):
 
         # preload the absorption cross sections for the input molecules
         if self.params.ven_load:
@@ -391,7 +487,7 @@ class data(object):
                 T_list, Tmin_idx, Tmax_idx = self.get_temp_range_idx(t)
                 sigma_dict['t'] = T_list
                 sigma_dict['p'] = p
-                sigma_dict['wno'] = sigma_tmp['wno'] # check: this should be identical to internal model!
+                sigma_dict['wno'] = sigma_tmp['wno']
 
             sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx] / 10000. # from cm^-2 to m^-2
         logging.info('Temperature range: %s' % sigma_dict['t'] )
@@ -601,20 +697,26 @@ class data(object):
 
         Tmin = 0
         Tmax = 5000
-        if self.params.ven_load:
-            Tmax = np.max(self.ven_temperature)
-            Tmin = np.min(self.ven_temperature)
-        elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
-            if self.params.atm_tp_type == 'isothermal':
-                Tmax = self.params.fit_tp_iso_bounds[1]
-                Tmin = self.params.fit_tp_iso_bounds[0]
-        elif self.params.atm_tp_type == 'isothermal':
-            Tmin = Tmax = self.params.atm_tp_iso_temp
-        if Tmax > np.max(t) or Tmin < np.min(t):
-            logging.warning('The atmospheric temperature profile falls outside the temperature '
-                            'range of the cross sections')
-            logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
-            logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
+        if self.in_custom_temp_range:
+            # range defined in parameter file
+            Tmin =  self.in_custom_temp_range[0]
+            Tmax =  self.in_custom_temp_range[1]
+        else:
+            # get range from other conditions (todo improve)
+            if self.params.ven_load:
+                Tmax = np.max(self.ven_temperature)
+                Tmin = np.min(self.ven_temperature)
+            elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+                if self.params.atm_tp_type == 'isothermal':
+                    Tmax = self.params.fit_tp_iso_bounds[1]
+                    Tmin = self.params.fit_tp_iso_bounds[0]
+            elif self.params.atm_tp_type == 'isothermal':
+                Tmin = Tmax = self.params.atm_tp_iso_temp
+            if Tmax > np.max(t) or Tmin < np.min(t):
+                logging.warning('The atmospheric temperature profile falls outside the temperature '
+                                'range of the cross sections')
+                logging.warning('Internal temperature range: %i - %i' % (Tmin, Tmax))
+                logging.warning('Cross section temperature range: %i - %i' % (np.min(t), np.max(t)))
 
         # get idx of the temperature boundaries in the cross sections
         # always get the max T availble in the xsec that is lower than Tmin and the min T that is higher than Tmax
