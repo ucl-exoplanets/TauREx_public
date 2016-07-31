@@ -135,26 +135,43 @@ extern "C" {
 
         // interpolate sigma CIA array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            for (int t=1; t<sigma_cia_ntemp; t++) {
-                if (temperature[j] == sigma_cia_temp[t]) {
-                   for (int wn=0; wn<nwngrid; wn++) {
+            if (sigma_ntemp == 1) { //
+                for (int wn=0; wn<nwngrid; wn++) {
+                     for (int l=0;l<cia_npairs;l++) {
+                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
+                     }
+                }
+            } else {
+                if (temperature[j] > sigma_cia_temp[sigma_cia_ntemp-1]) {
+                    for (int wn=0; wn<nwngrid; wn++) {
                          for (int l=0;l<cia_npairs;l++) {
-                                 sigma = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                                 sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp-1 + sigma_cia_ntemp*l)];
                          }
                     }
-                } else if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                } else if  (temperature[j] <  sigma_cia_temp[0]) {
                     for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<cia_npairs;l++) {
-                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
-                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
-                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                         for (int l=0;l<cia_npairs;l++) {
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
+                         }
+                    }
+                } else {
+                    for (int t=1; t<sigma_cia_ntemp; t++) {
+                        if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                            for (int wn=0; wn<nwngrid; wn++) {
+                                for (int l=0;l<cia_npairs;l++) {
+                                    sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                                    sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
+                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                                }
+                            }
                         }
                     }
-                }
+                 }
             }
         }
+
+
         // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
         for (int c=0; c<cia_npairs;c++) {
              if (int(cia_idx[c*2]) >= nactive) {

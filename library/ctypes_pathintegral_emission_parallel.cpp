@@ -84,21 +84,19 @@ extern "C" {
         w4 = 0.1012885;
 
 
-        // calculate dz array
-        for (int j=0; j<(nlayers-1); j++) {
+        //dz array
+        for (int j=0; j<(nlayers); j++) {
+            if ((j+1) == nlayers) {
+                dz[j] = z[j] - z[j-1];
+            } else {
                 dz[j] = z[j+1] - z[j];
+            }
         }
 
         // interpolate sigma array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
-                #pragma omp parallel for
-                for (int wn=0; wn<nwngrid; wn++) {
-                    for (int l=0;l<nactive;l++) {
-                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
-                    }
-                }
-            } else if (temperature[j] < sigma_temp[0]) {
+
+            if (sigma_ntemp == 1) { //
                 #pragma omp parallel for
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
@@ -106,7 +104,14 @@ extern "C" {
                     }
                 }
             } else {
-                if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
+                if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
+                    #pragma omp parallel for
+                    for (int wn=0; wn<nwngrid; wn++) {
+                        for (int l=0;l<nactive;l++) {
+                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
+                        }
+                    }
+                } else if (temperature[j] < sigma_temp[0]) {
                     #pragma omp parallel for
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
@@ -135,26 +140,43 @@ extern "C" {
 
         // interpolate sigma CIA array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            for (int t=1; t<sigma_cia_ntemp; t++) {
-                if (temperature[j] == sigma_cia_temp[t]) {
-                   #pragma omp parallel for private(sigma)
-                   for (int wn=0; wn<nwngrid; wn++) {
+            if (sigma_ntemp == 1) { //
+                #pragma omp parallel for
+                for (int wn=0; wn<nwngrid; wn++) {
+                     for (int l=0;l<cia_npairs;l++) {
+                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
+                     }
+                }
+            } else {
+                if (temperature[j] > sigma_cia_temp[sigma_cia_ntemp-1]) {
+                    #pragma omp parallel for
+                    for (int wn=0; wn<nwngrid; wn++) {
                          for (int l=0;l<cia_npairs;l++) {
-                                 sigma = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                                 sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp-1 + sigma_cia_ntemp*l)];
                          }
                     }
-                } else if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-                    #pragma omp parallel for private(sigma_l, sigma_r, sigma)
+                } else if  (temperature[j] <  sigma_cia_temp[0]) {
+                    #pragma omp parallel for
                     for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<cia_npairs;l++) {
-                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
-                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
-                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                         for (int l=0;l<cia_npairs;l++) {
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
+                         }
+                    }
+                } else {
+                    for (int t=1; t<sigma_cia_ntemp; t++) {
+                        if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
+                            for (int wn=0; wn<nwngrid; wn++) {
+                                for (int l=0;l<cia_npairs;l++) {
+                                    sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                                    sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
+                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                                }
+                            }
                         }
                     }
-                }
+                 }
             }
         }
 
@@ -176,7 +198,7 @@ extern "C" {
 
 
         // calculate emission
-        #pragma omp parallel for schedule(dynamic) private(I1, I2, I3, I4, F_total, BB_wl, exponent, tau_sum1, tau_sum2)
+        //#pragma omp parallel for schedule(dynamic) private(I1, I2, I3, I4, F_total, BB_wl, exponent, tau_sum1, tau_sum2)
         for (int wn=0; wn < nwngrid; wn++) {
 
             F_total = 0.0;
@@ -200,10 +222,14 @@ extern "C" {
     			for (int k=j+1; k < nlayers; k++) { // loop through layers to add dtau[k]
                     for (int l=0;l<nactive;l++) { // active gases
                         tau_sum1 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
+
+                        //cout << density[k] << " " <<   dz[k] << " " << sigma_interp[wn + nwngrid*(k + l*nlayers)] << " " << active_mixratio[k+nlayers*l]  << endl;
+
                     }
                     if (cia == 1) { // cia
                         for (int c=0; c<cia_npairs;c++) {
                             tau_sum1 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+                            //cout << sigma_cia_interp[wn + nwngrid*(k + c*nlayers)]  << endl;
                         }
                     }
                 }

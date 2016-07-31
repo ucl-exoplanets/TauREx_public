@@ -713,10 +713,11 @@ class data(object):
 
         Tmin = 0
         Tmax = 5000
-        if self.params.in_custom_temp_range in ['False', 'None']:
+
+        if not self.params.in_custom_temp_range in ['False', 'None', None]:
             # range defined in parameter file
-            Tmin =  self.in_custom_temp_range[0]
-            Tmax =  self.in_custom_temp_range[1]
+            Tmin =  self.params.in_custom_temp_range[0]
+            Tmax =  self.params.in_custom_temp_range[1]
         else:
             # get range from other conditions (todo improve)
             if self.params.ven_load:
@@ -762,28 +763,27 @@ class data(object):
     def get_star_SED(self):
 
         # reading in phoenix spectra from folder specified in parameter file
+        all_files = glob.glob(os.path.join(self.params.in_star_path, "*.fmt"))
 
-        index = loadtxt(os.path.join(self.params.in_star_path, "SPTyp_KH.dat"), dtype='string')
-        tmpind = []
-        for i in range(len(index)):
-            tmpind.append(float(index[i][1]))
-        tmpind = sort(tmpind)
+        temperatures = []
+        for filenm in all_files:
+            temp = np.float(os.path.basename(filenm).split('-')[0][3:])
+            temperatures.append(temp)
+        temperatures = np.sort(temperatures)
 
-        # reading in stellar file index
-        fileindex = glob.glob(os.path.join(self.params.in_star_path, "*.fmt"))
-
-        if self.params.star_temp > max(tmpind) or self.params.star_temp < min(tmpind):
+        # reading in stellar file
+        if self.params.star_temp > max(temperatures) or self.params.star_temp < min(temperatures):
             if self.params.verbose:
                 logging.warning('Stellar temp. in .par file exceeds range %.1f - %.1f K. '
-                                'Using black-body approximation instead' % (min(tmpind), max(tmpind)))
+                                'Using black-body approximation instead' % (min(temperatures), max(temperatures)))
             self.star_blackbody = True
             SED = black_body(self.int_wngrid_obs,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2 ??????
         else:
             # finding closest match to stellar temperature in parameter file
-            [tmpselect, idx] = find_nearest(tmpind, self.params.star_temp)
+            [tmpselect, idx] = find_nearest(temperatures, self.params.star_temp)
             self.star_blackbody = False
 
-            for file in fileindex: #this search is explicit due to compatibility issues with Mac and Linux sorting
+            for file in all_files: #this search is explicit due to compatibility issues with Mac and Linux sorting
                 if np.int(file.split('/')[-1][3:8]) == np.int(tmpselect):
                     self.SED_filename = file
 
