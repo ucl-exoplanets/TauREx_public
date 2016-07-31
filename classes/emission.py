@@ -39,8 +39,13 @@ class emission(object):
 
         self.stage = 0
 
-        #loading c++ pathintegral library for faster computation
-        self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
+        if self.params.in_opacity_method in ['xsec_highres', 'xsec_lowres']: # using cross sections
+
+            if self.atmosphere.nthreads > 1:
+                # load openmp version. Remember to set OMP_NUM_THREADS to number of threads
+                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission_parallel.so', mode=C.RTLD_GLOBAL)
+            else:
+                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
 
         # set forward model function
         self.model = self.ctypes_pathintegral
