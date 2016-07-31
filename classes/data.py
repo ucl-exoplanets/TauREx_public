@@ -438,7 +438,7 @@ class data(object):
                 for press_idx, press_val in enumerate(press_list):
                     sigma_array[press_idx, temp_idx, :] = np.interp(wngrid, xsec_load['wno'], xsec_load['xsecarr'][press_idx, 0, :])
 
-            sigma_dict['xsecarr'][mol_val] = sigma_array / 1000.  # from cm^-2 to m^-2
+            sigma_dict['xsecarr'][mol_val] = sigma_array / 10000.  # from cm^-2 to m^-2
 
         # set some final variables
         self.int_wngrid_full = wngrid # full wavenumber range
