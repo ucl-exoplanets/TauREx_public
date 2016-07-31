@@ -97,7 +97,6 @@ extern "C" {
         for (int j=0; j<nlayers; j++) {
 
             if (sigma_ntemp == 1) { //
-                #pragma omp parallel for
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
                         sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
@@ -105,14 +104,12 @@ extern "C" {
                 }
             } else {
                 if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
-                    #pragma omp parallel for
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
                             sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
                         }
                     }
                 } else if (temperature[j] < sigma_temp[0]) {
-                    #pragma omp parallel for
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
                             sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
@@ -121,7 +118,6 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
                                     sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
