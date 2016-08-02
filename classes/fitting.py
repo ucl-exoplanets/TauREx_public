@@ -552,9 +552,9 @@ class fitting(object):
 
         if self.params.gen_ace:
             self.forwardmodel.atmosphere.set_ace_params()
-            # if ace is on get_altitude_gravity_scaleheight_profile are called from the transmission/emission object
+            # if ace is on set_altitude_gravity_scaleheight_profile are called from the transmission/emission object
         else:
-            self.forwardmodel.atmosphere.altitude_profile, self.forwardmodel.atmosphere.scale_height, self.forwardmodel.atmosphere.planet_grav  = self.forwardmodel.atmosphere.get_altitude_gravity_scaleheight_profile()
+            self.forwardmodel.atmosphere.set_altitude_gravity_scaleheight_profile()
 
     #@profile
     def chisq_trans(self, fit_params, data, datastd):

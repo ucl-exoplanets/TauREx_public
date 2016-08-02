@@ -137,7 +137,7 @@ class atmosphere(object):
             self.planet_mu[:] = self.params.atm_mu
 
         # compute altitude profile, scale height and planet gravity arrays
-        self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
+        self.set_altitude_gravity_scaleheight_profile()
 
         # set density profile
         self.density_profile = self.get_density_profile()
@@ -312,27 +312,32 @@ class atmosphere(object):
         return np.asarray(self.TP_profile(TP_params), order='C')
 
     # altitude, gravity and scale height profile
-    def get_altitude_gravity_scaleheight_profile(self):
+    def set_altitude_gravity_scaleheight_profile(self):
 
         # build the altitude profile from the bottom up
 
         H = np.zeros(self.nlayers)
         g = np.zeros(self.nlayers)
-        z = np.zeros(self.nlayers)
+        z = np.zeros(self.nlayers) # corresponding to z' in plot
+        z_levels = np.zeros(self.nlevels) # corresponding in z in plot
 
-        g[0] = (G * self.planet_mass) / (self.planet_radius**2) # surface gravity (0th layer)
-        H[0] = (KBOLTZ*self.temperature_profile[0])/(self.planet_mu[0]*g[0]) # scaleheight at the surface (0th layer)
+        for i in range(0, self.nlayers):
 
-        for i in range(1, self.nlayers):
-            deltaz = (-1.)*H[i-1]*np.log(self.pressure_profile_levels[i]/self.pressure_profile_levels[i-1])
-            z[i] = z[i-1] + deltaz # altitude at the i-th layer
-            
-            with np.errstate(over='ignore'):
-                g[i] = (G * self.planet_mass) / ((self.planet_radius + z[i])**2) # gravity at the i-th layer
-            with np.errstate(divide='ignore'):
-                H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
+            g[i] = (G * self.planet_mass) / ((self.planet_radius + z_levels[i])**2) # gravity at the bottom of i-th layer
+            H[i] = (KBOLTZ*self.temperature_profile[i])/(self.planet_mu[i]*g[i])
+            deltaz = (-1.)*H[i]*np.log(self.pressure_profile_levels[i+1]/self.pressure_profile_levels[i])
+            z_levels[i+1] = z_levels[i] + deltaz # altitude at the i-th layer
 
-        return z, H, g
+            # get delta z up to pressure of layer [z prime in thesis]
+            deltaz2 = (-1.)*H[i]*np.log(self.pressure_profile[i]/self.pressure_profile_levels[i])
+            z[i] =  z_levels[i] + deltaz2
+
+        self.altitude_profile = z
+        self.altitude_profile_levels = z_levels
+
+        self.scale_height = H
+        self.planet_grav = g
+
 
     # get the density profile
     def get_density_profile(self, T=None, P=None):
@@ -513,7 +518,7 @@ class atmosphere(object):
             self.set_ace_params()
 
         self.pressure_profile = self.get_pressure_profile()
-        self.altitude_profile, self.scale_height, self.planet_grav  = self.get_altitude_gravity_scaleheight_profile()
+        self.set_altitude_gravity_scaleheight_profile()
         self.density_profile = self.get_density_profile()
 
     def set_ACE(self, mixratio_mask):
@@ -561,7 +566,7 @@ class atmosphere(object):
             self.planet_mu = self.get_coupled_planet_mu()
 
             # update atmospheric params
-            self.altitude_profile, self.scale_height, self.planet_grav = self.get_altitude_gravity_scaleheight_profile()
+            self.set_altitude_gravity_scaleheight_profile()
 
 
 

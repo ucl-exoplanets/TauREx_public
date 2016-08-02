@@ -45,6 +45,7 @@ extern "C" {
                        const double * pressure,
                        const double * density,
                        const double * z,
+                       const double * z_levels,
                        const double * active_mixratio,
                        const double * inactive_mixratio,
                        const double * temperature,
@@ -71,24 +72,15 @@ extern "C" {
         double p;
         int count, count2, t_idx;
 
-        //dz array
-        for (int j=0; j<(nlayers); j++) {
-            if ((j+1) == nlayers) {
-                dz[j] = z[j] - z[j-1];
-            } else {
-                dz[j] = z[j+1] - z[j];
-            }
-        }
-
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
             for (int k=0; k < (nlayers - j); k++) {
-                p = pow((z[j]+planet_radius+dz[j]/2.),2);
                 if (k == 0) {
-                    dlarray[count] = 2.0 * sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p);
+                    dlarray[count] = 2.0 * sqrt(pow((z_levels[j+1]+planet_radius),2) - pow((z[j]+planet_radius),2));
                 } else {
-                    dlarray[count] = 2.0 * (sqrt(pow((z[k+j]+planet_radius+dz[j]/2.),2) - p) -  sqrt(pow((z[k+j-1]+planet_radius+dz[j]/2.),2) - p));
+                    p = pow((z[j]+planet_radius),2);
+                    dlarray[count] = 2.0 * (sqrt(pow((z_levels[k+j+1]+planet_radius),2) - p) -  sqrt(pow((z[k+j]+planet_radius),2) - p));
                 }
                 count += 1;
             }

@@ -76,6 +76,7 @@ class transmission(object):
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 C.c_double,
                 C.c_double,
                 C.c_void_p,
@@ -108,6 +109,7 @@ class transmission(object):
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 C.c_int,
                 C.c_double,
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
@@ -264,6 +266,8 @@ class transmission(object):
         tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
 
         #running c++ path integral
+        print self.atmosphere.altitude_profile
+        print self.atmosphere.altitude_profile_levels
 
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,
@@ -286,6 +290,7 @@ class transmission(object):
                                             self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,
                                             self.atmosphere.altitude_profile,
+                                            self.atmosphere.altitude_profile_levels,
                                             self.atmosphere.active_mixratio_profile.flatten(),
                                             self.atmosphere.inactive_mixratio_profile.flatten(),
                                             self.atmosphere.temperature_profile,
@@ -330,7 +335,6 @@ class transmission(object):
         tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
 
         #running c++ path integral
-
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,
                                             self.atmosphere.nactivegases,
@@ -354,6 +358,7 @@ class transmission(object):
                                             self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,
                                             self.atmosphere.altitude_profile,
+                                            self.atmosphere.altitude_profile_levels,
                                             self.atmosphere.active_mixratio_profile.flatten(),
                                             self.atmosphere.inactive_mixratio_profile.flatten(),
                                             self.atmosphere.temperature_profile,
