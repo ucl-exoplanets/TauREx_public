@@ -266,9 +266,6 @@ class transmission(object):
         tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
 
         #running c++ path integral
-        print self.atmosphere.altitude_profile
-        print self.atmosphere.altitude_profile_levels
-
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,
                                             self.atmosphere.nactivegases,

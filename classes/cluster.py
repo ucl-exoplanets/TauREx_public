@@ -194,7 +194,7 @@ class cluster(object):
             with open(dict_name,'r') as infile:
                 DICT_in = infile.readlines()
         except IOError:
-            print 'Error: dictionary file found in base directory.'
+            print('Error: dictionary file found in base directory.')
             exit()
                 
         #parsing dictionary
