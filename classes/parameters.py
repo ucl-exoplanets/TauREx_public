@@ -120,6 +120,7 @@ class parameters(object):
         self.in_opacity_method     = self.getpar('Input','opacity_method')
         self.in_xsec_path          = self.getpar('Input','xsec_path')
         self.in_ktab_path          = self.getpar('Input','ktab_path')
+        self.in_custom_temp_range  = self.getpar('Input','custom_temp_range', 'list-float')
 
         self.in_cia_path           = self.getpar('Input','cia_path')
         self.in_star_path          = self.getpar('Input','star_path')

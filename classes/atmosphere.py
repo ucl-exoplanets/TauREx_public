@@ -211,7 +211,7 @@ class atmosphere(object):
 
             self.opacity_wngrid = wngrid
 
-            if self.params.in_opacity_method in ['xsec']:
+            if self.params.in_opacity_method in ['xsec_lowres', 'xsec_highres']:
                 # get sigma array (and interpolate sigma array to pressure profile)
                 self.sigma_array = self.get_sigma_array()
                 self.sigma_array_flat = self.sigma_array.flatten()

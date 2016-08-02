@@ -40,7 +40,7 @@ class transmission(object):
 
         self.atmosphere = atmosphere
 
-        if self.params.in_opacity_method in ['xsec']: # using cross sections
+        if self.params.in_opacity_method in ['xsec_highres', 'xsec_lowres']: # using cross sections
 
             # loading c++ pathintegral library
             if self.atmosphere.nthreads > 1:
