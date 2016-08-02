@@ -72,6 +72,16 @@ extern "C" {
         double p;
         int count, count2, t_idx;
 
+
+        //dz array
+        for (int j=0; j<(nlayers); j++) {
+            if ((j+1) == nlayers) {
+                dz[j] = z[j] - z[j-1];
+            } else {
+                dz[j] = z[j+1] - z[j];
+            }
+        }
+
         // dl array
         count = 0;
         for (int j=0; j<(nlayers); j++) {
