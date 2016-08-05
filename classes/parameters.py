@@ -53,11 +53,16 @@ class parameters(object):
             try:
                 self.parser.readfp(open(parfile, 'rb')) # python 2
             except:
-                self.parser.read_file(open(parfile)) # python 3
+                self.parser.read_file(open(parfile, 'rt', encoding='latin1')) # python 3
 
         self.parfile = parfile
         self.default_parser = SafeConfigParser()
-        self.default_parser.read('Parfiles/default.par')
+
+        try:
+            self.default_parser.readfp(open('Parfiles/default.par', 'rb')) # python 2
+        except:
+            self.default_parser.read_file(open('Parfiles/default.par', 'rt', encoding='latin1')) # python 3
+
         self.default_parser.sections()
         self.verbose = self.getpar('General', 'verbose', 'bool')
         self.verbose_all_threads = self.getpar('General', 'verbose_all_threads', 'bool')

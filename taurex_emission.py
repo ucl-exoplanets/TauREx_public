@@ -26,7 +26,7 @@ sys.path.append('./library')
 
 from library_emission import *
 
-def run(params):
+def run(params, options=False):
 
     out_path_orig = params.out_path
 
