@@ -57,7 +57,7 @@ extern "C" {
         double* sigma_interp = new double[nwngrid*nlayers*nactive];
         double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
-        double tau, tau_cia, dtau, dtau1, tau_sum1, tau_sum2, dtau_cia, mu;
+        double tau, tau_cia, dtau, dtau1, tau_sum1, tau_sum2, dtau_cia, mu, tau_tot,eta;
         double p;
         double mu1, mu2, mu3, mu4, w1, w2, w3, w4;
         int count, count2, t_idx;
@@ -84,32 +84,27 @@ extern "C" {
         w4 = 0.1012885;
 
 
-        //dz array
-        for (int j=0; j<(nlayers); j++) {
-            if ((j+1) == nlayers) {
-                dz[j] = z[j] - z[j-1];
-            } else {
+        // calculate dz array
+        for (int j=0; j<(nlayers-1); j++) {
                 dz[j] = z[j+1] - z[j];
-            }
         }
 
-        // interpolate sigma array to the temperature profile
+        // interpolate sigma array to the temperature profile.
         for (int j=0; j<nlayers; j++) {
-
-            if (sigma_ntemp == 1) { //
+            if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
+                for (int wn=0; wn<nwngrid; wn++) {
+                    for (int l=0;l<nactive;l++) {
+                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
+                    }
+                }
+            } else if (temperature[j] < sigma_temp[0]) {
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
                         sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
                     }
                 }
             } else {
-                if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
-                    for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<nactive;l++) {
-                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
-                        }
-                    }
-                } else if (temperature[j] < sigma_temp[0]) {
+                if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
                     for (int wn=0; wn<nwngrid; wn++) {
                         for (int l=0;l<nactive;l++) {
                             sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
@@ -132,44 +127,30 @@ extern "C" {
             }
         }
 
+
         // interpolate sigma CIA array to the temperature profile
+        // to do add cases in which we are outside the CIA temperature range
         for (int j=0; j<nlayers; j++) {
-            if (sigma_ntemp == 1) { //
-                for (int wn=0; wn<nwngrid; wn++) {
-                     for (int l=0;l<cia_npairs;l++) {
-                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
-                     }
-                }
-            } else {
-                if (temperature[j] > sigma_cia_temp[sigma_cia_ntemp-1]) {
+            for (int t=1; t<sigma_cia_ntemp; t++) {
+            	if (temperature[j] == sigma_cia_temp[t]) {
+            	   for (int wn=0; wn<nwngrid; wn++) {
+            	         for (int l=0;l<cia_npairs;l++) {
+            	                 sigma = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+            	                 sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+            	          }
+            	     }
+            	} else if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
                     for (int wn=0; wn<nwngrid; wn++) {
-                         for (int l=0;l<cia_npairs;l++) {
-                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp-1 + sigma_cia_ntemp*l)];
-                         }
-                    }
-                } else if  (temperature[j] <  sigma_cia_temp[0]) {
-                    for (int wn=0; wn<nwngrid; wn++) {
-                         for (int l=0;l<cia_npairs;l++) {
-                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
-                         }
-                    }
-                } else {
-                    for (int t=1; t<sigma_cia_ntemp; t++) {
-                        if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-                            for (int wn=0; wn<nwngrid; wn++) {
-                                for (int l=0;l<cia_npairs;l++) {
-                                    sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
-                                    sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
-                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
-                                }
-                            }
+                        for (int l=0;l<cia_npairs;l++) {
+                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
+                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
                         }
                     }
-                 }
+                }
             }
         }
-
 
         // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
         for (int c=0; c<cia_npairs;c++) {
@@ -200,6 +181,47 @@ extern "C" {
             I3 = 0;
             I4 = 0;
 
+            tau_sum1 = 0.;
+            tau_sum2 = 0.;
+            eta = 1.0;
+
+            // calculate BB for temperature of layer j
+            exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
+            BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+
+            for (int l=0;l<nactive;l++) { // active gases
+				tau_sum1 += (sigma_interp[wn + nwngrid*(l*nlayers)] * active_mixratio[nlayers*l] * density[0] * dz[0]);
+			}
+			if (cia == 1) { // cia
+				for (int c=0; c<cia_npairs;c++) {
+					tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
+				}
+			}
+
+            for (int k=0; k<(nlayers); k++) {
+
+            	// calculate tau from j+1 to TOA
+					for (int l=0;l<nactive;l++) { // active gases
+						tau_sum2 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
+					}
+					if (cia == 1) { // cia
+						for (int c=0; c<cia_npairs;c++) {
+							tau_sum2 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+						}
+					}
+				}
+
+
+
+			// calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+			I1 += BB_wl * ( exp(-tau_sum2/mu1)) * eta;
+			I2 += BB_wl * ( exp(-tau_sum2/mu2))* eta;
+			I3 += BB_wl * ( exp(-tau_sum2/mu3))* eta;
+			I4 += BB_wl * ( exp(-tau_sum2/mu4))* eta;
+
+
+
+//
             // loop through layers from bottom to TOA
     		for (int j=0; j<(nlayers-1); j++) {
 
@@ -232,15 +254,19 @@ extern "C" {
                 }
 
                 // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+
                 I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
                 I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
                 I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
                 I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
 
+
             }
+
+
             // Integrating over zenith angle by suming the 4 intensities multiplied by the zenith angle and the
             // four quadrature weights. Get flux by multiplying by 2 pi
-            F_total = (2*pi) * (I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4);
+            F_total =  2.0*pi*(I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4) ;
 
             FpFs[wn] = (F_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
 
