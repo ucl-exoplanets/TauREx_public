@@ -6,7 +6,15 @@
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:   g++ -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+    For both openmp and single core versions compile with g++:
+
+             g++ -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+             g++ -fPIC -shared -fopenmp -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+
+    or Intel compiler:
+
+             icc -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+             icc -fPIC -shared -openmp -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_xsec.cpp
 
  */
 
@@ -118,6 +126,7 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
                                     sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
@@ -156,6 +165,7 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_cia_ntemp; t++) {
                         if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<cia_npairs;l++) {
                                     sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
@@ -188,7 +198,7 @@ extern "C" {
          }
 
         // calculate absorption
-        count2 = 0;
+        #pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
         for (int wn=0; wn < nwngrid; wn++) {
             count = 0;
             integral = 0.0;
@@ -203,10 +213,8 @@ extern "C" {
                     }
                     //exptau = exp(-tautmp);
                     integral += ((planet_radius+z[j])*(1.0)*dz[j]);
-                    tau[count2] = 1.0;
-                    //cout << count2 << " " << tau[count2] << endl;
+                    tau[wn + j*nwngrid] = 1.0;
                     //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
-                    count2 += 1;
                 } else {
                     //cout << j << " NO " << pressure[j] << endl;
 
@@ -244,10 +252,8 @@ extern "C" {
                     }
                     exptau = exp(-tautmp);
                     integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
-                    tau[count2] = 1.0 - exptau;
-                    //cout << count2 << " " << tau[count2] << endl;
+                    tau[wn + j*nwngrid] =  exptau;
                     //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
-                    count2 += 1;
                 }
             }
             integral *= 2.0;

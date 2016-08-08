@@ -139,6 +139,7 @@ class parameters(object):
         # section Star
         self.star_radius           = self.getpar('Star', 'radius', 'float')    *RSOL
         self.star_temp             = self.getpar('Star','temp', 'float')
+        self.star_use_blackbody    = self.getpar('Star','use_blackbody', 'bool')
 
         # section Planet
         self.planet_class          = self.getpar('Planet','class')

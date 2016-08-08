@@ -366,11 +366,10 @@ class transmission(object):
         if return_tau:
 
             tauout = np.zeros((self.atmosphere.int_nwngrid, self.atmosphere.nlayers))
-            count = 0
             for i in range(self.atmosphere.int_nwngrid):
                 for j in range(self.atmosphere.nlayers):
-                    tauout[i,j] = tau[count]
-                    count += 1
+                    tauout[i,j] = tau[i + j*self.atmosphere.int_nwngrid]
+
             tauout = np.fliplr(np.rot90(tauout))
 
             del(absorption)

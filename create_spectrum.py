@@ -49,7 +49,8 @@ class create_spectrum(object):
         elif self.params.gen_type == 'emission':
             self.fmob = emission(self.atmosphereob)
 
-    def generate_spectrum(self, save_instance=False, instance_filename=None, contrib_func=False, opacity_contrib=False):
+    def generate_spectrum(self, save_instance=False, instance_filename=None, contrib_func=False, transmittance=False,
+                          opacity_contrib=False):
 
         # this function returns the SPECTRUM_INSTANCE_out dictionary
         # if filename is not specified, store in out_path/SPECTRUM_INSTANCE_out.pickle
@@ -72,6 +73,9 @@ class create_spectrum(object):
         # compute contribution function
         if  contrib_func:
             instance_data['contrib_func'] = self.fmob.model(return_tau=True)
+
+        if  transmittance:
+            instance_data['transmittance'] = self.fmob.model(return_tau=True)
 
         # calculate opacity contributions
         if opacity_contrib:
@@ -176,7 +180,7 @@ class create_spectrum(object):
         if save_instance:
             if not instance_filename:
                 instance_filename = os.path.join(self.params.out_path, 'SPECTRUM_INSTANCE_out.pickle')
-
+            logging.info('Store spectrum instance in %s ' % instance_filename)
             pickle.dump(instance, open(instance_filename, 'wb'), protocol=2)
 
         return instance
@@ -259,16 +263,22 @@ if __name__ == '__main__':
                              'each opacity source, suppressing the contribution from all the other sources. Stored in the instance'
                              'dictionary (see option --save_instance) under ["data"]["opacity_contrib"][<opacity_source>]')
 
-    # todo find a better name than contrib_func! ALSO NOT WORKING USING PARALLEL VERSION OF CPP CODE!
     parser.add_argument('--contrib_func',
                       dest='contrib_func',
                       action='store_true',
                       default=False,
-                      help = 'In transmission: compute the transmittance as a function of pressure and'
-                             'wavelength, integrated over the path parallel to the line of sight.'
-                             'In emission compute the contribution function as a funciton of pressure and wavelength.'
+                      help = 'Only valid for emission. Store the contribution function as a funciton of pressure and wavelength.'
                              'The 2d array is stored in the instance dictionary (see option --save_instance), '
-                             'under ["data"]["contrib_func"]. Note that this does not work if you use --nthreads',)
+                             'under ["data"]["contrib_func"].',)
+
+    parser.add_argument('--transmittance',
+                      dest='transmittance',
+                      action='store_true',
+                      default=False,
+                      help = 'Only valid for transmission. Store the spectral transmittance as a function of pressure'
+                             ' as a funciton of pressure and wavelength. The transmittance is integrated over the path '
+                             'parallel to the line of sight. The 2d array is stored in the instance dictionary (see option --save_instance), '
+                             'under ["data"]["transmittance"].',)
 
     parser.add_argument('--nthreads',  # run forward model in multithreaded mode (use Python multiprocesing for sigma array interpolation
                        dest='nthreads', # and openmp parallel version of cpp code). You need to spcify the number of cores to use,
@@ -314,12 +324,26 @@ if __name__ == '__main__':
                 value *= AMU
             setattr(params, param, value)
 
+    # checks
+    if params.gen_type == 'transmission' and options.contrib_func:
+        logging.error('Options --contrib_func is only valid in emission. Maybe you wanted to use --transmittance? ')
+
+    if params.gen_type == 'emission' and options.transmittance:
+        logging.error('Options --transmittance is only valid in transmission. Maybe you wanted to use --contrib_func ?')
+
+    if (options.transmittance or options.contrib_func) and not options.save_instance:
+        logging.warning('Options --transmittance and --contrib_func require --save_instance. This options is '
+                        'switched on automatically. The instance of the spectrum will be stored in a .pickle file'
+                        'in the Output folder.')
+        options.save_instance = True
+
     spectrumob = create_spectrum(params=params, nthreads=options.nthreads)
 
     spectrumob.generate_spectrum(save_instance=options.save_instance,
                                  instance_filename=options.instance_filename,
                                  opacity_contrib=options.opacity_contrib,
-                                 contrib_func=options.contrib_func)
+                                 contrib_func=options.contrib_func,
+                                 transmittance=options.transmittance)
 
     spectrumob.save_spectrum(sp_filename=options.sp_filename, pickled=options.pickle_save_sp)
 

@@ -772,12 +772,16 @@ class data(object):
         temperatures = np.sort(temperatures)
 
         # reading in stellar file
-        if self.params.star_temp > max(temperatures) or self.params.star_temp < min(temperatures):
-            if self.params.verbose:
-                logging.warning('Stellar temp. in .par file exceeds range %.1f - %.1f K. '
-                                'Using black-body approximation instead' % (min(temperatures), max(temperatures)))
+        if self.params.star_use_blackbody or (self.params.star_temp > max(temperatures) or
+                                                      self.params.star_temp < min(temperatures)):
+            if self.params.verbose and not self.params.star_use_blackbody:
+                logging.warning('Stellar temp. in .par file exceeds range %.1f - %.1f K. ' % (min(temperatures),
+                                                                                              max(temperatures)))
+
+            logging.info('Using black-body approximation for stellar spectrum')
+
             self.star_blackbody = True
-            SED = black_body(self.int_wngrid_obs,self.params.star_temp) #@todo bug here? not multiplied by size of star 4piRs^2 ??????
+            SED = black_body(self.int_wngrid_obs,self.params.star_temp)
         else:
             # finding closest match to stellar temperature in parameter file
             [tmpselect, idx] = find_nearest(temperatures, self.params.star_temp)
@@ -789,9 +793,8 @@ class data(object):
 
             #reading in correct file and interpolating it onto self.int_wngrid_obs
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
-            SED_raw[:,1] *= 10.0  #converting from ergs to SI @todo move converting somewhere more sane
+            SED_raw[:,1] *= 10.0 # #converting from ergs to SI
 
             SED = np.interp(self.int_wlgrid_obs, SED_raw[:,0], SED_raw[:,1])
 
         return SED
-

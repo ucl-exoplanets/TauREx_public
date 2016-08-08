@@ -56,9 +56,12 @@ class emission(object):
                                                          C.c_int,
                                                          C.c_int,
                                                          C.c_int,
+                                                         C.c_int,
+                                                         C.c_int,
                                                          np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                          np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                          C.c_int,
+                                                         np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                                                          C.c_int,
                                                          np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='C_CONTIGUOUS'),
                                                          C.c_int,
@@ -135,10 +138,13 @@ class emission(object):
                                              self.atmosphere.int_nwngrid,
                                              self.atmosphere.nlayers,
                                              self.atmosphere.nactivegases,
+                                             self.atmosphere.ninactivegases,
+                                             self.params.atm_rayleigh,
                                              self.params.atm_cia,
                                              self.atmosphere.sigma_array_flat,
                                              self.data.sigma_dict['t'],
                                              len(self.data.sigma_dict['t']),
+                                             self.atmosphere.sigma_rayleigh_array_flat,
                                              len(self.data.sigma_cia_dict['xsecarr']),
                                              np.asarray(self.atmosphere.cia_idx, dtype=np.float),
                                              len(self.atmosphere.cia_idx),
@@ -164,11 +170,10 @@ class emission(object):
         if return_tau:
 
             tauout = np.zeros((self.atmosphere.int_nwngrid, self.atmosphere.nlayers))
-            count = 0
             for i in range(self.atmosphere.int_nwngrid):
-                for j in range(1, self.atmosphere.nlayers):
-                    tauout[i,j] = tau[count]
-                    count += 1
+                for j in range(self.atmosphere.nlayers-1):
+                    tauout[i,j] = tau[i + j*self.atmosphere.int_nwngrid]
+
             tauout = np.fliplr(np.rot90(tauout))
 
             del(FpFs)

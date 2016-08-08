@@ -76,6 +76,9 @@ radius =  0.788
 #Stellar temperature (K)
 temp   = 4900
 
+# use black body instead of stellar model (see Input > star_path)
+use_blackbody = False
+
 [Planet]
 
 # Defines planet specific parameters
