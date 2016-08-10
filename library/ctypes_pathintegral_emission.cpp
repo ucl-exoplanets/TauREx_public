@@ -317,8 +317,12 @@ extern "C" {
 
         }
 
-        delete dz;
-        delete sigma_interp;
+        delete[] dz;
+        delete[] sigma_interp;
+        delete[] sigma_cia_interp;
+        dz = NULL;
+        sigma_interp = NULL;
+        sigma_cia_interp = NULL;
 
     }
 }

@@ -319,8 +319,8 @@ class data(object):
 
                 # restrict temperature range
                 T_list, Tmin_idx, Tmax_idx = self.get_temp_range_idx(t)
-                ktable_dict['t'] = T_list
-                ktable_dict['p'] = p
+                ktable_dict['t'] = T_list.astype(float)
+                ktable_dict['p'] = p.astype(float)
                 ktable_dict['bin_centers'] = bin_centers
                 ktable_dict['bin_edges'] = bin_edges
                 ktable_dict['weights'] = weights
@@ -412,8 +412,8 @@ class data(object):
         # loop again through all molecules and temperatures
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
-        sigma_dict['t'] = np.asarray(temp_list_cut)
-        sigma_dict['p'] = press_list
+        sigma_dict['t'] = np.asarray(temp_list_cut).astype(float)
+        sigma_dict['p'] = press_list.astype(float)
         sigma_dict['wno'] = wngrid
 
         for mol_idx, mol_val in enumerate(molecules):
@@ -501,8 +501,8 @@ class data(object):
 
                 # restrict temperature range
                 T_list, Tmin_idx, Tmax_idx = self.get_temp_range_idx(t)
-                sigma_dict['t'] = T_list
-                sigma_dict['p'] = p
+                sigma_dict['t'] = T_list.astype(float)
+                sigma_dict['p'] = p.astype(float)
                 sigma_dict['wno'] = sigma_tmp['wno']
 
             sigma_dict['xsecarr'][mol_val] = sigma_tmp['xsecarr'][:,Tmin_idx:Tmax_idx] / 10000. # from cm^-2 to m^-2
