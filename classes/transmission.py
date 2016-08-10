@@ -40,6 +40,10 @@ class transmission(object):
 
         self.atmosphere = atmosphere
 
+        if self.params.gen_ace:
+            # loading Fortran code for chemically consistent model
+            self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
+
         if self.params.in_opacity_method in ['xsec_highres', 'xsec_lowres']: # using cross sections
 
             # loading c++ pathintegral library
@@ -382,5 +386,54 @@ class transmission(object):
 
             return out
 
+    def set_ACE(self, mixratio_mask):
+
+        # todo should really move this to atmosphere.py [see also transmission]
+
+
+        # chemically consistent model
+        vector = C.c_double*self.atmosphere.nlayers
+        a_apt = vector()
+        p_apt = vector()
+        t_apt = vector()
+        for i in range(self.atmosphere.nlayers):
+           a_apt[i] = self.atmosphere.altitude_profile[i]/1000.
+           p_apt[i] = self.atmosphere.pressure_profile[i]/1.e5
+           t_apt[i] = self.atmosphere.temperature_profile[i]
+
+        # y_out has shape (nlayers, 105). 105 is the total number of molecules computed
+        y_out = ((C.c_double * 105) * self.atmosphere.nlayers)()
+
+        self.ace_lib.ACE(C.byref(C.c_int(self.atmosphere.nlayers)),
+                         C.byref(a_apt),
+                         C.byref(p_apt),
+                         C.byref(t_apt),
+                         C.byref(C.c_double(self.atmosphere.He_abund_dex)),
+                         C.byref(C.c_double(self.atmosphere.C_abund_dex)),
+                         C.byref(C.c_double(self.atmosphere.O_abund_dex)),
+                         C.byref(C.c_double(self.atmosphere.N_abund_dex)),
+                         C.byref(y_out))
+        ace_profiles = np.asarray(y_out)
+
+
+        for mol_idx, mol_val in enumerate(self.params.atm_active_gases):
+            self.atmosphere.active_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_active_gases_idx[mol_idx]]
+
+        for mol_idx, mol_val in enumerate(self.params.atm_inactive_gases):
+            self.atmosphere.inactive_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_inactive_gases_idx[mol_idx]]
+
+        if isinstance(mixratio_mask, (np.ndarray, np.generic)):
+            self.atmosphere.active_mixratio_profile[mixratio_mask, :] = 0
+
+        del(y_out)
+        del(a_apt)
+        del(p_apt)
+        del(t_apt)
+
+        # couple mu to composition
+        self.atmosphere.planet_mu = self.atmosphere.get_coupled_planet_mu()
+
+        # update atmospheric params
+        self.atmosphere.set_altitude_gravity_scaleheight_profile()
 
 

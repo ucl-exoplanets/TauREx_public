@@ -68,7 +68,7 @@ class taurex_plots(object):
             self.multinest_dir = False
 
         if not dbfname and not multinest_dir:
-            print 'Specify a .db filename or a multinest directory'
+            print('Specify a .db filename or a multinest directory')
             exit()
 
         self.title = title
@@ -88,7 +88,7 @@ class taurex_plots(object):
         try:
             os.makedirs(self.out_folder)
         except:
-            print 'Cannot create output directory: %s' % self.out_folder
+            print('Cannot create output directory: %s' % self.out_folder)
 
 
     def plot_posteriors(self, **kwargs):
@@ -127,7 +127,7 @@ class taurex_plots(object):
                   ha="center", va="top", fontsize=14)
         filename = os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type))
         plt.savefig(filename)
-        print 'Plot saved in %s' % filename
+        print('Plot saved in %s' % filename)
 
     def _plot_posteriors_db(self, plot_truths=False):
 
@@ -239,7 +239,7 @@ class taurex_plots(object):
 
         plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
         plt.xlabel('Wavelength ($\mu$m)')
-        if self.db['params']['fit_emission']:
+        if self.db['params']['gen_type'] == 'emission':
             plt.ylabel('$F_p/F_*$')
         else:
             plt.ylabel('$(R_p/R_*)^2$')
@@ -460,7 +460,6 @@ if __name__ == '__main__':
             tmp = os.path.join(folder,'nest_out.db')
             if os.path.exists(tmp):
                 db_filenames.append(tmp)
-        print db_filenames
     else:
         db_filenames = [options.db_filename]
         out_folders = [options.out_folder]
@@ -475,17 +474,17 @@ if __name__ == '__main__':
                             out_folder=out_folders[db_idx])
 
         if options.plot_all or options.plot_posteriors:
-            print 'Plotting posteriors'
+            print('Plotting posteriors')
             plot.plot_posteriors()
 
 #         if options.db_dir or options.db_filename:
 
         if options.plot_all or options.plot_spectrum:
-                print 'Plotting fitted spectrum'
+                print('Plotting fitted spectrum')
                 plot.plot_fitted_spectrum()
         if options.plot_all or options.plot_x:
-                print 'Plotting mixing ratio profiles'
+                print('Plotting mixing ratio profiles')
                 plot.plot_fitted_xprofiles()
         if options.plot_all or options.plot_tp:
-                print 'Plotting pressure-temperature profile'
+                print('Plotting pressure-temperature profile')
                 plot.plot_fitted_tp()

@@ -143,7 +143,7 @@ extern "C" {
 
         // interpolate sigma CIA array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            if (sigma_ntemp == 1) { //
+            if (sigma_cia_ntemp == 1) { //
                 for (int wn=0; wn<nwngrid; wn++) {
                      for (int l=0;l<cia_npairs;l++) {
                         sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];

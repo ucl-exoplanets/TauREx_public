@@ -2,12 +2,19 @@
 
     TauREx v2 - Development version - DO NOT DISTRIBUTE
 
-    Forward model for transmission
+    Forward model for emission
 
     Developers: Ingo Waldmann, Marco Rocchetto (University College London)
 
-    Compile with:
-    g++ -fPIC -shared -o ctypes_pathintegral_transmission_ktab.so ctypes_pathintegral_transmission_ktab.cpp
+
+    For both openmp and single core versions compile with g++:
+
+             g++ -fPIC -shared -o ctypes_pathintegral_emission_ktab.so ctypes_pathintegral_emission_ktab.cpp
+
+    or Intel compiler:
+
+             icc -fPIC -shared -o ctypes_pathintegral_emission_ktab.so ctypes_pathintegral_emission_ktab.cpp
+
 
  */
 
@@ -25,18 +32,25 @@ using namespace std;
 
 extern "C" {
 
-    void path_integral(const int nwngrid,
+    void path_integral(const double * wngrid,
+                       const int nwngrid,
                        const int nlayers,
                        const int nactive,
                        const int ninactive,
                        const int rayleigh,
                        const int cia,
-                       const int clouds,
+
+//                       const double * sigma_array,
+//                       const double * sigma_temp,
+//                       const int sigma_ntemp,
+
                        const double * ktab_array,
                        const double * ktab_temp,
                        const int ktab_ntemp,
                        const int ngauss,
                        const double * ktab_weights,
+
+
                        const double * sigma_rayleigh,
                        const int cia_npairs,
                        const double * cia_idx,
@@ -44,8 +58,6 @@ extern "C" {
                        const double * sigma_cia,
                        const double * sigma_cia_temp,
                        const int sigma_cia_ntemp,
-                       const double cloud_topP,
-                       const double * pressure,
                        const double * density,
                        const double * z,
                        const double * active_mixratio,
@@ -53,26 +65,45 @@ extern "C" {
                        const double * temperature,
                        const double planet_radius,
                        const double star_radius,
-                       void * absorptionv,
+                       const double * star_sed,
+                       void * FpFsv,
                        void * tauv) {
 
-
-        double * absorption = (double *) absorptionv;
-        double * tau = (double *) tauv;
+        double * FpFs = (double *) FpFsv;
+        double * contrib = (double *) tauv;
 
         // setting up arrays and variables
-        //double* tau = new double[nlayers*nwngrid];
         double* dz = new double[nlayers];
-        double* dlarray = new double[nlayers*nlayers];
         double* ktab_interp = new double[ngauss*nwngrid*nlayers*nactive];
         double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
+        double tau, tau_cia, dtau, dtau1, tau_sum1, tau_sum2, dtau_cia, mu, tau_tot,eta;
+        double p;
+        double mu1, mu2, mu3, mu4, w1, w2, w3, w4;
+        int count, count2, t_idx;
+        double F_total, BB_wl, exponent;
+        double I1, I2, I3, I4;
+        double h, c, kb, pi;
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
-        double tautmp, transtmp, transtot, exptau,  integral;
-        double cld_factor, cld_rho;
-        double p;
-        int count, count_orig, count2, t_idx;
+
+        int l;
+
+        h = 6.62606957e-34;
+        c = 299792458;
+        kb = 1.3806488e-23;
+        pi= 3.14159265359;
+
+        // set the four zenith angles sampled at four gaussian quadrature points
+        mu1 = 0.1834346;
+        mu2 = 0.5255324;
+        mu3 = 0.7966665;
+        mu4 = 0.9602899;
+        // gaussian quadrature weights
+        w1 = 0.3626838;
+        w2 = 0.3137066;
+        w3 = 0.2223810;
+        w4 = 0.1012885;
 
         //dz array
         for (int j=0; j<(nlayers); j++) {
@@ -83,23 +114,9 @@ extern "C" {
             }
         }
 
-        // dl array
-        count = 0;
-        for (int j=0; j<(nlayers); j++) {
-            for (int k=0; k < (nlayers - j); k++) {
-                p = pow((planet_radius+dz[0]/2.+z[j]),2);
-                if (k == 0) {
-                    dlarray[count] = 2.0 * sqrt(pow((planet_radius + dz[0]/2. + z[j] + dz[j]/2.),2) - p);
-                } else {
-                    dlarray[count] = 2.0 * (sqrt(pow((planet_radius + dz[0]/2. + z[k+j] + dz[j+k]/2.),2) - p) -  sqrt(pow((planet_radius + dz[0]/2. + z[k+j-1] + dz[j+k-1]/2.  ),2) - p));
-                }
-                count += 1;
-            }
-        }
-
-
         // interpolate ktab array to the temperature profile
         for (int j=0; j<nlayers; j++) {
+            cout << temperature[j] << endl;
             if (temperature[j] > ktab_temp[ktab_ntemp-1]) { // temperature higher than ktab
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {
@@ -128,6 +145,7 @@ extern "C" {
                 } else {
                     for (int t=1; t<ktab_ntemp; t++) {
                         if ((temperature[j] >= ktab_temp[t-1]) && (temperature[j] < ktab_temp[t])) {
+                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
                                     for (int g=0; g<ngauss; g++) {
@@ -183,6 +201,7 @@ extern "C" {
             }
         }
 
+
         // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
         for (int c=0; c<cia_npairs;c++) {
              if (int(cia_idx[c*2]) >= nactive) {
@@ -196,95 +215,111 @@ extern "C" {
                     x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
                     x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
                 }
-             }
+            }
          }
 
 
-        // calculate absorption
-        count2 = 0;
+        // calculate emission
+
+        #pragma omp parallel for private(F_total, I1, I2, I3, I4, dtau, tau_sum1, tau_sum2, eta, exponent, BB_wl)
         for (int wn=0; wn < nwngrid; wn++) {
-            count = 0;
-            integral = 0.0;
-            //cout << " integral 0 " << integral << endl;
-            //cout << " count 0 " << count << endl;
-    		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
 
-                count_orig = count;
+            F_total = 0.0;
 
-                if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
-                    //cout << j << " YES " << pressure[j] << endl;
-                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                        count += 1;
+            for (int g=0; g<ngauss; g++) {
+
+
+                 // Contribution from the surface.
+
+
+//                tau_sum1 = 0.;
+//                tau_sum2 = 0.;
+//                eta = 1.0;
+//
+//                // calculate BB for temperature of layer 0
+//                exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
+//                BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+//
+//
+//                // assume only one gas, and no cia or rayleigh
+//                l = 0;
+//                tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((0) + l*nlayers))]* density[0] * dz[0];
+//
+//                for (int k=0; k<(nlayers); k++) {
+//
+//                    // assume only one gas, and no cia or rayleigh
+//                    l = 0;
+//                    tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))]* density[k] * dz[k];
+//                 }
+//
+//                // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+//                I1 += BB_wl * ( exp(-tau_sum2/mu1))* eta;
+//                I2 += BB_wl * ( exp(-tau_sum2/mu2))* eta;
+//                I3 += BB_wl * ( exp(-tau_sum2/mu3))* eta;
+//                I4 += BB_wl * ( exp(-tau_sum2/mu4))* eta;
+
+                I1 = 0;
+                I2 = 0;
+                I3 = 0;
+                I4 = 0;
+
+                // loop through layers from bottom to TOA
+                for (int j=0; j<(nlayers-1); j++) {
+
+                    // calculate BB for temperature of layer j
+                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
+                    BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+
+                    // calculate tau from j+1 to TOA
+                    tau_sum1 = 0.;
+                    for (int k=j+1; k < nlayers; k++) { // loop through layers to add dtau[k]
+
+                       // again assume no cia and rayleigh, and only one gas
+                        l = 0;
+                        tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))]* density[k] * dz[k];
                     }
-                    //exptau = exp(-tautmp);
-                    integral += ((planet_radius+z[j])*(1.0)*dz[j]);
-                    tau[count2] = 1.0;
-                    //cout << count2 << " " << tau[count2] << endl;
-                    //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
-                    count2 += 1;
-                } else {
 
-                    transtot = 1.;
-                    for (int l=0;l<nactive;l++) {
-                        transtmp = 0;
-                        for (int g=0; g<ngauss; g++) {
-                            count = count_orig;
-                            tautmp = 0;
-                            for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                                // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
-                                sigma = ktab_interp[g + ngauss*(wn + nwngrid*((k+j) + l*nlayers))];
-                                tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
-                                count += 1;
-                            }
-                            //cout << tautmp << " " << exp(-tautmp) << " " << ktab_weights[g] << endl;
-                            transtmp += exp(-tautmp) * ktab_weights[g];
-                        }
-                        transtot *= transtmp;
-                    }
+                    // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
+                    dtau = 0;
+                    dtau +=  (ktab_interp[g + ngauss*(wn + nwngrid*((j) + l*nlayers))] * density[j] * dz[j]);
+                    tau_sum2 = tau_sum1 + dtau;
 
-                    // calculate rayleigh and cia separtely from cross sections
-                    // firstly get tau
-                    count = count_orig;
-                    tautmp = 0.;
-                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                        if (rayleigh == 1) {
-                           for (int l=0;l<nactive;l++) {
-                                tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                           }
-                           for (int l=0; l<ninactive; l++) {
-                                tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                           }
-                        }
-                        if (cia == 1) {
-                            for (int c=0; c<cia_npairs;c++) {
-                                tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
-                            }
-                        }
-                        count += 1;
-                    }
-                    transtot *= exp(-tautmp);
+                    // contribution function
+                    contrib[wn + j*nwngrid] = (exp(-tau_sum1) - exp(-tau_sum2));
 
-                    integral += ((planet_radius+z[j])*(1.0-transtot)*dz[j]);
-                    tau[count2] = 1.0 - transtot;
-                    //cout << count2 << " " << transtot << endl;
-                    //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
-                    count2 += 1;
+                    // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+
+                      I1 += BB_wl * ( exp(-tau_sum1/0.66) - exp(-tau_sum2/0.66));
+
+//                    I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
+//                    I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
+//                    I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
+//                    I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
+
                 }
-            }
-            integral *= 2.0;
-            //cout << integral << endl;
-            absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
-            //cout << wn << " " << absorption[wn] << endl;
+                I1 = I1 * ktab_weights[g];
+//              I2 = I2 * ktab_weights[g];
+//              I3 = I3 * ktab_weights[g];
+//              I4 = I4 * ktab_weights[g];
 
+                // Integrating over zenith angle by suming the 4 intensities multiplied by the zenith angle and the
+                // four quadrature weights. Get flux by multiplying by 2 pi
+                //F_total +=  2.0*pi*(I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4);
+
+                F_total += 2.* pi * I1 * 0.66;
+
+            }
+
+            FpFs[wn] = (F_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
 
         }
-//        cout << "END" << endl;
 
-        delete[] dlarray;
+        delete[] dz;
         delete[] ktab_interp;
         delete[] sigma_cia_interp;
-        dlarray = NULL;
+        dz = NULL;
         ktab_interp = NULL;
         sigma_cia_interp = NULL;
+
     }
 }

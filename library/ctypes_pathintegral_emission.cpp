@@ -147,7 +147,7 @@ extern "C" {
 
         // interpolate sigma CIA array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            if (sigma_ntemp == 1) { //
+            if (sigma_cia_ntemp == 1) { //
                 for (int wn=0; wn<nwngrid; wn++) {
                      for (int l=0;l<cia_npairs;l++) {
                         sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
@@ -223,7 +223,6 @@ extern "C" {
             // calculate BB for temperature of layer 0
             exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
             BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
-
             for (int l=0;l<nactive;l++) { // active gases
 				tau_sum1 += (sigma_interp[wn + nwngrid*(l*nlayers)] * active_mixratio[nlayers*l] * density[0] * dz[0]);
 			}
@@ -231,7 +230,7 @@ extern "C" {
 				for (int c=0; c<cia_npairs;c++) {
 					tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
 				}
-			}
+			} // todo CHECK: it looks like tau_sum1 is not used???
 
             for (int k=0; k<(nlayers); k++) {
 
