@@ -39,18 +39,11 @@ extern "C" {
                        const int ninactive,
                        const int rayleigh,
                        const int cia,
-
-//                       const double * sigma_array,
-//                       const double * sigma_temp,
-//                       const int sigma_ntemp,
-
                        const double * ktab_array,
                        const double * ktab_temp,
                        const int ktab_ntemp,
                        const int ngauss,
                        const double * ktab_weights,
-
-
                        const double * sigma_rayleigh,
                        const int cia_npairs,
                        const double * cia_idx,
@@ -228,40 +221,38 @@ extern "C" {
 
             for (int g=0; g<ngauss; g++) {
 
-
-                 // Contribution from the surface.
-
-
-//                tau_sum1 = 0.;
-//                tau_sum2 = 0.;
-//                eta = 1.0;
-//
-//                // calculate BB for temperature of layer 0
-//                exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
-//                BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
-//
-//
-//                // assume only one gas, and no cia or rayleigh
-//                l = 0;
-//                tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((0) + l*nlayers))]* density[0] * dz[0];
-//
-//                for (int k=0; k<(nlayers); k++) {
-//
-//                    // assume only one gas, and no cia or rayleigh
-//                    l = 0;
-//                    tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))]* density[k] * dz[k];
-//                 }
-//
-//                // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
-//                I1 += BB_wl * ( exp(-tau_sum2/mu1))* eta;
-//                I2 += BB_wl * ( exp(-tau_sum2/mu2))* eta;
-//                I3 += BB_wl * ( exp(-tau_sum2/mu3))* eta;
-//                I4 += BB_wl * ( exp(-tau_sum2/mu4))* eta;
+//                 // Contribution from the surface.
 
                 I1 = 0;
                 I2 = 0;
                 I3 = 0;
                 I4 = 0;
+
+                tau_sum1 = 0.;
+                tau_sum2 = 0.;
+                eta = 1.0;
+
+                // calculate BB for temperature of layer 0
+                exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
+                BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+
+
+                // assume only one gas, and no cia or rayleigh
+                l = 0;
+                tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((0) + l*nlayers))] * active_mixratio[0+nlayers*l] * density[0] * dz[0];
+
+                for (int k=0; k<(nlayers); k++) {
+
+                    // assume only one gas, and no cia or rayleigh
+                    l = 0;
+                    tau_sum2 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))] * active_mixratio[k+nlayers*l]* density[k] * dz[k];
+                 }
+
+                // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+                I1 += BB_wl * ( exp(-tau_sum2/mu1))* eta;
+                I2 += BB_wl * ( exp(-tau_sum2/mu2))* eta;
+                I3 += BB_wl * ( exp(-tau_sum2/mu3))* eta;
+                I4 += BB_wl * ( exp(-tau_sum2/mu4))* eta;
 
                 // loop through layers from bottom to TOA
                 for (int j=0; j<(nlayers-1); j++) {
@@ -276,12 +267,12 @@ extern "C" {
 
                        // again assume no cia and rayleigh, and only one gas
                         l = 0;
-                        tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))]* density[k] * dz[k];
+                        tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))]* active_mixratio[k+nlayers*l] *  density[k] * dz[k];
                     }
 
                     // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
                     dtau = 0;
-                    dtau +=  (ktab_interp[g + ngauss*(wn + nwngrid*((j) + l*nlayers))] * density[j] * dz[j]);
+                    dtau +=  (ktab_interp[g + ngauss*(wn + nwngrid*((j) + l*nlayers))] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
                     tau_sum2 = tau_sum1 + dtau;
 
                     // contribution function
@@ -289,24 +280,16 @@ extern "C" {
 
                     // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
 
-                      I1 += BB_wl * ( exp(-tau_sum1/0.66) - exp(-tau_sum2/0.66));
-
-//                    I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
-//                    I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
-//                    I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
-//                    I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
+                    I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
+                    I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
+                    I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
+                    I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
 
                 }
-                I1 = I1 * ktab_weights[g];
-//              I2 = I2 * ktab_weights[g];
-//              I3 = I3 * ktab_weights[g];
-//              I4 = I4 * ktab_weights[g];
 
                 // Integrating over zenith angle by suming the 4 intensities multiplied by the zenith angle and the
                 // four quadrature weights. Get flux by multiplying by 2 pi
-                //F_total +=  2.0*pi*(I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4);
-
-                F_total += 2.* pi * I1 * 0.66;
+                F_total +=  2.0*pi*(I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4) * ktab_weights[g];
 
             }
 
