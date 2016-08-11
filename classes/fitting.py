@@ -593,21 +593,21 @@ class fitting(object):
         # #
         # # #
         #
-        ion()
-        clf()
-        errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-        plot(self.data.obs_spectrum[:,0], model_binned)
-        xlabel('Wavelength (micron)')
-        ylabel('Transit depth')
-        xscale('log')
-        xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-        draw()
-        pause(0.0001)
-
-        print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
-            self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
-            self.forwardmodel.atmosphere.planet_radius/RJUP), \
-            fit_params #fit_params
+        # ion()
+        # clf()
+        # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        # plot(self.data.obs_spectrum[:,0], model_binned)
+        # xlabel('Wavelength (micron)')
+        # ylabel('Transit depth')
+        # xscale('log')
+        # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
+        # draw()
+        # pause(0.0001)
+        #
+        # print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+        #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
+        #     fit_params #fit_params
 
 
         return res
