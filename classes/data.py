@@ -29,7 +29,7 @@ from library_emission import *
 #import license
 #from license import *
 
-import matplotlib.pylab as plt
+from matplotlib.pylab import *
 
 
 class data(object):
@@ -661,8 +661,8 @@ class data(object):
             lambdamax = self.params.gen_wavemax
             lambdamin = self.params.gen_wavemin
         else:
-            lambdamax = self.obs_wlgrid[0] - self.obs_binwidths[0]/2.
-            lambdamin = self.obs_wlgrid[-1] + self.obs_binwidths[-1]/2.
+            lambdamax = self.obs_wlgrid[0] + self.obs_binwidths[0]/2.
+            lambdamin = self.obs_wlgrid[-1] - self.obs_binwidths[-1]/2.
 
         # convert to wavenumbers
         numin = 10000./lambdamax
@@ -694,10 +694,10 @@ class data(object):
 
         if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
             # calculate spectral binning grid in wavelength space
+
             self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid,
                                                                         self.int_wlgrid_obs, self.obs_binwidths)
             self.intsp_nbingrid = len(self.obs_wlgrid)
-
             self.intsp_bingrid_full, self.intsp_bingrididx_full = get_specbingrid(self.obs_wlgrid, self.int_wlgrid_full,
                                                                                   self.obs_binwidths)
             self.intsp_nbingrid_full = len(self.obs_wlgrid)

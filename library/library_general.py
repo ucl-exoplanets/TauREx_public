@@ -152,11 +152,10 @@ def get_specbingrid(wavegrid, specgrid, binwidths=None):
             bingrid.append(wavegrid[i]+binwidths[i]/2.)
 
         # build bin grid index array (an index for each model datapoint
-        bingrid_idx = np.empty(len(specgrid))
-        bingrid_idx[:] = np.NaN
+        bingrid_idx = np.zeros(len(specgrid))
         for i in range(len(specgrid)):
             for j in range(len(wavegrid)):
-                if specgrid[i] <= (wavegrid[j]-binwidths[j]/2.) and specgrid[i] > (wavegrid[j]+binwidths[j]/2.):
+                if specgrid[i] <= (wavegrid[j]+binwidths[j]/2.) and specgrid[i] > (wavegrid[j]-binwidths[j]/2.):
                     bingrid_idx[i] = j+1
     return bingrid, bingrid_idx
 
@@ -174,7 +173,7 @@ def get_molecular_weight(gasname):
 
     if gasname == 'HE':
         mu = 4.
-    elif gasname == 'H2':
+    # elif gasname == 'H2':
         mu = 2.
     elif gasname == 'N2':
         mu = 28.

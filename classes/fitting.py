@@ -573,9 +573,11 @@ class fitting(object):
 
         # get chi2
         res = ((data - model_binned) / datastd)
-        res = np.nansum(res*res)
+
+        res = np.sum(res*res)
         if res == 0:
             res = np.nan
+
         #
         #
         #
@@ -604,10 +606,11 @@ class fitting(object):
         # draw()
         # pause(0.0001)
         #
-        # print 'res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+        # print(model)
+        # print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
         #     self.forwardmodel.atmosphere.planet_mu[0]/AMU, \
         #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
-        #     fit_params #fit_params
+        #     fit_params) #fit_params
 
 
         return res
