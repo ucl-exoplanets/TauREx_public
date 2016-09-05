@@ -173,7 +173,7 @@ def get_molecular_weight(gasname):
 
     if gasname == 'HE':
         mu = 4.
-    # elif gasname == 'H2':
+    elif gasname == 'H2':
         mu = 2.
     elif gasname == 'N2':
         mu = 28.
