@@ -587,18 +587,18 @@ class fitting(object):
         self.update_atmospheric_parameters(fit_params)
         
         # get forward model and bin
-        model = self.forwardmodel.model()
+        model_out = self.forwardmodel.model()
 
-        #runnning fast cythonised function or slower python depending on import
-        # if cythonised:
-        #     model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
-        # else:
-        #     model_binned = [model[self.data.intsp_bingrididx == i].mean() for i in range(1, self.data.intsp_nbingrid+1)]
-
-        model_binned = np.interp(self.data.obs_wngrid, self.data.int_wngrid_obs, model)
+        if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+            # bin if using sampled cross sections
+            model = [model_out[self.data.intsp_bingrididx == i].mean() for i in range(1, self.data.intsp_nbingrid+1)]
+            #model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
+        elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+            # interpolate if using ktables
+            model = np.interp(self.data.obs_wngrid, self.data.int_wngrid_obs, model_out)
 
         # get chi2
-        res = ((data - model_binned) / datastd)
+        res = ((data - model) / datastd)
 
         res = np.sum(res*res)
         if res == 0:
@@ -619,8 +619,7 @@ class fitting(object):
         # ion()
         # clf()
         # errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-        # plot(self.data.obs_spectrum[:,0], model_binned)
-        # #plot(self.data.int_wlgrid_obs, model)
+        # plot(self.data.obs_spectrum[:,0], model)
         # xlabel('Wavelength (micron)')
         # ylabel('Transit depth')
         # xscale('log')
@@ -628,10 +627,10 @@ class fitting(object):
         # draw()
         # pause(0.0001)
 
-        print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
-            self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
-            self.forwardmodel.atmosphere.planet_radius/RJUP), \
-            fit_params) #fit_params
+        # print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+        #     self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
+        #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
+        #     fit_params) #fit_params
 
         return res
 
