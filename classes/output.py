@@ -197,7 +197,7 @@ class output(object):
 
             dict = {'type': 'nest',
                     'local_logE': (NEST_out['NEST_stats']['modes'][0]['local log-evidence'],  NEST_out['NEST_stats']['modes'][0]['local log-evidence error']),
-                    'weights': modes_weights[nmode],
+                    'weights': np.asarray(modes_weights[nmode]),
                     'tracedata': modes_array[nmode],
                     'fit_params': {}}
 
@@ -216,65 +216,65 @@ class output(object):
                     'trace': trace,
                 }
 
-            if self.params.fit_clr_trans == True:
+            # if self.params.fit_clr_trans == True:
 
-                # todo check!
-
-                nallgases = self.fitting.forwardmodel.atmosphere.nallgases
-
-                # if centered-log-ratio transformation is True, transform the traces of the log ratios back to abundances
-                mixing_ratios_clr = modes_array[nmode][:, :nallgases-1] # get traces of log-ratios
-                mixing_ratios_clr = np.c_[mixing_ratios_clr, -sum(mixing_ratios_clr, axis=1)] #add last clr (= -sum(clr) )
-                mixing_ratios_clr_inv, coupled_mu_trace = inverse_clr_transform(mixing_ratios_clr)
-
-                self.NEST_data_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace]
-
-                # get means
-                clr = np.asarray([NEST_stats['modes'][nmode]['maximum a posterior'][i] for i in range(nallgases-1)])
-                clr = np.append(clr, -np.sum(clr))
-
-                # add last CLR to dictionary. This is not fitted, as it is equal to minus the sum of all the other CLRs
-                # Note that that the sum of all CLR is equal to zero
-                dict['fit_params']['%s_CLR' % self.forwardmodel.atmosphere.inactive_gases[-1]] = {
-                    'map': clr[nallgases-1],
-                    'sigma': weighted_avg_and_std(mixing_ratios_clr[:, nallgases-1], modes_weights[nmode])[1], # weighted std
-                    'trace': mixing_ratios_clr[:, nallgases-1],
-                }
-
-                mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
-                mixing_means /= sum(mixing_means) # closure operation
-
-                # get coupled std of means
-                absorbing_gases_X = mixing_means[:len(self.params.atm_active_gases)]
-                inactive_gases_X = mixing_means[len(self.params.atm_inactive_gases)+1:]
-
-                coupled_mu = self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
-
-                # convert mixing means to log space # todo consider new parameter X_log
-                mixing_means = np.log10(mixing_means)
-
-                # set new list of params names, including the clr inv mixing ratios
-                self.clrinv_params_names = []
-                for idx, gasname in enumerate(self.params.atm_active_gases +
-                        self.params.atm_inactive_gases):
-                    self.clrinv_params_names.append(gasname)
-                self.clrinv_params_names.append('coupled_mu')
-                for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
-                     self.clrinv_params_names.append(self.fitting.fit_params_names[i])
-
-                for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1): # all gases + coupled_mu
-                    if self.clrinv_params_names[idx] == 'coupled_mu':
-                        trace = coupled_mu_trace
-                        value = coupled_mu
-                    else:
-                        trace = mixing_ratios_clr_inv[:,idx]
-                        value = mixing_means[idx]
-                    std = weighted_avg_and_std(trace, modes_weights[nmode])[1]
-                    dict['fit_params'][self.clrinv_params_names[idx]] = {
-                        'value': value,
-                        'sigma': std,
-                        'trace': trace,
-                    }
+                # NOT WORKING!
+                #
+                # nallgases = self.fitting.forwardmodel.atmosphere.nallgases
+                #
+                # # if centered-log-ratio transformation is True, transform the traces of the log ratios back to abundances
+                # mixing_ratios_clr = modes_array[nmode][:, :nallgases-1] # get traces of log-ratios
+                # mixing_ratios_clr = np.c_[mixing_ratios_clr, -sum(mixing_ratios_clr, axis=1)] #add last clr (= -sum(clr) )
+                # mixing_ratios_clr_inv, coupled_mu_trace = inverse_clr_transform(mixing_ratios_clr)
+                #
+                # self.NEST_data_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace]
+                #
+                # # get means
+                # clr = np.asarray([NEST_stats['modes'][nmode]['maximum a posterior'][i] for i in range(nallgases-1)])
+                # clr = np.append(clr, -np.sum(clr))
+                #
+                # # add last CLR to dictionary. This is not fitted, as it is equal to minus the sum of all the other CLRs
+                # # Note that that the sum of all CLR is equal to zero
+                # dict['fit_params']['%s_CLR' % self.forwardmodel.atmosphere.inactive_gases[-1]] = {
+                #     'map': clr[nallgases-1],
+                #     'sigma': weighted_avg_and_std(mixing_ratios_clr[:, nallgases-1], modes_weights[nmode])[1], # weighted std
+                #     'trace': mixing_ratios_clr[:, nallgases-1],
+                # }
+                #
+                # mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
+                # mixing_means /= sum(mixing_means) # closure operation
+                #
+                # # get coupled std of means
+                # absorbing_gases_X = mixing_means[:len(self.params.atm_active_gases)]
+                # inactive_gases_X = mixing_means[len(self.params.atm_inactive_gases)+1:]
+                #
+                # coupled_mu = None self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
+                #
+                # # convert mixing means to log space # todo consider new parameter X_log
+                # mixing_means = np.log10(mixing_means)
+                #
+                # # set new list of params names, including the clr inv mixing ratios
+                # self.clrinv_params_names = []
+                # for idx, gasname in enumerate(self.params.atm_active_gases +
+                #         self.params.atm_inactive_gases):
+                #     self.clrinv_params_names.append(gasname)
+                # self.clrinv_params_names.append('coupled_mu')
+                # for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
+                #      self.clrinv_params_names.append(self.fitting.fit_params_names[i])
+                #
+                # for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1): # all gases + coupled_mu
+                #     if self.clrinv_params_names[idx] == 'coupled_mu':
+                #         trace = coupled_mu_trace
+                #         value = coupled_mu
+                #     else:
+                #         trace = mixing_ratios_clr_inv[:,idx]
+                #         value = mixing_means[idx]
+                #     std = weighted_avg_and_std(trace, modes_weights[nmode])[1]
+                #     dict['fit_params'][self.clrinv_params_names[idx]] = {
+                #         'value': value,
+                #         'sigma': std,
+                #         'trace': trace,
+                #     }
 
             NEST_out['solutions'].append(dict)
 
@@ -302,7 +302,7 @@ class output(object):
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
 
         # load model using full wavenumber range
-        if self.params.gen_type is 'transmission' or self.params.fit_transmission:
+        if self.params.gen_type is 'transmission':
             self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
             wavegrid  = self.data.int_wlgrid_full
             nwavegrid = self.data.int_nwlgrid_full

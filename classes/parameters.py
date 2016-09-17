@@ -117,10 +117,10 @@ class parameters(object):
 
         # section Input
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
-        self.in_spectrum_micron    = self.getpar('Input', 'spectrum_micron', 'bool')
+        #self.in_spectrum_micron    = self.getpar('Input', 'spectrum_micron', 'bool')
         self.in_spectrum_db        = self.getpar('Input', 'spectrum_db')
-        self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
-        self.in_atm_file           = self.getpar('Input','atm_file')
+        #self.in_use_ATMfile        = self.getpar('Input','use_ATMfile', 'bool')
+        #self.in_atm_file           = self.getpar('Input','atm_file')
 
         self.in_opacity_method     = self.getpar('Input','opacity_method')
         self.in_xsec_path          = self.getpar('Input','xsec_path')
@@ -132,7 +132,7 @@ class parameters(object):
 
         # section Output
         self.out_path              = self.getpar('Output','path')
-        self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
+        #self.out_save_plots        = self.getpar('Output','save_plots', 'bool')
         self.out_sigma_spectrum        = self.getpar('Output', 'sigma_spectrum', 'bool')
         self.out_sigma_spectrum_frac   = self.getpar('Output', 'sigma_spectrum_frac', 'float')
 
@@ -169,57 +169,62 @@ class parameters(object):
 
         self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
         self.atm_active_gases_mixratios = self.getpar('Atmosphere','active_gases_mixratios', 'list-float')
-        self.atm_inactive_gases     = [gas.upper() for gas in self.getpar('Atmosphere','inactive_gases', 'list-str')]
-        self.atm_inactive_gases_mixratios = self.getpar('Atmosphere','inactive_gases_mixratios', 'list-float')
+        self.atm_inactive_gases     = ['H2', 'HE', 'N2']
+        self.atm_N2_mixratio        = self.getpar('Atmosphere', 'N2_mixratio', 'float')
+        self.atm_He_H2_ratio        = self.getpar('Atmosphere', 'He_H2_ratio', 'float')
 
-        self.atm_mu                 = self.getpar('Atmosphere', 'mu', 'float')*AMU
-        self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
+        #self.atm_mu                 = self.getpar('Atmosphere', 'mu', 'float')*AMU
+        #self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
 
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
         self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
         self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
         self.atm_clouds             = self.getpar('Atmosphere','clouds', 'bool')
-        self.atm_cld_topP           = self.getpar('Atmosphere','cld_topP', 'float')
+        self.atm_clouds_pressure           = self.getpar('Atmosphere','clouds_pressure', 'float')
         self.atm_ace_metallicity    = self.getpar('Atmosphere', 'ace_metallicity', 'float')
         self.atm_ace_co             = self.getpar('Atmosphere', 'ace_co', 'float')
 
         # section Venot
-        self.ven_load = self.getpar('Venot', 'load', 'bool')
-        self.ven_TP_profile_path = self.getpar('Venot', 'TP_profile_path')
-        self.ven_mol_profile_path = self.getpar('Venot', 'mol_profile_path')
-        self.ven_exclude_mol = [mol.upper() for mol in self.getpar('Venot','exclude_mol', 'list-str')]
+        #self.ven_load = self.getpar('Venot', 'load', 'bool')
+        #self.ven_TP_profile_path = self.getpar('Venot', 'TP_profile_path')
+        #self.ven_mol_profile_path = self.getpar('Venot', 'mol_profile_path')
+        #self.ven_exclude_mol = [mol.upper() for mol in self.getpar('Venot','exclude_mol', 'list-str')]
 
         # Section Fit
 
-        self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
-        self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
+        #self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
+        #self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
         self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
 
         # misc
-        self.fit_couple_mu           = self.getpar('Fitting','couple_mu', 'bool')
-        self.fit_inactive_mu_rescale = self.getpar('Fitting','inactive_mu_rescale', 'bool')
-        self.fit_X_log               = self.getpar('Fitting','X_log', 'bool')
-        self.fit_clr_trans           = self.getpar('Fitting','clr_trans', 'bool')
+        #self.fit_couple_mu           = self.getpar('Fitting','couple_mu', 'bool')
+        #self.fit_inactive_mu_rescale = self.getpar('Fitting','inactive_mu_rescale', 'bool')
+        self.fit_mixratio_log               = self.getpar('Fitting','mixratio_log', 'bool')
+        #self.fit_clr_trans           = self.getpar('Fitting','clr_trans', 'bool')
 
         # fit / fix parameters
-        self.fit_fit_active          = self.getpar('Fitting', 'fit_active', 'bool')
-        self.fit_fit_inactive        = self.getpar('Fitting', 'fit_inactive', 'bool')
+        self.fit_fit_active_gases          = self.getpar('Fitting', 'fit_active_gases', 'bool')
+        self.fit_fit_N2_mixratio          = self.getpar('Fitting', 'fit_N2_mixratio', 'bool')
+        self.fit_fit_He_H2_ratio          = self.getpar('Fitting', 'fit_He_H2_ratio', 'bool')
+        #self.fit_fit_inactive        = self.getpar('Fitting', 'fit_inactive', 'bool')
         self.fit_fit_temp            = self.getpar('Fitting', 'fit_temp', 'bool')
-        self.fit_fit_mu              = self.getpar('Fitting', 'fit_mu', 'bool')
+        #self.fit_fit_mu              = self.getpar('Fitting', 'fit_mu', 'bool')
         self.fit_fit_radius          = self.getpar('Fitting', 'fit_radius', 'bool')
-        self.fit_fit_P0              = self.getpar('Fitting', 'fit_P0', 'bool')
-        self.fit_fit_clouds_topP     = self.getpar('Fitting', 'fit_clouds_topP', 'bool')
+        #self.fit_fit_P0              = self.getpar('Fitting', 'fit_P0', 'bool')
+        self.fit_fit_clouds_pressure     = self.getpar('Fitting', 'fit_clouds_pressure', 'bool')
         self.fit_fit_ace_metallicity = self.getpar('Fitting', 'fit_ace_metallicity', 'bool')
         self.fit_fit_ace_co          = self.getpar('Fitting', 'fit_ace_co', 'bool')
 
         # prior bounds
-        self.fit_X_active_bounds        = self.getpar('Fitting', 'X_active_bounds', 'list-float')
-        self.fit_X_inactive_bounds      = self.getpar('Fitting', 'X_inactive_bounds', 'list-float')
-        self.fit_clr_bounds             = self.getpar('Fitting', 'clr_bounds', 'list-float')
-        self.fit_mu_bounds              = self.getpar('Fitting', 'mu_bounds', 'list-float')
+        self.fit_mixratio_bounds        = self.getpar('Fitting', 'mixratio_bounds', 'list-float')
+        #self.fit_X_inactive_bounds      = self.getpar('Fitting', 'X_inactive_bounds', 'list-float')
+        #self.fit_clr_bounds             = self.getpar('Fitting', 'clr_bounds', 'list-float')
+        self.fit_He_H2_ratio_bounds     = self.getpar('Fitting', 'He_H2_ratio_bounds', 'list-float')
+        #self.fit_mu_bounds              = self.getpar('Fitting', 'mu_bounds', 'list-float')
         self.fit_radius_bounds          = self.getpar('Fitting', 'radius_bounds', 'list-float')
-        self.fit_P0_bounds              = self.getpar('Fitting', 'P0_bounds', 'list-float')
-        self.fit_clouds_topP_bounds     = self.getpar('Fitting', 'clouds_topP_bounds', 'list-float')
+        self.fit_radius_bounds_factor   = self.getpar('Fitting', 'radius_bounds_factor', 'float')
+        #self.fit_P0_bounds              = self.getpar('Fitting', 'P0_bounds', 'list-float')
+        self.fit_clouds_pressure_bounds = self.getpar('Fitting', 'clouds_pressure_bounds', 'list-float')
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
 
@@ -262,10 +267,7 @@ class parameters(object):
         self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
         self.nest_out_filename     = self.getpar('MultiNest','out_filename')
 
-        #checking that either emission or transmisison is run
-        if self.fit_emission and self.fit_transmission:
-            logging.error('Transmission and emission cannot currently be run simultaneously')
-            logging.error('change the fit_emission, fit_transmission parameters.' )
+
 
     def getpar(self, sec, par, type=None):
 

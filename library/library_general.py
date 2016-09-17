@@ -143,20 +143,22 @@ def get_specbingrid(wavegrid, specgrid, binwidths=None):
         bingrid.append(wavegrid[0]- (wavegrid[1]-wavegrid[0])/2.0) #first bin edge
         for i in range(len(wavegrid)-1):
             bingrid.append(wavegrid[i]+(wavegrid[i+1]-wavegrid[i])/2.0)
-        bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
-        bingrid_idx = np.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
+        # bingrid.append((wavegrid[-1]-wavegrid[-2])/2.0 + wavegrid[-1]) #last bin edge
+        # bingrid_idx = np.digitize(specgrid,bingrid) #getting the specgrid indexes for bins
+        #
     else:
         bingrid = []
         for i in range(len(wavegrid)):
             bingrid.append(wavegrid[i]-binwidths[i]/2.)
             bingrid.append(wavegrid[i]+binwidths[i]/2.)
 
-        # build bin grid index array (an index for each model datapoint
-        bingrid_idx = np.zeros(len(specgrid))
-        for i in range(len(specgrid)):
-            for j in range(len(wavegrid)):
-                if specgrid[i] <= (wavegrid[j]+binwidths[j]/2.) and specgrid[i] > (wavegrid[j]-binwidths[j]/2.):
-                    bingrid_idx[i] = j+1
+    # build bin grid index array (an index for each model datapoint
+    bingrid_idx = np.zeros(len(specgrid))
+    for i in range(len(specgrid)):
+        for j in range(len(wavegrid)):
+            if specgrid[i] <= (wavegrid[j]+binwidths[j]/2.) and specgrid[i] > (wavegrid[j]-binwidths[j]/2.):
+                bingrid_idx[i] = j+1
+
     return bingrid, bingrid_idx
 
 def plot_bin(spectrum, R, ycol=1, yadg=0., **kwargs):

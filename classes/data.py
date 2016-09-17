@@ -38,6 +38,7 @@ class data(object):
 
         logging.info('Initialising data object')
 
+        # DISABLED.
         #checking taurex license
         #license_manager().run()
         
@@ -47,9 +48,9 @@ class data(object):
         if self.params.gen_compile_cpp:
             self.compile_shared_libs()
 
-        # reading in atmospheric profile file from Venot
-        if self.params.ven_load:
-            self.load_venot_model()
+        # # reading in atmospheric profile file from Venot
+        # if self.params.ven_load:
+        #     self.load_venot_model()
 
         # load ace specific parameters
         if self.params.gen_ace:
@@ -60,14 +61,14 @@ class data(object):
 
 
         # Preload the cross sections
-        if self.params.in_opacity_method == 'xsec_lowres':
-            self.load_sigma_dict_lowres()
+        if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+            self.load_sigma_dict_sampled()
         elif self.params.in_opacity_method == 'xsec_highres':
             self.load_sigma_dict_highres()
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
             self.load_ktables_dict()
         else:
-            logging.error('You need to select an opacity calculation method (xsec or ktables)')
+            logging.error('You need to select an opacity calculation method. See parameter General->opacity_method')
             exit()
 
         # Create wavenumber grid of internal model
@@ -79,8 +80,8 @@ class data(object):
         # Preload CIA cross sections
         self.load_sigma_cia_dict()
 
-        # reading in Phoenix stellar model library (if emission is calculated only)
-        if self.params.gen_type == 'emission' or self.params.fit_emission:
+        # reading in Phoenix stellar model library or star blackbody
+        if self.params.gen_type == 'emission':
             self.star_sed = self.get_star_SED()
 
         logging.info('Data object initialised')
@@ -120,16 +121,12 @@ class data(object):
                 self.ace_molecules.append(sl[1])
                 self.ace_molecules_mu.append(float(sl[2]))
 
-        # include He, H and N as inactive gases
-        self.params.atm_inactive_gases = ['H2', 'HE', 'N2']
-        self.params.atm_inactive_gases_mixratios = [0.85, 0.15, 0]
-        self.params.atm_inactive_gases_idx = [0, 0, 0] # will be set below
 
         # include only molecules for which we have cross sections
         self.params.atm_active_gases = []
         self.params.atm_active_gases_mixratios = []
         self.ace_active_gases_idx = []
-        self.ace_inactive_gases_idx = [0,0,0]
+        self.ace_inactive_gases_idx = [0, 0, 0]
 
         for mol_idx, mol_val in enumerate(self.ace_molecules):
             molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
@@ -138,6 +135,7 @@ class data(object):
                 self.params.atm_active_gases_mixratios.append(0)
                 self.ace_active_gases_idx.append(mol_idx)
 
+            # the idx 0, 1, 2 always correspond to H2, He, N2 respectively in self.atm_inactive_gases
             if mol_val.upper() == 'H2':
                 self.ace_inactive_gases_idx[0] = mol_idx
             if mol_val.upper() == 'HE':
@@ -200,71 +198,71 @@ class data(object):
             # no input spectrum provided. If running only forward model, input spectrum can be omitted
             logging.info('No input spectrum provided')
             self.obs_spectrum = False
-
-    def load_venot_model(self):
-
-            logging.info('Load atmospheric profile from external files. Format: Venot photochemical models')
-
-            # altitude (km), pressure (mbar), temperature (K) profile
-            apt = np.loadtxt(self.params.ven_TP_profile_path)
-            self.ven_altitude = apt[:,0]/1000. # convert km to m
-            self.ven_pressure = apt[:,1]*100. # convert mbar to pascal
-            self.ven_temperature = apt[:,2]
-            self.ven_altitude_int = interp1d(self.ven_pressure, self.ven_altitude)
-            self.ven_temperature_int = interp1d(self.ven_pressure, self.ven_temperature)
-
-            # mixing ratio profiles
-
-            # extract list of molecules from 'fractions_molaires' file
-            with open(self.params.ven_mol_profile_path, 'r') as f:
-                self.ven_molecules = [x.upper() for x in f.readline().split()]
-                self.ven_molweight = [float(x) for x in f.readline().split()] # molecular weight in AMU
-                table = np.loadtxt(self.params.ven_mol_profile_path, skiprows=2)
-                self.ven_molprof_altitude = table[:,0]/1000. # convert km to m
-                self.ven_molprof_pressure = table[:,1]*100. # convert mbar to pascal
-                self.ven_molprof_mixratios = table[:,2:] # mixing ratios referring to self.ven_molecules
-                self.ven_molprof_altitude_int = interp1d(self.ven_molprof_pressure, self.ven_molprof_altitude)
-                self.ven_molprof_mixratios_int = [interp1d(self.ven_molprof_pressure, self.ven_molprof_mixratios[:,i])
-                                                  for i in range(np.shape(self.ven_molprof_mixratios)[1])]
-                logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' %
-                             (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
-
-            # determine list of molecules with cross sections. exclude the others.
-            self.ven_active_gases = []
-            self.ven_active_gases_idx = []
-            self.ven_noxsec = []
-
-            for mol_idx, mol_val in enumerate(self.ven_molecules):
-                molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
-                if os.path.isfile(molpath) and not mol_val in self.params.ven_exclude_mol:
-                    self.ven_active_gases.append(mol_val)
-                    self.ven_active_gases_idx.append(mol_idx)
-                else:
-                    self.ven_noxsec.append(mol_val)
-
-            logging.info('Molecules with available cross sections: %s' %  self.ven_active_gases)
-            logging.info('Molecules with available cross sections idx: %s' %  self.ven_active_gases_idx)
-            logging.info('Excluded molecules: %s' %  self.ven_noxsec)
-
-            # determine list of inactive gases
-            gases = ['H2', 'HE', 'N2']
-            self.ven_inactive_gases = []
-            self.ven_inactive_gases_idx = []
-            for gasname in gases:
-                if gasname in self.ven_molecules:
-                    self.ven_inactive_gases.append(gasname)
-                    self.ven_inactive_gases_idx.append(self.ven_molecules.index(gasname))
-            logging.info('Inactive gases: %s' %  self.ven_inactive_gases)
+    #
+    # def load_venot_model(self):
+    #
+    #         logging.info('Load atmospheric profile from external files. Format: Venot photochemical models')
+    #
+    #         # altitude (km), pressure (mbar), temperature (K) profile
+    #         apt = np.loadtxt(self.params.ven_TP_profile_path)
+    #         self.ven_altitude = apt[:,0]/1000. # convert km to m
+    #         self.ven_pressure = apt[:,1]*100. # convert mbar to pascal
+    #         self.ven_temperature = apt[:,2]
+    #         self.ven_altitude_int = interp1d(self.ven_pressure, self.ven_altitude)
+    #         self.ven_temperature_int = interp1d(self.ven_pressure, self.ven_temperature)
+    #
+    #         # mixing ratio profiles
+    #
+    #         # extract list of molecules from 'fractions_molaires' file
+    #         with open(self.params.ven_mol_profile_path, 'r') as f:
+    #             self.ven_molecules = [x.upper() for x in f.readline().split()]
+    #             self.ven_molweight = [float(x) for x in f.readline().split()] # molecular weight in AMU
+    #             table = np.loadtxt(self.params.ven_mol_profile_path, skiprows=2)
+    #             self.ven_molprof_altitude = table[:,0]/1000. # convert km to m
+    #             self.ven_molprof_pressure = table[:,1]*100. # convert mbar to pascal
+    #             self.ven_molprof_mixratios = table[:,2:] # mixing ratios referring to self.ven_molecules
+    #             self.ven_molprof_altitude_int = interp1d(self.ven_molprof_pressure, self.ven_molprof_altitude)
+    #             self.ven_molprof_mixratios_int = [interp1d(self.ven_molprof_pressure, self.ven_molprof_mixratios[:,i])
+    #                                               for i in range(np.shape(self.ven_molprof_mixratios)[1])]
+    #             logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' %
+    #                          (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
+    #
+    #         # determine list of molecules with cross sections. exclude the others.
+    #         self.ven_active_gases = []
+    #         self.ven_active_gases_idx = []
+    #         self.ven_noxsec = []
+    #
+    #         for mol_idx, mol_val in enumerate(self.ven_molecules):
+    #             molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
+    #             if os.path.isfile(molpath) and not mol_val in self.params.ven_exclude_mol:
+    #                 self.ven_active_gases.append(mol_val)
+    #                 self.ven_active_gases_idx.append(mol_idx)
+    #             else:
+    #                 self.ven_noxsec.append(mol_val)
+    #
+    #         logging.info('Molecules with available cross sections: %s' %  self.ven_active_gases)
+    #         logging.info('Molecules with available cross sections idx: %s' %  self.ven_active_gases_idx)
+    #         logging.info('Excluded molecules: %s' %  self.ven_noxsec)
+    #
+    #         # determine list of inactive gases
+    #         gases = ['H2', 'HE', 'N2']
+    #         self.ven_inactive_gases = []
+    #         self.ven_inactive_gases_idx = []
+    #         for gasname in gases:
+    #             if gasname in self.ven_molecules:
+    #                 self.ven_inactive_gases.append(gasname)
+    #                 self.ven_inactive_gases_idx.append(self.ven_molecules.index(gasname))
+    #         logging.info('Inactive gases: %s' %  self.ven_inactive_gases)
 
 
     def load_ktables_dict(self):
 
         # preload the k tables for the input molecules
 
-        if self.params.ven_load:
-            molecules = self.ven_active_gases
-        else:
-            molecules = self.params.atm_active_gases
+        # if self.params.ven_load:
+        #     molecules = self.ven_active_gases
+        # else:
+        molecules = self.params.atm_active_gases
 
         ktable_dict = {}
         ktable_dict['kcoeff'] = {}
@@ -328,8 +326,8 @@ class data(object):
 
             ktable_dict['kcoeff'][mol_val] = ktable['kcoeff'][:,Tmin_idx:Tmax_idx,:,:] / 10000. # from cm^-2 to m^-2
 
-        logging.info('Temperature range: %s' % ktable_dict['t'] )
-        logging.info('Pressure range: %s ' % ktable_dict['p'])
+        logging.info('Loaded temperatures in ktables: %s' % ktable_dict['t'] )
+        logging.info('Loaded pressures in ktables: %s ' % ktable_dict['p'])
         logging.info('The full wavenumber range is %.2f - %.2f with %i bins' % (np.min(bin_edges),
                                                                                 np.max(bin_edges), len(bin_centers)))
 
@@ -346,10 +344,10 @@ class data(object):
         logging.info('Load high resolution cross sections.')
 
         # preload the absorption cross sections for the input molecules
-        if self.params.ven_load:
-            molecules = self.ven_active_gases
-        else:
-            molecules = self.params.atm_active_gases
+        # if self.params.ven_load:
+        #     molecules = self.ven_active_gases
+        # else:
+        molecules = self.params.atm_active_gases
 
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
@@ -448,15 +446,15 @@ class data(object):
         self.int_nwlgrid_full = len(wngrid)
         self.sigma_dict = sigma_dict
 
-    def load_sigma_dict_lowres(self):
+    def load_sigma_dict_sampled(self):
 
-        logging.info('Load low resolution cross sections.')
+        logging.info('Load sampled cross sections.')
 
         # preload the absorption cross sections for the input molecules
-        if self.params.ven_load:
-            molecules = self.ven_active_gases
-        else:
-            molecules = self.params.atm_active_gases
+        # if self.params.ven_load:
+        #     molecules = self.ven_active_gases
+        # else:
+        molecules = self.params.atm_active_gases
 
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
@@ -528,10 +526,10 @@ class data(object):
 
         sigma_rayleigh_dict = {}
 
-        if self.params.ven_load:
-            molecules = self.ven_active_gases + self.ven_inactive_gases
-        else:
-            molecules = self.params.atm_active_gases + self.params.atm_inactive_gases
+        # if self.params.ven_load:
+        #     molecules = self.ven_active_gases + self.ven_inactive_gases
+        # else:
+        molecules = self.params.atm_active_gases + self.params.atm_inactive_gases
 
         for gasname in molecules:
 
@@ -696,15 +694,13 @@ class data(object):
             # calculate spectral binning grid in wavelength space
 
             self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid,
-                                                                        self.int_wlgrid_obs, self.obs_binwidths)
+                                                                        self.int_wlgrid_obs,
+                                                                        self.obs_binwidths)
             self.intsp_nbingrid = len(self.obs_wlgrid)
-            self.intsp_bingrid_full, self.intsp_bingrididx_full = get_specbingrid(self.obs_wlgrid, self.int_wlgrid_full,
+            self.intsp_bingrid_full, self.intsp_bingrididx_full = get_specbingrid(self.obs_wlgrid,
+                                                                                  self.int_wlgrid_full,
                                                                                   self.obs_binwidths)
             self.intsp_nbingrid_full = len(self.obs_wlgrid)
-
-
-
-
 
     def get_temp_range_idx(self, t):
 
@@ -720,10 +716,10 @@ class data(object):
             Tmax =  self.params.in_custom_temp_range[1]
         else:
             # get range from other conditions (todo improve)
-            if self.params.ven_load:
-                Tmax = np.max(self.ven_temperature)
-                Tmin = np.min(self.ven_temperature)
-            elif self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
+            # if self.params.ven_load:
+            #     Tmax = np.max(self.ven_temperature)
+            #     Tmin = np.min(self.ven_temperature)
+            if self.params.downhill_run or self.params.mcmc_run or self.params.nest_run:
                 if self.params.atm_tp_type == 'isothermal':
                     Tmax = self.params.fit_tp_iso_bounds[1]
                     Tmin = self.params.fit_tp_iso_bounds[0]

@@ -44,7 +44,7 @@ class transmission(object):
             # loading Fortran code for chemically consistent model
             self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
 
-        if self.params.in_opacity_method in ['xsec_highres', 'xsec_lowres']: # using cross sections
+        if self.params.in_opacity_method in ['xsec_lowres', 'xsec_highres', 'xsec_sampled', 'xsec']: # using cross sections
 
             # loading c++ pathintegral library
             if self.atmosphere.nthreads > 1:
@@ -124,144 +124,10 @@ class transmission(object):
                 C.c_void_p]
 
 
-
-
-        # set forward model function
-        #self.model = self.ctypes_pathintegral
-
-        #self.model = self.linebyline_pathintegral
-
-
-    def ktables_pathintegral(self):
-
-        z = self.atmosphere.altitude_profile
-        dz = np.diff(z)
-        dz = np.append(dz, dz[-1])
-        nlayers = self.atmosphere.nlayers
-
-        rp = self.atmosphere.planet_radius
-        density = self.atmosphere.density_profile
-        mixratio = self.atmosphere.active_mixratio_profile
-        dlarray = np.zeros((nlayers, nlayers))
-
-        for j in range(nlayers):
-            for k in range(1, nlayers - j):
-                p = np.power(z[j] + rp, 2)
-                dlarray[j, k] = 2.*np.sqrt(np.power(z[k+j]+rp, 2) - p) - np.sqrt(np.power(z[k-1+j]+rp, 2) - p)
-
-        # load k table
-        #ktable = []
-        #ktable.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/ktable_h2o_0.001bar_1500K.kcoeff.pickle')))
-        #ktable.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/ktable_co_1bar_1200K.kcoeff.pickle')))
-
-        mixratio[1, :] = 1e-3
-
-        bins = ktable[0][:,0]
-
-        ngauss = 20
-        gauss = np.polynomial.legendre.leggauss(ngauss)
-        weights = gauss[1]
-
-        absorption = np.zeros(len(bins))
-
-        # for bin_idx, bin_val in enumerate(bins):
-        #     integral = 0
-        #     for j in range(nlayers):
-        #         transfull = 1.
-        #         for gasid in range(len(ktable)):
-        #             kcoeff = ktable[gasid][:,1:]
-        #             transtmp = 0
-        #             for kc_idx in range(ngauss):
-        #                 tautmp = 0
-        #                 for k in range(1, nlayers-j):
-        #                     tautmp += kcoeff[bin_idx, kc_idx] * mixratio[gasid, j+k] * density[j+k] * dlarray[j, k]
-        #                 transtmp += np.exp(- tautmp ) * weights[kc_idx]/2.
-        #             transfull *= transtmp
-        #         integral += (rp + z[j])*(1-transfull)*dz[j]
-        #     integral *= 2.
-        #     absorption[bin_idx] = (rp**2 + integral)/(self.params.star_radius**2)
-
-        for bin_idx, bin_val in enumerate(bins):
-            integral = 0
-            for j in range(nlayers):
-                transfull = 1.
-                for gasid in range(len(ktable)):
-                    kcoeff = ktable[gasid][:,1:]
-                    transtmp = 0
-                    for kc_idx in range(ngauss):
-                        tautmp = 0
-                        for k in range(1, nlayers-j):
-                            tautmp += kcoeff[bin_idx, kc_idx] * mixratio[gasid, j+k] * density[j+k] * dlarray[j, k]
-                        transtmp += np.exp(- tautmp ) * weights[kc_idx]/2.
-
-
-                    transfull *= transtmp
-                integral += (rp + z[j])*(1-transfull)*dz[j]
-            integral *= 2.
-            absorption[bin_idx] = (rp**2 + integral)/(self.params.star_radius**2)
-
-
-        out = np.zeros((len(absorption), 2))
-        out[:,1] = absorption
-        out[:,0] = 10000./bins
-
-        np.savetxt('Output/ktables/spectrum_kcoeff_0.001bar.dat', out)
-        exit()
-
-    def linebyline_pathintegral(self):
-
-        z = self.atmosphere.altitude_profile
-        dz = np.diff(z)
-        dz = np.append(dz, dz[-1])
-        nlayers = self.atmosphere.nlayers
-
-        rp = self.atmosphere.planet_radius
-        density = self.atmosphere.density_profile
-        mixratio = self.atmosphere.active_mixratio_profile
-        dlarray = np.zeros((nlayers, nlayers))
-
-        # mixratio[1, :] = 1e-3
-
-        for j in range(nlayers):
-            for k in range(1, nlayers - j):
-                p = np.power(z[j] + rp, 2)
-                dlarray[j, k] = 2.*np.sqrt(np.power(z[k+j]+rp, 2) - p) - np.sqrt(np.power(z[k-1+j]+rp, 2) - p)
-
-
-        #load xsec
-        xsec = []
-        #xsec.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/1H2-16O__0-30000_1500_0.001_0.01.sig.pickle')))
-        #xsec.append(pickle.load(open('/Users/marco/Dropbox/repos/TauREx/Output/ktables/12C-16O__0-30000_1200_1.0_0.01.sig.pickle')))
-
-        absorption = np.zeros(len(xsec[0][:,0]))
-
-        for bin_idx, bin_val in enumerate(xsec[0][:,0]):
-            integral = 0
-            for j in range(nlayers):
-                tautmp = 0
-                for k in range(1, nlayers-j):
-                    for gasid in range(len(xsec)):
-                        tautmp += xsec[gasid][bin_idx, 1] * mixratio[gasid, j+k] * density[j+k] * dlarray[j, k]
-
-                integral += (rp + z[j])*(1-np.exp(- tautmp))*dz[j]
-
-            integral *= 2.
-            absorption[bin_idx] = (rp**2 + integral)/(self.params.star_radius**2)
-
-
-        out = np.zeros((len(absorption), 2))
-        out[:,1] = absorption
-        out[:,0] = 10000./xsec[0][:,0]
-
-        np.savetxt('Output/ktables/spectrum_linebyline_0.001bar.dat', out)
-        exit()
-
-
-
     def ctypes_pathintegral_xsec(self, return_tau=False, mixratio_mask=False):
 
         if self.params.gen_ace:
-            self.set_ACE(mixratio_mask)
+            self.atmosphere.set_ACE(mixratio_mask)
 
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
@@ -285,7 +151,7 @@ class transmission(object):
                                             self.atmosphere.sigma_cia_array_flat,
                                             self.data.sigma_cia_dict['t'],
                                             len(self.data.sigma_cia_dict['t']),
-                                            self.atmosphere.clouds_topP,
+                                            self.atmosphere.clouds_pressure,
                                             self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,
                                             self.atmosphere.altitude_profile,
@@ -324,7 +190,8 @@ class transmission(object):
     def ctypes_pathintegral_ktab(self, return_tau=False, mixratio_mask=False):
 
         if self.params.gen_ace:
-            self.set_ACE(mixratio_mask)
+            self.atmosphere.set_ACE(mixratio_mask)
+
 
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
@@ -350,7 +217,7 @@ class transmission(object):
                                             self.atmosphere.sigma_cia_array_flat,
                                             self.data.sigma_cia_dict['t'],
                                             len(self.data.sigma_cia_dict['t']),
-                                            self.atmosphere.clouds_topP,
+                                            self.atmosphere.clouds_pressure,
                                             self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,
                                             self.atmosphere.altitude_profile,
@@ -385,55 +252,3 @@ class transmission(object):
             del(tau)
 
             return out
-
-    def set_ACE(self, mixratio_mask):
-
-        # todo should really move this to atmosphere.py [see also transmission]
-
-
-        # chemically consistent model
-        vector = C.c_double*self.atmosphere.nlayers
-        a_apt = vector()
-        p_apt = vector()
-        t_apt = vector()
-        for i in range(self.atmosphere.nlayers):
-           a_apt[i] = self.atmosphere.altitude_profile[i]/1000.
-           p_apt[i] = self.atmosphere.pressure_profile[i]/1.e5
-           t_apt[i] = self.atmosphere.temperature_profile[i]
-
-        # y_out has shape (nlayers, 105). 105 is the total number of molecules computed
-        y_out = ((C.c_double * 105) * self.atmosphere.nlayers)()
-
-        self.ace_lib.ACE(C.byref(C.c_int(self.atmosphere.nlayers)),
-                         C.byref(a_apt),
-                         C.byref(p_apt),
-                         C.byref(t_apt),
-                         C.byref(C.c_double(self.atmosphere.He_abund_dex)),
-                         C.byref(C.c_double(self.atmosphere.C_abund_dex)),
-                         C.byref(C.c_double(self.atmosphere.O_abund_dex)),
-                         C.byref(C.c_double(self.atmosphere.N_abund_dex)),
-                         C.byref(y_out))
-        ace_profiles = np.asarray(y_out)
-
-
-        for mol_idx, mol_val in enumerate(self.params.atm_active_gases):
-            self.atmosphere.active_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_active_gases_idx[mol_idx]]
-
-        for mol_idx, mol_val in enumerate(self.params.atm_inactive_gases):
-            self.atmosphere.inactive_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_inactive_gases_idx[mol_idx]]
-
-        if isinstance(mixratio_mask, (np.ndarray, np.generic)):
-            self.atmosphere.active_mixratio_profile[mixratio_mask, :] = 0
-
-        del(y_out)
-        del(a_apt)
-        del(p_apt)
-        del(t_apt)
-
-        # couple mu to composition
-        self.atmosphere.planet_mu = self.atmosphere.get_coupled_planet_mu()
-
-        # update atmospheric params
-        self.atmosphere.set_altitude_gravity_scaleheight_profile()
-
-

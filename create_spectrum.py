@@ -137,9 +137,9 @@ class create_spectrum(object):
             self.fmob.params.atm_clouds = atm_clouds
 
         # tp profile
-        instance_data['tp_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        instance_data['tp_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        instance_data['tp_profile'][:,1] = self.fmob.atmosphere.temperature_profile
+        instance_data['temperature_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['temperature_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['temperature_profile'][:,1] = self.fmob.atmosphere.temperature_profile
 
         # altitude
         instance_data['altitude_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
@@ -149,17 +149,17 @@ class create_spectrum(object):
         # planet_grav
         instance_data['gravity_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
         instance_data['gravity_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        instance_data['gravity_profile'][:,1] = self.fmob.atmosphere.planet_grav
+        instance_data['gravity_profile'][:,1] = self.fmob.atmosphere.gravity_profile
 
         # scale_height
-        instance_data['scale_height_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
-        instance_data['scale_height_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        instance_data['scale_height_profile'][:,1] = self.fmob.atmosphere.scale_height
+        instance_data['scaleheight_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
+        instance_data['scaleheight_profile'][:,0] = self.fmob.atmosphere.pressure_profile
+        instance_data['scaleheight_profile'][:,1] = self.fmob.atmosphere.scaleheight_profile
 
         # mu profile
         instance_data['mu_profile'] = np.zeros((self.atmosphereob.nlayers, 2))
         instance_data['mu_profile'][:,0] = self.fmob.atmosphere.pressure_profile
-        instance_data['mu_profile'][:,1] = self.fmob.atmosphere.planet_mu
+        instance_data['mu_profile'][:,1] = self.fmob.atmosphere.mu_profile
 
         # mixing ratios
         instance_data['active_mixratio_profile'] = np.zeros((len(self.atmosphereob.active_gases), self.atmosphereob.nlayers, 2))

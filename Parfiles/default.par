@@ -6,52 +6,65 @@
 verbose = True
 verbose_all_threads = False
 
-# manually set wavelength range (if False, range taken from input data)
+
+# specturm type (emission, transmission)
+type = transmission
+# chemically consistent model ACE (Atmospheric Chemical Equilibrium)
+ace = False
+
+# recompile cpp code at each run
+compile_cpp = False
+compiler = g++
+openmp_flag = -fopenmp
+
+# These settings are used when running create_spectrum.py
+
+# manually set wavelength range (if False, the max range available in the cross sections is used)
 manual_waverange = False
 # short wavelength cut-off (in microns) if manual_waverange = True
 wavemin = 0.4
 # long wavelength cut-off (in microns) if manual_waverange = True
 wavemax = 20.0
-# specturm type (emission, transmission)
-type = transmission
-# chemically consistent model ACE (Atmospheric Chemical Equilibrium)
-ace = False
-# recompile cpp code
-compile_cpp = False
 
 [Input]
 
 # Defines input parameters
 
-#Observed spectrum to be fitted (three columns: wavelength (micron), (Rp/R*)^2, error
+#Observed spectrum to be fitted (Format: wavelength (micron), (Rp/R*)^2, error[, bin width (micron)])
 spectrum_file = False
+
+# DEPRECATED. Provide always in microns
 #Input spectrum in wavenumbers or microns (True = micron, False = Wavenumber)
-spectrum_micron = True
+#spectrum_micron = True
+
 # append SPECTRUM_out.db to output. Useful to keep track of synthetic observations created with TauREx
 spectrum_db = False
-#use T-P profile and mixing ratios ATM file
-use_ATMfile = False
-atm_file = Input/profile.atm
 
-# opacity computation method: 'xsec_lowres', 'xsec_highres' or 'ktables'
+# DEPRECATED
+#use T-P profile and mixing ratios ATM file
+#use_ATMfile = False
+#atm_file = Input/profile.atm
+
+# opacity computation method: 'xsec_sampled', 'xsec_highres' or 'ktables'.
 opacity_method = ktables
-# path to pickled cross sections and dnu
-xsec_path = Input/xsec/R7000
+# path to pickled cross sections
+xsec_path = Input/xsec/sampling/R7000
 # path to pickled ktables
 ktab_path = Input/ktables/R100/
 
-# force TauREx to load xsec or ktables in this range of temperatures.
-# if set to None or False the temperature range loaded will be automatically determined
+# CAREFUL IN USING THIS PARAM! Keep it to False if you don't know what you're doing :)
+# Force TauREx to load xsec or ktables in this range of temperatures.
+# If set to None or False the temperature range loaded will be automatically determined
 # according to the fitting TP boundaries or the input TP profile (if profile is isothermal).
 # Might be useful when using TP profile different from isothermal, as in this case
-# all available temperatures will be used and loaded into memory.
-# Also useful when using custom TP profiles using the create_spectrum object
+# all available temperatures will be used and loaded into memory. This might be problematic when
+# you use high resolution cross sections, as several hundreds of GB of RAM would be needed.
 custom_temp_range = None
-
 
 # Path where cia pairs are stored as pickled files
 cia_path = Input/cia/HITRAN/
-#Path to Phoenix/Atlas stellar models (required by emission code)
+
+# Path to Phoenix/Atlas stellar models
 star_path = Input/star_spectra
 
 [Output]
@@ -60,21 +73,27 @@ star_path = Input/star_spectra
 
 #path for output files
 path = Output/
+
+# DEPRECATED. (Plots are now managed with external library, tools/taurex_plot)
 #save plots to .pdf
-save_plots = True
-# calculate one sigma of fitted spectrum
+#save_plots = True
+
+
+# Calculate one sigma of fitted spectrum. Note that this spectrum extends over the entire range available in the input
+# cross section, so it might take a while!
 sigma_spectrum = False
 # fraction of total samples from which to calculate the one sigma spectrum
 sigma_spectrum_frac = 0.1
+
 
 [Star]
 
 # Defines stellar specific parameters
 
 #Stellar radius (R_sun)
-radius =  0.788
+radius =  1
 #Stellar temperature (K)
-temp   = 4900
+temp   = 5800
 
 # use black body instead of stellar model (see Input > star_path)
 use_blackbody = False
@@ -83,13 +102,10 @@ use_blackbody = False
 
 # Defines planet specific parameters
 
-# Planet calss. Available are: hotjupiter, superearth
-class = hotjupiter
-# Planetary radius (R_jupiter)
-radius = 1.1724
+# 10 bar pressure planetary radius (R_jupiter)
+radius = 1
 # Planetary mass (M_jupiter)
-mass = 1.13035
-
+mass = 1
 
 [Atmosphere]
 
@@ -97,12 +113,13 @@ mass = 1.13035
 
 # number of atmospheric levels
 nlayers = 100
-# set maximum pressure level in Pascal
+
+# Set maximum pressure level in Pascal
 max_pressure = 1e6
 min_pressure = 1e-4
 
 # TP profile type to be selected (only sets for emission, tranmission = isothermal)
-# available profiles are: isothermal, guillot, hybrid, 2point, 3point,Npoint
+# available profiles are: isothermal, guillot, hybrid, 2point, 3point, Npoint)
 tp_type = isothermal
 
 # isothermal temperature
@@ -134,7 +151,6 @@ tp_Npoint_P_list = -1, 1e4, 100.0, -1
 #smoothing factor (no. of layers)
 tp_Npoint_smooth = 10
 
-
 # correlation length of TP profile for Rodgers2000 and Hybrid
 tp_corr_length = 5.0
 
@@ -142,20 +158,29 @@ tp_corr_length = 5.0
 active_gases = H2O
 active_gases_mixratios = 1e-5
 
+# mixing ratio of N2
+N2_mixratio = 0
+
+# He/H2 ratio (default is 0.85 H2, 0.15 He)
+He_H2_ratio = 0.17647
+
+# DEPRECATED. The list of inactive gases is fixed to H2, He, N2. See new params: h2_he_ratio and n2_mixratio
 # spectrally-inactive gases and relative mixing ratios. (if ace = False)
 # The mixing ratios are relative to the remainder of the amtosphere (1 - active_gases_mixratios)
 # Hence sum(inactive gases) must be 1
-inactive_gases = H2, He
-inactive_gases_mixratios = 0.85, 0.15
+#inactive_gases = H2, He
+#inactive_gases_mixratios = 0.85, 0.15
 
+# DEPRECATED. mu is always calculated from the composition of the atmosphere
 # mean molecular weight of the atmosphere (see also next param couple_mu)
-mu = 2.3
+#mu = 2.3
 
+# DEPRECATED. mu is always calculated from the composition of the atmosphere
 # Couple mean molecular weight to the absolute mixing ratios of active and inactive gases
 # This parameter is only used for forward model in create_spectrum
 # NOTE: it overrides the value of mu specified above
 # NOTE: for behaviour during fitting, see the different parameter in Fitting>couple_mu
-couple_mu = True
+#couple_mu = True
 
 # include Ryleigh scattering opacities
 rayleigh = True
@@ -163,49 +188,57 @@ rayleigh = True
 # include CIA opacities
 cia = True
 
-# Name of the pairs to include (use dash "-" between elements). The names are used to load the pickled files inside cia_path (e.g. "h2-h2" loads H2-H2.db).
+# Name of the pairs to include (use dash "-" between elements). The names are used to load the pickled files
+# inside cia_path (e.g. "h2-h2" loads H2-H2.db).
 cia_pairs = H2-H2, H2-He
 
 # include cloud opacities. True/False
 clouds = False
 # cloud top pressure in Pascal
-cld_topP = 1e3
+clouds_pressure = 1e3
 
 # metallicity (1 = solar metallicity, 10 = 10x solar metallicity etc)
 ace_metallicity = 1
 # co ratio (value given below is solar)
 ace_co = 0.54954
 
-[Venot]
 
+# DEPRECATED. See new parameters to load tp & mixing ratio profiles files
+#[Venot]
 # Integrates TP and mixing ratio profiles from Olivia Venot (photo)chemical models
-
 # if load = True, temperature-pressure-altitude profile is loaded form TP_profile_path, and mixing ratio profiles of the available
 # molecules in xsec_path are loaded from mol_profile_path. If specific molecules need to be excluded, use exclude_mol
-
-load = False
-TP_profile_path = Input/Venot/example/profil_PTn_1000K_metal1.dat
-mol_profile_path = Input/Venot/example/fractions_molaires_CO_0.5_T1000_019_renorm_1.25RJ.dat
-exclude_mol = False
+#load = False
+#TP_profile_path = Input/Venot/example/profil_PTn_1000K_metal1.dat
+#mol_profile_path = Input/Venot/example/fractions_molaires_CO_0.5_T1000_019_renorm_1.25RJ.dat
+#exclude_mol = False
 
 
 [Fitting]
 
 # Defines general fittings parameters, independent of method
+# Note that fitting runs only if one of the fitting modes is active. (E.g. MultiNest->run = True)
 
-# fit transmission model
-transmission = True
+# DISABLED. They cause some conflicts with General->type. Might be useful to get them back when we will try to combine
+# transmission and emission
+#fit transmission model
+#transmission = True
 # fit emission model
-emission     = False
-# fit emission in 2 stage mode
+#emission     = False
+
+
+# fit emission in 2 stage mode (General->type must be emission)
 emission_stage2 = True
+
 # use the chemically consistent fit
 ace = False
 
+# DEPRECATED. mu is always derived. See new params: fit_h2_he_ratio, fit_n2_mixratio
 # if True mu is not fitted, but derived from the absolute mixing ratios of active and inactive gases
 # if False, mu is either fitted (if fit_mu = True) or kept fixed to the value defined in Atmosphere > mu (if fit_mu = False)
-couple_mu = False
+#couple_mu = False
 
+# DEPRECATED. It was impossible to understand what this thing actually did
 # If fit_mu is True, set this parameter to True to rescale the absolute abundances of H2 and He
 # according to the fitted value of mu. Note that the fitted value of mu referes to the remainder
 # of the atmosphere (1 - sum( active gases )). If this parameter is set to True, the priors bounds
@@ -213,57 +246,95 @@ couple_mu = False
 # 4 would not be permitted. NOTE that this parameter only works for H2/He dominated atmospheres,
 # i.e. where the mmw of (1 - sum(active mix ratios) ) is between 2 and 4, and the inactive gases are
 # He and H2 (no other inactive gas is allowed).
-inactive_mu_rescale = False
+#inactive_mu_rescale = False
 
 # fit mixing ratios in log space
-X_log = True
-# centered log ratio transformation for mixing ratios
-clr_trans = False
+mixratio_log = True
+
+# NOT SUPPORTED
+# centered log ratio transformation for mixing ratios.
+# clr_trans = False
 
 # Fit/fix parameters. True means the parameter is fitted, False the parameter is fixed to its input value
 
-# fit the active gases mixing ratios, defined in Planet > inactive_gases
-fit_active = True
+# Fit the active gases mixing ratios, defined in Planet > active_gases. Bounds set in mixratio_bounds
+fit_active_gases = True
+
+# Fit the mixing ratio of N2, defined in Planet > N2_mixratio. Bounds set in mixratio_bounds
+fit_N2_mixratio = False
+
+# Fit the He/H2 cotent ratio, defined in Planet > H2_He_ratio
+fit_He_H2_ratio = False
+
+# DEPRECATED. see fit_h2_he_ratio, fit_n2_mixratio
 # fit the inactive gases mixing ratios, defined in Planet > inactive_gases
-fit_inactive = False
-# fit the temperature (defined in Planet > temp. Not working if TP profile is not isothermal)
+#fit_inactive = False
+
+# fit the temperature profile (working with isothermal, guillot, 2point, 3point; not yet tested with rodgers;
+# not implemented for n-point)
 fit_temp = True
+
+# DEPRECATED. Mean molecular weight is always derived from composition. See new params fit_h2_he_ratio, fit_n2_mixratio
 # fit the mean molecular weight (defined in Planet > mu. Careful: can be overidden by fit_couple_mu).
 # the way in which mu is fitted depends on Atmosphere>couple_mu. If Atmosphere>couple_mu = False, then mu can take
 # any value regardless of the absolute mixing ratios of the gases
-fit_mu = True
+#fit_mu = True
+
 # fit radius at atm_max_pressure (defined in Planet > radius)
 fit_radius = True
+
+# DEPRECATED. Replace this with fit_clouds_topP! The surface can be the cloud top pressure.
 # fit maximum pressure at surface (defined in T-P Profile > atm_max_pressure). Fit is in log space
-fit_P0 = False
-# fit cloud parameters. Only working if Planet > include_cld is True
-# cloud top pressure
-fit_clouds_topP = False
+# fit_P0 = False
+
+
+# fit cloud top pressure
+fit_clouds_pressure = False
+
 # ace: chemical consistent fitting
 fit_ace_metallicity = False
 fit_ace_co = False
 
-# Set prior bounds (assume uniform priors)
+# Set prior bounds (always assume uniform priors)
 
-# upper and lower bounds for active gases mixing ratios (in linear space). IMPORTANT: never set X_low to zero
-X_active_bounds = 1.0e-8, 1.0
+# upper and lower bounds for active gases mixing ratios (in linear space). This includes N2 (see fit_N2_mixratio)
+# IMPORTANT: never set mixratio_bounds to zero, otherwise log conversion (mixratio_log = True) will break
+mixratio_bounds = 1.0e-12, 1.0
+
+# DEPRECATED
 # upper and lower bounds for inactive gases mixing ratios (in linear space). IMPORTANT: never set X_low to zero
-X_inactive_bounds = 1.0e-8, 1.0
+#X_inactive_bounds = 1.0e-8, 1.0
+
 # upper and lower bounds for the clr ratios
-clr_bounds = -20, 20
+# NOT SUPPORTED
+#clr_bounds = -20, 20
+
+# He to H2 ratio. Fitted in log space. Do not set bounds to zero!
+He_H2_ratio_bounds = 1e-12, 1
+
+# DEPRECATED
 #upper and lower bounds for mean molecular weight (in AMU)
-mu_bounds = 0, 10
-#Upper and lower bounds for planet radius (in RJUP)
-radius_bounds = 0.2, 0.3
+#mu_bounds = 0, 10
+
+# Upper and lower bounds of the radius (but see also radius_bounds_factor)
+radius_bounds = 0.9, 1.1
+
+# The upper and lower bounds of the radius are defined as a factor of the input radius (Planet->radius).
+# E.g. if you set radius_bounds_factor = 0.1, and Planet->radius = 1, the radius bounderies will be 0.9 - 1.0
+# This parameter overrides radius_bounds. You can set this to None or False, and then radius_bounds will be used.
+radius_bounds_factor = 0.1
+
+# DEPRECATED
 #Upper and lower bounds for surface pressure (in Pascal)
-P0_bounds = 1.e2, 1.e8
+#P0_bounds = 1.e2, 1.e8
+
 # cloud top pressure bounds ( in Pascal ) ). Fit is in log space
-clouds_topP_bounds = 1.e0, 1.e6
+clouds_pressure_bounds = 1.e0, 1.e6
 
 # tp profile bounds
 
 #isothermal
-tp_iso_bounds  = 1300, 1500
+tp_iso_bounds  = 1300, 1800
 
 # guillot [kappa params fitted in log space, don't set to zero]
 tp_guillot_T_irr_bounds = 1300, 2500
@@ -313,7 +384,7 @@ thin = 1
 verbose = True
 # show progress bar
 progressbar = True
-# pickle MCMC_out location (default params.out_path/NEST_out.db)
+# pickle MCMC_out location
 out_filename = default
 
 [MultiNest]
