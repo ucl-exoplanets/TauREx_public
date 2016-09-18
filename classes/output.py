@@ -300,9 +300,8 @@ class output(object):
     def get_spectra(self, solution):
 
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
-
         # load model using full wavenumber range
-        if self.params.gen_type is 'transmission':
+        if self.params.gen_type == 'transmission':
             self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
             wavegrid  = self.data.int_wlgrid_full
             nwavegrid = self.data.int_nwlgrid_full

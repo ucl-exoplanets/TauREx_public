@@ -118,7 +118,7 @@ class atmosphere(object):
         if len(self.active_gases) > 1:
             active_mixratio_sum = np.sum(self.active_mixratio_profile, axis = 1)
         else:
-            active_mixratio_sum = self.active_mixratio_profile
+            active_mixratio_sum = np.copy(self.active_mixratio_profile)
         # add the N2 mixing ratio profile to this sum
         active_mixratio_sum += self.inactive_mixratio_profile[2, :]
 

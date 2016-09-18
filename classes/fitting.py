@@ -445,7 +445,7 @@ class fitting(object):
                 if len(self.atmosphere.active_gases) > 1:
                     active_mixratio_sum = np.sum(self.atmosphere.active_mixratio_profile, axis = 1)
                 else:
-                    active_mixratio_sum = self.atmosphere.active_mixratio_profile
+                    active_mixratio_sum = np.copy(self.atmosphere.active_mixratio_profile)
 
                 # add the N2 mixing ratio profile to this sum
                 active_mixratio_sum += self.atmosphere.inactive_mixratio_profile[2, :]
@@ -603,6 +603,7 @@ class fitting(object):
         res = np.sum(res*res)
         if res == 0:
             res = np.nan
+
 
         # ion()
         # figure(1)

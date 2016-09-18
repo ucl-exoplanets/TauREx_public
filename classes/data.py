@@ -335,7 +335,7 @@ class data(object):
         with np.errstate(divide='ignore'):
             self.int_wlgrid_full = 10000./self.int_wngrid_full
         self.int_nwngrid_full = len(bin_centers)
-
+        self.int_nwlgrid_full = len(bin_centers)
         self.ktable_dict = ktable_dict
 
 
@@ -674,6 +674,11 @@ class data(object):
         idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
         if numax - self.int_wngrid_full[idx_max] > 0:
             idx_max += 1
+
+        if idx_min < 0 or idx_max < 0:
+            logging.error('There is a problem with the internal wavenumber grid. Maybe spectrum is outside range'
+                          'of cross sections?')
+            exit()
 
         self.int_wngrid_obs_idxmin = idx_min
         self.int_wngrid_obs_idxmax = idx_max
