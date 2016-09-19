@@ -68,7 +68,7 @@ class taurex_plots(object):
             self.multinest_dir = False
 
         if not dbfname and not multinest_dir:
-            print('Specify a .db filename or a multinest directory')
+            print('Specify a NEST_out.pickle filename or a multinest directory')
             exit()
 
         self.title = title
@@ -96,7 +96,7 @@ class taurex_plots(object):
         if self.multinest_dir:
             self._plot_posteriors_from_multinest(**kwargs)
         elif self.db:
-            self._plot_posteriors_db(**kwargs)
+            self._plot_posteriors_from_pickle(**kwargs)
 
     def _plot_posteriors_from_multinest(self):
 
@@ -129,21 +129,21 @@ class taurex_plots(object):
         plt.savefig(filename)
         print('Plot saved in %s' % filename)
 
-    def _plot_posteriors_db(self, plot_truths=False):
+    def _plot_posteriors_from_pickle(self, plot_truths=False):
 
         if self.db:
 
             if self.type.upper() == 'NEST':
 
                 labels = self.db['fit_params_texlabels']
+                labels.append('$\mu$ (derived)')
 
                 N = len(self.db['solutions'])
 
                 # determine ranges for all solutions
-                ranges_all = np.zeros((len(self.db['solutions']), len(self.db['fit_params_names']), 3))
+                ranges_all = np.zeros((len(self.db['solutions']), len(self.db['fit_params_names'])+1, 3))
                 for solution_idx, solution_val in enumerate(self.db['solutions']):
                     for param_idx, param_val in enumerate(self.db['fit_params_names']):
-
                         val = solution_val['fit_params'][param_val]['value']
                         try:
                             sigma_m = solution_val['fit_params'][param_val]['sigma_m']
@@ -155,7 +155,20 @@ class taurex_plots(object):
                         ranges_all[solution_idx, param_idx, 1] = val - 5*sigma_m
                         ranges_all[solution_idx, param_idx, 2] = val + 5*sigma_p
 
+                    # mean molecular weight (this is derived and not directly fitted, so it is not in fit_params_names)
+                    val = solution_val['fit_params']['mu_derived']['value']
+                    try:
+                        sigma_m = solution_val['fit_params']['mu_derived']['sigma_m']
+                        sigma_p = solution_val['fit_params']['mu_derived']['sigma_p']
+                    except:
+                        sigma_m = sigma_p = solution_val['fit_params']['mu_derived']['sigma']
+
+                    ranges_all[solution_idx, param_idx+1, 0] = val
+                    ranges_all[solution_idx, param_idx+1, 1] = val - 5*sigma_m
+                    ranges_all[solution_idx, param_idx+1, 2] = val + 5*sigma_p
+
                 ranges = []
+                # ranges for all fitted parameters
                 for param_idx, param_val in enumerate(self.db['fit_params_names']):
                     min = np.min(ranges_all[:, param_idx, 1])
                     max = np.max(ranges_all[:, param_idx, 2])
@@ -163,10 +176,11 @@ class taurex_plots(object):
                         min = self.db['fit_params_bounds'][param_idx][0]
                     if max > self.db['fit_params_bounds'][param_idx][1]:
                         max = self.db['fit_params_bounds'][param_idx][1]
-
                     ranges.append((min, max))
+                # add range for mean molecular weight
+                ranges.append((np.min(ranges_all[:, param_idx+1, 1]), np.max(ranges_all[:, param_idx+1, 2])))
 
-                # build imput value lists if input SPECTRUM_db is in NEST_db
+                # build input value lists if input SPECTRUM_db is in NEST_db
                 if 'SPECTRUM_db' in self.db and plot_truths:
                     truths = self.build_truths()
                 else:
@@ -177,6 +191,8 @@ class taurex_plots(object):
 
                     tracedata = solution_val['tracedata']
                     weights = solution_val['weights']
+
+                    tracedata = np.column_stack((tracedata, solution_val['fit_params']['mu_derived']['trace']))
 
                     if solution_idx > 0:
                         figure_past = figs[solution_idx - 1]
@@ -198,12 +214,20 @@ class taurex_plots(object):
                                           color=self.cmap(float(solution_idx)/N),
                                           bins=30,
                                           fig = figure_past)
+
+
+
                     if self.title:
                         fig.gca().annotate(self.title, xy=(0.5, 1.0), xycoords="figure fraction",
                           xytext=(0, -5), textcoords="offset points",
                           ha="center", va="top", fontsize=14)
 
                     figs.append(fig)
+
+                # grey out mean molecular weight row
+                nparams = len(self.db['fit_params_names'])
+                for i in range((nparams+1)*nparams, (nparams+1)*nparams+nparams+1):
+                    gcf().get_axes()[i].set_axis_bgcolor('#EEEEEE')
 
                 plt.savefig(os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type)))
 
@@ -372,10 +396,7 @@ class taurex_plots(object):
         truths = []
         in_params = self.db['SPECTRUM_db']['params']
         for param in self.db['fit_params_names']:
-            if param[:3] == 'log' and (param[4:] in in_params['atm_active_gases']):
-                mol_idx = in_params['atm_active_gases'].index(param[4:])
-                truths.append(np.log10(in_params['atm_active_gases_mixratios'][mol_idx]))
-            elif param in in_params['atm_active_gases']:
+            if param in in_params['atm_active_gases']:
                 mol_idx = in_params['atm_active_gases'].index(param)
                 truths.append(in_params['atm_active_gases_mixratios'][mol_idx])
             elif param == 'ace_log_metallicity':
@@ -384,17 +405,19 @@ class taurex_plots(object):
                 truths.append(in_params['fit_fit_ace_co'])
             elif param == 'T':
                 truths.append(in_params['atm_tp_iso_temp'])
-            elif param == 'mu':
-                truths.append(in_params['atm_mu']/1.660538921e-27) # todo check, might not be right. See how mu is coupled in the fitting
             elif param == 'Radius':
                 truths.append(in_params['planet_radius']/69911000.0)
-            elif param == 'clouds_topP':
+            elif param == 'clouds_pressure':
                 if in_params['atm_clouds']:
-                    truths.append(np.log(in_params['atm_cld_topP']))
+                    truths.append(np.log(in_params['clouds_pressure']))
                 else:
                     truths.append(6) # if no clouds in input spectrum, but fitting for clouds, assume clouds at 10 bar
             else:
                 truths.append(0)
+
+        # todo append dummy truth for mean molecular weight (which is a derived fit value). Set zero for now.
+        thruts.append(0)
+
         return truths
 
 

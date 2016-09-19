@@ -30,71 +30,40 @@ except:
 
 class output(object):
 
-    def __init__(self, fitting=None, forwardmodel=None, data=None, atmosphere=None, params=None, out_path=None):
+    def __init__(self, fitting, nthreads=1):
 
-        if params is not None:
-            self.params = params
-        else:
-            if fitting:
-                self.params = fitting.params #get params object from profile
-            elif forwardmodel:
-                self.params = forwardmodel.params
+        self.params = fitting.params
+        self.data = fitting.data
+        self.atmosphere = fitting.atmosphere
+        self.forwardmodel = fitting.forwardmodel
+        self.fitting = fitting
 
-        if out_path is None:
-            self.out_path = self.params.out_path
-        else:
-            self.out_path = out_path
+        self.nthreads = nthreads
 
-        if data is not None:
-            self.data = data
-        else:
-            if fitting:
-                self.data = fitting.data    # get data object from profile
-            elif forwardmodel:
-                self.data = forwardmodel.data
+        types = ['downhill', 'mcmc', 'nest']
+        func_types = [self.store_downhill_solution,
+                      self.store_mcmc_solutions,
+                      self.store_nest_solutions]
+        run = [self.fitting.DOWN, self.fitting.MCMC, self.fitting.NEST]
+        out_filenames = [self.params.downhill_out_filename,
+                         self.params.mcmc_out_filename,
+                         self.params.nest_out_filename]
+        self.dbfilename = {}
+        for idx, val in enumerate(types):
+            if run[idx]:
 
-        if atmosphere is not None:
-            self.atmosphere = atmosphere
-        else:
-            if fitting:
-                self.atmosphere = fitting.atmosphere    # get data object from profile
-            elif forwardmodel:
-                self.atmosphere = forwardmodel.atmosphere
+                logging.info('Storing %s solution' % val)
 
-        if fitting is not None:
-            self.fitting = fitting
+                outdb = self.initialize_output(val)
+                outdb = func_types[idx](outdb)
+                outdb = self.add_data_from_solutions(outdb)
 
-        if forwardmodel is not None:
-            self.forwardmodel = forwardmodel
-        else:
-            self.forwardmodel = fitting.forwardmodel    # get data object from profile
-
-        if fitting is not None:
-
-            types = ['downhill', 'mcmc', 'nest']
-            func_types = [self.store_downhill_solution,
-                          self.store_mcmc_solutions,
-                          self.store_nest_solutions]
-            run = [self.fitting.DOWN, self.fitting.MCMC, self.fitting.NEST]
-            out_filenames = [self.params.downhill_out_filename,
-                             self.params.mcmc_out_filename,
-                             self.params.nest_out_filename]
-            self.dbfilename = {}
-            for idx, val in enumerate(types):
-                if run[idx]:
-
-                    logging.info('Storing %s solution' % val)
-
-                    outdb = self.initialize_output(val)
-                    outdb = func_types[idx](outdb)
-                    outdb = self.add_data_from_solutions(outdb)
-
-                    if out_filenames[idx] == 'default':
-                        filename = os.path.join(self.params.out_path, '%s_out.db' % types[idx])
-                    else:
-                        filename = out_filenames[idx]
-                    self.dbfilename[val] = filename
-                    pickle.dump(outdb, open(filename, 'wb'), protocol=2)
+                if out_filenames[idx] == 'default':
+                    filename = os.path.join(self.params.out_path, '%s_out.pickle' % types[idx])
+                else:
+                    filename = out_filenames[idx]
+                self.dbfilename[val] = filename
+                pickle.dump(outdb, open(filename, 'wb'), protocol=2)
 
         logging.info('Output object correctly initialised')
 
@@ -109,7 +78,6 @@ class output(object):
                  'solutions': []}
 
         if os.path.isfile(self.params.in_spectrum_db):
-
 
             try:
                 SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db, 'rb'), encoding='latin1')
@@ -292,7 +260,7 @@ class output(object):
 
             solution = self.get_spectra(solution)  # compute spectra, contribution from opacities, and contribution function
             solution = self.get_profiles(solution) # compute mixing ratio and tp profiles
-
+            solution = self.get_mu_posterior(solution) # derive trace, best fit value and uncertainties of mean molecular weight
             fitting_out['solutions'][idx] = solution
 
         return fitting_out
@@ -302,13 +270,14 @@ class output(object):
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
         # load model using full wavenumber range
         if self.params.gen_type == 'transmission':
-            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full')
+            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full', nthreads=self.nthreads)
             wavegrid  = self.data.int_wlgrid_full
             nwavegrid = self.data.int_nwlgrid_full
             bingrid   = self.data.intsp_bingrididx_full
             nbingrid = self.data.intsp_nbingrid_full
         else:
-            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='obs_spectrum')
+            print('double check', self.nthreads)
+            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='obs_spectrum', nthreads=self.nthreads)
             wavegrid  = self.data.int_wlgrid_obs
             nwavegrid = self.data.int_nwlgrid_obs
             bingrid   = self.data.intsp_bingrididx
@@ -329,20 +298,32 @@ class output(object):
         solution['obs_spectrum'][:,2] = self.data.obs_spectrum[:,2]
 
         #append fitted spectrum to observed spectrum array
-        solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
-                                                   for i in range(1, nbingrid+1)])
+
+        if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+            # bin if using sampled cross sections
+            solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
+                                                       for i in range(1, nbingrid+1)])
+        elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+            # interpolate if using ktables
+            solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wngrid, self.data.int_wngrid_full, model)
+
 
         solution['fit_spectrum_xsecres'] = np.zeros((nwavegrid, 3))
         solution['fit_spectrum_xsecres'][:,0] = wavegrid
         solution['fit_spectrum_xsecres'][:,1] = model
 
-
         # calculate 1 sigma spectrum
         if self.params.out_sigma_spectrum and solution['type'] == 'nest':
             sigmasp = self.get_one_sigma_spectrum(solution)
             solution['fit_spectrum_xsecres'][:,2] = sigmasp
-            solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
-                                                        for i in range(1, nbingrid+1)])
+
+            if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+                # bin if using sampled cross sections
+                solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
+                                                           for i in range(1, nbingrid+1)])
+            elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+                # interpolate if using ktables
+                solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wngrid, self.data.int_wngrid_full, sigmasp)
 
         # calculate contribution function
         contrib_func = self.fitting.forwardmodel.model(return_tau=True)
@@ -495,6 +476,7 @@ class output(object):
         for i in range(nprofiles):
             fit_params_iter = sol_tracedata[i]
             self.fitting.update_atmospheric_parameters(fit_params_iter)
+
             tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
             for j in range(self.atmosphere.nactivegases):
                 molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[j,:]
@@ -511,3 +493,28 @@ class output(object):
                 std_molprofiles_inactive[j,i] = weighted_avg_and_std(molprofiles_inactive[:,j,i], weights=sol_weights, axis=0)[1]
 
         return std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive
+
+    def get_mu_posterior(self, solution):
+
+        logging.info('Compute trace for mean molecular weight (of 1st layer)')
+
+        sol_tracedata = solution['tracedata']
+        sol_weights = solution['weights']
+        nsamples = len(sol_tracedata)
+        mu_trace = np.zeros(nsamples)
+        for i in range(nsamples):
+            fit_params_iter = sol_tracedata[i]
+            self.fitting.update_atmospheric_parameters(fit_params_iter)
+            mu_trace[i] = self.fitting.atmosphere.mu_profile[0]/AMU
+
+        q_16, q_50, q_84 = quantile_corner(mu_trace, [0.16, 0.5, 0.84],
+                    weights=np.asarray(sol_weights))
+
+        solution['fit_params']['mu_derived'] =  {
+            'value' : q_50,
+            'sigma_m' : q_50-q_16,
+            'sigma_p' : q_84-q_50,
+            'trace': mu_trace,
+        }
+
+        return solution

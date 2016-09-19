@@ -13,6 +13,7 @@ import logging
 
  #loading classes
 sys.path.append('./classes')
+
 import transmission, output, fitting, atmosphere, data
 from transmission import *
 from output import *
@@ -21,7 +22,6 @@ from atmosphere import *
 from data import *
 
 def run(params, options=False):
-
 
     # initialising data object
     dataob = data(params)
@@ -52,11 +52,13 @@ def run(params, options=False):
     elif options and (params.nest_run and multinest_import and options.no_multinest):
         fittingob.NEST = True
 
-    #forcing slave processes to exit at this stage
-    if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
-        exit()
-        
-    #initiating output instance with fitted data from fitting class
-    outputob = output(fittingob)
+    # exit if the rank of MPI process is > 0 (.e. leave only master process running)
+    MPIsize = MPI.COMM_WORLD.Get_size()
+    if MPI.COMM_WORLD.Get_rank() > 0:
+        sys.exit()
+
+    # initiating output instance with fitted data from fitting class
+    # running inteprolations with nthreads = MPIsize
+    outputob = output(fittingob, nthreads=MPIsize)
 
     return outputob

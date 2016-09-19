@@ -32,7 +32,7 @@ cythonised = False
 
 class atmosphere(object):
 
-    def __init__(self, data, params=None, tp_profile_type=None, covariance=None, nthreads=0):
+    def __init__(self, data, params=None, tp_profile_type=None, covariance=None, nthreads=1):
 
         logging.info('Initialising atmosphere object')
 
@@ -43,8 +43,6 @@ class atmosphere(object):
         else:
             self.params = data.params
 
-        # number of threads to use when running multithreading tasks (don't use nthreads>1 for mpi jobs!)
-        self.nthreads = int(nthreads)
 
         self.data = data
 
@@ -171,7 +169,7 @@ class atmosphere(object):
 
         # load opacity arrays (gas, rayleigh, cia)
         self.opacity_wngrid = ''
-        self.load_opacity_arrays(wngrid='obs_spectrum')
+        self.load_opacity_arrays(wngrid='obs_spectrum', nthreads=nthreads)
 
         # initialise ACE specific parameters
         if self.params.gen_ace:
@@ -191,7 +189,7 @@ class atmosphere(object):
 
         logging.info('Atmosphere object initialised')
 
-    def load_opacity_arrays(self, wngrid='obs_spectrum'):
+    def load_opacity_arrays(self, wngrid='obs_spectrum', nthreads=1):
 
         if self.opacity_wngrid != wngrid:
 
@@ -220,11 +218,11 @@ class atmosphere(object):
 
             if self.params.in_opacity_method in ['xsec_lowres', 'xsec_highres', 'xsec_sampled', 'xsec']:
                 # get sigma array (and interpolate sigma array to pressure profile)
-                self.sigma_array = self.get_sigma_array()
+                self.sigma_array = self.get_sigma_array(nthreads=nthreads)
                 self.sigma_array_flat = self.sigma_array.flatten()
             elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
                 # get sigma array (and interpolate sigma array to pressure profile)
-                self.ktables_array = self.get_ktables_array()
+                self.ktables_array = self.get_ktables_array(nthreads=nthreads)
                 self.ktables_array_flat = self.ktables_array.flatten()
 
             # get sigma rayleigh array (for active and inactive absorbers)
@@ -353,12 +351,11 @@ class atmosphere(object):
         self.P_sample   = self.pressure_profile[Pindex]
 
     # get sigma array from data.sigma_dict. Interpolate sigma array to pressure profile
-    def get_sigma_array(self):
+    def get_sigma_array(self, nthreads=1):
 
         logging.info('Interpolate sigma array to pressure profile')
 
         pressure_profile_bar = self.pressure_profile/1e5
-
 
         sigma_array = np.zeros((self.nactivegases, len(self.pressure_profile), len(self.data.sigma_dict['t']),
                                 self.int_nwngrid))
@@ -368,11 +365,7 @@ class atmosphere(object):
             sigma_in = self.data.sigma_dict['xsecarr'][mol_val]
             sigma_in_cut = sigma_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax]
 
-
-            if  self.nthreads <= 1:
-
-                # run interpolation on the current thread
-
+            if  nthreads <= 1:  # run interpolation on the current thread
                 for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
                     for temperature_idx, temperature_val in enumerate(self.data.sigma_dict['t']):
                         for wno_idx, wno_val in enumerate(self.int_wngrid):
@@ -380,21 +373,17 @@ class atmosphere(object):
                                 np.interp(pressure_val, self.data.sigma_dict['p'],
                                           sigma_in_cut[:,temperature_idx,wno_idx])
 
-
             else:
 
                 # run interpolation with multiple threads. threads are used to compute separate pressure levels.
                 # Run simultaneously up to NTHREADS pressure levels.
 
-                logging.info('Running inteprolation with  %i threads' % self.nthreads)
+                logging.info('Running inteprolation with  %i threads' % nthreads)
 
-                nruns = int(self.nlayers/self.nthreads)
-                remainder = self.nlayers % self.nthreads
-
+                nruns = int(self.nlayers/nthreads)
+                remainder = self.nlayers % nthreads
                 for round_idx in range(nruns+1):
-
                     gotQueues = dict()
-
                     def empty_queues(jobs):
                         for i, job in enumerate(jobs):
                             if not queues[i].empty():
@@ -402,22 +391,17 @@ class atmosphere(object):
                                     gotQueues[i] += queues[i].get()
                                 else:
                                     gotQueues[i] = queues[i].get()
-
-                    level_min_idx = self.nthreads*round_idx
+                    level_min_idx = nthreads*round_idx
                     if  round_idx == nruns:
                         if remainder == 0:
                             break
                         level_max_idx = self.nlayers
                     else:
-                        level_max_idx = self.nthreads*(round_idx+1)
-
+                        level_max_idx = nthreads*(round_idx+1)
                     pressure_profile_bar = self.pressure_profile[level_min_idx:level_max_idx]/1e5
-
                     queues = [Queue() for pressure_idx, pressure_val in enumerate(pressure_profile_bar)]
-
                     jobs = [MultiThread_get_sigma_array(queues[pressure_idx],
                                                          pressure_idx,
-                                                         mol_idx,
                                                          pressure_profile_bar,
                                                          self.nactivegases,
                                                          self.data.sigma_dict,
@@ -427,39 +411,88 @@ class atmosphere(object):
                                                          self.int_nwngrid,
                                                          self.int_wngrid_idxmin,
                                                          self.int_wngrid_idxmax) for pressure_idx, pressure_val in enumerate(pressure_profile_bar)]
-
                     for job in jobs:
                         job.start()
-
                     while any([jj.is_alive() for jj in jobs]):
                         time.sleep(0.01)  # 0.01 Wait a while before next update. Slow down updates for really long runs.
                         empty_queues(jobs)
-
                     for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
-                        sigma_array[mol_idx, round_idx*self.nthreads+pressure_idx, :, :] = gotQueues[pressure_idx]
+                        sigma_array[mol_idx, round_idx*nthreads+pressure_idx, :, :] = gotQueues[pressure_idx]
 
         return sigma_array
 
+    def get_ktables_array(self, nthreads=1):
 
-    def get_ktables_array(self):
         logging.info('Interpolate ktables array to pressure profile')
+
         pressure_profile_bar = self.pressure_profile/1e5
+
         kcoeff_array = np.zeros((self.nactivegases, len(self.pressure_profile),
                                  len(self.data.ktable_dict['t']), self.int_nwngrid,
                                  len(self.data.ktable_dict['weights'])))
 
         for mol_idx, mol_val in enumerate(self.active_gases):
+
             ktable_in = self.data.ktable_dict['kcoeff'][mol_val]
-            for pressure_idx, pressure_val in enumerate(pressure_profile_bar): # loop through input pressure grid
-                for temperature_idx, temperature_val in enumerate(self.data.ktable_dict['t']):# loop through temps
-                    for wno_idx, wno_val in enumerate(self.int_wngrid): # loop through bins
-                        for kc_idx, kc_val in enumerate(self.data.ktable_dict['weights']): # loop through k-coeff (~20)
-                            # store kcoeff array
-                            # pre-interpolate in pressure and slice in wavenumber to internal grid
-                            kcoeff_array[mol_idx, pressure_idx, temperature_idx, wno_idx, kc_idx] = \
-                                np.interp(pressure_val, self.data.ktable_dict['p'],
-                                          ktable_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax,:]\
-                                                   [:,temperature_idx,wno_idx,kc_idx])
+            if  nthreads <= 1:
+                for pressure_idx, pressure_val in enumerate(pressure_profile_bar): # loop through input pressure grid
+                    for temperature_idx, temperature_val in enumerate(self.data.ktable_dict['t']):# loop through temps
+                        for wno_idx, wno_val in enumerate(self.int_wngrid): # loop through bins
+                            for kc_idx, kc_val in enumerate(self.data.ktable_dict['weights']): # loop through k-coeff (~20)
+                                # store kcoeff array
+                                # pre-interpolate in pressure and slice in wavenumber to internal grid
+                                kcoeff_array[mol_idx, pressure_idx, temperature_idx, wno_idx, kc_idx] = \
+                                    np.interp(pressure_val, self.data.ktable_dict['p'],
+                                              ktable_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax,:]\
+                                                       [:,temperature_idx,wno_idx,kc_idx])
+            else:
+
+
+
+                # run interpolation with multiple threads. threads are used to compute separate pressure levels.
+                # Run simultaneously up to NTHREADS pressure levels.
+
+                logging.info('Running inteprolation with  %i threads' % nthreads)
+
+                nruns = int(self.nlayers/nthreads)
+                remainder = self.nlayers % nthreads
+                for round_idx in range(nruns+1):
+                    gotQueues = dict()
+                    def empty_queues(jobs):
+                        for i, job in enumerate(jobs):
+                            if not queues[i].empty():
+                                if i in gotQueues:
+                                    gotQueues[i] += queues[i].get()
+                                else:
+                                    gotQueues[i] = queues[i].get()
+                    level_min_idx = nthreads*round_idx
+                    if  round_idx == nruns:
+                        if remainder == 0:
+                            break
+                        level_max_idx = self.nlayers
+                    else:
+                        level_max_idx = nthreads*(round_idx+1)
+                    pressure_profile_bar = self.pressure_profile[level_min_idx:level_max_idx]/1e5
+                    queues = [Queue() for pressure_idx, pressure_val in enumerate(pressure_profile_bar)]
+                    jobs = [MultiThread_get_ktables_array(queues[pressure_idx],
+                                                         pressure_idx,
+                                                         pressure_profile_bar,
+                                                         self.nactivegases,
+                                                         self.data.ktable_dict,
+                                                         ktable_in,
+                                                         self.active_gases,
+                                                         self.int_wngrid,
+                                                         self.int_nwngrid,
+                                                         self.int_wngrid_idxmin,
+                                                         self.int_wngrid_idxmax) for pressure_idx, pressure_val in enumerate(pressure_profile_bar)]
+                    for job in jobs:
+                        job.start()
+                    while any([jj.is_alive() for jj in jobs]):
+                        time.sleep(0.01)  # Wait a while before next update. Slow down updates for really long runs.
+                        empty_queues(jobs)
+                    for pressure_idx, pressure_val in enumerate(pressure_profile_bar):
+                        kcoeff_array[mol_idx, round_idx*nthreads+pressure_idx, :, :] = gotQueues[pressure_idx]
+
         return kcoeff_array
 
     def get_sigma_rayleigh_array(self):
@@ -895,7 +928,6 @@ class MultiThread_get_sigma_array(Process):
     def __init__(self,
                  queue,
                  pressure_idx,
-                 mol_idx,
                  pressure_profile_bar,
                  nactivegases,
                  sigma_dict,
@@ -909,7 +941,6 @@ class MultiThread_get_sigma_array(Process):
         Process.__init__(self)
         self.queue = queue
         self.pressure_idx = pressure_idx
-        self.mol_idx = mol_idx
         self.pressure_profile_bar = pressure_profile_bar
         self.nactivegases = nactivegases
         self.sigma_dict = sigma_dict
@@ -938,4 +969,51 @@ class MultiThread_get_sigma_array(Process):
                     sigma_array_partial[temperature_idx, wno_idx] = \
                         np.interp(pressure_val, self.sigma_dict['p'], self.sigma_in_cut[:,temperature_idx,wno_idx])
         self.queue.put(sigma_array_partial)
+        return
+
+class MultiThread_get_ktables_array(Process):
+
+    # Interpolation of sigma_array to pressure profile
+
+    def __init__(self,
+                 queue,
+                 pressure_idx,
+                 pressure_profile_bar,
+                 nactivegases,
+                 ktable_dict,
+                 ktable_in,
+                 active_gases,
+                 int_wngrid,
+                 int_nwngrid,
+                 int_wngrid_idxmin,
+                 int_wngrid_idxmax):
+
+        Process.__init__(self)
+        self.queue = queue
+        self.pressure_idx = pressure_idx
+        self.pressure_profile_bar = pressure_profile_bar
+        self.nactivegases = nactivegases
+        self.ktable_dict = ktable_dict
+        self.ktable_in = ktable_in
+        self.active_gases = active_gases
+        self.int_wngrid = int_wngrid
+        self.int_nwngrid = int_nwngrid
+        self.int_wngrid_idxmin = int_wngrid_idxmin
+        self.int_wngrid_idxmax = int_wngrid_idxmax
+        return
+
+    def run(self):
+        pressure_val = self.pressure_profile_bar[self.pressure_idx]
+        kcoeff_array_partial = np.zeros((len(self.ktable_dict['t']),self.int_nwngrid, len(self.ktable_dict['weights'])))
+        for temperature_idx, temperature_val in enumerate(self.ktable_dict['t']):# loop through temps
+            for wno_idx, wno_val in enumerate(self.int_wngrid): # loop through bins
+                for kc_idx, kc_val in enumerate(self.ktable_dict['weights']): # loop through k-coeff (~20)
+                    # store kcoeff array
+                    # pre-interpolate in pressure and slice in wavenumber to internal grid
+                    kcoeff_array_partial[temperature_idx, wno_idx, kc_idx] = \
+                        np.interp(pressure_val, self.ktable_dict['p'],
+                                  self.ktable_in[:,:,self.int_wngrid_idxmin:self.int_wngrid_idxmax,:]\
+                                                [:,temperature_idx,wno_idx,kc_idx])
+
+        self.queue.put(kcoeff_array_partial)
         return

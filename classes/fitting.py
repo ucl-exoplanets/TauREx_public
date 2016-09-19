@@ -167,11 +167,11 @@ class fitting(object):
             ##########################################################
             # He/H2 ratio. Fit in log space
             if self.params.fit_fit_He_H2_ratio:
-                self.fit_params.append(np.log10(self.params.atm_He_H2_ratio))
-                self.fit_bounds.append((np.log10(self.params.fit_He_H2_ratio_bounds[0]),
-                                        np.log10(self.params.fit_He_H2_ratio_bounds[1])))
-                self.fit_params_names.append('log_H2_He')
-                self.fit_params_texlabels.append('log(H$_2$/He)')
+                self.fit_params.append(self.params.atm_He_H2_ratio)
+                self.fit_bounds.append((self.params.fit_He_H2_ratio_bounds[0],
+                                        self.params.fit_He_H2_ratio_bounds[1]))
+                self.fit_params_names.append('H2_He')
+                self.fit_params_texlabels.append('H$_2$/He')
 
             ##########################################################
             # Centered-log-ratio transform of gases all gases.
@@ -439,7 +439,8 @@ class fitting(object):
             # H2/He ratio. Fit in log space
             if self.params.fit_fit_He_H2_ratio:
 
-                He_H2_ratio = np.power(10, fit_params[count])
+                #He_H2_ratio = np.power(10, fit_params[count])
+                He_H2_ratio = fit_params[count]
 
                 # first get the sum of the mixing ratio of all active gases
                 if len(self.atmosphere.active_gases) > 1:
