@@ -55,31 +55,17 @@ from library_general import *
 
 class fitting(object):
 
-    def __init__(self, forwardmodel, params=None, data=None, atmosphere=None, rad_model=None):
+    def __init__(self, forwardmodel):
 
         # forwardmodel can be either the transmission or the emission object
-
-        # todo: we might deprecate the parsing of objects params, data, atmosphere. we never use them, and shouldn't
-        # really be used... similar in other classes.
-
         logging.info('Initialise object fitting')
 
-        if params:
-            self.params = params
-        else:
-            self.params = forwardmodel.params # get params object from profile
-        if data:
-            self.data = data
-        else:
-            self.data = forwardmodel.data    # get data object from forwardmodel
-        if atmosphere:
-            self.atmosphere = atmosphere
-        else:
-            self.atmosphere = forwardmodel.atmosphere    # get atmosphere object from forwardmodel
-
+        self.params = forwardmodel.params # get params object from forwardmodel
+        self.data = forwardmodel.data    # get data object from forwardmodel
+        self.atmosphere = forwardmodel.atmosphere    # get atmosphere object from forwardmodel
         self.forwardmodel = forwardmodel
 
-        self.forwardmodel_type = type(forwardmodel).__name__
+        self.forwardmodel_type = type(forwardmodel).__name__ #used???
         logging.info('Radiative transfer model: %s' % self.forwardmodel_type)
 
         # MPI support
@@ -167,11 +153,11 @@ class fitting(object):
             ##########################################################
             # He/H2 ratio. Fit in log space
             if self.params.fit_fit_He_H2_ratio:
-                self.fit_params.append(self.params.atm_He_H2_ratio)
-                self.fit_bounds.append((self.params.fit_He_H2_ratio_bounds[0],
-                                        self.params.fit_He_H2_ratio_bounds[1]))
-                self.fit_params_names.append('H2_He')
-                self.fit_params_texlabels.append('H$_2$/He')
+                self.fit_params.append(np.log10(self.params.atm_He_H2_ratio))
+                self.fit_bounds.append((np.log10(self.params.fit_He_H2_ratio_bounds[0]),
+                                        np.log10(self.params.fit_He_H2_ratio_bounds[1])))
+                self.fit_params_names.append('log_H2_He')
+                self.fit_params_texlabels.append('log(H$_2$/He)')
 
             ##########################################################
             # Centered-log-ratio transform of gases all gases.
@@ -439,8 +425,8 @@ class fitting(object):
             # H2/He ratio. Fit in log space
             if self.params.fit_fit_He_H2_ratio:
 
-                #He_H2_ratio = np.power(10, fit_params[count])
-                He_H2_ratio = fit_params[count]
+                He_H2_ratio = np.power(10, fit_params[count])
+                #He_H2_ratio = fit_params[count]
 
                 # first get the sum of the mixing ratio of all active gases
                 if len(self.atmosphere.active_gases) > 1:
@@ -592,11 +578,11 @@ class fitting(object):
 
         if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
             # bin if using sampled cross sections
-            model = [model_out[self.data.intsp_bingrididx == i].mean() for i in range(1, self.data.intsp_nbingrid+1)]
-            #model_binned = cy_fun.runtime_bin_spectrum(model,self.data.intsp_bingrididx, self.data.intsp_nbingrid)
+            model = [model_out[self.atmosphere.int_bingrididx == i].mean() for i in range(1, self.atmosphere.int_nbingrid+1)]
+            #model_binned = cy_fun.runtime_bin_spectrum(model, self.atmosphere.int_bingrididx, self.atmosphere.int_nbingrid)
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
             # interpolate if using ktables
-            model = np.interp(self.data.obs_wngrid, self.data.int_wngrid_obs, model_out)
+            model = np.interp(self.data.obs_wngrid, self.atmosphere.int_wngrid, model_out)
 
         # get chi2
         res = ((data - model) / datastd)
@@ -628,7 +614,7 @@ class fitting(object):
         # xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
         # draw()
         # pause(0.0001)
-
+        #
         # print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
         #     self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
         #     self.forwardmodel.atmosphere.planet_radius/RJUP), \
@@ -775,6 +761,7 @@ class fitting(object):
             if os.path.isfile(filename):
                 livepoints = sum(1 for line in open(filename))
                 if livepoints != self.params.nest_nlive:
+                    # todo this should only be done if MPIrank = 0
                     logging.warning('Cannot resume previous MULTINEST run, the number of live points has changed')
                     logging.warning('Removing previous MULTINEST chains')
                     for file in os.listdir(self.dir_multinest):

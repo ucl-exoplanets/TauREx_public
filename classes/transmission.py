@@ -25,19 +25,13 @@ import matplotlib.pylab as plt
 
 class transmission(object):
 
-    def __init__(self, atmosphere, data=None, params=None):
+    def __init__(self, atmosphere):
 
         logging.info('Initialise object transmission')
 
-        if params:
-            self.params = params
-        else:
-            self.params = atmosphere.params #get params object from atmosphere
-        if data:
-            self.data = data
-        else:
-            self.data = atmosphere.data    # get data object from atmosphere
 
+        self.params = atmosphere.params #get params object from atmosphere
+        self.data = atmosphere.data    # get data object from atmosphere
         self.atmosphere = atmosphere
 
         if self.params.gen_ace:
@@ -49,8 +43,10 @@ class transmission(object):
             # loading c++ pathintegral library
             if self.atmosphere.nthreads > 1:
                 # load openmp version. Remember to set OMP_NUM_THREADS to number of threads
+                logging.info('Load openmp version of transmission model')
                 self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_parallel_xsec.so', mode=C.RTLD_GLOBAL)
             else:
+                logging.info('Load single-core version of transmission model')
                 self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
 
             self.model = self.ctypes_pathintegral_xsec
@@ -196,7 +192,6 @@ class transmission(object):
         #setting up output array
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
         tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
-
         #running c++ path integral
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,

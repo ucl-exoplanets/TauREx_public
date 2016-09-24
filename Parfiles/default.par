@@ -102,7 +102,7 @@ use_blackbody = False
 
 # Defines planet specific parameters
 
-# 10 bar pressure planetary radius (R_jupiter)
+# Pressure planetary radius (R_jupiter) referenced at max_pressure (default is 10 bar)
 radius = 1
 # Planetary mass (M_jupiter)
 mass = 1
@@ -115,12 +115,19 @@ mass = 1
 nlayers = 100
 
 # Set maximum pressure level in Pascal
+# Remember that the planet_radius will be referenced against max_pressure. Leave to 1e6 if you're using the 10 bar pressure radius
 max_pressure = 1e6
 min_pressure = 1e-4
 
 # TP profile type to be selected (only sets for emission, tranmission = isothermal)
-# available profiles are: isothermal, guillot, hybrid, 2point, 3point, Npoint)
+# available profiles are: isothermal, guillot, hybrid, 2point, 3point, Npoint, file)
+# If using 'file', specify the external file from which the TP profile is loaded (see tp_file)
+# Note that if you use 'file' during fitting, TauREx will not fit the TP profile, but use the provided profile
 tp_type = isothermal
+
+# Load TP profile from external file. File must contain two columns: Pressure (Pascalà), Temperature (K)
+# Note that the provided TP profile will be interpolated to the internal pressure grid (between min_pressure and max_pressure)
+tp_file = Input/EXAMPLE_tp_profile.dat
 
 # isothermal temperature
 tp_iso_temp = 1500
@@ -154,9 +161,15 @@ tp_Npoint_smooth = 10
 # correlation length of TP profile for Rodgers2000 and Hybrid
 tp_corr_length = 5.0
 
-# active absorbers and absolute mixing ratios (if ace = False)
+# active absorbers and absolute mixing ratios (if ace = False). Set to 'file' to load external profiles (see active_gases_file)
 active_gases = H2O
 active_gases_mixratios = 1e-5
+
+# Load active gases mixing ratio profiles from external file.
+# The first row must be a list of molecules corresponding to the mixing ratios profile, separated by a space
+# From second row: first column is the pressure in Pascal, other columns gases mixing ratios (sorted in the same
+# order as in the first row)
+active_gases_file = Input/EXAMPLE_active_gases_profile.dat
 
 # mixing ratio of N2
 N2_mixratio = 0
@@ -310,7 +323,7 @@ mixratio_bounds = 1.0e-12, 1.0
 #clr_bounds = -20, 20
 
 # He to H2 ratio. Fitted in log space. Do not set bounds to zero!
-He_H2_ratio_bounds = 1e-12, 1
+He_H2_ratio_bounds = 1e-12, 1e12
 
 # DEPRECATED
 #upper and lower bounds for mean molecular weight (in AMU)
@@ -329,7 +342,7 @@ radius_bounds_factor = 0.1
 #P0_bounds = 1.e2, 1.e8
 
 # cloud top pressure bounds ( in Pascal ) ). Fit is in log space
-clouds_pressure_bounds = 1.e0, 1.e6
+clouds_pressure_bounds = 1.e-3, 1.e6
 
 # tp profile bounds
 

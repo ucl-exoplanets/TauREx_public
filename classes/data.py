@@ -48,45 +48,54 @@ class data(object):
         if self.params.gen_compile_cpp:
             self.compile_shared_libs()
 
-        # # reading in atmospheric profile file from Venot
-        # if self.params.ven_load:
-        #     self.load_venot_model()
-
         # load ace specific parameters
         if self.params.gen_ace:
             self.load_ace_params()
 
         # load observed input spectrum
-        self.load_input_spectrum()
+        if self.params.mode == 'retrieval':
+            self.load_input_spectrum()
 
+        # Load external active gases profiles
+        if self.params.atm_active_gases[0] == 'FILE':
+            self.load_active_gases_file()
+
+        # Load external temperature profile
+        if self.params.atm_tp_type.upper() == 'FILE':
+            self.load_tp_profile_file()
 
         # Preload the cross sections
         if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
-            self.load_sigma_dict_sampled()
+            self.opacity_method = 'xsec_sampled'
+            self.load_sigma_sampled_dict()
         elif self.params.in_opacity_method == 'xsec_highres':
-            self.load_sigma_dict_highres()
+            self.opacity_method = 'xsec_highres'
+            self.load_sigma_highres_dict()
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+            self.opacity_method = 'ktables'
             self.load_ktables_dict()
         else:
             logging.error('You need to select an opacity calculation method. See parameter General->opacity_method')
             exit()
 
-        # Create wavenumber grid of internal model
+        # Load wavenumber grid of internal model
         self.load_wavenumber_grid()
 
-        # Preload rayleigh cross secitons
+        # Load rayleigh cross secitons
         self.load_sigma_rayleigh_dict()
 
-        # Preload CIA cross sections
+        # Load CIA cross sections
         self.load_sigma_cia_dict()
 
-        # reading in Phoenix stellar model library or star blackbody
-        if self.params.gen_type == 'emission':
-            self.star_sed = self.get_star_SED()
+        # Load Phoenix stellar model library or star blackbody
+        if self.params.gen_type.upper() == 'EMISSION':
+            self.star_sed = self.load_star_SED()
 
         logging.info('Data object initialised')
 
     def compile_shared_libs(self):
+
+        # todo check. Do we want it here?
 
         logging.info('Compiling shared libraries')
 
@@ -115,12 +124,11 @@ class data(object):
         # get molcules list from composes.dat
         self.ace_molecules = []
         self.ace_molecules_mu = []
-        with open("library/ACE/composes.dat", "r") as textfile:
+        with open('library/ACE/composes.dat', 'r') as textfile:
             for line in textfile:
                 sl = line.split()
                 self.ace_molecules.append(sl[1])
                 self.ace_molecules_mu.append(float(sl[2]))
-
 
         # include only molecules for which we have cross sections
         self.params.atm_active_gases = []
@@ -143,7 +151,6 @@ class data(object):
             if mol_val.upper() == 'N2':
                 self.ace_inactive_gases_idx[2] = mol_idx
 
-
         logging.info('ace active absorbers: %s' % self.params.atm_active_gases)
         logging.info('ace active absorbers idx: %s' % self.ace_active_gases_idx)
         logging.info('ace inctive absorbers: %s' % self.params.atm_inactive_gases)
@@ -152,7 +159,14 @@ class data(object):
     def load_input_spectrum(self):
 
         # set observed spectrum specific variables (only if spectrum is provided)
-        if self.params.in_spectrum_file not in  ['False', 'None', '']:
+        if self.params.in_spectrum_file in ['False', 'None', '']:
+            logging.error('You need to specify an input spectrum when running a retrieval. See Input->spectrum_file')
+            exit()
+        elif not os.path.isfile(self.params.in_spectrum_file):
+            logging.error('The input spectrum file specified in Input->spectrum_file does not exist. Path: %s'
+                          % self.params.in_spectrum_file)
+            exit()
+        else:
 
             # read spectrum from file
             logging.info('Reading spectrum from file: %s ' % self.params.in_spectrum_file)
@@ -188,81 +202,23 @@ class data(object):
                 for i in range(len(self.obs_wlgrid)-1):
                     bin_edges.append(self.obs_wlgrid[i]+(self.obs_wlgrid[i+1]-self.obs_wlgrid[i])/2.0)
                 bin_edges.append((self.obs_wlgrid[-1]-self.obs_wlgrid[-2])/2.0 + self.obs_wlgrid[-1]) #last bin edge
-                bin_widths = np.diff(bin_edges)
+                bin_widths = np.abs(np.diff(bin_edges))
 
                 self.obs_binwidths = bin_widths
                 self.obs_binedges = bin_edges
 
-        else:
-
-            # no input spectrum provided. If running only forward model, input spectrum can be omitted
-            logging.info('No input spectrum provided')
-            self.obs_spectrum = False
-    #
-    # def load_venot_model(self):
-    #
-    #         logging.info('Load atmospheric profile from external files. Format: Venot photochemical models')
-    #
-    #         # altitude (km), pressure (mbar), temperature (K) profile
-    #         apt = np.loadtxt(self.params.ven_TP_profile_path)
-    #         self.ven_altitude = apt[:,0]/1000. # convert km to m
-    #         self.ven_pressure = apt[:,1]*100. # convert mbar to pascal
-    #         self.ven_temperature = apt[:,2]
-    #         self.ven_altitude_int = interp1d(self.ven_pressure, self.ven_altitude)
-    #         self.ven_temperature_int = interp1d(self.ven_pressure, self.ven_temperature)
-    #
-    #         # mixing ratio profiles
-    #
-    #         # extract list of molecules from 'fractions_molaires' file
-    #         with open(self.params.ven_mol_profile_path, 'r') as f:
-    #             self.ven_molecules = [x.upper() for x in f.readline().split()]
-    #             self.ven_molweight = [float(x) for x in f.readline().split()] # molecular weight in AMU
-    #             table = np.loadtxt(self.params.ven_mol_profile_path, skiprows=2)
-    #             self.ven_molprof_altitude = table[:,0]/1000. # convert km to m
-    #             self.ven_molprof_pressure = table[:,1]*100. # convert mbar to pascal
-    #             self.ven_molprof_mixratios = table[:,2:] # mixing ratios referring to self.ven_molecules
-    #             self.ven_molprof_altitude_int = interp1d(self.ven_molprof_pressure, self.ven_molprof_altitude)
-    #             self.ven_molprof_mixratios_int = [interp1d(self.ven_molprof_pressure, self.ven_molprof_mixratios[:,i])
-    #                                               for i in range(np.shape(self.ven_molprof_mixratios)[1])]
-    #             logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' %
-    #                          (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
-    #
-    #         # determine list of molecules with cross sections. exclude the others.
-    #         self.ven_active_gases = []
-    #         self.ven_active_gases_idx = []
-    #         self.ven_noxsec = []
-    #
-    #         for mol_idx, mol_val in enumerate(self.ven_molecules):
-    #             molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
-    #             if os.path.isfile(molpath) and not mol_val in self.params.ven_exclude_mol:
-    #                 self.ven_active_gases.append(mol_val)
-    #                 self.ven_active_gases_idx.append(mol_idx)
-    #             else:
-    #                 self.ven_noxsec.append(mol_val)
-    #
-    #         logging.info('Molecules with available cross sections: %s' %  self.ven_active_gases)
-    #         logging.info('Molecules with available cross sections idx: %s' %  self.ven_active_gases_idx)
-    #         logging.info('Excluded molecules: %s' %  self.ven_noxsec)
-    #
-    #         # determine list of inactive gases
-    #         gases = ['H2', 'HE', 'N2']
-    #         self.ven_inactive_gases = []
-    #         self.ven_inactive_gases_idx = []
-    #         for gasname in gases:
-    #             if gasname in self.ven_molecules:
-    #                 self.ven_inactive_gases.append(gasname)
-    #                 self.ven_inactive_gases_idx.append(self.ven_molecules.index(gasname))
-    #         logging.info('Inactive gases: %s' %  self.ven_inactive_gases)
+            logging.info('Input spactrum wavenumber range (including bin widths): %.3f, %.3f' % (self.obs_binedges[1],
+                                                                                                 self.obs_binedges[-1]))
 
 
     def load_ktables_dict(self):
 
         # preload the k tables for the input molecules
 
-        # if self.params.ven_load:
-        #     molecules = self.ven_active_gases
-        # else:
-        molecules = self.params.atm_active_gases
+        if self.params.atm_active_gases[0] == 'FILE':
+            molecules = self.active_gases_file
+        else:
+            molecules = self.params.atm_active_gases
 
         ktable_dict = {}
         ktable_dict['kcoeff'] = {}
@@ -328,26 +284,25 @@ class data(object):
 
         logging.info('Loaded temperatures in ktables: %s' % ktable_dict['t'] )
         logging.info('Loaded pressures in ktables: %s ' % ktable_dict['p'])
-        logging.info('The full wavenumber range is %.2f - %.2f with %i bins' % (np.min(bin_edges),
+        logging.info('The wavenumber range of the ktables is %.2f - %.2f with %i bins' % (np.min(bin_edges),
                                                                                 np.max(bin_edges), len(bin_centers)))
 
-        self.int_wngrid_full = bin_centers # full wavenumber range
+        # set 'native' wavenumber grid
+        self.int_wngrid_native = bin_centers # full wavenumber range
         with np.errstate(divide='ignore'):
-            self.int_wlgrid_full = 10000./self.int_wngrid_full
-        self.int_nwngrid_full = len(bin_centers)
-        self.int_nwlgrid_full = len(bin_centers)
+            self.int_wlgrid_native = 10000./self.int_wngrid_native
+        self.int_nwngrid_native = len(bin_centers)
+        self.int_nwlgrid_native = len(bin_centers)
         self.ktable_dict = ktable_dict
 
-
-    def load_sigma_dict_highres(self):
+    def load_sigma_highres_dict(self):
 
         logging.info('Load high resolution cross sections.')
 
-        # preload the absorption cross sections for the input molecules
-        # if self.params.ven_load:
-        #     molecules = self.ven_active_gases
-        # else:
-        molecules = self.params.atm_active_gases
+        if self.params.atm_active_gases[0] == 'FILE':
+            molecules = self.active_gases_file
+        else:
+            molecules = self.params.atm_active_gases
 
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
@@ -438,23 +393,23 @@ class data(object):
 
             sigma_dict['xsecarr'][mol_val] = sigma_array / 10000.  # from cm^-2 to m^-2
 
-        # set some final variables
-        self.int_wngrid_full = wngrid # full wavenumber range
-        self.int_nwngrid_full = len(wngrid)
+        # set 'native' wavenumber grid
+        self.int_wngrid_native = wngrid
+        self.int_nwngrid_native = len(wngrid)
         with np.errstate(divide='ignore'):
-            self.int_wlgrid_full = 10000./wngrid
-        self.int_nwlgrid_full = len(wngrid)
+            self.int_wlgrid_native = 10000./wngrid
+        self.int_nwlgrid_native = len(wngrid)
         self.sigma_dict = sigma_dict
 
-    def load_sigma_dict_sampled(self):
+    def load_sigma_sampled_dict(self):
 
         logging.info('Load sampled cross sections.')
 
-        # preload the absorption cross sections for the input molecules
-        # if self.params.ven_load:
-        #     molecules = self.ven_active_gases
-        # else:
-        molecules = self.params.atm_active_gases
+        # list of molecules to load
+        if self.params.atm_active_gases[0] == 'FILE': # loaded from external file
+            molecules = self.active_gases_file
+        else:
+            molecules = self.params.atm_active_gases # loaded from param file
 
         sigma_dict = {}
         sigma_dict['xsecarr'] = {}
@@ -507,14 +462,14 @@ class data(object):
         logging.info('Temperature range: %s' % sigma_dict['t'] )
         logging.info('Pressure range: %s ' % sigma_dict['p'])
 
-        logging.info('The full wavenumber range is %.2f - %.2f with %i points' % (np.min(wno), np.max(wno), len(wno)))
+        logging.info('The wavenumber range of the cross sections is %.2f - %.2f with %i points' % (np.min(wno), np.max(wno), len(wno)))
 
-        self.int_wngrid_full = wno # full wavenumber range
-        self.int_nwngrid_full = len(wno)
-
+        # set 'native' wavenumber grid
+        self.int_wngrid_native = wno
+        self.int_nwngrid_native = len(wno)
         with np.errstate(divide='ignore'):
-            self.int_wlgrid_full = 10000./wno
-        self.int_nwlgrid_full = len(wno)
+            self.int_wlgrid_native = 10000./wno
+        self.int_nwlgrid_native = len(wno)
 
         self.sigma_dict = sigma_dict
 
@@ -526,10 +481,10 @@ class data(object):
 
         sigma_rayleigh_dict = {}
 
-        # if self.params.ven_load:
-        #     molecules = self.ven_active_gases + self.ven_inactive_gases
-        # else:
-        molecules = self.params.atm_active_gases + self.params.atm_inactive_gases
+        if self.params.atm_active_gases[0] == 'FILE':
+            molecules = self.active_gases_file + ['H2', 'HE', 'N2']
+        else:
+            molecules = self.params.atm_active_gases + self.params.atm_inactive_gases
 
         for gasname in molecules:
 
@@ -539,7 +494,7 @@ class data(object):
             n_formula = True # assume we have a formula for the refractive index of gasname
             king = 1 # King correction factor
             ns = 0   # refractive index
-            wn = self.int_wngrid_full # wavenumber in cm^-1
+            wn = self.int_wngrid_native # wavenumber in cm^-1
 
             with np.errstate(divide='ignore'):
                 wltmp = 10000./wn
@@ -624,22 +579,22 @@ class data(object):
             wno = sigma_tmp['wno']
 
             # check cia wavenumber boundaries
-            if np.min(wno) > np.min(self.int_wngrid_full) or np.max(wno) < np.max(self.int_wngrid_full):
+            if np.min(wno) > np.min(self.int_wngrid_native) or np.max(wno) < np.max(self.int_wngrid_native):
                 logging.warning('Internal wavenumber grid overflow for CIA xsec for %s' % pair_val)
-                logging.warning('Internal wavenumber grid range: %f - %f' % (np.min(self.int_wngrid_full),
-                                                                             np.max(self.int_wngrid_full)))
+                logging.warning('Internal (native) wavenumber grid range: %f - %f' % (np.min(self.int_wngrid_native),
+                                                                             np.max(self.int_wngrid_native)))
                 logging.warning('CIA cross section wavenumber grid range: %f - %f' % (np.min(wno), np.max(wno)))
-                logging.warning('Assume xsec to be zero outside the cia range')
+                logging.warning('Assume cia to be zero outside the xsec range')
 
             # restrict temperature range
             T_list, Tmin_idx, Tmax_idx = self.get_temp_range_idx(t)
             sigma_dict['t'] = T_list
-            sigma_dict['wno'] = self.int_wngrid_full
-            sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid_full))
+            sigma_dict['wno'] = self.int_wngrid_native
+            sigma_dict['xsecarr'][pair_val] = np.zeros((len(sigma_dict['t']), self.int_nwngrid_native))
 
             # reinterpolate cia xsec to molecule cross section grid and save
             for t_idx, t_val in enumerate(sigma_dict['t']):
-                sigma_dict['xsecarr'][pair_val][t_idx,:] = np.interp(self.int_wngrid_full, wno,
+                sigma_dict['xsecarr'][pair_val][t_idx,:] = np.interp(self.int_wngrid_native, wno,
                                                                      sigma_tmp['xsecarr'][Tmin_idx+t_idx])
 
             # load the sigma array in memory
@@ -651,61 +606,139 @@ class data(object):
 
     def load_wavenumber_grid(self):
 
-        logging.info('Create wavenumber grid of internal model')
+        # restrict the native grid (i.e. the spectral grid of the loaded xsec/ktables) to various grids
 
-        # wavenumber grid limits of internal model
-        if self.params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
-            # limits defined by a manual wavelength range in micron in param file
-            lambdamax = self.params.gen_wavemax
-            lambdamin = self.params.gen_wavemin
-        else:
-            lambdamax = self.obs_wlgrid[0] + self.obs_binwidths[0]/2.
-            lambdamin = self.obs_wlgrid[-1] - self.obs_binwidths[-1]/2.
+        logging.info('Create wavenumber grids')
 
-        # convert to wavenumbers
-        numin = 10000./lambdamax
-        numax = 10000./lambdamin
+        # native. This grid is set in load_sigma_sampled_dict, load_sigma_highres_dict or load_ktables_dict
+        # It is the native spectral range of the loaded cross sections or ktables. All other grids are subgrids of the native grid
+        # It is used in create_spectrum if General->manual_waverange = False
+        # It is also used in the output class General->manual_waverange = False to create the extended fitted spectrum.
+        # The extended fitted spectrum is a spectrum extending beyond the range of obs_spectrum.
+        logging.info('`native` wavenumber grid: %.3f - %.3f' % (np.min(self.int_wngrid_native), np.max(self.int_wngrid_native)))
 
-        # find numin / numax closest to the cross section wavenumber grid (approx numin for defect, and numax for excess)
-        idx_min = np.argmin(np.abs(self.int_wngrid_full-numin))
-        if numin - self.int_wngrid_full[idx_min] < 0:
-            idx_min -= 1
-
-        idx_max = np.argmin(np.abs(self.int_wngrid_full-numax))
-        if numax - self.int_wngrid_full[idx_max] > 0:
-            idx_max += 1
-
-        if idx_min < 0 or idx_max < 0:
-            logging.error('There is a problem with the internal wavenumber grid. Maybe spectrum is outside range'
-                          'of cross sections?')
-            exit()
-
-        self.int_wngrid_obs_idxmin = idx_min
-        self.int_wngrid_obs_idxmax = idx_max
-
-        self.int_wngrid_obs = self.int_wngrid_full[self.int_wngrid_obs_idxmin:self.int_wngrid_obs_idxmax]
-        self.int_nwngrid_obs = len(self.int_wngrid_obs)
-
-        logging.info('Internal wavenumber grid is %.2f - %.2f with %i points' %
-                     (self.int_wngrid_full[self.int_wngrid_obs_idxmin],
-                      self.int_wngrid_full[self.int_wngrid_obs_idxmax-1],
-                      self.int_nwngrid_obs))
-
-        # convert wavenumber grid to wavelenght grid
-        self.int_wlgrid_obs = 10000./self.int_wngrid_obs
-        self.int_nwlgrid_obs = len(self.int_wlgrid_obs)
-
-        if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
-            # calculate spectral binning grid in wavelength space
+        # obs_spectrum. Used during fitting. This is the optimal grid to fit the spectrum.
+        if self.params.mode == 'retrieval':
+            numin = 10000/(self.obs_wlgrid[0] + self.obs_binwidths[0]/2.)
+            numax = 10000/(self.obs_wlgrid[-1] - self.obs_binwidths[-1]/2.)
+            logging.info('`obs_spectrum` wavenumber grid: %.3f - %.3f'% (numin, numax))
+            idx_min, idx_max = self.get_native_grid_range_idx(numin, numax, 'obs_spectrum')
+            self.int_wngrid_obs_idxmin = idx_min
+            self.int_wngrid_obs_idxmax = idx_max
+            self.int_wngrid_obs = self.int_wngrid_native[self.int_wngrid_obs_idxmin:self.int_wngrid_obs_idxmax]
+            self.int_nwngrid_obs = len(self.int_wngrid_obs)
+            self.int_wlgrid_obs = 10000./self.int_wngrid_obs
+            self.int_nwlgrid_obs = len(self.int_wlgrid_obs)
 
             self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid,
                                                                         self.int_wlgrid_obs,
                                                                         self.obs_binwidths)
-            self.intsp_nbingrid = len(self.obs_wlgrid)
-            self.intsp_bingrid_full, self.intsp_bingrididx_full = get_specbingrid(self.obs_wlgrid,
-                                                                                  self.int_wlgrid_full,
-                                                                                  self.obs_binwidths)
-            self.intsp_nbingrid_full = len(self.obs_wlgrid)
+
+        # manual. Used only if General->manual_waverange = True.
+        # Used in create_spectrum (forward model creation), and in output class to create the extended fitted spectrum.
+        # (The extended fitted spectrum is a spectrum extending beyond the range of obs_spectrum.)
+        if self.params.gen_manual_waverange:
+            numin = 10000/(self.params.gen_wavemax)
+            numax = 10000/(self.params.gen_wavemin)
+            logging.info('`manual` wavenumber grid:'
+                         ' %.3f - %.3f'% (numin, numax))
+            idx_min, idx_max = self.get_native_grid_range_idx(numin, numax, 'manual')
+            self.int_wngrid_manual_idxmin = idx_min
+            self.int_wngrid_manual_idxmax = idx_max
+            self.int_wngrid_manual = self.int_wngrid_native[self.int_wngrid_manual_idxmin:self.int_wngrid_manual_idxmax]
+            self.int_nwngrid_manual = len(self.int_wngrid_manual)
+            self.int_wlgrid_manual = 10000./self.int_wngrid_manual
+            self.int_nwlgrid_manual = len(self.int_wlgrid_manual)
+
+        # extended (obs_spectrum extended by 10% on each side)
+        # Used only after fitting, in output class. It recomputes the fitted spectrum on an extended grid with respect
+        # to obs_spectrum. Also used to create 1 sigma spectrum spread.
+        if self.params.mode == 'retrieval':
+            numin = self.int_wngrid_obs[0] - 0.1 * self.int_wngrid_obs[0]
+            numax = self.int_wngrid_obs[-1] + 0.1 * self.int_wngrid_obs[-1]
+            logging.info('`extended` wavenumber grid: %.3f - %.3f' % (numin, numax))
+            idx_min, idx_max = self.get_native_grid_range_idx(numin, numax, 'extended')
+            self.int_wngrid_extended_idxmin = idx_min
+            self.int_wngrid_extended_idxmax = idx_max
+            self.int_wngrid_extended = self.int_wngrid_native[self.int_wngrid_extended_idxmin:self.int_wngrid_extended_idxmax]
+            self.int_nwngrid_extended = len(self.int_wngrid_extended)
+            self.int_wlgrid_extended = 10000./self.int_wngrid_extended
+            self.int_nwlgrid_extended = len(self.int_wlgrid_extended)
+
+        # # wavenumber grid limits of internal model
+        # if self.params.gen_manual_waverange or not isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
+        #     logging.info('Wavenumber grid limits defined in manual_waverange: %.3f - %.3f' % (10000./self.params.gen_wavemax,
+        #                                                                                      10000./self.params.gen_wavemin))
+        #     # limits defined by a manual wavelength range in micron in param file
+        #     lambdamax = self.params.gen_wavemax
+        #     lambdamin = self.params.gen_wavemin
+        # else:
+        #     logging.info('Wavenumber grid limits by the observed spectrum: %.3f - %.3f' % (10000./self.params.gen_wavemax,
+        #                                                                                   10000./self.params.gen_wavemin))
+        #     lambdamax = self.obs_wlgrid[0] + self.obs_binwidths[0]/2.
+        #     lambdamin = self.obs_wlgrid[-1] - self.obs_binwidths[-1]/2.
+        #
+        # # convert to wavenumbers
+        # numin = 10000./lambdamax
+        # numax = 10000./lambdamin
+        #
+        # # find numin / numax closest to the cross section wavenumber grid (approx numin for defect, and numax for excess)
+        # idx_min = np.argmin(np.abs(self.int_wngrid_native-numin))
+        # if numin - self.int_wngrid_native[idx_min] < 0:
+        #     idx_min -= 1
+        #
+        # idx_max = np.argmin(np.abs(self.int_wngrid_native-numax))
+        # if numax - self.int_wngrid_native[idx_max] > 0:
+        #     idx_max += 1
+        #
+        # if idx_min < 0 or idx_max < 0:
+        #     logging.error('There is a problem with the internal wavenumber grid. Maybe  the spectrum is outside the '
+        #                   'spectral range of the cross sections / ktables?')
+        #     exit()
+        #
+        # self.int_wngrid_obs_idxmin = idx_min
+        # self.int_wngrid_obs_idxmax = idx_max
+        # self.int_wngrid_obs = self.int_wngrid_native[self.int_wngrid_obs_idxmin:self.int_wngrid_obs_idxmax]
+        # self.int_nwngrid_obs = len(self.int_wngrid_obs)
+        #
+        # logging.info('Internal wavenumber grid is %.2f - %.2f with %i points' %
+        #              (self.int_wngrid_native[self.int_wngrid_obs_idxmin],
+        #               self.int_wngrid_native[self.int_wngrid_obs_idxmax-1],
+        #               self.int_nwngrid_obs))
+        #
+        # # convert wavenumber grid to wavelenght grid
+        # self.int_wlgrid_obs = 10000./self.int_wngrid_obs
+        # self.int_nwlgrid_obs = len(self.int_wlgrid_obs)
+        #
+        # if isinstance(self.obs_spectrum, (np.ndarray, np.generic)):
+        #     # calculate spectral binning grid in wavelength space
+        #
+        #     self.intsp_bingrid, self.intsp_bingrididx = get_specbingrid(self.obs_wlgrid,
+        #                                                                 self.int_wlgrid_obs,
+        #                                                                 self.obs_binwidths)
+        #     self.intsp_nbingrid = len(self.obs_wlgrid)
+        #     self.intsp_bingrid_full, self.intsp_bingrididx_full = get_specbingrid(self.obs_wlgrid,
+        #                                                                           self.int_wlgrid_native,
+        #                                                                           self.obs_binwidths)
+        #     self.intsp_nbingrid_full = len(self.obs_wlgrid)
+
+
+    def get_native_grid_range_idx(self, numin, numax, gridname):
+
+        # restrict native wavenumber range to numin, numax. Return indexes of new range boundaries in native grid
+        idx_min = np.argmin(np.abs(self.int_wngrid_native-numin))
+        if numin - self.int_wngrid_native[idx_min] < 0:
+            idx_min -= 1
+        idx_max = np.argmin(np.abs(self.int_wngrid_native-numax))
+        if numax - self.int_wngrid_native[idx_max] > 0:
+            idx_max += 1
+
+        if idx_min < 0 or idx_max < 0:
+            logging.error('There is a problem with the %s wavenumber grid. Maybe  the range is outside the '
+                          'spectral range of the `native` grid (i.e. xsec, ktables spectral range) ?'  % gridname)
+            exit()
+
+        return idx_min, idx_max
 
     def get_temp_range_idx(self, t):
 
@@ -760,11 +793,10 @@ class data(object):
         return T_list, Tmin_idx, Tmax_idx
 
 
-
-    def get_star_SED(self):
+    def load_star_SED(self):
 
         # reading in phoenix spectra from folder specified in parameter file
-        all_files = glob.glob(os.path.join(self.params.in_star_path, "*.fmt"))
+        all_files = glob.glob(os.path.join(self.params.in_star_path, '*.fmt'))
 
         temperatures = []
         for filenm in all_files:
@@ -799,3 +831,65 @@ class data(object):
             SED = np.interp(self.int_wlgrid_obs, SED_raw[:,0], SED_raw[:,1])
 
         return SED
+
+    def load_active_gases_file(self):
+
+        logging.info('Load active gases mixing ratios from external file: %s' % self.params.atm_active_gases_file)
+
+        # read list of molecules (first line)
+        with open(self.params.atm_active_gases_file, 'r') as f:
+            first_line = f.readline()
+            molecules = ' '.join(first_line.split()).split(' ')
+
+        # read mixing ratio profiles (from second row)
+        if os.path.isfile(self.params.atm_active_gases_file):
+            mixratio_profiles_file = np.loadtxt(self.params.atm_active_gases_file, skiprows=1)
+
+        # first column is pressure
+        self.mixratio_pressure_file = mixratio_profiles_file[:,0]
+        nrows = len(self.mixratio_pressure_file) # number of pressure levels
+
+        # set inactive gases. Allow H2, HE and N2. If one of these is not present, just set to zero
+        self.inactive_gases_file = ['H2', 'HE', 'N2']
+        self.inactive_mixratio_profile_file = np.zeros((nrows, 3))
+        count_inactive = 0
+        for inactive_mol_idx, inactive_mol_val in enumerate(['H2', 'HE', 'N2']):
+            for mol_idx, mol_val in enumerate(molecules):
+                if mol.upper() == inactive_mol:
+                    count_inactive += 1
+                    self.inactive_mixratio_profile_file[:,inactive_mol_idx] = mixratio_profiles_file[:,mol_idx+1] # plus 1 as first column is pressure
+
+        # Set active gases (get everything, excluding H2, HE, N2
+        self.active_gases_file = []
+        self.active_mixratio_profile_file = np.zeros((nrows, len(molecules) - count_inactive))
+        idx = 0
+        for mol_idx, mol_val in enumerate(molecules):
+            if not mol_val.upper() in ['H2', 'HE', 'N2']:
+
+                # check that we have cross section or ktable for this molecule
+                if self.opacity_method[:4] == 'xsec':
+                    opacity_path = self.params.in_xsec_path
+                elif self.opacity_method == 'ktables':
+                    opacity_path = self.params.in_ktab_path
+
+                # check that xsec for given molecule exists
+                molpath = glob.glob(os.path.join(opacity_path, '%s_*' % mol_val))+\
+                          glob.glob(os.path.join(opacity_path, '%s.*' % mol_val))
+                if len(molpath) <= 0: # we don't have xsec/ktable for this moluecule
+                    excluded_molecules.append(mol_val)
+
+                else:
+                    self.active_gases_file.append(mol_val)
+                    self.active_mixratio_profile_file[:,idx] = mixratio_profiles_file[:,mol_idx+1]
+                    idx += 1
+
+        if len(excluded_molecules) > 1:
+            logging.warning('There are some excluded molecules from the input mixing ratios:', excluded_molecules)
+
+    def load_tp_profile_file(self):
+
+        logging.info('Load temperature profile from external file: %s' % self.params.atm_tp_file)
+
+        # note first column is pressure, secondo column is temperature
+        if os.path.isfile(self.params.atm_tp_file):
+            self.tp_profile_file = np.loadtxt(self.params.atm_tp_file)

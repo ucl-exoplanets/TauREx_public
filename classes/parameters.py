@@ -21,9 +21,9 @@ from library_constants import *
 
 class parameters(object):
 
-    def __init__(self, parfile='Parfiles/default.par', mpi=True, log=True): # todo might switch mpi=False as default??
-        '''
+    def __init__(self, parfile='Parfiles/default.par', mode='foward_model', mpi=True, log=True): # todo might switch mpi=False as default??
 
+        '''
         a parameter file is parsed and initial parameter values are set.
         to add a new parameter edit this file and the input .par file.
         '''
@@ -46,6 +46,7 @@ class parameters(object):
             else:
                 MPIrank     = 0
                 MPIsize     = 0
+
 
         #config file parser
         if parfile:
@@ -101,6 +102,12 @@ class parameters(object):
 
         logging.info('Initialise parameters object')
 
+        if mode in ['forward_model', 'retrieval']:
+            self.mode = mode
+            logging.info('TauREx is running in %s mode' % self.mode)
+        else:
+            logging.info('Mode %s is not recognized' % mode)
+
         # list of all molecules for which we have cross sections
         self.all_absorbing_gases = ['H2O', 'HCN', 'CH4', 'CO2', 'CO', 'NH3', 'C2H2']
         # list of all inactive gases we take care of
@@ -152,6 +159,7 @@ class parameters(object):
         self.atm_min_pres           = self.getpar('Atmosphere', 'min_pressure', 'float')
 
         self.atm_tp_type              = self.getpar('Atmosphere', 'tp_type')
+        self.atm_tp_file              = self.getpar('Atmosphere', 'tp_file')
         self.atm_tp_iso_temp          = self.getpar('Atmosphere', 'tp_iso_temp', 'float' )
         self.atm_tp_guillot_T_irr     = self.getpar('Atmosphere', 'tp_guillot_T_irr', 'float' )
         self.atm_tp_guillot_kappa_ir = self.getpar('Atmosphere', 'tp_guillot_kappa_ir', 'float' )
@@ -168,7 +176,11 @@ class parameters(object):
         
 
         self.atm_active_gases       = [gas.upper() for gas in self.getpar('Atmosphere','active_gases', 'list-str')]
+        if self.atm_active_gases[0] == 'FILE':
+            self.atm_active_gases = 'file'
         self.atm_active_gases_mixratios = self.getpar('Atmosphere','active_gases_mixratios', 'list-float')
+        self.atm_active_gases_file  = self.getpar('Atmosphere', 'active_gases_file')
+
         self.atm_inactive_gases     = ['H2', 'HE', 'N2']
         self.atm_N2_mixratio        = self.getpar('Atmosphere', 'N2_mixratio', 'float')
         self.atm_He_H2_ratio        = self.getpar('Atmosphere', 'He_H2_ratio', 'float')
@@ -268,7 +280,6 @@ class parameters(object):
         self.nest_out_filename     = self.getpar('MultiNest','out_filename')
 
 
-
     def getpar(self, sec, par, type=None):
 
         # get parameter from user defined parser. If parameter is not found there, load the default parameter
@@ -335,4 +346,3 @@ class parameters(object):
                             name != 'parser' and name != 'default_parser' and name != 'console':
                 pr[name] = value
         return pr
-

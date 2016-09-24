@@ -32,17 +32,13 @@ cythonised = False
 
 class atmosphere(object):
 
-    def __init__(self, data, params=None, tp_profile_type=None, covariance=None, nthreads=1):
+    def __init__(self, data, tp_profile_type=None, covariance=None, nthreads=1):
 
         logging.info('Initialising atmosphere object')
 
-        # set some objects and variables
-        if params is not None:
-            # should we deprecate this?
-            self.params = params
-        else:
-            self.params = data.params
+        self.params = data.params
 
+        self.nthreads = nthreads
 
         self.data = data
 
@@ -59,39 +55,100 @@ class atmosphere(object):
         logging.info('Atmospheric pressure boundaries from internal model: %f-%f' %
                      (np.min(self.pressure_profile), np.max(self.pressure_profile)))
 
-        # if self.params.ven_load:
-        #
-        #     #self.temperature_profile = self.data.ven_temperature_int(self.pressure_profile)
-        #     self.temperature_profile = np.interp(self.pressure_profile[::-1],
-        #                                          self.data.ven_pressure[::-1], self.data.ven_temperature[::-1])[::-1]
-        #     self.temperature_profile = np.asarray(self.temperature_profile, order='C')
-        #
-        #     # active and inactive gas names and mixing ratios
-        #     self.active_gases = self.data.ven_active_gases
-        #     self.inactive_gases = self.data.ven_inactive_gases
-        #     self.params.atm_active_gases = self.active_gases
-        #     self.params.atm_inactive_gases = self.inactive_gases
-        #
-        #     # set mixing ratios profiles of active and inactive gases
-        #     self.active_mixratio_profile = np.zeros((len(self.active_gases), self.nlayers))
-        #     self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
-        #     for mol_idx, mol_val in enumerate(self.active_gases):
-        #         ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-        #         self.active_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1],
-        #                                                               self.data.ven_molprof_pressure[::-1],
-        #                                                               self.data.ven_molprof_mixratios\
-        #                                                                   [:,ven_molprof_idx][::-1])[::-1]
-        #         self.active_mixratio_profile[mol_idx, :] = np.asarray(self.active_mixratio_profile[mol_idx, :],
-        #                                                               order='C')
-        #     for mol_idx, mol_val in enumerate(self.inactive_gases):
-        #         ven_molprof_idx = self.data.ven_molecules.index(mol_val)
-        #         self.inactive_mixratio_profile[mol_idx, :] =  np.interp(self.pressure_profile[::-1],
-        #                                                                 self.data.ven_molprof_pressure[::-1],
-        #                                                                 self.data.ven_molprof_mixratios\
-        #                                                                     [:,ven_molprof_idx][::-1])[::-1]
-        #         self.inactive_mixratio_profile[mol_idx, :] = np.asarray(self.inactive_mixratio_profile[mol_idx, :],
-        #                                                                 order='C')
-        # else:
+        if self.params.atm_active_gases[0] == 'FILE':
+            self.set_gases_from_file()
+        else:
+            self.set_gases_from_param()
+
+        self.nallgases = len(self.active_gases) + len(self.inactive_gases)
+        self.nactivegases = len(self.active_gases)
+        self.ninactivegases = len(self.inactive_gases)
+
+        # set planet mean molecular weight
+        self.set_mu_profile()
+
+        # set the temperature profile
+        if self.params.atm_tp_type.upper() == 'FILE':
+            self.temperature_profile  = self.get_temperature_profile_from_file()
+        else:
+            self.temperature_profile  = self.get_temperature_profile_from_param()
+
+        # compute altitude profile, scale height and planet gravity arrays
+        self.set_altitude_gravity_scaleheight_profile()
+
+        # set density profile
+        self.set_density_profile()
+
+        logging.info('Star radius: %.3f RSUN = %.9e m' % (self.params.star_radius/RSOL, self.params.star_radius))
+        logging.info('Planet radius: %.3f RJUP = %.9e m' % (self.planet_radius/RJUP, self.planet_radius))
+        logging.info('Planet mass: %.3f MJUP = %.9e kg' % (self.planet_mass/MJUP, self.planet_mass))
+        logging.info('Planet gravity (log g) (1st layer): %.3f cgs = %.3f m/s2' % (np.log10(self.gravity_profile[0]*100.),
+                                                                                   self.gravity_profile[0]))
+        logging.info('Mean molecular weight (1st layer): %.5f AMU' % (self.mu_profile[0]/AMU))
+        logging.info('Scale height (1st layer): %.1f km' % (self.scaleheight_profile[0]/1000.))
+        logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
+        logging.info('Atmospheric max pressure: %.3f bar' % (self.params.atm_max_pres/1e5))
+
+        # selecting TP profile to use
+        if tp_profile_type is None:
+            self.TP_type = self.params.atm_tp_type
+        else:
+            self.TP_type = tp_profile_type
+
+        # set non-linear sampling grid for hybrid model
+        if tp_profile_type == 'hybrid':
+            self.hybrid_covmat = covariance
+            self.get_TP_sample_grid(covariance, delta=0.05)
+
+        # load opacity arrays for the appropriate wavenumber grid (gas, rayleigh, cia)
+        self.opacity_wngrid = ''
+        if self.params.mode == 'retrieval':
+            self.load_opacity_arrays(wngrid='obs_spectrum', nthreads=nthreads)
+        else:
+            if self.params.gen_manual_waverange:
+                self.load_opacity_arrays(wngrid='manual', nthreads=nthreads)
+            else:
+                self.load_opacity_arrays(wngrid='native', nthreads=nthreads)
+
+        # initialise ACE specific parameters
+        if self.params.gen_ace:
+
+            # loading Fortran code for chemically consistent model
+            self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
+
+            # set solar elemental abundances. H and He are always set to solar and never change.
+            self.ace_H_solar = 12.
+            self.ace_He_solar = 10.93
+            self.ace_C_solar = 8.43
+            self.ace_O_solar = 8.69
+            self.ace_N_solar = 7.83
+            self.ace_metallicity = self.params.atm_ace_metallicity
+            self.ace_co = self.params.atm_ace_co
+            self.set_ace_params()
+
+        logging.info('Atmosphere object initialised')
+
+    def set_gases_from_file(self):
+
+        # loading mixing ratio profiles from external file (preloaded in data object)
+        self.active_gases = self.data.active_gases_file
+        self.inactive_gases = ['H2', 'HE', 'N2']
+
+        # interpolate mixing ratio profiles to pressure grid
+        self.active_mixratio_profile = np.zeros((len(self.active_gases), self.nlayers))
+        for idx in range(len(self.active_gases)):
+            self.active_mixratio_profile[idx,:] = np.interp(self.pressure_profile,
+                                                            self.data.mixratio_pressure_file,
+                                                            self.data.active_mixratio_profile_file[:,idx])
+        self.inactive_mixratio_profile = np.zeros((len(self.inactive_gases), self.nlayers))
+        for idx in range(len(self.inactive_gases)):
+            self.inactive_mixratio_profile[idx,:] = np.interp(self.pressure_profile,
+                                                              self.data.mixratio_pressure_file,
+                                                              self.data.inactive_mixratio_profile_file[:,idx])
+
+    def set_gases_from_param(self):
+
+        # active and inactive gases set from param file
 
         # active and inactive gas names
         self.active_gases = self.params.atm_active_gases
@@ -131,63 +188,7 @@ class atmosphere(object):
         self.inactive_mixratio_profile[0, :] = mixratio_remainder/(1. + self.params.atm_He_H2_ratio) # H2
         self.inactive_mixratio_profile[1, :] =  self.params.atm_He_H2_ratio * self.inactive_mixratio_profile[0, :]
 
-        self.temperature_profile  = self.get_temperature_profile()
 
-        self.nallgases = len(self.active_gases) + len(self.inactive_gases)
-        self.nactivegases = len(self.active_gases)
-        self.ninactivegases = len(self.inactive_gases)
-
-        # set planet mean molecular weight
-        self.set_mu_profile()
-
-        # compute altitude profile, scale height and planet gravity arrays
-        self.set_altitude_gravity_scaleheight_profile()
-
-        # set density profile
-        self.set_density_profile()
-
-        logging.info('Star radius: %.3f RSUN = %.9e m' % (self.params.star_radius/RSOL, self.params.star_radius))
-        logging.info('Planet radius: %.3f RJUP = %.9e m' % (self.planet_radius/RJUP, self.planet_radius))
-        logging.info('Planet mass: %.3f MJUP = %.9e kg' % (self.planet_mass/MJUP, self.planet_mass))
-        logging.info('Planet gravity (log g) (1st layer): %.3f cgs = %.3f m/s2' % (np.log10(self.gravity_profile[0]*100.),
-                                                                                   self.gravity_profile[0]))
-        logging.info('Mean molecular weight (1st layer): %.5f AMU' % (self.mu_profile[0]/AMU))
-        logging.info('Scale height (1st layer): %.1f km' % (self.scaleheight_profile[0]/1000.))
-        logging.info('Temperature (1st layer): %.1f K' % (self.temperature_profile[0]))
-        logging.info('Atmospheric max pressure: %.3f bar' % (self.params.atm_max_pres/1e5))
-
-        # selecting TP profile to use
-        if tp_profile_type is None:
-            self.TP_type = self.params.atm_tp_type
-        else:
-            self.TP_type = tp_profile_type
-
-        # set non-linear sampling grid for hybrid model
-        if tp_profile_type == 'hybrid':
-            self.hybrid_covmat = covariance
-            self.get_TP_sample_grid(covariance, delta=0.05)
-
-        # load opacity arrays (gas, rayleigh, cia)
-        self.opacity_wngrid = ''
-        self.load_opacity_arrays(wngrid='obs_spectrum', nthreads=nthreads)
-
-        # initialise ACE specific parameters
-        if self.params.gen_ace:
-
-            # loading Fortran code for chemically consistent model
-            self.ace_lib = C.CDLL('./library/ACE/ACE.so', mode=C.RTLD_GLOBAL)
-
-            # set solar elemental abundances. H and He are always set to solar and never change.
-            self.ace_H_solar = 12.
-            self.ace_He_solar = 10.93
-            self.ace_C_solar = 8.43
-            self.ace_O_solar = 8.69
-            self.ace_N_solar = 7.83
-            self.ace_metallicity = self.params.atm_ace_metallicity
-            self.ace_co = self.params.atm_ace_co
-            self.set_ace_params()
-
-        logging.info('Atmosphere object initialised')
 
     def load_opacity_arrays(self, wngrid='obs_spectrum', nthreads=1):
 
@@ -195,26 +196,49 @@ class atmosphere(object):
 
             logging.info('Loading opacity arrays for grid `%s`' % wngrid)
 
+            self.opacity_wngrid = wngrid
 
-            # select the wavenumber grid
+            # select the wavenumber grid. The grids are defined in the data class, function load_wavenumber_grid
             if wngrid == 'obs_spectrum':
                 self.int_nwngrid = self.data.int_nwngrid_obs
                 self.int_wngrid = self.data.int_wngrid_obs
                 self.int_wngrid_idxmin = self.data.int_wngrid_obs_idxmin
                 self.int_wngrid_idxmax = self.data.int_wngrid_obs_idxmax
 
-            elif wngrid == 'full':
-                self.int_nwngrid = self.data.int_nwngrid_full
-                self.int_wngrid = self.data.int_wngrid_full
+            elif wngrid == 'native':
+                self.int_nwngrid = self.data.int_nwngrid_native
+                self.int_wngrid = self.data.int_wngrid_native
                 self.int_wngrid_idxmin = 0
-                self.int_wngrid_idxmax = self.data.int_nwngrid_full
+                self.int_wngrid_idxmax = self.data.int_nwngrid_native
 
+            elif wngrid == 'manual':
+                self.int_nwngrid = self.data.int_nwngrid_manual
+                self.int_wngrid = self.data.int_wngrid_manual
+                self.int_wngrid_idxmin = self.data.int_wngrid_manual_idxmin
+                self.int_wngrid_idxmax = self.data.int_wngrid_manual_idxmax
+
+            elif wngrid == 'extended':
+                self.int_nwngrid = self.data.int_nwngrid_extended
+                self.int_wngrid = self.data.int_wngrid_extended
+                self.int_wngrid_idxmin = self.data.int_wngrid_extended_idxmin
+                self.int_wngrid_idxmax = self.data.int_wngrid_extended_idxmax
             else:
 
                 logging.error('Cannot load the opacity arrays for grid `%s`' % wngrid)
                 exit()
 
-            self.opacity_wngrid = wngrid
+            self.int_wlgrid = 10000./self.int_wngrid
+            self.int_nwlgrid = self.int_nwngrid
+
+
+            if self.params.mode == 'retrieval':
+                # get bins and indexes for spectrum binning (used only if opacity method is xsec, not used for ktables)
+                self.int_bingrid, self.int_bingrididx = get_specbingrid(self.data.obs_wlgrid,
+                                                                         self.int_wlgrid,
+                                                                         self.data.obs_binwidths)
+                self.int_nbingrid = len(self.data.obs_binwidths)
+
+            # load arrays (interpolate to pressure profile and restrict wavenumber range to selected wngrid)
 
             if self.params.in_opacity_method in ['xsec_lowres', 'xsec_highres', 'xsec_sampled', 'xsec']:
                 # get sigma array (and interpolate sigma array to pressure profile)
@@ -268,7 +292,14 @@ class atmosphere(object):
         self.pressure_profile = np.power(10, np.log10(self.pressure_profile_levels)[:-1]+
                                          np.diff(np.log10(self.pressure_profile_levels))/2.)
 
-    def get_temperature_profile(self):
+
+    def get_temperature_profile_from_file(self):
+
+        temperature_profile = np.interp(self.pressure_profile,
+                                        self.data.mixratio_pressure_file,
+                                        self.data.tp_profile_file)
+
+    def get_temperature_profile_from_param(self):
 
         # set initial temperature profile (mainly used for create_spectrum)
         if self.params.atm_tp_type == 'guillot':

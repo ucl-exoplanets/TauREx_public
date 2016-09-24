@@ -268,20 +268,19 @@ class output(object):
     def get_spectra(self, solution):
 
         fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
-        # load model using full wavenumber range
-        if self.params.gen_type == 'transmission':
-            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='full', nthreads=self.nthreads)
-            wavegrid  = self.data.int_wlgrid_full
-            nwavegrid = self.data.int_nwlgrid_full
-            bingrid   = self.data.intsp_bingrididx_full
-            nbingrid = self.data.intsp_nbingrid_full
+
+        # load model using extended or manual wavenumber range
+        if self.params.gen_manual_waverange:
+            wngrid = 'manual'
         else:
-            print('double check', self.nthreads)
-            self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid='obs_spectrum', nthreads=self.nthreads)
-            wavegrid  = self.data.int_wlgrid_obs
-            nwavegrid = self.data.int_nwlgrid_obs
-            bingrid   = self.data.intsp_bingrididx
-            nbingrid = self.data.intsp_nbingrid
+            wngrid = 'extended'
+
+        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid, nthreads=self.nthreads)
+
+        wavegrid  = self.atmosphere.int_wngrid
+        nwavegrid = self.atmosphere.int_nwngrid
+        bingrid   = self.atmosphere.int_bingrididx
+        nbingrid = self.atmosphere.int_nbingrid
 
         # update atmospheric parameters to current solution
         self.fitting.update_atmospheric_parameters(fit_params)
@@ -305,11 +304,11 @@ class output(object):
                                                        for i in range(1, nbingrid+1)])
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
             # interpolate if using ktables
-            solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wngrid, self.data.int_wngrid_full, model)
+            solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wlgrid, self.atmosphere.int_wlgrid, model)
 
 
         solution['fit_spectrum_xsecres'] = np.zeros((nwavegrid, 3))
-        solution['fit_spectrum_xsecres'][:,0] = wavegrid
+        solution['fit_spectrum_xsecres'][:,0] = self.atmosphere.int_wlgrid
         solution['fit_spectrum_xsecres'][:,1] = model
 
         # calculate 1 sigma spectrum
@@ -323,7 +322,7 @@ class output(object):
                                                            for i in range(1, nbingrid+1)])
             elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
                 # interpolate if using ktables
-                solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wngrid, self.data.int_wngrid_full, sigmasp)
+                solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wlgrid, self.atmosphere.int_wlgrid, sigmasp)
 
         # calculate contribution function
         contrib_func = self.fitting.forwardmodel.model(return_tau=True)
@@ -347,8 +346,8 @@ class output(object):
             self.fitting.forwardmodel.params.atm_rayleigh = False
             self.fitting.forwardmodel.params.atm_cia = False
             #self.fitting.forwardmodel.params.atm_clouds = False
-            solution['opacity_contrib'][val] = np.zeros((nwavegrid, 2))
-            solution['opacity_contrib'][val][:,0] = wavegrid
+            solution['opacity_contrib'][val] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+            solution['opacity_contrib'][val][:,0] = self.atmosphere.int_wlgrid
             solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model(mixratio_mask=mask)
             
 
@@ -363,8 +362,8 @@ class output(object):
                 self.fitting.forwardmodel.params.atm_rayleigh = True
                 self.fitting.forwardmodel.params.atm_cia = False
                 #self.fitting.forwardmodel.params.atm_clouds = False
-                solution['opacity_contrib']['rayleigh'] = np.zeros((self.data.int_nwlgrid_full, 2))
-                solution['opacity_contrib']['rayleigh'][:,0] = self.data.int_wlgrid_full
+                solution['opacity_contrib']['rayleigh'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['rayleigh'][:,0] = self.atmosphere.int_wlgrid
                 solution['opacity_contrib']['rayleigh'][:,1] = self.fitting.forwardmodel.model()
 
             # opacity from cia
@@ -372,8 +371,8 @@ class output(object):
                 self.fitting.forwardmodel.params.atm_rayleigh = False
                 self.fitting.forwardmodel.params.atm_cia = True
                 #self.fitting.forwardmodel.params.atm_clouds = False
-                solution['opacity_contrib']['cia'] = np.zeros((self.data.int_nwlgrid_full, 2))
-                solution['opacity_contrib']['cia'][:,0] = self.data.int_wlgrid_full
+                solution['opacity_contrib']['cia'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['cia'][:,0] = self.atmosphere.int_wlgrid
                 solution['opacity_contrib']['cia'][:,1] = self.fitting.forwardmodel.model()
 
             # opacity from clouds
@@ -381,8 +380,8 @@ class output(object):
                 self.fitting.forwardmodel.params.atm_rayleigh = False
                 self.fitting.forwardmodel.params.atm_cia = False
                 self.fitting.forwardmodel.params.atm_clouds = True
-                solution['opacity_contrib']['clouds'] = np.zeros((self.data.int_nwlgrid_full, 2))
-                solution['opacity_contrib']['clouds'][:,0] = self.data.int_wlgrid_full
+                solution['opacity_contrib']['clouds'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['clouds'][:,0] = self.atmosphere.int_wlgrid
                 solution['opacity_contrib']['clouds'][:,1] = self.fitting.forwardmodel.model()
 
             self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
@@ -440,7 +439,7 @@ class output(object):
         weights = []
         nspectra = int(self.params.out_sigma_spectrum_frac * np.shape(solution['tracedata'])[0])
 
-        models = np.zeros((nspectra, self.data.int_nwlgrid_full)) # number of possible combinations
+        models = np.zeros((nspectra, self.atmosphere.int_nwngrid)) # number of possible combinations
         weights = np.zeros((nspectra))
         for i in range(nspectra):
             rand_idx = random.randint(0, np.shape(solution['tracedata'])[0])
@@ -450,11 +449,8 @@ class output(object):
             model = self.fitting.forwardmodel.model()
             models[i, :] = self.fitting.forwardmodel.model()
 
-        models = models[1:,:] # exclude 1st spectrum, for some reasons is made of nan
-        weights = np.asarray(weights[1:])
-
-        std_spectrum = np.zeros((self.data.int_nwngrid_full))
-        for i in range(self.data.int_nwngrid_full):
+        std_spectrum = np.zeros((self.atmosphere.int_nwngrid))
+        for i in range(self.atmosphere.int_nwngrid):
             std_spectrum[i] =  weighted_avg_and_std(models[:,i], weights=weights, axis=0)[1]
 
         # update atmospheric parameters to best solution

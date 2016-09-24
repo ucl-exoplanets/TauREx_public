@@ -27,6 +27,9 @@ import matplotlib.patches
 import warnings
 warnings.filterwarnings("ignore", module="matplotlib")
 
+sys.path.append('../library')
+sys.path.append('./library')
+from library_general import *
 
 #some global matplotlib vars
 mpl.rcParams['axes.linewidth'] = 1 #set the value globally
@@ -244,22 +247,40 @@ class taurex_plots(object):
                 label = 'Fitted model (%i)' % (solution_idx + 1)
             else:
                 label = 'Fitted model'
+
             spectra = solution_val['obs_spectrum']
             fit_highres = solution_val['fit_spectrum_xsecres']
-            rangeidx = np.logical_and(fit_highres[:,0] > np.min(obs[:,0])-0.05*np.min(obs[:,0]), fit_highres[:,0] < np.max(obs[:,0])+0.05*np.max(obs[:,0]))
-            plt.plot(fit_highres[:,0][rangeidx], fit_highres[:,1][rangeidx], color=self.cmap(float(solution_idx)/N), label=label)
+
+            plot_spectrum = np.zeros((len(fit_highres[:,0]), 2))
+            plot_spectrum[:,0] = fit_highres[:,0]
+            plot_spectrum[:,1] = fit_highres[:,1]
+            plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
+            if self.db['params']['in_opacity_method'][:4] == 'xsec':
+                plot_spectrum = binspectrum(plot_spectrum, 300)
+
+            plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], color=self.cmap(float(solution_idx)/N), label=label)
             plt.plot(spectra[:,0], spectra[:,3], 'd', markersize=3, color=self.cmap(float(solution_idx)/N))
 
-            # add 1 sigma spread
+            # add sigma spread
             if self.db['params']['out_sigma_spectrum']:
-                plt.fill_between(solution_val['fit_spectrum_xsecres'][:,0][rangeidx],
-                solution_val['fit_spectrum_xsecres'][:,1][rangeidx]-solution_val['fit_spectrum_xsecres'][:,2][rangeidx],
-                solution_val['fit_spectrum_xsecres'][:,1][rangeidx]+solution_val['fit_spectrum_xsecres'][:,2][rangeidx],
-                alpha=0.5, zorder=-1, color=self.cmap(float(solution_idx)/N), edgecolor="none")
-                plt.fill_between(solution_val['fit_spectrum_xsecres'][:,0][rangeidx],
-                solution_val['fit_spectrum_xsecres'][:,1][rangeidx]-2*solution_val['fit_spectrum_xsecres'][:,2][rangeidx],
-                solution_val['fit_spectrum_xsecres'][:,1][rangeidx]+2*solution_val['fit_spectrum_xsecres'][:,2][rangeidx],
-                alpha=0.2, zorder=-1, color=self.cmap(float(solution_idx)/N), edgecolor="none")
+
+                plot_spectrum_std = np.zeros((len(fit_highres[:,0]), 2))
+                plot_spectrum_std[:,0] = fit_highres[:,0]
+                plot_spectrum_std[:,1] = fit_highres[:,2]
+                plot_spectrum_std = plot_spectrum_std[plot_spectrum_std[:,0].argsort(axis=0)]  # sort in wavelength
+
+                if self.db['params']['in_opacity_method'][:4] == 'xsec':
+                    plot_spectrum_std = binspectrum(plot_spectrum_std, 300)
+
+                # 1 sigma
+                plt.fill_between(plot_spectrum[:,0], plot_spectrum[:,1]-plot_spectrum_std[:,1],
+                                 plot_spectrum[:,1]+plot_spectrum_std[:,1],
+                                 alpha=0.5, zorder=-1, color=self.cmap(float(solution_idx)/N), edgecolor='none')
+
+                # 2 sigma
+                plt.fill_between(plot_spectrum[:,0], plot_spectrum[:,1]-2*plot_spectrum_std[:,1],
+                                 plot_spectrum[:,1]+2*plot_spectrum_std[:,1],
+                                 alpha=0.2, zorder=-1, color=self.cmap(float(solution_idx)/N), edgecolor='none')
 
         plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
         plt.xlabel('Wavelength ($\mu$m)')
@@ -285,12 +306,24 @@ class taurex_plots(object):
             for solution_idx, solution_val in enumerate(self.db['solutions']):
                 fig = plt.figure(figsize=(7,3.5))
                 ax = fig.add_subplot(111)
-                rangeidx = np.logical_and(fit_highres[:,0] > np.min(obs[:,0])-0.05*np.min(obs[:,0]), fit_highres[:,0] < np.max(obs[:,0])+0.05*np.max(obs[:,0]))
-                plt.plot(fit_highres[:,0][rangeidx], fit_highres[:,1][rangeidx], alpha=0.7, color='black', label='Fitted model')
+
+                plot_spectrum = np.zeros((len(fit_highres[:,0]), 2))
+                plot_spectrum[:,0] = fit_highres[:,0]
+                plot_spectrum[:,1] = fit_highres[:,1]
+                plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
+                if self.db['params']['in_opacity_method'][:4] == 'xsec':
+                    plot_spectrum = binspectrum(plot_spectrum, 300)
+                #plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], alpha=0.7, color='black', label='Fitted model')
+
                 plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
+
                 for idx, val in enumerate(self.db['solutions'][solution_idx]['opacity_contrib']):
-                    sp = self.db['solutions'][solution_idx]['opacity_contrib'][val]
-                    plt.plot(sp[:,0][rangeidx], sp[:,1][rangeidx], color=self.cmap(float(idx)/N), label=val)
+                    plot_spectrum = self.db['solutions'][solution_idx]['opacity_contrib'][val]
+                    plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
+                    if self.db['params']['in_opacity_method'][:4] == 'xsec':
+                        plot_spectrum = binspectrum(plot_spectrum, 300)
+                    plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], color=self.cmap(float(idx)/N), label=val)
+
                 plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
                 plt.xlabel('Wavelength ($\mu$m)')
                 plt.ylabel('$(R_p/R_*)^2$')

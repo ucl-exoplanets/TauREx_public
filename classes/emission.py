@@ -22,19 +22,12 @@ import matplotlib.pylab as plt
 
 class emission(object):
 
-    def __init__(self, atmosphere, stage=0, data=None, params=None):
+    def __init__(self, atmosphere, stage=0):
 
         logging.info('Initialise object emission')
 
-        if params:
-            self.params = params
-        else:
-            self.params = atmosphere.params #get params object from atmosphere
-        if data:
-            self.data = data
-        else:
-            self.data = atmosphere.data    # get data object from atmosphere
-
+        self.params = atmosphere.params # get params object from atmosphere
+        self.data = atmosphere.data    # get data object from atmosphere
         self.atmosphere = atmosphere
 
         self.stage = 0

@@ -121,7 +121,7 @@ for param in params_dict:
 options = parser.parse_args()
 
 # Initialise parameters instance
-params = parameters(options.param_filename)
+params = parameters(options.param_filename, mode='retrieval')
 
 params.gen_manual_waverange = False
 
