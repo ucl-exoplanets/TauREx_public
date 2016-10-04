@@ -32,7 +32,7 @@ class create_spectrum(object):
         if params:
             self.params = params
         elif hasattr(options, 'param_filename'):
-            self.params = parameters(options.param_filename, mpi=False)
+            self.params = parameters(options.param_filename,mpi=False)
         elif param_filename:
             self.params = parameters(param_filename, mpi=False)
 
@@ -62,8 +62,8 @@ class create_spectrum(object):
         instance_data = {}
 
         # compute spectrum
-        instance_data['spectrum'] = np.zeros((self.dataob.int_nwlgrid_obs, 3))
-        instance_data['spectrum'][:,0] = self.dataob.int_wlgrid_obs
+        instance_data['spectrum'] = np.zeros((self.dataob.int_nwlgrid_manual, 3))
+        instance_data['spectrum'][:,0] = self.dataob.int_wlgrid_manual
         instance_data['spectrum'][:,1] = self.fmob.model()
 
         # freeze the mixing ratio profiles, disable gen_ace
