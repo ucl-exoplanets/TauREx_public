@@ -189,7 +189,6 @@ class atmosphere(object):
         self.inactive_mixratio_profile[1, :] =  self.params.atm_He_H2_ratio * self.inactive_mixratio_profile[0, :]
 
 
-
     def load_opacity_arrays(self, wngrid='obs_spectrum', nthreads=1):
 
         if self.opacity_wngrid != wngrid:
@@ -237,6 +236,10 @@ class atmosphere(object):
                                                                          self.int_wlgrid,
                                                                          self.data.obs_binwidths)
                 self.int_nbingrid = len(self.data.obs_binwidths)
+
+            # load SED array for emission
+            if self.params.gen_type.upper() == 'EMISSION':
+                self.star_sed =  self.data.star_sed_native[self.int_wngrid_idxmin:self.int_wngrid_idxmax]
 
             # load arrays (interpolate to pressure profile and restrict wavenumber range to selected wngrid)
 

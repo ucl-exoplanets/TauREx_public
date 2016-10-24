@@ -21,6 +21,13 @@ from fitting import *
 from atmosphere import *
 from data import *
 
+try:
+    from mpi4py import MPI
+
+    MPIimport = True
+except ImportError:
+    MPIimport = False
+
 def run(params, options=False):
 
     # initialising data object
@@ -36,14 +43,20 @@ def run(params, options=False):
     fittingob = fitting(forwardmodelob)
         
     #fit data
-    if params.downhill_run and MPI.COMM_WORLD.Get_rank() == 0:
-        fittingob.downhill_fit() # simplex downhill fit, only on first core
+    if params.downhill_run:
+        if MPIimport:
+            if MPI.COMM_WORLD.Get_rank() == 0:
+                fittingob.downhill_fit()  # simplex downhill fit, only on first core
+        else:
+            fittingob.downhill_fit()  # simplex downhill fit, only on first core
 
-    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+    if MPIimport:
+        MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
     if params.mcmc_run and pymc_import:
         fittingob.mcmc_fit() # MCMC fit
-        MPI.COMM_WORLD.Barrier()
+        if MPIimport:
+            MPI.COMM_WORLD.Barrier()
 
 
     if (not options and params.nest_run and multinest_import) \
@@ -53,9 +66,12 @@ def run(params, options=False):
         fittingob.NEST = True
 
     # exit if the rank of MPI process is > 0 (.e. leave only master process running)
-    MPIsize = MPI.COMM_WORLD.Get_size()
-    if MPI.COMM_WORLD.Get_rank() > 0:
-        sys.exit()
+    if MPIimport:
+        MPIsize = MPI.COMM_WORLD.Get_size()
+        if MPI.COMM_WORLD.Get_rank() > 0:
+            sys.exit()
+    else:
+        MPIsize = 0
 
     # initiating output instance with fitted data from fitting class
     # running inteprolations with nthreads = MPIsize

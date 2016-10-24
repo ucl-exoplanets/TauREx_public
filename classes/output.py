@@ -30,13 +30,18 @@ except:
 
 class output(object):
 
-    def __init__(self, fitting, nthreads=1):
+    def __init__(self, fitting, out_path, nthreads=1):
 
         self.params = fitting.params
         self.data = fitting.data
         self.atmosphere = fitting.atmosphere
         self.forwardmodel = fitting.forwardmodel
         self.fitting = fitting
+
+        if out_path is None:
+            self.out_path = self.params.out_path
+        else:
+            self.out_path = out_path
 
         self.nthreads = nthreads
 
@@ -59,7 +64,7 @@ class output(object):
                 outdb = self.add_data_from_solutions(outdb)
 
                 if out_filenames[idx] == 'default':
-                    filename = os.path.join(self.params.out_path, '%s_out.pickle' % types[idx])
+                    filename = os.path.join(self.out_path, '%s_out.pickle' % types[idx])
                 else:
                     filename = out_filenames[idx]
                 self.dbfilename[val] = filename
@@ -95,7 +100,7 @@ class output(object):
         for idx, param_name in enumerate(self.fitting.fit_params_names):
             dict[param_name] = {'value': self.fitting.DOWN_fit_output[idx] }
 
-        DOWN_out['solutions'].append({'type': 'down', 'fit_params': dict})
+        DOWN_out['solutions'].append({'type': 'downhill', 'fit_params': dict})
 
         return DOWN_out
 
@@ -257,7 +262,6 @@ class output(object):
 
             fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
             solution = fitting_out['solutions'][idx]
-
             solution = self.get_spectra(solution)  # compute spectra, contribution from opacities, and contribution function
             solution = self.get_profiles(solution) # compute mixing ratio and tp profiles
             solution = self.get_mu_posterior(solution) # derive trace, best fit value and uncertainties of mean molecular weight
@@ -492,25 +496,27 @@ class output(object):
 
     def get_mu_posterior(self, solution):
 
-        logging.info('Compute trace for mean molecular weight (of 1st layer)')
+        if solution['type'] == 'nest':
 
-        sol_tracedata = solution['tracedata']
-        sol_weights = solution['weights']
-        nsamples = len(sol_tracedata)
-        mu_trace = np.zeros(nsamples)
-        for i in range(nsamples):
-            fit_params_iter = sol_tracedata[i]
-            self.fitting.update_atmospheric_parameters(fit_params_iter)
-            mu_trace[i] = self.fitting.atmosphere.mu_profile[0]/AMU
+            logging.info('Compute trace for mean molecular weight (of 1st layer)')
 
-        q_16, q_50, q_84 = quantile_corner(mu_trace, [0.16, 0.5, 0.84],
-                    weights=np.asarray(sol_weights))
+            sol_tracedata = solution['tracedata']
+            sol_weights = solution['weights']
+            nsamples = len(sol_tracedata)
+            mu_trace = np.zeros(nsamples)
+            for i in range(nsamples):
+                fit_params_iter = sol_tracedata[i]
+                self.fitting.update_atmospheric_parameters(fit_params_iter)
+                mu_trace[i] = self.fitting.atmosphere.mu_profile[0]/AMU
 
-        solution['fit_params']['mu_derived'] =  {
-            'value' : q_50,
-            'sigma_m' : q_50-q_16,
-            'sigma_p' : q_84-q_50,
-            'trace': mu_trace,
-        }
+            q_16, q_50, q_84 = quantile_corner(mu_trace, [0.16, 0.5, 0.84],
+                        weights=np.asarray(sol_weights))
+
+            solution['fit_params']['mu_derived'] =  {
+                'value' : q_50,
+                'sigma_m' : q_50-q_16,
+                'sigma_p' : q_84-q_50,
+                'trace': mu_trace,
+            }
 
         return solution

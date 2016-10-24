@@ -89,7 +89,7 @@ class data(object):
 
         # Load Phoenix stellar model library or star blackbody
         if self.params.gen_type.upper() == 'EMISSION':
-            self.star_sed = self.load_star_SED()
+            self.load_star_SED()
 
         logging.info('Data object initialised')
 
@@ -814,7 +814,7 @@ class data(object):
             logging.info('Using black-body approximation for stellar spectrum')
 
             self.star_blackbody = True
-            SED = black_body(self.int_wngrid_obs,self.params.star_temp)
+            SED = black_body(self.int_wngrid_native, self.params.star_temp)
         else:
             # finding closest match to stellar temperature in parameter file
             [tmpselect, idx] = find_nearest(temperatures, self.params.star_temp)
@@ -827,10 +827,9 @@ class data(object):
             #reading in correct file and interpolating it onto self.int_wngrid_obs
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0 # #converting from ergs to SI
+            SED = np.interp(self.int_wlgrid_native, SED_raw[:,0], SED_raw[:,1])
 
-            SED = np.interp(self.int_wlgrid_obs, SED_raw[:,0], SED_raw[:,1])
-
-        return SED
+        self.star_sed_native = SED
 
     def load_active_gases_file(self):
 

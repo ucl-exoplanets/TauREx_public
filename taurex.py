@@ -43,7 +43,6 @@ try:
     import pymultinest
     multinest_import = True
 except:
-    logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
     multinest_import = False
 
 # loading classes
@@ -144,7 +143,12 @@ for param in params_dict:
 if MPIimport:
     logging.info('MPI enabled. Running on %i cores' % MPIsize)
 else:
-    logging.info('MPI disabled')
+    logging.warning('MPI disabled')
+
+if multinest_import:
+    logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
+else:
+    logging.info('Multinest library correctly loaded.')
 
 # modifying parameters object if running in cluster mode (see cluster class for docu)
 if options.cluster_dictionary is not 'None':
@@ -164,7 +168,8 @@ else:
     logging.info('PS: you suck at this... ')
     exit()
 
-MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+if MPIimport:
+    MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 #running Tau-REx
 outputob = run(params, options)

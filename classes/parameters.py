@@ -21,7 +21,7 @@ from library_constants import *
 
 class parameters(object):
 
-    def __init__(self, parfile='Parfiles/default.par', mode='foward_model', mpi=True, log=True): # todo might switch mpi=False as default??
+    def __init__(self, parfile='Parfiles/default.par', mode='forward_model', mpi=True, log=True): # todo might switch mpi=False as default??
 
         '''
         a parameter file is parsed and initial parameter values are set.

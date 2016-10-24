@@ -109,7 +109,7 @@ extern "C" {
 
         // interpolate ktab array to the temperature profile
         for (int j=0; j<nlayers; j++) {
-            cout << temperature[j] << endl;
+            //cout << temperature[j] << endl;
             if (temperature[j] > ktab_temp[ktab_ntemp-1]) { // temperature higher than ktab
                 for (int wn=0; wn<nwngrid; wn++) {
                     for (int l=0;l<nactive;l++) {

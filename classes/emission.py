@@ -146,7 +146,7 @@ class emission(object):
                                              self.atmosphere.temperature_profile,
                                              self.atmosphere.planet_radius,
                                              self.params.star_radius,
-                                             self.atmosphere.data.star_sed,
+                                             self.atmosphere.star_sed,
                                              C.c_void_p(FpFs.ctypes.data),
                                              C.c_void_p(tau.ctypes.data))
 
@@ -217,7 +217,7 @@ class emission(object):
                                              self.atmosphere.temperature_profile,
                                              self.atmosphere.planet_radius,
                                              self.params.star_radius,
-                                             self.atmosphere.data.star_sed,
+                                             self.atmosphere.star_sed,
                                              C.c_void_p(FpFs.ctypes.data),
                                              C.c_void_p(tau.ctypes.data))
 
