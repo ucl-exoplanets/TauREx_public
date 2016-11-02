@@ -36,12 +36,6 @@ class create_spectrum(object):
         elif param_filename:
             self.params = parameters(param_filename, mpi=False)
 
-        # Initialise taurex instances up to forward model
-        self.params.gen_manual_waverange = True
-        self.params.nest_run = False
-        self.params.mcmc_run = False
-        self.params.downhill_run = False
-
         self.dataob = data(self.params)
         self.atmosphereob = atmosphere(self.dataob, nthreads=nthreads)
         if self.params.gen_type == 'transmission':
@@ -62,8 +56,8 @@ class create_spectrum(object):
         instance_data = {}
 
         # compute spectrum
-        instance_data['spectrum'] = np.zeros((self.dataob.int_nwlgrid_manual, 3))
-        instance_data['spectrum'][:,0] = self.dataob.int_wlgrid_manual
+        instance_data['spectrum'] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 3))
+        instance_data['spectrum'][:,0] = self.fmob.atmosphere.int_wlgrid
         instance_data['spectrum'][:,1] = self.fmob.model()
 
         # freeze the mixing ratio profiles, disable gen_ace
@@ -95,8 +89,8 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = False
                 #self.fmob.params.atm_clouds = False
-                instance_data['opacity_contrib'][val] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                instance_data['opacity_contrib'][val][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib'][val] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 2))
+                instance_data['opacity_contrib'][val][:,0] = self.fmob.atmosphere.int_wlgrid
                 instance_data['opacity_contrib'][val][:,1] = self.fmob.model()
             self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
 
@@ -109,8 +103,8 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = True
                 self.fmob.params.atm_cia = False
                 #self.fmob.params.atm_clouds = False
-                instance_data['opacity_contrib']['rayleigh'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                instance_data['opacity_contrib']['rayleigh'][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib']['rayleigh'] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 2))
+                instance_data['opacity_contrib']['rayleigh'][:,0] = self.fmob.atmosphere.int_wlgrid
                 instance_data['opacity_contrib']['rayleigh'][:,1] = self.fmob.model()
 
             # opacity from cia
@@ -118,8 +112,8 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = True
                 #self.fmob.params.atm_clouds = False
-                instance_data['opacity_contrib']['cia'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                instance_data['opacity_contrib']['cia'][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib']['cia'] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 2))
+                instance_data['opacity_contrib']['cia'][:,0] = self.fmob.atmosphere.int_wlgrid
                 instance_data['opacity_contrib']['cia'][:,1] = self.fmob.model()
 
             # opacity from clouds
@@ -127,8 +121,8 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = False
                 self.fmob.params.atm_clouds = True
-                instance_data['opacity_contrib']['clouds'] = np.zeros((self.dataob.int_nwlgrid_obs, 2))
-                instance_data['opacity_contrib']['clouds'][:,0] = self.dataob.int_wlgrid_obs
+                instance_data['opacity_contrib']['clouds'] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 2))
+                instance_data['opacity_contrib']['clouds'][:,0] = self.fmob.atmosphere.int_wlgrid
                 instance_data['opacity_contrib']['clouds'][:,1] = self.fmob.model()
 
             self.fmob.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
@@ -283,6 +277,7 @@ if __name__ == '__main__':
     parser.add_argument('--nthreads',  # run forward model in multithreaded mode (use Python multiprocesing for sigma array interpolation
                        dest='nthreads', # and openmp parallel version of cpp code). You need to spcify the number of cores to use,
                        default=0,
+                       type=int,
                        help = 'Run forward model in multithreaded mode (using NTHREADS cores). NTHREADS should not '
                               'be larger than the number of cores available.')
     # add command line interface to parameter file
@@ -307,7 +302,7 @@ if __name__ == '__main__':
     options = parser.parse_args()
 
     # Initialise parameters instance
-    params = parameters(options.param_filename, mpi=False)
+    params = parameters(options.param_filename, mode='forward_model', mpi=False)
 
     # Override params object from command line input
     for param in params_dict:

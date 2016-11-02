@@ -1,0 +1,49 @@
+[General]
+type = emission
+manual_waverange = False
+wavemin = 1
+wavemax = 10.
+
+[Input]
+opacity_method = ktables
+ktab_path = Input/ktables/new/R100/
+xsec_path = Input/xsec/sampling/R7000
+cia_path = Input/cia/HITRAN/
+
+[Output]
+path = tests/test_0_emission
+
+[Star]
+radius = 1
+temp   = 5800
+use_blackbody = False
+
+[Planet]
+radius = 1
+mass = 1
+
+[Atmosphere]
+nlayers = 30
+max_pressure = 1e6
+min_pressure = 1e-5
+
+tp_type = guillot
+tp_guillot_T_irr = 1500
+tp_guillot_kappa_ir = 0.5
+tp_guillot_kappa_v1 = 0.05
+tp_guillot_kappa_v2 = 0.05
+tp_guillot_alpha = 0.005
+
+active_gases = H2O
+active_gases_mixratios = 1e-4
+
+N2_mixratio = 0.
+He_H2_ratio = 0.17647
+
+cia_pairs = H2-H2, H2-He
+
+rayleigh = True
+cia = True
+
+clouds = True
+clouds_pressure = 0.001

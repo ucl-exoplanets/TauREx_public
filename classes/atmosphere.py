@@ -171,9 +171,11 @@ class atmosphere(object):
 
         # first get the sum of the mixing ratio of all active gases
         if len(self.active_gases) > 1:
-            active_mixratio_sum = np.sum(self.active_mixratio_profile, axis = 1)
+            active_mixratio_sum = np.sum(self.active_mixratio_profile, axis = 0)
         else:
             active_mixratio_sum = np.copy(self.active_mixratio_profile)
+
+
         # add the N2 mixing ratio profile to this sum
         active_mixratio_sum += self.inactive_mixratio_profile[2, :]
 
@@ -187,7 +189,6 @@ class atmosphere(object):
         mixratio_remainder = 1. - active_mixratio_sum
         self.inactive_mixratio_profile[0, :] = mixratio_remainder/(1. + self.params.atm_He_H2_ratio) # H2
         self.inactive_mixratio_profile[1, :] =  self.params.atm_He_H2_ratio * self.inactive_mixratio_profile[0, :]
-
 
 
     def load_opacity_arrays(self, wngrid='obs_spectrum', nthreads=1):
@@ -237,6 +238,10 @@ class atmosphere(object):
                                                                          self.int_wlgrid,
                                                                          self.data.obs_binwidths)
                 self.int_nbingrid = len(self.data.obs_binwidths)
+
+            # load SED array for emission
+            if self.params.gen_type.upper() == 'EMISSION':
+                self.star_sed =  self.data.star_sed_native[self.int_wngrid_idxmin:self.int_wngrid_idxmax]
 
             # load arrays (interpolate to pressure profile and restrict wavenumber range to selected wngrid)
 
@@ -596,7 +601,6 @@ class atmosphere(object):
                              C.byref(y_out))
             ace_profiles = np.asarray(y_out)
 
-
             for mol_idx, mol_val in enumerate(self.params.atm_active_gases):
                 self.active_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_active_gases_idx[mol_idx]]
 
@@ -605,6 +609,7 @@ class atmosphere(object):
 
             if isinstance(mixratio_mask, (np.ndarray, np.generic)):
                 self.active_mixratio_profile[mixratio_mask, :] = 0
+
 
             del(y_out)
             del(a_apt)

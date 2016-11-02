@@ -48,6 +48,9 @@ class data(object):
         if self.params.gen_compile_cpp:
             self.compile_shared_libs()
 
+        # set opacity method (ktab, xsec_sampled, xsec_highres)
+        self.get_opacity_method()
+
         # load ace specific parameters
         if self.params.gen_ace:
             self.load_ace_params()
@@ -65,18 +68,12 @@ class data(object):
             self.load_tp_profile_file()
 
         # Preload the cross sections
-        if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
-            self.opacity_method = 'xsec_sampled'
+        if self.opacity_method == 'xsec_sampled':
             self.load_sigma_sampled_dict()
-        elif self.params.in_opacity_method == 'xsec_highres':
-            self.opacity_method = 'xsec_highres'
+        elif self.opacity_method == 'xsec_highres':
             self.load_sigma_highres_dict()
-        elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
-            self.opacity_method = 'ktables'
+        elif self.opacity_method == 'ktables':
             self.load_ktables_dict()
-        else:
-            logging.error('You need to select an opacity calculation method. See parameter General->opacity_method')
-            exit()
 
         # Load wavenumber grid of internal model
         self.load_wavenumber_grid()
@@ -89,7 +86,7 @@ class data(object):
 
         # Load Phoenix stellar model library or star blackbody
         if self.params.gen_type.upper() == 'EMISSION':
-            self.star_sed = self.load_star_SED()
+            self.load_star_SED()
 
         logging.info('Data object initialised')
 
@@ -117,6 +114,18 @@ class data(object):
                       'library/ACE/Md_Types_Numeriques.f90 library/ACE/Md_Utilitaires.f90 '
                       'library/ACE/Md_numerical_recipes.f90')
 
+    def get_opacity_method(self):
+
+        if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+            self.opacity_method = 'xsec_sampled'
+        elif self.params.in_opacity_method == 'xsec_highres':
+            self.opacity_method = 'xsec_highres'
+        elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+            self.opacity_method = 'ktables'
+        else:
+            logging.error('You need to select an opacity calculation method. See parameter General->opacity_method')
+            exit()
+
     def load_ace_params(self):
 
         logging.info('Loading ace specific parameters')
@@ -137,19 +146,29 @@ class data(object):
         self.ace_inactive_gases_idx = [0, 0, 0]
 
         for mol_idx, mol_val in enumerate(self.ace_molecules):
-            molpath = os.path.join(self.params.in_xsec_path, '%s.db' % mol_val)
-            if os.path.isfile(molpath):
-                self.params.atm_active_gases.append(mol_val)
-                self.params.atm_active_gases_mixratios.append(0)
-                self.ace_active_gases_idx.append(mol_idx)
+            if self.opacity_method in ['xsec_sampled', 'xsec_highres']:
+                opacity_path = self.params.in_xsec_path
+            elif self.opacity_method == 'ktables':
+                opacity_path = self.params.in_ktab_path
 
-            # the idx 0, 1, 2 always correspond to H2, He, N2 respectively in self.atm_inactive_gases
-            if mol_val.upper() == 'H2':
-                self.ace_inactive_gases_idx[0] = mol_idx
-            if mol_val.upper() == 'HE':
-                self.ace_inactive_gases_idx[1] = mol_idx
-            if mol_val.upper() == 'N2':
-                self.ace_inactive_gases_idx[2] = mol_idx
+            molpath = glob.glob(os.path.join(opacity_path, '%s_*' % mol_val))+\
+                      glob.glob(os.path.join(opacity_path, '%s.*' % mol_val))
+            if len(molpath)>0:
+                molpath = molpath[0]
+                if os.path.isfile(molpath):
+                    self.params.atm_active_gases.append(mol_val)
+                    self.params.atm_active_gases_mixratios.append(0)
+                    self.ace_active_gases_idx.append(mol_idx)
+
+            # cannot find molecule, maybe it's an inactive gas?
+            elif mol_val.upper() == 'H2':
+                    self.ace_inactive_gases_idx[0] = mol_idx
+            elif mol_val.upper() == 'HE':
+                    self.ace_inactive_gases_idx[1] = mol_idx
+            elif mol_val.upper() == 'N2':
+                    self.ace_inactive_gases_idx[2] = mol_idx
+            else:
+                continue
 
         logging.info('ace active absorbers: %s' % self.params.atm_active_gases)
         logging.info('ace active absorbers idx: %s' % self.ace_active_gases_idx)
@@ -814,7 +833,7 @@ class data(object):
             logging.info('Using black-body approximation for stellar spectrum')
 
             self.star_blackbody = True
-            SED = black_body(self.int_wngrid_obs,self.params.star_temp)
+            SED = black_body(self.int_wngrid_native, self.params.star_temp)
         else:
             # finding closest match to stellar temperature in parameter file
             [tmpselect, idx] = find_nearest(temperatures, self.params.star_temp)
@@ -827,10 +846,9 @@ class data(object):
             #reading in correct file and interpolating it onto self.int_wngrid_obs
             SED_raw = np.loadtxt(self.SED_filename, dtype='float', comments='#')
             SED_raw[:,1] *= 10.0 # #converting from ergs to SI
+            SED = np.interp(self.int_wlgrid_native, SED_raw[:,0], SED_raw[:,1])
 
-            SED = np.interp(self.int_wlgrid_obs, SED_raw[:,0], SED_raw[:,1])
-
-        return SED
+        self.star_sed_native = SED
 
     def load_active_gases_file(self):
 

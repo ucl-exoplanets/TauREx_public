@@ -1,0 +1,52 @@
+[Input]
+opacity_method = xsec
+ktab_path = Input/ktables/new/R100/
+xsec_path = Input/xsec/sampling/R7000
+spectrum_file = tests/test_0_transmission/SPECTRUM_fit.dat
+
+[Output]
+path = tests/test_0_transmission
+sigma_spectrum = True
+sigma_spectrum_frac = 0.5
+
+[Star]
+radius = 1
+
+[Planet]
+radius = 1
+mass = 1
+
+[Atmosphere]
+nlayers = 10
+max_pressure = 1e6
+min_pressure = 1e-5
+tp_type = isothermal
+tp_iso_temp = 1500
+
+active_gases = H2O
+active_gases_mixratios = 1e-4
+
+N2_mixratio = 1e-12
+He_H2_ratio = 0.17
+
+cia_pairs = H2-H2, H2-He
+
+rayleigh = True
+cia = True
+
+clouds = False
+cld_topP = 200
+
+[Fitting]
+fit_active_gases = True
+fit_N2_mixratio = True
+fit_He_H2_ratio = True
+fit_temp = True
+fit_radius = True
+fit_clouds_pressure = False
+
+tp_iso_bounds  = 1300, 1800
+
+[MultiNest]
+run = True
+n_live_points = 100
