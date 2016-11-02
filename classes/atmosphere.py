@@ -171,9 +171,11 @@ class atmosphere(object):
 
         # first get the sum of the mixing ratio of all active gases
         if len(self.active_gases) > 1:
-            active_mixratio_sum = np.sum(self.active_mixratio_profile, axis = 1)
+            active_mixratio_sum = np.sum(self.active_mixratio_profile, axis = 0)
         else:
             active_mixratio_sum = np.copy(self.active_mixratio_profile)
+
+
         # add the N2 mixing ratio profile to this sum
         active_mixratio_sum += self.inactive_mixratio_profile[2, :]
 
@@ -599,7 +601,6 @@ class atmosphere(object):
                              C.byref(y_out))
             ace_profiles = np.asarray(y_out)
 
-
             for mol_idx, mol_val in enumerate(self.params.atm_active_gases):
                 self.active_mixratio_profile[mol_idx, :] = ace_profiles[:, self.data.ace_active_gases_idx[mol_idx]]
 
@@ -608,6 +609,7 @@ class atmosphere(object):
 
             if isinstance(mixratio_mask, (np.ndarray, np.generic)):
                 self.active_mixratio_profile[mixratio_mask, :] = 0
+
 
             del(y_out)
             del(a_apt)
