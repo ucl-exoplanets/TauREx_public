@@ -146,9 +146,9 @@ else:
     logging.warning('MPI disabled')
 
 if multinest_import:
-    logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
-else:
     logging.info('Multinest library correctly loaded.')
+else:
+    logging.warning('Multinest library is not loaded. Multinest functionality will be disabled')
 
 # modifying parameters object if running in cluster mode (see cluster class for docu)
 if options.cluster_dictionary is not 'None':
