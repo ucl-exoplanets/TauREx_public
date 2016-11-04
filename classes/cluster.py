@@ -162,7 +162,7 @@ class cluster(object):
             h.write('module load mpi/openmpi/1.10.1/gnu-4.9.2 \n')
             
             #setting up output dir on scratch
-            outdirpath = OUTDIR+'/{0}'.format(ID_number)
+            outdirpath = OUTDIR#+'/{0}'.format(ID_number)
             h.write('mkdir -p '+outdirpath+'\n')  #setting up output directory
         
             #run main command 
