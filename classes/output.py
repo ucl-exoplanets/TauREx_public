@@ -30,7 +30,7 @@ except:
 
 class output(object):
 
-    def __init__(self, fitting, out_path, nthreads=1):
+    def __init__(self, fitting, out_path = None, nthreads=1):
 
         self.params = fitting.params
         self.data = fitting.data

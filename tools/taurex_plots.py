@@ -507,13 +507,13 @@ if __name__ == '__main__':
 
 
     if options.db_dir:
-        db_filenames = glob.glob(os.path.join(options.db_dir, '*.db'))
-        out_folders = [val[:-3] for val in db_filenames]
+        db_filenames = glob.glob(os.path.join(options.db_dir, '*.pickle'))
+        out_folders = [val[:-7] for val in db_filenames]
     elif options.multi_dir:
         out_folders = glob.glob(os.path.join(options.multi_dir, '*'))
         db_filenames = []
         for folder in out_folders:
-            tmp = os.path.join(folder,'nest_out.db')
+            tmp = os.path.join(folder,'nest_out.pickle')
             if os.path.exists(tmp):
                 db_filenames.append(tmp)
     else:
