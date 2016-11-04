@@ -79,9 +79,9 @@ parser.add_argument('--no_multinest',
                   default=False)
 
 # plotting parameters
-parser.add_argument('--no_plot',
+parser.add_argument('--plot',
                       action='store_true',
-                      dest='no_plot',
+                      dest='plot',
                       default=False)
 parser.add_argument('--plot_profiles',
                       action='store_true',
@@ -175,7 +175,7 @@ if MPIimport:
 outputob = run(params, options)
 
 # plotting
-if not options.no_plot:
+if  options.plot:
     sys.path.append('./tools')
     from taurex_plots import taurex_plots
     for val in outputob.dbfilename:
