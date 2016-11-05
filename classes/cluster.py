@@ -124,7 +124,7 @@ class cluster(object):
                 h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
                 
                 #run command standard version
-                h.write('mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+'\n') 
+                h.write('mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+'--plot \n') 
                 
                 #run command version for multiple processes per node (i.e. ppn <24)
     #             h.write('OMPI_MCA_btl=^openib OMPI_MCA_mtl=^psm mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
@@ -161,6 +161,7 @@ class cluster(object):
             h.write('module load compilers/gnu/4.9.2 \n')
             h.write('module load mpi/openmpi/1.10.1/gnu-4.9.2 \n')
             h.write('module load mpi4py/2.0.0/python2 \n')
+            h.write('export MPLBACKEND="pdf" \n')
             
             #setting up output dir on scratch
             outdirpath = OUTDIR#+'/{0}'.format(ID_number)
