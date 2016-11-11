@@ -124,7 +124,7 @@ class cluster(object):
                 h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
                 
                 #run command standard version
-                h.write('mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+'--plot \n') 
+                h.write('mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+' --plot \n') 
                 
                 #run command version for multiple processes per node (i.e. ppn <24)
     #             h.write('OMPI_MCA_btl=^openib OMPI_MCA_mtl=^psm mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
@@ -132,8 +132,8 @@ class cluster(object):
                 #version without hostfile. works better if run on 3+ nodes 
     #             h.write('mpirun -np {0} /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
     
-                h.write('mkdir -p {0}/{1}'.format(OUTDIR,ID_number)+'\n')                       #make output dir
-                h.write('cp -rf {0}/{2}/Output/* {1}/{2}'.format(SCRATCHDIR,OUTDIR,ID_number)+'\n')    #copy all the stuff back
+                h.write('mkdir -p {0}'.format(OUTDIR)+'\n')                       #make output dir
+                h.write('cp -rf {0}/{1}/Output/* {2}'.format(SCRATCHDIR,ID_number,OUTDIR)+'\n')    #copy all the stuff back
                 h.write('rm -rf {0}/{1}'.format(SCRATCHDIR,ID_number)+' \n')                    #remove scratch dir
     
     
@@ -156,11 +156,11 @@ class cluster(object):
             h.write('#$ -wd '+DATADIR+'\n') #setting up path to SCRATCH space, data needs to be in scratch not home 
             
             #making sure environment variables are set
-            h.write('module unload compilers/intel/2015/update2 \n')
-            h.write('module unload mpi/intel/2015/update3/intel \n')
-            h.write('module load compilers/gnu/4.9.2 \n')
-            h.write('module load mpi/openmpi/1.10.1/gnu-4.9.2 \n')
-            h.write('module load mpi4py/2.0.0/python2 \n')
+#             h.write('module unload compilers/intel/2015/update2 \n')
+#             h.write('module unload mpi/intel/2015/update3/intel \n')
+#             h.write('module load compilers/gnu/4.9.2 \n')
+#             h.write('module load mpi/openmpi/1.10.1/gnu-4.9.2 \n')
+#             h.write('module load mpi4py/2.0.0/python2 \n')
             h.write('export MPLBACKEND="pdf" \n')
             
             #setting up output dir on scratch
