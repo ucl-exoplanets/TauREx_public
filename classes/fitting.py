@@ -809,7 +809,8 @@ class fitting(object):
                         init_MPI=False)
 
         # wait for all threads to synchronise
-        MPI.COMM_WORLD.Barrier()
+        if MPIimport:
+            MPI.COMM_WORLD.Barrier()
 
         self.NEST = True
 
