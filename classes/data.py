@@ -105,8 +105,11 @@ class data(object):
                       'library/ctypes_pathintegral_transmission_ktab.cpp')
         elif  self.params.gen_type == 'emission':
             os.system('rm library/ctypes_pathintegral_emission.so')
+            os.system('rm library/ctyped_pathintegral_emission_ktab.so')
             os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission.so '
                       'library/ctypes_pathintegral_emission.cpp')
+            os.system('g++ -fPIC -shared -o library/ctypes_pathintegral_emission_ktab.so '
+                      'library/ctypes_pathintegral_emission_ktab.cpp')
         if  self.params.gen_ace:
             #os.system('rm library/ACE/ACE.so')
             os.system('gfortran -shared -fPIC  -o library/ACE/ACE.so library/ACE/Md_ACE.f90 '

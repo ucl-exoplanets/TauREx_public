@@ -111,10 +111,10 @@ class fitting(object):
         # build the fit_params_names: names of params in fit_params
         # build the fit_params_texlabels: Latex labels of params in fit_params
         # build the fit_bounds list: boundary conditions for fit_params, used to build (uniform) priors
-
+        
+ 
 
         if not self.params.gen_ace: # not using the chemically consistent model
-
             ##########################################################
             # Mixing ratios of active gases either in log/linear space
             if self.params.fit_fit_active_gases:
@@ -178,21 +178,20 @@ class fitting(object):
         #####################################################
         # Chemically consistent model parameters: metallicity and co
         if self.params.gen_ace:
-
             if self.params.fit_fit_ace_metallicity:
                 self.fit_params_names.append('ace_log_metallicity')
                 self.fit_params_texlabels.append('log(Metallicity)')
                 self.fit_bounds.append((np.log10(self.params.fit_ace_metallicity_bounds[0]),
                                         np.log10(self.params.fit_ace_metallicity_bounds[1])))
                 self.fit_params.append(np.log10(self.params.atm_ace_metallicity))
-                count_ace += 1
+#                 count_ace += 1
             if self.params.fit_fit_ace_co:
                 self.fit_params_names.append('ace_co')
                 self.fit_params_texlabels.append('C/O')
                 self.fit_bounds.append((self.params.fit_ace_co_bounds[0],
                                         self.params.fit_ace_co_bounds[1]))
                 self.fit_params.append(self.params.atm_ace_co)
-                count_ace += 1
+#                 count_ace += 1
 
         ##########################################################################
         # TP profile parameters
@@ -614,7 +613,7 @@ class fitting(object):
 #         xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
 #         draw()
 #         pause(0.0001)
-# 
+# # 
 #         print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
 #             self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
 #             self.forwardmodel.atmosphere.planet_radius/RJUP), \
@@ -810,7 +809,8 @@ class fitting(object):
                         init_MPI=False)
 
         # wait for all threads to synchronise
-        MPI.COMM_WORLD.Barrier()
+        if MPIimport:
+            MPI.COMM_WORLD.Barrier()
 
         self.NEST = True
 
