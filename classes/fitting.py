@@ -430,7 +430,7 @@ class fitting(object):
 
                 # first get the sum of the mixing ratio of all active gases
                 if len(self.atmosphere.active_gases) > 1:
-                    active_mixratio_sum = np.sum(self.atmosphere.active_mixratio_profile, axis = 1)
+                    active_mixratio_sum = np.sum(self.atmosphere.active_mixratio_profile, axis = 0)
                 else:
                     active_mixratio_sum = np.copy(self.atmosphere.active_mixratio_profile)
 
