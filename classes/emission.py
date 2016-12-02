@@ -40,7 +40,7 @@ class emission(object):
 
             if self.atmosphere.nthreads > 1:
                 # load openmp version. Remember to set OMP_NUM_THREADS to number of threads
-                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission_parallel.so', mode=C.RTLD_GLOBAL)
+                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
             else:
                 self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
 
