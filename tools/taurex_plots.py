@@ -41,7 +41,7 @@ phi = 1.618
 
 class taurex_plots(object):
 
-    def __init__(self, dbfname=False, multinest_dir=False, multinest_prefix='1-', title=False, prefix='', out_folder=False, **kwargs):
+    def __init__(self, dbfname=False, multinest_dir=False, multinest_prefix='1-', title=False, prefix='', out_folder=False, spec_instance=False,**kwargs):
 
         if 'cmap' in kwargs:
             cmap = kwargs['cmap']
@@ -73,6 +73,15 @@ class taurex_plots(object):
         if not dbfname and not multinest_dir:
             print('Specify a NEST_out.pickle filename or a multinest directory')
             exit()
+        
+        if spec_instance:
+            try: 
+                self.add_spectrum_instance(spec_instance)
+            except:
+                db_dir = dbfname.split('/')[:-1]
+                db_dir[0] = '/'
+                db_dir.append(spec_instance)
+                self.add_spectrum_instance(os.path.join(*db_dir))
 
         self.title = title
         if not prefix:
@@ -93,6 +102,17 @@ class taurex_plots(object):
         except:
             print('Cannot create output directory: %s' % self.out_folder)
 
+            
+    def add_spectrum_instance(self,spec_instance):
+        #function adding SPECTRUM_INSTNANCE_out.pickle to self.db if exists
+        #this is required if plotting truths and it's not been specified already 
+        if 'SPECTRUM_db' in self.db:
+            print('Instance of SPECTRUM_db already available. Will not overwrite instance.')
+        else:
+            with open(spec_instance,'r') as f:
+                db_tmp = pickle.load(f)
+            self.db['SPECTRUM_db'] = db_tmp 
+#             
 
     def plot_posteriors(self, **kwargs):
 
@@ -132,7 +152,7 @@ class taurex_plots(object):
         plt.savefig(filename)
         print('Plot saved in %s' % filename)
 
-    def _plot_posteriors_from_pickle(self, plot_truths=False):
+    def _plot_posteriors_from_pickle(self, plot_truths=True):
 
         if self.db:
 
@@ -188,7 +208,7 @@ class taurex_plots(object):
                     truths = self.build_truths()
                 else:
                     truths = None
-
+                  
                 figs = []
                 for solution_idx, solution_val in enumerate(self.db['solutions']):
 
@@ -239,6 +259,7 @@ class taurex_plots(object):
         # fitted model
         fig = plt.figure(figsize=(5.3, 3.5))
         ax = fig.add_subplot(111)
+        
         obs = self.db['obs_spectrum']
         plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
         N = len(self.db['solutions'])
@@ -359,7 +380,7 @@ class taurex_plots(object):
 
         # add input spectrum param if available
         if 'SPECTRUM_db' in self.db:
-            tp = self.db['SPECTRUM_db']['data']['tp_profile']
+            tp = self.db['SPECTRUM_db']['data']['temperature_profile']
             plt.plot(tp[:,1], tp[:,0]/1e5, color='#C04F55', label='Input profile')
 
         plt.gca().invert_yaxis()
@@ -433,12 +454,22 @@ class taurex_plots(object):
                 mol_idx = in_params['atm_active_gases'].index(param)
                 truths.append(in_params['atm_active_gases_mixratios'][mol_idx])
             elif param == 'ace_log_metallicity':
-                truths.append(in_params['atm_ace_metallicity'])
+                truths.append(np.log10(in_params['atm_ace_metallicity']))
             elif param == 'ace_co':
-                truths.append(in_params['fit_fit_ace_co'])
+                truths.append(in_params['atm_ace_co'])
             elif param == 'T':
                 truths.append(in_params['atm_tp_iso_temp'])
-            elif param == 'Radius':
+            elif param == 'T_irr':
+                truths.append(in_params['atm_tp_guillot_T_irr'])
+            elif param == 'kappa_ir':
+                truths.append(np.log10(in_params['atm_tp_guillot_kappa_ir']))
+            elif param == 'kappa_v1':
+                truths.append(np.log10(in_params['atm_tp_guillot_kappa_v1']))
+            elif param == 'kappa_v2':
+                truths.append(np.log10(in_params['atm_tp_guillot_kappa_v2']))
+            elif param == 'alpha':
+                truths.append(in_params['atm_tp_guillot_alpha'])
+            elif param == 'radius':
                 truths.append(in_params['planet_radius']/69911000.0)
             elif param == 'clouds_pressure':
                 if in_params['atm_clouds']:
@@ -449,7 +480,7 @@ class taurex_plots(object):
                 truths.append(0)
 
         # todo append dummy truth for mean molecular weight (which is a derived fit value). Set zero for now.
-        thruts.append(0)
+        truths.append(0)
 
         return truths
 
@@ -473,6 +504,9 @@ if __name__ == '__main__':
     parser.add_argument('--multinest_prefix',
                           dest='multinest_prefix',
                           default='1-')
+    parser.add_argument('--spec_instance',
+                           dest='spec_instance',
+                           default=False)
     parser.add_argument('--title',
                           dest='title',
                           default=False)
@@ -507,7 +541,10 @@ if __name__ == '__main__':
 
 
     if options.db_dir:
-        db_filenames = glob.glob(os.path.join(options.db_dir, '*.pickle'))
+        if options.db_filename:
+            db_filenames = glob.glob(os.path.join(options.db_dir, options.db_filename))
+        else:
+            db_filenames = glob.glob(os.path.join(options.db_dir, '*.pickle'))
         out_folders = [val[:-7] for val in db_filenames]
     elif options.multi_dir:
         out_folders = glob.glob(os.path.join(options.multi_dir, '*'))
@@ -527,6 +564,7 @@ if __name__ == '__main__':
                             multinest_prefix = options.multinest_prefix,
                             title=options.title,
                             prefix=options.prefix,
+                            spec_instance=options.spec_instance,
                             out_folder=out_folders[db_idx])
 
         if options.plot_all or options.plot_posteriors:

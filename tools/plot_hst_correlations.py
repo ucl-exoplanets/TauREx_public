@@ -6,6 +6,7 @@ import pickle as pkl
 import string as str
 import itertools as iter
 import mpl_toolkits.mplot3d.axes3d as axes3d
+from mpl_toolkits.mplot3d import proj3d
 from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
 import os 
@@ -36,6 +37,7 @@ class hst_correlations(object):
          'xtick.labelsize':'15',
          'ytick.labelsize':'15'}
         pl.rcParams.update(plot_params)
+        self.labels = options.labels
         
         colors = [(1, 0, 0), (0, 1, 0)]  # R -> G 
         n_bins = [3, 6, 10, 100]  # Discretizes the interpolation into bins
@@ -67,11 +69,19 @@ class hst_correlations(object):
             self.data[self.planet_list[i]]['derived'] = {}
             comb = iter.combinations(paramlist,2)
             for per in comb:
-                corr_tmp = self.weight_corr(tracedata[:,paramlist.index(per[0])],tracedata[:,paramlist.index(per[1])],weights[:])
                 name = '{0}-{1}'.format(per[0],per[1])
                 self.data[self.planet_list[i]]['derived'][name] = {} 
+                #pearson correlation coefficient 
+                corr_tmp = self.weight_corr(tracedata[:,paramlist.index(per[0])],tracedata[:,paramlist.index(per[1])],weights[:])
                 self.data[self.planet_list[i]]['derived'][name]['pearson'] = corr_tmp 
-        
+                #linear regression 
+                fit_tmp = self.fit_linear_weighted(tracedata[:,paramlist.index(per[0])],tracedata[:,paramlist.index(per[1])], weights[:])
+                self.data[self.planet_list[i]]['derived'][name]['regression'] = fit_tmp[1]
+                
+    def fit_linear_weighted(self,data1,data2,weights):
+        #fits linear regression line to weighted data
+        fit = np.polynomial.polynomial.polyfit(data1, data2, deg=1, w=weights)
+        return fit
     
     def cov(self,x, y, w):
     #weighted covariance
@@ -106,7 +116,7 @@ class hst_correlations(object):
         DERIVED_TYPE = options.derived_type
         DERIVED = options.derived
         
-        if FIT_PARAMS[0] == 'logE':
+        if len(FIT_PARAMS) > 0 and FIT_PARAMS[0] == 'logE':
             data,parlist = self.compile_data(PARAMS=['planet_mass'], FIT_PARAMS=[],DERIVED_TYPE=None,DERIVED_PARAMS=[])
             fig = self.plot_logE(data)
             if save_plot:
@@ -157,6 +167,7 @@ class hst_correlations(object):
         pl.ylabel(parlist[0])
         pl.title('log(Evidence): {0} - {1}'.format(np.min(data[:,-1]),np.max(data[:,-1])))
 #         pl.colorbar(cax,[np.min(data[:,-1]),np.max(data[:,-1])])
+    
         return fig
     
     def plot_scatter_2D(self,data,parlist,colour):
@@ -171,6 +182,17 @@ class hst_correlations(object):
         pl.xlabel(parlist[0])
         pl.ylabel(parlist[2])
         pl.title('log(Evidence): {0} - {1}'.format(np.min(data[:,-1]),np.max(data[:,-1])))
+        
+        if self.labels:
+            for label, x, y in zip(self.planet_list, data[:, 0], data[:, 2]):
+                pl.annotate(
+                    label, 
+                    xy = (x, y), xytext = (-20, 20),
+                    textcoords = 'offset points', ha = 'right', va = 'bottom',
+                    bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                    arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+
+        
 #         pl.colorbar(cax,[np.min(data[:,-1]),np.max(data[:,-1])])
         return fig
         
@@ -203,6 +225,17 @@ class hst_correlations(object):
             ax.plot([fx[i], fx[i]], [fy[i], fy[i]], [fz[i]+zerror[i], fz[i]-zerror[i]], marker="_",color=self.cmap(norm_logE[i]))
             ax.plot([fx[i], fx[i]], [fy[i], fy[i]], [fz[i], fz[i]],color=self.cmap(norm_logE[i]),marker='o',markersize=10,linestyle="None")
             
+        if self.labels:
+            for i in range(len(fx)):
+                text=self.planet_list[i]    
+                x2, y2, _ = proj3d.proj_transform(fx[i],fy[i],fz[i], ax.get_proj())    
+                label = pl.annotate(text,
+                xycoords='data', 
+                xy = (x2, y2), xytext = (60, 20),
+                textcoords = 'offset points', ha = 'right', va = 'bottom',
+                bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+
         return fig
         
         
@@ -319,10 +352,10 @@ if __name__ == '__main__':
                       nargs='+',
                       help='list of derived parameters to be plotted'
                       )
-    parser.add_argument('--derived_type',
+    parser.add_argument('--d_type',
                         dest='derived_type',
-                        default='pearson',
-                        help='type of derived parameter: pearson'
+                        default='regression',
+                        help='type of derived parameter: regression, pearson. Default: regression'
                         )
     parser.add_argument('--list_static',
                         dest='list_static',
@@ -348,6 +381,12 @@ if __name__ == '__main__':
                       dest='save_plot',
                       default=False,
                       help='saves plot to pdf'
+                      )
+    parser.add_argument('--labels',
+                      action='store_true',
+                      dest='labels',
+                      default=False,
+                      help='put labels on figure'
                       )
 #     parser.add_argument('--save',
 #                       action='store_true',
