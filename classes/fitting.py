@@ -216,7 +216,7 @@ class fitting(object):
                 for i in range(self.forwardmodel.atmosphere.nlayers):
                     self.fit_bounds.append((T_bounds[0],T_bounds[1])) #layer by layer T
                     self.fit_params.append(T_mean)
-                    self.fit_params_names.append('T_%i' %1)
+                    self.fit_params_names.append('T_%i' %i)
                     self.fit_params_texlabels.append('$T_{%i}$' % i)
 
             elif self.forwardmodel.atmosphere.TP_type == 'hybrid':
@@ -310,6 +310,7 @@ class fitting(object):
                 self.fit_params_texlabels.append('$P_2$')
                 self.fit_bounds.append((1.0,1e5))
                 self.fit_params.append(np.mean((1.0,1e5)))
+                
 
         else: # not fitting for the TP profile
             self.fit_TP_nparams = 0
@@ -591,33 +592,33 @@ class fitting(object):
             res = np.nan
 
            
-#         ion()
-#         figure(1)
-#         clf()
-#         plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
-#         gca().invert_yaxis()
-#         xlabel('Temperature')
-#         ylabel('Pressure (Pa)')
-#         yscale('log')
-#         draw()
-#         figure(2)
-#         clf()
+        ion()
+        figure(1)
+        clf()
+        plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
+        gca().invert_yaxis()
+        xlabel('Temperature')
+        ylabel('Pressure (Pa)')
+        yscale('log')
+        draw()
+        figure(2)
+        clf()
+  
+        ion()
+        clf()
+        errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
+        plot(self.data.obs_spectrum[:,0], model)
+        xlabel('Wavelength (micron)')
+        ylabel('Transit depth')
+        xscale('log')
+        xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
+        draw()
+        pause(0.0001)
 # 
-#         ion()
-#         clf()
-#         errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
-#         plot(self.data.obs_spectrum[:,0], model)
-#         xlabel('Wavelength (micron)')
-#         ylabel('Transit depth')
-#         xscale('log')
-#         xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
-#         draw()
-#         pause(0.0001)
-# # 
-#         print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
-#             self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
-#             self.forwardmodel.atmosphere.planet_radius/RJUP), \
-#             fit_params) #fit_params
+        print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
+            self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
+            self.forwardmodel.atmosphere.planet_radius/RJUP), \
+            fit_params) #fit_params
 
         return res
 
