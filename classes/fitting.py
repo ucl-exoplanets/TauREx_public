@@ -368,7 +368,7 @@ class fitting(object):
         #Mie scattering. Replaces clouds and Rayleigh
         if self.params.fit_fit_mie:
             self.fit_params_names.append('clouds_particle_size')
-            self.fit_params_texlabels.append('$R_\mathrm{clouds}$')
+            self.fit_params_texlabels.append('log($R_\mathrm{clouds}$)')
             
             self.fit_params.append(np.mean((np.log10(self.params.fit_mie_r_bounds[0]),
                                             np.log10(self.params.fit_mie_r_bounds[1]))))
@@ -376,11 +376,11 @@ class fitting(object):
                                     np.log10(self.params.fit_mie_r_bounds[1])))
             
             self.fit_params_names.append('clouds_mixing')
-            self.fit_params_texlabels.append('$\chi_\mathrm{clouds}$')
+            self.fit_params_texlabels.append('log($\chi_\mathrm{clouds}$)')
             self.fit_params.append(np.mean((np.log10(self.params.fit_mie_f_bounds[0]),
                                                 np.log10(self.params.fit_mie_f_bounds[1]))))
-            self.fit_bounds.append((np.log10(self.params.fit_mie_r_bounds[0]),
-                                        np.log10(self.params.fit_mie_r_bounds[1])))
+            self.fit_bounds.append((np.log10(self.params.fit_mie_f_bounds[0]),
+                                        np.log10(self.params.fit_mie_f_bounds[1])))
             
             self.fit_params_names.append('clouds_composition')
             self.fit_params_texlabels.append('$Q_\mathrm{clouds}$')
@@ -388,8 +388,7 @@ class fitting(object):
                                                 self.params.fit_mie_q_bounds[1])))
             self.fit_bounds.append((self.params.fit_mie_q_bounds[0],
                                         self.params.fit_mie_q_bounds[1]))
-                                        
-                                        
+                                                
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
         logging.info('Fitted parameters value: %s' % self.fit_params)
@@ -570,7 +569,7 @@ class fitting(object):
         ####################################################################################
         # Mie scattering
         if self.params.fit_fit_mie:
-            self.forwardmodel.atmosphere.mie_r = fit_params[count]
+            self.forwardmodel.atmosphere.mie_r = np.power(10,fit_params[count])
             self.forwardmodel.atmosphere.mie_f = np.power(10,fit_params[count+1])
             self.forwardmodel.atmosphere.mie_q = fit_params[count+2]
             count += 3

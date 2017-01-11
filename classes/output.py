@@ -308,8 +308,10 @@ class output(object):
                                                        for i in range(1, nbingrid+1)])
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
             # interpolate if using ktables
-            solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wlgrid, self.atmosphere.int_wlgrid, model)
-
+            solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
+                                                       for i in range(1, nbingrid+1)])
+#             solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wlgrid[::-1], self.atmosphere.int_wlgrid[::-1], model)
+            
 
         solution['fit_spectrum_xsecres'] = np.zeros((nwavegrid, 3))
         solution['fit_spectrum_xsecres'][:,0] = self.atmosphere.int_wlgrid
@@ -326,7 +328,9 @@ class output(object):
                                                            for i in range(1, nbingrid+1)])
             elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
                 # interpolate if using ktables
-                solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wlgrid, self.atmosphere.int_wlgrid, sigmasp)
+                solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
+                                                           for i in range(1, nbingrid+1)])
+#                 solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wlgrid[::-1], self.atmosphere.int_wlgrid[::-1], sigmasp)
 
         # calculate contribution function
         contrib_func = self.fitting.forwardmodel.model(return_tau=True)
@@ -338,7 +342,8 @@ class output(object):
         atm_rayleigh = self.fitting.forwardmodel.params.atm_rayleigh
         atm_cia = self.fitting.forwardmodel.params.atm_cia
         atm_clouds = self.fitting.forwardmodel.params.atm_clouds
-
+        atm_mie = self.fitting.forwardmodel.params.atm_mie
+        
         # opacity from molecules
         for idx, val in enumerate(self.atmosphere.active_gases):
             mask = np.ones(len(self.atmosphere.active_gases), dtype=bool)
@@ -365,7 +370,8 @@ class output(object):
             if atm_rayleigh:
                 self.fitting.forwardmodel.params.atm_rayleigh = True
                 self.fitting.forwardmodel.params.atm_cia = False
-                #self.fitting.forwardmodel.params.atm_clouds = False
+                self.fitting.forwardmodel.params.atm_mie = False
+#                 self.fitting.forwardmodel.params.atm_clouds = False
                 solution['opacity_contrib']['rayleigh'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
                 solution['opacity_contrib']['rayleigh'][:,0] = self.atmosphere.int_wlgrid
                 solution['opacity_contrib']['rayleigh'][:,1] = self.fitting.forwardmodel.model()
@@ -374,7 +380,8 @@ class output(object):
             if atm_cia:
                 self.fitting.forwardmodel.params.atm_rayleigh = False
                 self.fitting.forwardmodel.params.atm_cia = True
-                #self.fitting.forwardmodel.params.atm_clouds = False
+                self.fitting.forwardmodel.params.atm_mie = False
+#                 self.fitting.forwardmodel.params.atm_clouds = False
                 solution['opacity_contrib']['cia'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
                 solution['opacity_contrib']['cia'][:,0] = self.atmosphere.int_wlgrid
                 solution['opacity_contrib']['cia'][:,1] = self.fitting.forwardmodel.model()
@@ -384,9 +391,20 @@ class output(object):
                 self.fitting.forwardmodel.params.atm_rayleigh = False
                 self.fitting.forwardmodel.params.atm_cia = False
                 self.fitting.forwardmodel.params.atm_clouds = True
+                self.fitting.forwardmodel.params.atm_mie = False
                 solution['opacity_contrib']['clouds'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
                 solution['opacity_contrib']['clouds'][:,0] = self.atmosphere.int_wlgrid
                 solution['opacity_contrib']['clouds'][:,1] = self.fitting.forwardmodel.model()
+                
+            #opacity from mie clouds
+            if atm_mie:
+                self.fitting.forwardmodel.params.atm_rayleigh = False
+                self.fitting.forwardmodel.params.atm_cia = False
+                self.fitting.forwardmodel.params.atm_clouds = False
+                self.fitting.forwardmodel.params.atm_mie = True
+                solution['opacity_contrib']['mie_clouds'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['mie_clouds'][:,0] = self.atmosphere.int_wlgrid
+                solution['opacity_contrib']['mie_clouds'][:,1] = self.fitting.forwardmodel.model()
 
             self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
 
