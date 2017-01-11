@@ -267,6 +267,19 @@ class atmosphere(object):
 
             # get clouds specific parameters
             self.clouds_pressure = self.params.atm_clouds_pressure
+            
+            #get mie scattrering specific parameters
+            self.mie_r = self.params.atm_mie_r
+            self.mie_q = self.params.atm_mie_q
+            self.mie_f = self.params.atm_mie_f
+            
+            self.sigma_mie_array = self.get_sigma_mie_array()
+#             print self.sigma_mie_array
+#             plt.figure()
+#             plt.plot(self.sigma_mie_array)
+#             plt.show()
+#             
+#             exit()
 
         else:
             logging.info('Opacity for grid `%s` already loaded' % wngrid)
@@ -538,6 +551,28 @@ class atmosphere(object):
             sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val]\
                 [self.int_wngrid_idxmin:self.int_wngrid_idxmax]
         return sigma_rayleigh_array
+    
+    def get_sigma_mie_array(self):
+        ''' 
+        Mie approximation, replaces rayleigh scattering. 
+        Formalism taken from: Lee et al. 2013, ApJ, 778, 97
+        '''
+        wltmp = (10000./self.int_wngrid)
+#         wltmp = (1.0/self.int_wngrid)*1E8
+        
+        x = 2.0 * np.pi * self.mie_r/ wltmp
+        Qext = 5.0 / (self.mie_q * x**(-4.0) + x**(0.2))
+        sigma_mie = Qext * np.pi * (self.mie_r)**(2.0) * self.mie_f 
+        
+#         plt.figure()
+#         plt.plot(wltmp,sigma_mie)
+#         plt.show()
+#         exit()
+        
+        return sigma_mie 
+    
+    def set_sigma_mie_array(self):
+        self.sigma_mie_array = self.get_sigma_mie_array()
 
     def get_sigma_cia_array(self):
         logging.info('Interpolate CIA sigma array to pressure profile')

@@ -205,6 +205,20 @@ cia = True
 # inside cia_path (e.g. "h2-h2" loads H2-H2.db).
 cia_pairs = H2-H2, H2-He
 
+
+#Mie scattering, will override rayleigh opacities 
+mie = False 
+
+#Mie scattering cloud particle size (microns)
+mie_r = 7e-5
+
+#Mie scattering cloud mixing ratio 
+mie_f = 1e-10
+
+#Mie scattering cloud composition 
+mie_q = 40 
+
+
 # include cloud opacities. True/False
 clouds = False
 # cloud top pressure in Pascal
@@ -300,6 +314,17 @@ fit_radius = True
 # fit maximum pressure at surface (defined in T-P Profile > atm_max_pressure). Fit is in log space
 # fit_P0 = False
 
+#fit mie scattering 
+fit_mie_scattering = True
+
+#Mie scattering, cloud particle size prior (microns)
+mie_r_bounds = 1e-10, 10.0
+
+#Mie scattering, cloud mixing ratio
+mie_f_bounds = 1e-40, 1e-4
+
+#Mie scattering, composition parameter 
+mie_q_bounds = 1.0, 100.0
 
 # fit cloud top pressure
 fit_clouds_pressure = False

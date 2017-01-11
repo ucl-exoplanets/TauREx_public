@@ -158,7 +158,7 @@ class fitting(object):
                                         np.log10(self.params.fit_He_H2_ratio_bounds[1])))
                 self.fit_params_names.append('log_H2_He')
                 self.fit_params_texlabels.append('log(H$_2$/He)')
-
+                
             ##########################################################
             # Centered-log-ratio transform of gases all gases.
             # NEEDS FIXING OR DEPRECATION!
@@ -362,13 +362,38 @@ class fitting(object):
             self.fit_bounds.append((np.log10(self.params.fit_clouds_pressure_bounds[0]),
                                     np.log10(self.params.fit_clouds_pressure_bounds[1])))
 
+        # define total number of parameters to be fitted
+        self.fit_nparams = len(self.fit_params)
+        
+        #Mie scattering. Replaces clouds and Rayleigh
+        if self.params.fit_fit_mie:
+            self.fit_params_names.append('clouds_particle_size')
+            self.fit_params_texlabels.append('$R_\mathrm{clouds}$')
+            
+            self.fit_params.append(np.mean((np.log10(self.params.fit_mie_r_bounds[0]),
+                                            np.log10(self.params.fit_mie_r_bounds[1]))))
+            self.fit_bounds.append((np.log10(self.params.fit_mie_r_bounds[0]),
+                                    np.log10(self.params.fit_mie_r_bounds[1])))
+            
+            self.fit_params_names.append('clouds_mixing')
+            self.fit_params_texlabels.append('$\chi_\mathrm{clouds}$')
+            self.fit_params.append(np.mean((np.log10(self.params.fit_mie_f_bounds[0]),
+                                                np.log10(self.params.fit_mie_f_bounds[1]))))
+            self.fit_bounds.append((np.log10(self.params.fit_mie_r_bounds[0]),
+                                        np.log10(self.params.fit_mie_r_bounds[1])))
+            
+            self.fit_params_names.append('clouds_composition')
+            self.fit_params_texlabels.append('$Q_\mathrm{clouds}$')
+            self.fit_params.append(np.mean((self.params.fit_mie_q_bounds[0],
+                                                self.params.fit_mie_q_bounds[1])))
+            self.fit_bounds.append((self.params.fit_mie_q_bounds[0],
+                                        self.params.fit_mie_q_bounds[1]))
+                                        
+                                        
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
         logging.info('Fitted parameters value: %s' % self.fit_params)
         logging.info('Fitted parameters bound: %s' % self.fit_bounds)
-
-        # define total number of parameters to be fitted
-        self.fit_nparams = len(self.fit_params)
 
     #@profile
     def update_atmospheric_parameters(self, fit_params):
@@ -395,6 +420,7 @@ class fitting(object):
         # temperature parameters         Depending on params.atm_tp_type   params.fit_fit_temp = True
         # radius                         1                                 params.fit_fit_radius = True
         # clouds_pressure                1                                 params.fit_fit_clouds_pressure = True
+        # mie_scattering                 3                                 params.fit_fit_mie = True
 
 
         count = 0 # used to iterate over fit_params[count]
@@ -540,6 +566,14 @@ class fitting(object):
         if self.params.fit_fit_clouds_pressure:
             self.forwardmodel.atmosphere.clouds_pressure = np.power(10, fit_params[count])
             count += 1
+            
+        ####################################################################################
+        # Mie scattering
+        if self.params.fit_fit_mie:
+            self.forwardmodel.atmosphere.mie_r = fit_params[count]
+            self.forwardmodel.atmosphere.mie_f = np.power(10,fit_params[count+1])
+            self.forwardmodel.atmosphere.mie_q = fit_params[count+2]
+            count += 3
 
         # if self.params.fit_fit_P0:
         # DEPRECTED
@@ -565,6 +599,8 @@ class fitting(object):
             self.forwardmodel.atmosphere.set_ace_params()
             # Note that if gen_ace is True, set_altitude_gravity_scaleheight_profile is called from the
             # transmission/emission object
+        if self.params.fit_fit_mie: #updates mie scattering slope
+            self.forwardmodel.atmosphere.set_sigma_mie_array()
 
 
     #@profile
@@ -603,7 +639,7 @@ class fitting(object):
 #         draw()
 #         figure(2)
 #         clf()
-#   
+#    
 #         ion()
 #         clf()
 #         errorbar(self.data.obs_spectrum[:,0],self.data.obs_spectrum[:,1],self.data.obs_spectrum[:,2])
@@ -614,7 +650,7 @@ class fitting(object):
 #         xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
 #         draw()
 #         pause(0.0001)
-# # 
+# # # 
 #         print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
 #             self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
 #             self.forwardmodel.atmosphere.planet_radius/RJUP), \

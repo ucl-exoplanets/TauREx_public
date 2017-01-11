@@ -189,6 +189,12 @@ class parameters(object):
         #self.atm_couple_mu          = self.getpar('Atmosphere', 'couple_mu', 'bool')
 
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
+        
+        self.atm_mie                = self.getpar('Atmosphere','mie','bool')
+        self.atm_mie_r              = self.getpar('Atmosphere','mie_r','float')
+        self.atm_mie_q              = self.getpar('Atmosphere','mie_q','float')
+        self.atm_mie_f              = self.getpar('Atmosphere','mie_f','float') 
+        
         self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
         self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
         self.atm_clouds             = self.getpar('Atmosphere','clouds', 'bool')
@@ -206,18 +212,18 @@ class parameters(object):
 
         #self.fit_transmission      = self.getpar('Fitting','transmission', 'bool')
         #self.fit_emission          = self.getpar('Fitting', 'emission', 'bool')
-        self.fit_emission_stage2   = self.getpar('Fitting', 'emission_stage2', 'bool')
+        self.fit_emission_stage2     = self.getpar('Fitting', 'emission_stage2', 'bool')
 
         # misc
         #self.fit_couple_mu           = self.getpar('Fitting','couple_mu', 'bool')
         #self.fit_inactive_mu_rescale = self.getpar('Fitting','inactive_mu_rescale', 'bool')
-        self.fit_mixratio_log               = self.getpar('Fitting','mixratio_log', 'bool')
+        self.fit_mixratio_log        = self.getpar('Fitting','mixratio_log', 'bool')
         #self.fit_clr_trans           = self.getpar('Fitting','clr_trans', 'bool')
 
         # fit / fix parameters
-        self.fit_fit_active_gases          = self.getpar('Fitting', 'fit_active_gases', 'bool')
-        self.fit_fit_N2_mixratio          = self.getpar('Fitting', 'fit_N2_mixratio', 'bool')
-        self.fit_fit_He_H2_ratio          = self.getpar('Fitting', 'fit_He_H2_ratio', 'bool')
+        self.fit_fit_active_gases    = self.getpar('Fitting', 'fit_active_gases', 'bool')
+        self.fit_fit_N2_mixratio     = self.getpar('Fitting', 'fit_N2_mixratio', 'bool')
+        self.fit_fit_He_H2_ratio     = self.getpar('Fitting', 'fit_He_H2_ratio', 'bool')
         #self.fit_fit_inactive        = self.getpar('Fitting', 'fit_inactive', 'bool')
         self.fit_fit_temp            = self.getpar('Fitting', 'fit_temp', 'bool')
         #self.fit_fit_mu              = self.getpar('Fitting', 'fit_mu', 'bool')
@@ -237,12 +243,18 @@ class parameters(object):
         self.fit_radius_bounds_factor   = self.getpar('Fitting', 'radius_bounds_factor', 'float')
         #self.fit_P0_bounds              = self.getpar('Fitting', 'P0_bounds', 'list-float')
         self.fit_clouds_pressure_bounds = self.getpar('Fitting', 'clouds_pressure_bounds', 'list-float')
+        
+        self.fit_fit_mie                = self.getpar('Fitting', 'fit_mie', 'bool')
+        self.fit_mie_r_bounds           = self.getpar('Fitting','mie_r_bounds','list-float') 
+        self.fit_mie_q_bounds           = self.getpar('Fitting','mie_q_bounds','list-float')
+        self.fit_mie_f_bounds           = self.getpar('Fitting','mie_f_bounds','list-float')
+        
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
 
         self.fit_tp_iso_bounds               = self.getpar('Fitting', 'tp_iso_bounds', 'list-float')
         self.fit_tp_guillot_T_irr_bounds     = self.getpar('Fitting', 'tp_guillot_T_irr_bounds', 'list-float')
-        self.fit_tp_guillot_kappa_ir_bounds = self.getpar('Fitting', 'tp_guillot_kappa_ir_bounds', 'list-float')
+        self.fit_tp_guillot_kappa_ir_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_ir_bounds', 'list-float')
         self.fit_tp_guillot_kappa_v1_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_v1_bounds', 'list-float')
         self.fit_tp_guillot_kappa_v2_bounds  = self.getpar('Fitting', 'tp_guillot_kappa_v2_bounds', 'list-float')
         self.fit_tp_guillot_alpha_bounds     = self.getpar('Fitting', 'tp_guillot_alpha_bounds', 'list-float')

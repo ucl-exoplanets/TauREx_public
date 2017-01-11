@@ -581,6 +581,7 @@ class data(object):
 
         self.sigma_rayleigh_dict = sigma_rayleigh_dict
 
+        
     def load_sigma_cia_dict(self):
 
         # preload collision induced absorption cross sections

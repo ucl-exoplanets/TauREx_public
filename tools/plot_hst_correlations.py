@@ -302,7 +302,9 @@ class hst_correlations(object):
             planet_tmp = str.split(dir,'/')[-1]
             planet = str.split(planet_tmp,'_')[0]
             self.data[planet] = {}
-            data = self._read_instance_file(os.path.join(dir,'0'))
+            data = self._read_instance_file(os.path.join(dir,'1'))
+            if data is 'False':
+                data = self._read_instance_file(os.path.join(dir,'0'))
             if data is not 'False':
                 self.data[planet] = data
                 self.planet_list.append(planet)

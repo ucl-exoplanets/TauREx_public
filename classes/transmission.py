@@ -59,6 +59,7 @@ class transmission(object):
                 C.c_int,
                 C.c_int,
                 C.c_int,
+                C.c_int,
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 C.c_int,
@@ -70,6 +71,7 @@ class transmission(object):
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 C.c_int,
                 C.c_double,
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
@@ -93,6 +95,7 @@ class transmission(object):
                 C.c_int, # atmosphere.nactivegases
                 C.c_int, # atmosphere.ninactivegases
                 C.c_int, # params.atm_rayleigh
+                C.c_int, # params.atm_mie
                 C.c_int, # params.atm_cia
                 C.c_int, # params.atm_clouds
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # atmosphere.ktables_array_flat
@@ -108,6 +111,7 @@ class transmission(object):
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 C.c_int,
                 C.c_double,
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
@@ -135,6 +139,7 @@ class transmission(object):
                                             self.atmosphere.nactivegases,
                                             self.atmosphere.ninactivegases,
                                             self.params.atm_rayleigh,
+                                            self.params.atm_mie,
                                             self.params.atm_cia,
                                             self.params.atm_clouds,
                                             self.atmosphere.sigma_array_flat,
@@ -148,6 +153,7 @@ class transmission(object):
                                             self.data.sigma_cia_dict['t'],
                                             len(self.data.sigma_cia_dict['t']),
                                             self.atmosphere.clouds_pressure,
+                                            self.atmosphere.sigma_mie_array,
                                             self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,
                                             self.atmosphere.altitude_profile,

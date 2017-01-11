@@ -37,6 +37,7 @@ extern "C" {
                        const int nactive,
                        const int ninactive,
                        const int rayleigh,
+					   const int mie,
                        const int cia,
                        const int clouds,
                        const double * sigma_array,
@@ -50,6 +51,7 @@ extern "C" {
                        const double * sigma_cia_temp,
                        const int sigma_cia_ntemp,
                        const double cloud_topP,
+					   const double * sigma_mie,
                        const double * pressure,
                        const double * density,
                        const double * z,
@@ -78,7 +80,6 @@ extern "C" {
         double cld_factor, cld_rho;
         double p;
         int count, count2, t_idx;
-
 
         //dz array
         for (int j=0; j<(nlayers); j++) {
@@ -246,6 +247,10 @@ extern "C" {
                             for (int c=0; c<cia_npairs;c++) {
                                 tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
                             }
+                        }
+                        //calculating mie scattering model
+                        if (mie == 1){
+                        	tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
                         }
 
                         count += 1;
