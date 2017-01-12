@@ -191,6 +191,8 @@ class parameters(object):
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
         
         self.atm_mie                = self.getpar('Atmosphere','mie','bool')
+        if self.atm_mie: 
+            self.atm_rayleigh = False #Mie replaces Rayleigh
         self.atm_mie_r              = self.getpar('Atmosphere','mie_r','float')
         self.atm_mie_q              = self.getpar('Atmosphere','mie_q','float')
         self.atm_mie_f              = self.getpar('Atmosphere','mie_f','float') 

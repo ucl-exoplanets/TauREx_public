@@ -307,7 +307,7 @@ class output(object):
             solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
                                                        for i in range(1, nbingrid+1)])
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
-            # interpolate if using ktables
+            # interpolate if using ktables @todo interpolation doesnt work very well, temporarily switched it to binning 
             solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
                                                        for i in range(1, nbingrid+1)])
 #             solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wlgrid[::-1], self.atmosphere.int_wlgrid[::-1], model)
@@ -327,7 +327,7 @@ class output(object):
                 solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
                                                            for i in range(1, nbingrid+1)])
             elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
-                # interpolate if using ktables
+                # interpolate if using ktables @todo interpolation doesnt work very well, temporarily switched it to binning 
                 solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
                                                            for i in range(1, nbingrid+1)])
 #                 solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wlgrid[::-1], self.atmosphere.int_wlgrid[::-1], sigmasp)
