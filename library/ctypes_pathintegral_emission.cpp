@@ -40,6 +40,7 @@ extern "C" {
                        const int ninactive,
                        const int rayleigh,
                        const int cia,
+					   const int mie,
                        const double * sigma_array,
                        const double * sigma_temp,
                        const int sigma_ntemp,
@@ -50,6 +51,7 @@ extern "C" {
                        const double * sigma_cia,
                        const double * sigma_cia_temp,
                        const int sigma_cia_ntemp,
+					   const double * sigma_mie,
                        const double * density,
                        const double * z,
                        const double * active_mixratio,
@@ -231,6 +233,9 @@ extern "C" {
 					tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
 				}
 			} // todo CHECK: it looks like tau_sum1 is not used???
+			if (mie == 1){
+			    tau_sum1 += sigma_mie[wn] * density[0] *dz[0];
+			}
 
             for (int k=0; k<(nlayers); k++) {
 
@@ -242,6 +247,9 @@ extern "C" {
 						for (int c=0; c<cia_npairs;c++) {
 							tau_sum2 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
 						}
+					}
+					if (mie == 1){
+					    tau_sum2 += sigma_mie[wn] * density[k] *dz[k];
 					}
 				}
 
@@ -277,6 +285,9 @@ extern "C" {
                             tau_sum1 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
                         }
                     }
+                    if (mie == 1){
+                    	tau_sum1 += sigma_mie[wn] * density[k] *dz[k];
+                    }
                 }
 
                 // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
@@ -294,6 +305,10 @@ extern "C" {
                         dtau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[j+nlayers*l] * density[j] * dz[j];
                     }
                 }
+                if (mie == 1){
+                    dtau += sigma_mie[wn] * density[j] *dz[j];
+                }
+
                 tau_sum2 = tau_sum1 + dtau;
 
                 // contribution function

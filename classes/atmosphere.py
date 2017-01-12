@@ -557,17 +557,10 @@ class atmosphere(object):
         Mie approximation, replaces rayleigh scattering. 
         Formalism taken from: Lee et al. 2013, ApJ, 778, 97
         '''
-        wltmp = (10000./self.int_wngrid)
-#         wltmp = (1.0/self.int_wngrid)*1E8
-        
+        wltmp = (10000./self.int_wngrid)       
         x = 2.0 * np.pi * self.mie_r/ wltmp
         Qext = 5.0 / (self.mie_q * x**(-4.0) + x**(0.2))
         sigma_mie = Qext * np.pi * (self.mie_r)**(2.0) * self.mie_f 
-        
-#         plt.figure()
-#         plt.plot(wltmp,sigma_mie)
-#         plt.show()
-#         exit()
         
         return sigma_mie 
     
