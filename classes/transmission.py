@@ -72,6 +72,7 @@ class transmission(object):
                 C.c_int,
                 C.c_double,
                 C.c_double,
+                C.c_double,
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
@@ -134,6 +135,7 @@ class transmission(object):
         absorption = zeros((self.atmosphere.int_nwngrid), dtype=np.float64, order='C')
         tau = zeros((self.atmosphere.int_nwngrid*self.atmosphere.nlayers), dtype=np.float64, order='C')
 
+        
         #running c++ path integral
         self.pathintegral_lib.path_integral(self.atmosphere.int_nwngrid,
                                             self.atmosphere.nlayers,
@@ -155,6 +157,7 @@ class transmission(object):
                                             len(self.data.sigma_cia_dict['t']),
                                             self.atmosphere.clouds_pressure,
                                             self.atmosphere.mie_topP,
+                                            self.atmosphere.mie_bottomP,
                                             self.atmosphere.sigma_mie_array,
                                             self.atmosphere.pressure_profile,
                                             self.atmosphere.density_profile,

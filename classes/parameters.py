@@ -197,9 +197,8 @@ class parameters(object):
         self.atm_mie_q              = self.getpar('Atmosphere','mie_q','float')
         self.atm_mie_f              = self.getpar('Atmosphere','mie_f','float') 
         self.atm_mie_topP           = self.getpar('Atmosphere','mie_topP','float')
-        if self.atm_mie_topP == -1:
-            self.atm_mie_topP = self.atm_min_pres
-        
+        self.atm_mie_bottomP        = self.getpar('Atmosphere','mie_bottomP','float')
+
         self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
         self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
         self.atm_clouds             = self.getpar('Atmosphere','clouds', 'bool')
@@ -255,9 +254,9 @@ class parameters(object):
         self.fit_mie_f_bounds           = self.getpar('Fitting','mie_f_bounds','list-float')
        
         self.fit_fit_mie_cloud_topP     = self.getpar('Fitting', 'fit_mie_Ptop', 'bool')
-        self.fit_mie_topP_bounds        = self.getpar('Fitting', 'mie_ptop_bounds', 'list_float')
-        print self.fit_fit_mie_cloud_topP, self.fit_mie_topP_bounds
-        exit()
+        self.fit_mie_topP_bounds        = self.getpar('Fitting','mie_ptop_bounds','list-float')
+        self.fit_fit_mie_cloud_bottomP  = self.getpar('Fitting','fit_mie_Pbottom','bool')
+        self.fit_mie_bottomP_bounds     = self.getpar('Fitting','mie_pbottom_bounds','list-float')
         
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
@@ -300,6 +299,24 @@ class parameters(object):
         self.nest_mode_tol         = self.getpar('MultiNest', 'mode_tolerance', 'float')
         self.nest_imp_sampling     = self.getpar('MultiNest','imp_sampling', 'bool')
         self.nest_out_filename     = self.getpar('MultiNest','out_filename')
+
+
+        #determining upper and lower bounds 
+        if self.atm_mie_topP == -1:
+            self.atm_mie_topP = self.atm_min_pres
+        if self.atm_mie_bottomP == -1:
+            self.atm_mie_bottomP = self.atm_max_pres
+        
+        if self.fit_mie_topP_bounds[0] == -1:
+            self.fit_mie_topP_bounds[0] = self.atm_max_pres
+        if self.fit_mie_topP_bounds[1] == -1:
+            self.fit_mie_topP_bounds[1] = self.atm_min_pres
+        if self.fit_mie_bottomP_bounds[0] == -1:
+            self.fit_mie_bottomP_bounds[0] = self.atm_max_pres
+        if self.fit_mie_bottomP_bounds[1] == -1:
+            self.fit_mie_bottomP_bounds[1] = self.atm_min_pres
+
+
 
 
     def getpar(self, sec, par, type=None):

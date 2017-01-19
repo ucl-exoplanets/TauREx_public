@@ -272,7 +272,8 @@ class atmosphere(object):
             self.mie_r = self.params.atm_mie_r
             self.mie_q = self.params.atm_mie_q
             self.mie_f = self.params.atm_mie_f
-            self.mie_topP = self.params.atm_mie_topP
+            self.mie_topP    = self.params.atm_mie_topP
+            self.mie_bottomP = self.params.atm_mie_bottomP
             
             self.sigma_mie_array = self.get_sigma_mie_array()
 #             print self.sigma_mie_array

@@ -396,12 +396,21 @@ class fitting(object):
                                                 np.log10(self.params.fit_mie_topP_bounds[1]))))
             self.fit_bounds.append((np.log10(self.params.fit_mie_topP_bounds[0]),
                                         np.log10(self.params.fit_mie_topP_bounds[1])))
+            
+        if self.params.fit_fit_mie_cloud_bottomP:
+            self.fit_params_names.append('clouds_bottomP')
+            self.fit_params_texlabels.append('$P_\mathrm{bottom}$')
+            self.fit_params.append(np.mean((np.log10(self.params.fit_mie_bottomP_bounds[0]),
+                                                np.log10(self.params.fit_mie_bottomP_bounds[1]))))
+            self.fit_bounds.append((np.log10(self.params.fit_mie_bottomP_bounds[0]),
+                                        np.log10(self.params.fit_mie_bottomP_bounds[1])))
                                                 
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
         logging.info('Fitted parameters value: %s' % self.fit_params)
         logging.info('Fitted parameters bound: %s' % self.fit_bounds)
-        exit()
+        
+        
     #@profile
     def update_atmospheric_parameters(self, fit_params):
 
@@ -583,6 +592,9 @@ class fitting(object):
             count += 3
         
         if self.params.fit_fit_mie_cloud_topP:
+            self.forwardmodel.atmosphere.mie_topP = fit_params[count]
+            count += 1
+        if self.params.fit_fit_mie_cloud_bottomP:
             self.forwardmodel.atmosphere.mie_topP = fit_params[count]
             count += 1
 
