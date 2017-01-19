@@ -388,12 +388,20 @@ class fitting(object):
                                                 self.params.fit_mie_q_bounds[1])))
             self.fit_bounds.append((self.params.fit_mie_q_bounds[0],
                                         self.params.fit_mie_q_bounds[1]))
+            
+        if self.params.fit_fit_mie_cloud_topP:
+            self.fit_params_names.append('clouds_topP')
+            self.fit_params_texlabels.append('$P_\mathrm{top}$')
+            self.fit_params.append(np.mean((np.log10(self.params.fit_mie_topP_bounds[0]),
+                                                np.log10(self.params.fit_mie_topP_bounds[1]))))
+            self.fit_bounds.append((np.log10(self.params.fit_mie_topP_bounds[0]),
+                                        np.log10(self.params.fit_mie_topP_bounds[1])))
                                                 
         logging.info('Dimensionality: %i' % len(self.fit_params_names))
         logging.info('Fitted parameters name: %s' % self.fit_params_names)
         logging.info('Fitted parameters value: %s' % self.fit_params)
         logging.info('Fitted parameters bound: %s' % self.fit_bounds)
-
+        exit()
     #@profile
     def update_atmospheric_parameters(self, fit_params):
 
@@ -419,7 +427,7 @@ class fitting(object):
         # temperature parameters         Depending on params.atm_tp_type   params.fit_fit_temp = True
         # radius                         1                                 params.fit_fit_radius = True
         # clouds_pressure                1                                 params.fit_fit_clouds_pressure = True
-        # mie_scattering                 3                                 params.fit_fit_mie = True
+        # mie_scattering                 3 - 4                             params.fit_fit_mie = True
 
 
         count = 0 # used to iterate over fit_params[count]
@@ -573,6 +581,10 @@ class fitting(object):
             self.forwardmodel.atmosphere.mie_f = np.power(10,fit_params[count+1])
             self.forwardmodel.atmosphere.mie_q = fit_params[count+2]
             count += 3
+        
+        if self.params.fit_fit_mie_cloud_topP:
+            self.forwardmodel.atmosphere.mie_topP = fit_params[count]
+            count += 1
 
         # if self.params.fit_fit_P0:
         # DEPRECTED

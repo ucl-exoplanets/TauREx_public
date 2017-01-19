@@ -218,6 +218,8 @@ mie_f = 1e-10
 #Mie scattering cloud composition 
 mie_q = 40 
 
+#Mie upper atmospheric pressure bound (PA). Set to -1 to assume top of atmospehre 
+mie_topP = -1 
 
 # include cloud opacities. True/False
 clouds = False
@@ -325,6 +327,10 @@ mie_f_bounds = 1e-40, 1e-4
 
 #Mie scattering, composition parameter 
 mie_q_bounds = 1.0, 100.0
+
+fit_mie_Ptop = False
+mie_ptop_bounds = 1.0e4, 1.0e-5
+
 
 # fit cloud top pressure
 fit_clouds_pressure = False

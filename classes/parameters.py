@@ -196,6 +196,9 @@ class parameters(object):
         self.atm_mie_r              = self.getpar('Atmosphere','mie_r','float')
         self.atm_mie_q              = self.getpar('Atmosphere','mie_q','float')
         self.atm_mie_f              = self.getpar('Atmosphere','mie_f','float') 
+        self.atm_mie_topP           = self.getpar('Atmosphere','mie_topP','float')
+        if self.atm_mie_topP == -1:
+            self.atm_mie_topP = self.atm_min_pres
         
         self.atm_cia                = self.getpar('Atmosphere','cia', 'bool')
         self.atm_cia_pairs          = [pair.upper() for pair in self.getpar('Atmosphere','cia_pairs', 'list-str')]
@@ -250,6 +253,11 @@ class parameters(object):
         self.fit_mie_r_bounds           = self.getpar('Fitting','mie_r_bounds','list-float') 
         self.fit_mie_q_bounds           = self.getpar('Fitting','mie_q_bounds','list-float')
         self.fit_mie_f_bounds           = self.getpar('Fitting','mie_f_bounds','list-float')
+       
+        self.fit_fit_mie_cloud_topP     = self.getpar('Fitting', 'fit_mie_Ptop', 'bool')
+        self.fit_mie_topP_bounds        = self.getpar('Fitting', 'mie_ptop_bounds', 'list_float')
+        print self.fit_fit_mie_cloud_topP, self.fit_mie_topP_bounds
+        exit()
         
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')

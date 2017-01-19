@@ -51,6 +51,7 @@ extern "C" {
                        const double * sigma_cia_temp,
                        const int sigma_cia_ntemp,
                        const double cloud_topP,
+					   const double mie_topP,
 					   const double * sigma_mie,
                        const double * pressure,
                        const double * density,
@@ -63,6 +64,8 @@ extern "C" {
                        void * absorptionv,
                        void * tauv) {
 
+//    	double mie_topP;
+//    	mie_topP = 1e-5;
 
         double * absorption = (double *) absorptionv;
         double * tau = (double *) tauv;
@@ -249,7 +252,7 @@ extern "C" {
                             }
                         }
                         //calculating mie scattering model
-                        if (mie == 1){
+                        if ((mie == 1) && (pressure[j] <= mie_topP)){
                         	tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
                         }
 
