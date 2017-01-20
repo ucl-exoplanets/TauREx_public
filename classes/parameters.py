@@ -308,13 +308,13 @@ class parameters(object):
             self.atm_mie_bottomP = self.atm_max_pres
         
         if self.fit_mie_topP_bounds[0] == -1:
-            self.fit_mie_topP_bounds[0] = self.atm_max_pres
+            self.fit_mie_topP_bounds[0] = self.atm_min_pres
         if self.fit_mie_topP_bounds[1] == -1:
-            self.fit_mie_topP_bounds[1] = self.atm_min_pres
+            self.fit_mie_topP_bounds[1] = self.atm_max_pres
         if self.fit_mie_bottomP_bounds[0] == -1:
-            self.fit_mie_bottomP_bounds[0] = self.atm_max_pres
+            self.fit_mie_bottomP_bounds[0] = self.atm_min_pres
         if self.fit_mie_bottomP_bounds[1] == -1:
-            self.fit_mie_bottomP_bounds[1] = self.atm_min_pres
+            self.fit_mie_bottomP_bounds[1] = self.atm_max_pres
 
 
 

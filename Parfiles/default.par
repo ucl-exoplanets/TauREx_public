@@ -334,13 +334,13 @@ mie_q_bounds = 1.0, 100.0
 #Mie scattering fitting top pressure 
 fit_mie_Ptop = False
 
-#Mie top pressure bounds (Pa). Set to -1 to assume top/bottom atmosphere
+#Mie top pressure bounds min-max (Pa). Set to -1 to assume top/bottom atmosphere
 mie_ptop_bounds = -1,-1
 
 #Mie scattering fitting bottom pressure 
 fit_mie_Pbottom = False
 
-#Mie bottom pressure bounds (Pa). Set to -1 to assume top/bottom atmosphere
+#Mie bottom pressure bounds min-max (Pa). Set to -1 to assume top/bottom atmosphere
 mie_pbottom_bounds = -1,-1
 
 # fit cloud top pressure
