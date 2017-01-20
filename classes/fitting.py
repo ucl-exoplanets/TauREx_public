@@ -367,7 +367,7 @@ class fitting(object):
         
         #Mie scattering. Replaces clouds and Rayleigh
         if self.params.fit_fit_mie:
-            self.fit_params_names.append('clouds_particle_size')
+            self.fit_params_names.append('log_clouds_particle_size')
             self.fit_params_texlabels.append('log($R_\mathrm{clouds}$)')
             
             self.fit_params.append(np.mean((np.log10(self.params.fit_mie_r_bounds[0]),
@@ -375,7 +375,7 @@ class fitting(object):
             self.fit_bounds.append((np.log10(self.params.fit_mie_r_bounds[0]),
                                     np.log10(self.params.fit_mie_r_bounds[1])))
             
-            self.fit_params_names.append('clouds_mixing')
+            self.fit_params_names.append('log_cloud_mixing')
             self.fit_params_texlabels.append('log($\chi_\mathrm{clouds}$)')
             self.fit_params.append(np.mean((np.log10(self.params.fit_mie_f_bounds[0]),
                                                 np.log10(self.params.fit_mie_f_bounds[1]))))
@@ -390,16 +390,16 @@ class fitting(object):
                                         self.params.fit_mie_q_bounds[1]))
             
         if self.params.fit_fit_mie_cloud_topP:
-            self.fit_params_names.append('clouds_topP')
-            self.fit_params_texlabels.append('$P_\mathrm{top}$')
+            self.fit_params_names.append('log_clouds_topP')
+            self.fit_params_texlabels.append('$log(P_\mathrm{top})$')
             self.fit_params.append(np.mean((np.log10(self.params.fit_mie_topP_bounds[0]),
                                                 np.log10(self.params.fit_mie_topP_bounds[1]))))
             self.fit_bounds.append((np.log10(self.params.fit_mie_topP_bounds[0]),
                                         np.log10(self.params.fit_mie_topP_bounds[1])))
             
         if self.params.fit_fit_mie_cloud_bottomP:
-            self.fit_params_names.append('clouds_bottomP')
-            self.fit_params_texlabels.append('$P_\mathrm{bottom}$')
+            self.fit_params_names.append('log_clouds_bottomP')
+            self.fit_params_texlabels.append('$log(P_\mathrm{bottom})$')
             self.fit_params.append(np.mean((np.log10(self.params.fit_mie_bottomP_bounds[0]),
                                                 np.log10(self.params.fit_mie_bottomP_bounds[1]))))
             self.fit_bounds.append((np.log10(self.params.fit_mie_bottomP_bounds[0]),
