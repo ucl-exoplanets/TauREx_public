@@ -95,11 +95,16 @@ class emission(object):
                  C.c_int,
                  C.c_int,
                  C.c_int,
-                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # atmosphere.ktables_array_flat
-                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # data.ktable_dict['t']
-                C.c_int, # len(data.ktable_dict['t'])
-                C.c_int, # data.ktable_dict['ngauss']
-                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # data.ktable_dict['weights']
+                 C.c_int, 
+                 C.c_double,
+                 C.c_double,
+                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # atmosphere.ktables_array_flat
+                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # data.ktable_dict['t']
+                 C.c_int, # len(data.ktable_dict['t'])
+                 C.c_int, # data.ktable_dict['ngauss']
+                 np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'), # data.ktable_dict['weights']
                  np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                  C.c_int,
                  np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='C_CONTIGUOUS'),
@@ -208,11 +213,16 @@ class emission(object):
                                              self.atmosphere.ninactivegases,
                                              self.params.atm_rayleigh,
                                              self.params.atm_cia,
-                                            self.atmosphere.ktables_array_flat,
-                                            self.data.ktable_dict['t'],
-                                            len(self.data.ktable_dict['t']),
-                                            self.data.ktable_dict['ngauss'],
-                                            self.data.ktable_dict['weights'],
+                                             self.params.atm_mie, 
+                                             self.atmosphere.mie_topP,
+                                             self.atmosphere.mie_bottomP,
+                                             self.atmosphere.pressure_profile,
+                                             self.atmosphere.sigma_mie_array,
+                                             self.atmosphere.ktables_array_flat,
+                                             self.data.ktable_dict['t'],
+                                             len(self.data.ktable_dict['t']),
+                                             self.data.ktable_dict['ngauss'],
+                                             self.data.ktable_dict['weights'],
                                              self.atmosphere.sigma_rayleigh_array_flat,
                                              len(self.data.sigma_cia_dict['xsecarr']),
                                              np.asarray(self.atmosphere.cia_idx, dtype=np.float),

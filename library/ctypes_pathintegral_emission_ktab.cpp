@@ -39,6 +39,11 @@ extern "C" {
                        const int ninactive,
                        const int rayleigh,
                        const int cia,
+					   const int mie,
+					   const double mie_topP,
+					   const double mie_bottomP,
+					   const double * pressure,
+					   const double * sigma_mie,
                        const double * ktab_array,
                        const double * ktab_temp,
                        const int ktab_ntemp,
@@ -64,6 +69,9 @@ extern "C" {
 
         double * FpFs = (double *) FpFsv;
         double * contrib = (double *) tauv;
+
+//        cout << mie_topP << endl;
+//        cout << mie_bottomP << endl;
 
         // setting up arrays and variables
         double* dz = new double[nlayers];
@@ -237,16 +245,34 @@ extern "C" {
                 BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
 
 
-                // assume only one gas, and no cia or rayleigh
+                // assume only one gas
                 l = 0;
                 tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((0) + l*nlayers))] * active_mixratio[0+nlayers*l] * density[0] * dz[0];
 
+                if (cia == 1) { // cia
+					for (int c=0; c<cia_npairs;c++) {
+						tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
+					}
+				}
+				if ((mie == 1) && (pressure[0] >= mie_topP) && (pressure[0] <= mie_bottomP)){ //mie
+					tau_sum1 += sigma_mie[wn] * density[0] *dz[0];
+				}
+
                 for (int k=0; k<(nlayers); k++) {
 
-                    // assume only one gas, and no cia or rayleigh
+                    // assume only one gas
                     l = 0;
                     tau_sum2 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))] * active_mixratio[k+nlayers*l]* density[k] * dz[k];
-                 }
+
+					if (cia == 1) { // cia
+						for (int c=0; c<cia_npairs;c++) {
+							tau_sum2 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+						}
+					}
+					if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
+						tau_sum2 += sigma_mie[wn] * density[k] *dz[k];
+					}
+                }
 
                 // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
                 I1 += BB_wl * ( exp(-tau_sum2/mu1))* eta;
@@ -265,14 +291,46 @@ extern "C" {
                     tau_sum1 = 0.;
                     for (int k=j+1; k < nlayers; k++) { // loop through layers to add dtau[k]
 
-                       // again assume no cia and rayleigh, and only one gas
+                       //  only one gas
                         l = 0;
                         tau_sum1 += ktab_interp[g + ngauss*(wn + nwngrid*((k) + l*nlayers))]* active_mixratio[k+nlayers*l] *  density[k] * dz[k];
+
+                        // calculating optical depth due inactive gases (rayleigh scattering)
+						if (rayleigh == 1) {
+							for (int l=0; l<ninactive; l++) {
+								tau_sum1 += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+nlayers*l] * density[k] * dz[k];
+							}
+						}
+						if (cia == 1) { // cia
+							for (int c=0; c<cia_npairs;c++) {
+								tau_sum1 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+							}
+						}
+						if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
+							tau_sum1 += sigma_mie[wn] * density[k] *dz[k];
+                                            }
                     }
+
 
                     // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
                     dtau = 0;
                     dtau +=  (ktab_interp[g + ngauss*(wn + nwngrid*((j) + l*nlayers))] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
+
+                    if (cia == 1) { // cia
+						for (int c=0; c<cia_npairs;c++) {
+							dtau += sigma_cia_interp[wn + nwngrid*(j + c*nlayers)] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+						}
+					}
+					if (rayleigh == 1) { // rayleigh
+						for (int l=0; l<ninactive; l++) {
+							dtau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[j+nlayers*l] * density[j] * dz[j];
+						}
+					}
+					if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){ //mie
+						dtau += sigma_mie[wn] * density[j] *dz[j];
+					}
+
+
                     tau_sum2 = tau_sum1 + dtau;
 
                     // contribution function

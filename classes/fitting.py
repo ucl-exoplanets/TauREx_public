@@ -592,10 +592,10 @@ class fitting(object):
             count += 3
         
         if self.params.fit_fit_mie_cloud_topP:
-            self.forwardmodel.atmosphere.mie_topP = fit_params[count]
+            self.forwardmodel.atmosphere.mie_topP = np.power(10,fit_params[count])
             count += 1
         if self.params.fit_fit_mie_cloud_bottomP:
-            self.forwardmodel.atmosphere.mie_topP = fit_params[count]
+            self.forwardmodel.atmosphere.mie_topP = np.power(10,fit_params[count])
             count += 1
 
         # if self.params.fit_fit_P0:

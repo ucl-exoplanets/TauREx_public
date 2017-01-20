@@ -236,7 +236,7 @@ extern "C" {
 					tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
 				}
 			}
-			if ((mie == 1) && (pressure[0] >= mie_topP) && (pressure[0] <= mie_bottomP)){
+			if ((mie == 1) && (pressure[0] >= mie_topP) && (pressure[0] <= mie_bottomP)){ //mie
 			    tau_sum1 += sigma_mie[wn] * density[0] *dz[0];
 			}
 
@@ -251,7 +251,7 @@ extern "C" {
 							tau_sum2 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
 						}
 					}
-					if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){
+					if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
 					    tau_sum2 += sigma_mie[wn] * density[k] *dz[k];
 					}
 				}
@@ -308,7 +308,7 @@ extern "C" {
                         dtau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[j+nlayers*l] * density[j] * dz[j];
                     }
                 }
-                if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
+                if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){ //mie
                     dtau += sigma_mie[wn] * density[j] *dz[j];
                 }
 
