@@ -42,10 +42,6 @@ class convert_venot(object):
             self.ven_temperature = apt[:,2]
             self.ven_altitude_int = interp1d(self.ven_pressure, self.ven_altitude)
             self.ven_temperature_int = interp1d(self.ven_pressure, self.ven_temperature)
-        
-#             self.ven_pressure_min = self.ven
-
-            # mixing ratio profiles
 
             # extract list of molecules from 'fractions_molaires' file
             with open(self.chem_profile_file, 'r') as f:
@@ -199,11 +195,7 @@ if __name__ == '__main__':
                       default='Parfiles/default.par',
                        help='Input parameter file'
                       )
-    # parser.add_argument('--save_sp',       # spectrum is always saved!
-    #                   action='store_true',
-    #                   dest='save_sp',
-    #                   default=True)
-
+    
     parser.add_argument('--chem_profile',
                         dest='chemprofile',
                         default='profile.dat',
