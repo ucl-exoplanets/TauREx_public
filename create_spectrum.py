@@ -25,7 +25,7 @@ from data import *
 
 class create_spectrum(object):
 
-    def __init__(self, params=None, param_filename=None, nthreads=0):
+    def __init__(self, params=None, param_filename=None, nthreads=0,full_init=True):
 
         logging.info('Initialise object create_spectrum')
 
@@ -36,8 +36,25 @@ class create_spectrum(object):
         elif param_filename:
             self.params = parameters(param_filename, mpi=False)
 
+        if full_init:
+            self.init_data()
+            self.init_atmosphere(nthreads)
+            self.init_fmob()
+#         self.dataob = data(self.params)
+#         self.atmosphereob = atmosphere(self.dataob, nthreads=nthreads)
+#         if self.params.gen_type == 'transmission':
+#             self.fmob = transmission(self.atmosphereob)
+#         elif self.params.gen_type == 'emission':
+#             self.fmob = emission(self.atmosphereob)
+            
+            
+    def init_data(self):
         self.dataob = data(self.params)
-        self.atmosphereob = atmosphere(self.dataob, nthreads=nthreads)
+        
+    def init_atmosphere(self,nthreads):
+        self.atmosphereob = atmosphere(self.dataob,nthreads=nthreads)
+    
+    def init_fmob(self):
         if self.params.gen_type == 'transmission':
             self.fmob = transmission(self.atmosphereob)
         elif self.params.gen_type == 'emission':

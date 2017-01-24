@@ -181,7 +181,7 @@ class atmosphere(object):
 
         # error if this sum is larger than 1 (i.e. 100%)
         if np.any(active_mixratio_sum > 1.):
-            logging.error('It seems that the sum of the mixing ratios of the active gases is larger than unity in at least'
+            logging.error('It seems that the sum of the mixing ratios of the active gases is larger than unity in at least '
                           'one atmospheric layer. Solve this problem before continuing!')
             exit()
 

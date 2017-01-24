@@ -44,7 +44,7 @@ class transmission(object):
             if self.atmosphere.nthreads > 1:
                 # load openmp version. Remember to set OMP_NUM_THREADS to number of threads
                 logging.info('Load openmp version of transmission model')
-                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_parallel_xsec.so', mode=C.RTLD_GLOBAL)
+                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
             else:
                 logging.info('Load single-core version of transmission model')
                 self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
