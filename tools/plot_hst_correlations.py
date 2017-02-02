@@ -18,7 +18,7 @@ from __builtin__ import False
 
 
 class hst_correlations(object):
-    def __init__(self,FILEPATH='./',SNR=None):
+    def __init__(self,FILEPATH='./',SNR=None,options=None):
        #initialising bin_spectrum class 
         
         #setting constants 
@@ -27,6 +27,10 @@ class hst_correlations(object):
         self.MJUP = 1.898e27
         self.G = 6.67384e-11
         self.KBOLTZ = 1.380648813e-23
+        
+        if options is not None:
+            self.subfolder1 = np.str(options.subfolder)
+            self.subfolder2 = np.str(options.subfolder2)
         
         #setting variables 
         self.filepath = FILEPATH
@@ -49,7 +53,10 @@ class hst_correlations(object):
         self.load_data()
         
         #calculating derived parameters 
-        self.get_derived_params()
+        try:
+            self.get_derived_params()
+        except KeyError:
+            print 'CANNOT LOAD nest_out.pickle'
       
 #         print self.data[self.planet_list[0]]['derived'].keys()
 #         exit()
@@ -59,6 +66,7 @@ class hst_correlations(object):
         #calculates derived parameters
         
         for i in range(self.N_instance):
+#             print self.planet_list[i]
             paramlist = self.data[self.planet_list[i]]['fit_params_names']
             paramlist.append('mu_derived')
             
@@ -147,6 +155,16 @@ class hst_correlations(object):
         pl.xticks(xax,self.planet_list,rotation=60)
         pl.xlabel('Planet name')
         pl.ylabel('log(Evidence)')
+        
+    def save_logE(self):
+        #saving logEs to file
+        try:
+            data,parlist = self.compile_data(PARAMS=['planet_mass'], FIT_PARAMS=[],DERIVED_TYPE=None,DERIVED_PARAMS=[])
+        except:
+            pass
+        with open('loge.dat', 'w') as f: 
+            for idx,planet in enumerate(self.planet_list):
+                f.write('{0} {1} \n'.format(planet, data[idx,-1]))
         
     def plot_scatter_1D(self,data,parlist,colour):
         #plotting 2D scatter with errorbars
@@ -260,38 +278,43 @@ class hst_correlations(object):
         idx1 = 0
         for planet in self.planet_list:
             idx2 = 0
-            for param in PARAMS:
-                out[idx1,idx2] = self.data[planet]['params'][param]
-                out[idx1,idx2+1] = 0.0
-                if idx1 == 0:
-                    parlist_out.append(param)
-                    parlist_out.append(param+'_sig')
-                idx2 += 2
-            for fit in FIT_PARAMS:
-                out[idx1,idx2] = self.data[planet]['solutions'][0]['fit_params'][fit]['nest_mean']
-                out[idx1,idx2+1] = self.data[planet]['solutions'][0]['fit_params'][fit]['nest_sigma']
-                if idx1 == 0:
-                    parlist_out.append(fit)
-                    parlist_out.append(fit+'_sig')
-                idx2 += 2
+            try:  
+                for param in PARAMS:
+                    out[idx1,idx2] = self.data[planet]['params'][param]
+                    out[idx1,idx2+1] = 0.0
+                    if idx1 == 0:
+                        parlist_out.append(param)
+                        parlist_out.append(param+'_sig')
+                    idx2 += 2
+                for fit in FIT_PARAMS:
+                    out[idx1,idx2] = self.data[planet]['solutions'][0]['fit_params'][fit]['nest_mean']
+                    out[idx1,idx2+1] = self.data[planet]['solutions'][0]['fit_params'][fit]['nest_sigma']
+                    if idx1 == 0:
+                        parlist_out.append(fit)
+                        parlist_out.append(fit+'_sig')
+                    idx2 += 2
+                
+                for derived in DERIVED_PARAMS:
+                    out[idx1,idx2] = self.data[planet]['derived'][derived][DERIVED_TYPE]
+                    out[idx1,idx2+1] = 0.0
+                    if idx1 == 0:
+                        parlist_out.append(derived)
+                        parlist_out.append(derived+'_sig')
+                    idx2 += 2
+                    
+                    
+                out[idx1,-1] = self.data[planet]['global_logE'][0]
+                idx1 += 1
+            except KeyError:
+                pass
             
-            for derived in DERIVED_PARAMS:
-                out[idx1,idx2] = self.data[planet]['derived'][derived][DERIVED_TYPE]
-                out[idx1,idx2+1] = 0.0
-                if idx1 == 0:
-                    parlist_out.append(derived)
-                    parlist_out.append(derived+'_sig')
-                idx2 += 2
-                
-                
-            out[idx1,-1] = self.data[planet]['global_logE'][0]
-            idx1 += 1
         
         return out,parlist_out
         
     def load_data(self):
         #main routine reading in all nest_out.pickle files and loading them into the data dictionary 
-        self.instance_list = glob.glob(os.path.join(self.filepath,'*'))
+        instance_list = glob.glob(os.path.join(self.filepath,'*'))
+        self.instance_list = [fn for fn in instance_list if not os.path.basename(fn).endswith('.txt')]
         self.N_instance = 0
         self.planet_list = []
         
@@ -302,9 +325,9 @@ class hst_correlations(object):
             planet_tmp = str.split(dir,'/')[-1]
             planet = str.split(planet_tmp,'_')[0]
             self.data[planet] = {}
-            data = self._read_instance_file(os.path.join(dir,'1'))
+            data = self._read_instance_file(os.path.join(dir,self.subfolder1))
             if data is 'False':
-                data = self._read_instance_file(os.path.join(dir,'0'))
+                data = self._read_instance_file(os.path.join(dir,self.subfolder2))
             if data is not 'False':
                 self.data[planet] = data
                 self.planet_list.append(planet)
@@ -336,6 +359,14 @@ if __name__ == '__main__':
                       default='',
                       help='input file directory'
                       )
+    parser.add_argument('--subfolder1',
+                        dest='subfolder',
+                        default='4',
+                        help='subfolder to be considered. default: 4')
+    parser.add_argument('--subfodler2',
+                        dest='subfolder2',
+                        default='2',
+                        help='if main subfolder is not available, default to this. default: 2')
     parser.add_argument('--static',
                       dest='static',
                       default=[],
@@ -384,6 +415,11 @@ if __name__ == '__main__':
                       default=False,
                       help='saves plot to pdf'
                       )
+    parser.add_argument('--save_loge',
+                        action='store_true',
+                        dest='save_loge',
+                        default=False,
+                        help='saves logE per planet to ascii file')
     parser.add_argument('--labels',
                       action='store_true',
                       dest='labels',
@@ -412,7 +448,7 @@ if __name__ == '__main__':
     
     
     #initialising binning object 
-    corr_ob = hst_correlations(FILEPATH=options.instance_dir)      
+    corr_ob = hst_correlations(FILEPATH=options.instance_dir,options=options)      
     
     #returning parameter names 
     if options.list_fitted:
@@ -422,6 +458,9 @@ if __name__ == '__main__':
     if options.list_derived:
         corr_ob.get_derived_list()
         
+    if options.save_loge:
+        corr_ob.save_logE()
+    
     #plotting stuff
     if len(options.fitted) > 0 or len(options.static) > 0 or len(options.derived) > 0:
         print 'Close window to terminate program...'

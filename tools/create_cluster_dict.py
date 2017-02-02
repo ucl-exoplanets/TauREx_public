@@ -41,7 +41,7 @@ from cluster import cluster
 # alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
 # alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
-datalist = glob.glob('../Input/observations/riemann_hd209_wfc3/*')
+datalist = glob.glob('../Input/observations/55Cance-20phases/*')
 
 # print datalist[0][3:]
 # exit()
@@ -56,11 +56,11 @@ RNUM = len(datalist)
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
-GENERAL['CPUS']       = 12
-GENERAL['WALLTIME']   = '5:00:00'
+GENERAL['CPUS']       = 24
+GENERAL['WALLTIME']   = '10:00:00'
 GENERAL['MEMORY']     = 10
-GENERAL['PARFILE']    = 'Parfiles/riemann/riemann_hd209_wfc3.par'
-GENERAL['CLUSTER']    = 'legion'
+GENERAL['PARFILE']    = 'Parfiles/jp/55CNCe_retrieval_day_z1.par'
+GENERAL['CLUSTER']    = 'cobweb'
 GENERAL['USERNAME']   = 'ucapipw'
 GENERAL['DISKMEM']    = 10
 
@@ -74,7 +74,7 @@ elif GENERAL['CLUSTER'] is 'cobweb':
     #cobweb directories (all must be absolute paths)
     GENERAL['DATA_DIR']   = '/share/data/ingo/repos/TauREx'
     GENERAL['SCRATCH_DIR']= '/scratch/ingo/run'
-    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/riemann_hd209'
+    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/jp/55cnc/'
     
 
 
@@ -86,7 +86,7 @@ ID = 0
 for i in range(RNUM): #this may be changed with a more informative ID... e.g. date
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
-    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']
+    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID)
     DICT[ID]['in_spectrum_file'] = datalist[i][3:]  #setting parameter for run
     if GENERAL['CLUSTER'] is 'legion':
         DICT[ID]['out_path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID) #must be provided for legion but not for cobweb

@@ -56,7 +56,10 @@ class convert_venot(object):
                                               for i in xrange(np.shape(self.ven_molprof_mixratios)[1])]
             logging.info('Atmospheric pressure boundaries from chemical model: %f-%f' %
                          (np.min(self.ven_molprof_pressure), np.max(self.ven_molprof_pressure)))
-
+            
+#             pl.figure()
+#             pl.plot(self.ven_temperature, np.log(self.ven_pressure))
+           
             # determine list of molecules with cross sections. exclude the others.
             self.ven_active_gases = []
             self.ven_active_gases_idx = []
@@ -94,6 +97,8 @@ class convert_venot(object):
         self.params = params
         params.atm_active_gases = self.ven_active_gases
         params.atm_active_gases_mixratios = [1e-10 for i in range(len(self.ven_active_gases))]
+        params.atm_max_pres = np.max(self.ven_pressure)
+        params.atm_min_pres = np.min(self.ven_pressure)
         params.mode == 'custom'
         return params
     
@@ -121,6 +126,14 @@ class convert_venot(object):
 
         # re-set density profile
         csob.atmosphereob.set_density_profile()
+        
+#         
+#         pl.figure()
+# #         pl.plot(csob.atmosphereob.pressure_profile,csob.atmosphereob.temperature_profile)
+#         pl.plot(csob.atmosphereob.temperature_profile,np.log(csob.atmosphereob.pressure_profile))
+#         pl.show()
+#         exit()
+        
         
         logging.info('Read in Venot chemical and thermal profiles. Modifying atmosphere accordingly...')
         logging.info('Mean molecular weight (1st layer): %.5f AMU' % (csob.atmosphereob.mu_profile[0]/AMU))

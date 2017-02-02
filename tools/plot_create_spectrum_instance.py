@@ -10,6 +10,7 @@ import csv
 from matplotlib import cm
 from matplotlib import rc
 import matplotlib as mpl
+from __builtin__ import False
 
 #some global matplotlib vars
 mpl.rcParams['axes.linewidth'] = 1 #set the value globally
@@ -20,10 +21,11 @@ rc('font', **{'family':'serif','serif':['Palatino'],'size'   : 11})
 
 
 class plot_spectrum(object):
-    def __init__(self,FILEPATH,FILENAME,BINSPEC=False,BINRES=300):
+    def __init__(self,FILEPATH,FILENAME,BINSPEC=False,BINRES=300,SPEC_LOG=False):
        #initialising bin_spectrum class 
         
         self.bin_spec = BINSPEC
+        self.spec_log = SPEC_LOG
         #setting constants 
         self.RJUP = 6.9911e7
         self.RSOL = 6.955e8
@@ -102,12 +104,20 @@ class plot_spectrum(object):
         if self.bin_spec:
             pl.plot(self.highres_spec[:,0],self.highres_spec[:,1],c=[0.8,0.8,0.8],label='high-res')
             pl.plot(self.lowres_spec[:,0],self.lowres_spec[:,1],'k',linewidth=2.5,label='low-res')
-            pl.plot(self.lowres_spec[:,0],self.lowres_spec[:,1],'k.',linewidth=2.5,markersize=10.0)
+#             pl.plot(self.lowres_spec[:,0],self.lowres_spec[:,1],'k.',linewidth=2.5,markersize=10.0)
         else:
             pl.plot(self.highres_spec[:,0],self.highres_spec[:,1],'k',label='high-res')
         pl.legend(loc=0)
-        pl.xlim([0.5,15.0])
+        xmin = 0.4
+        xmax = 25.0
+        if np.min(self.highres_spec[:,0]) > xmin:
+            xmin = np.min(self.highres_spec[:,0])
+        if np.max(self.highres_spec[:,0]) < xmax:
+            xmax = np.max(self.highres_spec[:,0])
+        pl.xlim([xmin,xmax])
         pl.title('Spectrum')
+        if self.spec_log:
+            pl.xscale('log')
         if self.fn_type == 'emission':
             pl.ylabel(r'$F_p/F_\ast$')
         else:
@@ -241,6 +251,7 @@ if __name__ == '__main__':
                       )
     parser.add_argument('--bin',
                       dest='bin_spec',
+                      action='store_true',
                       default=False,
                        help='bin spectrum to differnt resolution'
                       ) 
@@ -249,6 +260,11 @@ if __name__ == '__main__':
                         default=100,
                         help='Spectral resolution of binning (constant in delta_lambda)'
                         )
+    parser.add_argument('--spec_log',
+                        dest='spec_log',
+                        default=False,
+                        action='store_true',
+                        help='plots spectrum in log(wavelength)')
     parser.add_argument('--dir',
                       dest='instance_dir',
                       default='',
@@ -279,7 +295,8 @@ if __name__ == '__main__':
     plot_ob = plot_spectrum(FILEPATH=options.instance_dir,
                           FILENAME=options.instance_file,
                           BINSPEC=options.bin_spec,
-                          BINRES=options.resolution)
+                          BINRES=options.resolution,
+                          SPEC_LOG=options.spec_log)
     
     
     #saving final spectrum to file

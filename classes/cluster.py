@@ -124,7 +124,7 @@ class cluster(object):
                 h.write('cat $PBS_NODEFILE > nodes'+'\n')              #creating hostfile 
                 
                 #run command standard version
-                h.write('mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+' --plot \n') 
+                h.write('mpirun -np {0} -hostfile nodes  /share/apps/linuxbrew/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICTFILE,ID_number)+' --plot \n') 
                 
                 #run command version for multiple processes per node (i.e. ppn <24)
     #             h.write('OMPI_MCA_btl=^openib OMPI_MCA_mtl=^psm mpirun -np {0} -hostfile nodes  /share/apps/anaconda/2.2.0/bin/python taurex.py -p {1} -c {2} -i {3}'.format(TCPUS,PFILE,DICFILE,ID_number)+'\n') #run command
