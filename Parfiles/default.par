@@ -322,6 +322,9 @@ fit_radius = True
 #fit mie scattering 
 fit_mie_scattering = True
 
+#fit mie cloud composition
+fit_mie_composition = False
+
 #Mie scattering, cloud particle size prior (microns)
 mie_r_bounds = 1e-10, 10.0
 

@@ -382,6 +382,7 @@ class fitting(object):
             self.fit_bounds.append((np.log10(self.params.fit_mie_f_bounds[0]),
                                         np.log10(self.params.fit_mie_f_bounds[1])))
             
+        if self.params.fit_fit_mie_composition:
             self.fit_params_names.append('clouds_composition')
             self.fit_params_texlabels.append('$Q_\mathrm{clouds}$')
             self.fit_params.append(np.mean((self.params.fit_mie_q_bounds[0],
@@ -588,8 +589,10 @@ class fitting(object):
         if self.params.fit_fit_mie:
             self.forwardmodel.atmosphere.mie_r = np.power(10,fit_params[count])
             self.forwardmodel.atmosphere.mie_f = np.power(10,fit_params[count+1])
-            self.forwardmodel.atmosphere.mie_q = fit_params[count+2]
-            count += 3
+            count += 2
+        if self.params.fit_fit_mie_composition:
+            self.forwardmodel.atmosphere.mie_q = fit_params[count]
+            count += 1
         
         if self.params.fit_fit_mie_cloud_topP:
             self.forwardmodel.atmosphere.mie_topP = np.power(10,fit_params[count])

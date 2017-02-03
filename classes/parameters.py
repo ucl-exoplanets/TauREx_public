@@ -257,6 +257,7 @@ class parameters(object):
         self.fit_mie_topP_bounds        = self.getpar('Fitting','mie_ptop_bounds','list-float')
         self.fit_fit_mie_cloud_bottomP  = self.getpar('Fitting','fit_mie_Pbottom','bool')
         self.fit_mie_bottomP_bounds     = self.getpar('Fitting','mie_pbottom_bounds','list-float')
+        self.fit_fit_mie_composition    = self.getpar('Fitting','fit_mie_composition','bool')
         
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
