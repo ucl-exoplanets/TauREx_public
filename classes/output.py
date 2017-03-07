@@ -260,7 +260,7 @@ class output(object):
 
             logging.info('Solution %i' % idx)
 
-            fit_params = [solution['fit_params'][param]['nest_map'] for param in self.fitting.fit_params_names]
+            fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
             solution = fitting_out['solutions'][idx]
             solution = self.get_spectra(solution)  # compute spectra, contribution from opacities, and contribution function
             solution = self.get_profiles(solution) # compute mixing ratio and tp profiles
@@ -271,7 +271,7 @@ class output(object):
 
     def get_spectra(self, solution):
 
-        fit_params = [solution['fit_params'][param]['nest_map'] for param in self.fitting.fit_params_names]
+        fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
 
         # load model using extended or manual wavenumber range
         if self.params.gen_manual_waverange:
