@@ -34,6 +34,8 @@ from library_general import *
 #some global matplotlib vars
 mpl.rcParams['axes.linewidth'] = 1 #set the value globally
 mpl.rcParams['text.antialiased'] = True
+mpl.rcParams['errorbar.capsize'] = 2
+
 #rc('text', usetex=True) # use tex in plots
 rc('font', **{'family':'serif','serif':['Palatino'],'size'   : 11})
 
@@ -279,8 +281,8 @@ class taurex_plots(object):
             if self.db['params']['in_opacity_method'][:4] == 'xsec':
                 plot_spectrum = binspectrum(plot_spectrum, 300)
 
-            plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], color=self.cmap(float(solution_idx)/N), label=label)
-            plt.plot(spectra[:,0], spectra[:,3], 'd', markersize=3, color=self.cmap(float(solution_idx)/N))
+            plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], zorder=0,color=self.cmap(float(solution_idx)/N), label=label)
+            plt.scatter(spectra[:,0], spectra[:,3], marker='d',zorder=1,**{'s': 10, 'edgecolors': 'grey','c' : self.cmap(float(solution_idx)/N) })
 
             # add sigma spread
             if self.db['params']['out_sigma_spectrum']:
@@ -296,12 +298,12 @@ class taurex_plots(object):
                 # 1 sigma
                 plt.fill_between(plot_spectrum[:,0], plot_spectrum[:,1]-plot_spectrum_std[:,1],
                                  plot_spectrum[:,1]+plot_spectrum_std[:,1],
-                                 alpha=0.5, zorder=-1, color=self.cmap(float(solution_idx)/N), edgecolor='none')
+                                 alpha=0.5, zorder=-2, color=self.cmap(float(solution_idx)/N), edgecolor='none')
 
                 # 2 sigma
                 plt.fill_between(plot_spectrum[:,0], plot_spectrum[:,1]-2*plot_spectrum_std[:,1],
                                  plot_spectrum[:,1]+2*plot_spectrum_std[:,1],
-                                 alpha=0.2, zorder=-1, color=self.cmap(float(solution_idx)/N), edgecolor='none')
+                                 alpha=0.2, zorder=-3, color=self.cmap(float(solution_idx)/N), edgecolor='none')
 
         plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
         plt.xlabel('Wavelength ($\mu$m)')
