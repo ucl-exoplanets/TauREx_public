@@ -41,9 +41,9 @@ from cluster import cluster
 # alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
 # alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
-datalist = glob.glob('../Input/observations/55Cance-20phases/*')
+datalist = glob.glob('../Input/observations/excite/*.dat')
 
-# print datalist[0][3:]
+# print datalist
 # exit()
 
 with open('datalist.txt','wb') as ofile:
@@ -56,11 +56,11 @@ RNUM = len(datalist)
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
-GENERAL['CPUS']       = 24
-GENERAL['WALLTIME']   = '10:00:00'
+GENERAL['CPUS']       = 32
+GENERAL['WALLTIME']   = '36:00:00'
 GENERAL['MEMORY']     = 10
-GENERAL['PARFILE']    = 'Parfiles/jp/55CNCe_retrieval_day_z1.par'
-GENERAL['CLUSTER']    = 'cobweb'
+GENERAL['PARFILE']    = 'Parfiles/excite/WASP18b.par'
+GENERAL['CLUSTER']    = 'legion'
 GENERAL['USERNAME']   = 'ucapipw'
 GENERAL['DISKMEM']    = 10
 
@@ -68,13 +68,13 @@ if GENERAL['CLUSTER'] is 'legion':
     #legion directories (all must be absolute paths)
     #legion does not require a scratch path, handled by $TMPDIR variable
     GENERAL['DATA_DIR']   = '/home/ucapipw/Scratch/TauREx'
-    GENERAL['OUTPUT_DIR'] = '/home/ucapipw/Scratch/riemann/hd209_wfc3'
+    GENERAL['OUTPUT_DIR'] = '/home/ucapipw/Scratch/excite'
 
 elif GENERAL['CLUSTER'] is 'cobweb':
     #cobweb directories (all must be absolute paths)
     GENERAL['DATA_DIR']   = '/share/data/ingo/repos/TauREx'
     GENERAL['SCRATCH_DIR']= '/scratch/ingo/run'
-    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/jp/55cnc/'
+    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/excite'
     
 
 

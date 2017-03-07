@@ -33,6 +33,7 @@ class plot_spectrum(object):
         self.G = 6.67384e-11
         self.KBOLTZ = 1.380648813e-23
         self.cmap = cm.get_cmap('Paired')
+        self.BINRES = BINRES
         
         #reading in instance file 
         print 'reading in spectrum: {}'.format(FILENAME)
@@ -123,6 +124,52 @@ class plot_spectrum(object):
         else:
             pl.ylabel(r'$(R_p/R_s)^2$')
         pl.xlabel(r'Wavelength ($\mu$m)')
+        
+    def plot_contributions(self):
+        #plotting contributions 
+        N = len(self.data["data"]["opacity_contrib"])
+        
+        fig = pl.figure(figsize=(7,3.5))
+        ax = fig.add_subplot(111)
+
+#         plot_spectrum = np.zeros((len(self.highres_spec[:,0]), 2))
+#         plot_spectrum[:,0] = self.highres_spec[:,0]
+#         plot_spectrum[:,1] = self.highres_spec[:,1]
+#         plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
+#         if self.data['params']['in_opacity_method'][:4] == 'xsec':
+#             self.get_specgrid(self.BINRES, self.highres_spec[0,0], self.highres_spec[-1,0])
+#             self.lowres_spec = self.bin_spectrum(self.highres_spec, self.lambda_grid)
+# #             plot_spectrum = binspectrum(plot_spectrum, self.BINRES)
+#         #plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], alpha=0.7, color='black', label='Fitted model')
+        if self.bin_spec:
+            pl.plot(self.lowres_spec[:,0],self.lowres_spec[:,1],'k',linewidth=2.5,label='low-res')
+        else:
+            pl.plot(self.highres_spec[:,0],self.highres_spec[:,1],c=[0.8,0.8,0.8],label='high-res')
+#         plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
+
+        for idx, val in enumerate(self.data["data"]["opacity_contrib"]):
+            plot_spectrum = self.data["data"]["opacity_contrib"][val]
+            plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
+            if self.bin_spec:
+                plot_spectrum = self.bin_spectrum(plot_spectrum, self.lambda_grid)
+#                 plot_spectrum = binspectrum(plot_spectrum, 300)
+            pl.plot(plot_spectrum[:,0], plot_spectrum[:,1], color=self.cmap(float(idx)/N), label=val)
+
+#         pl.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
+        pl.xlabel('Wavelength ($\mu$m)')
+        pl.ylabel('$(R_p/R_*)^2$')
+        pl.tick_params(axis='x', which='minor')
+        # set log scale only if interval is greater than 5 micron
+        if self.spec_log:
+            pl.xscale('log')
+            pl.tick_params(axis='x', which='minor')
+#             ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
+#             ax.xaxis.set_major_formatter(FormatStrFormatter("%i"))
+        pl.tight_layout()
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
+     
         
     def plot_tp_profile(self):
         #plotting temperature-pressure profile 
@@ -310,4 +357,8 @@ if __name__ == '__main__':
     plot_ob.plot_spectrum(plot_errors=True)
     plot_ob.plot_tp_profile()
     plot_ob.plot_xprofiles()
+    try:
+        plot_ob.plot_contributions()
+    except KeyError:
+        pass
     pl.show()

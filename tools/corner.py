@@ -512,7 +512,10 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     inds = np.argsort(Hflat)[::-1]
     Hflat = Hflat[inds]
     sm = np.cumsum(Hflat)
-    sm /= sm[-1]
+    try:
+        sm /= sm[-1]
+    except:
+        pass
     V = np.empty(len(levels))
     for i, v0 in enumerate(levels):
         try:
@@ -559,7 +562,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         data_kwargs["color"] = data_kwargs.get("color", color)
         data_kwargs["ms"] = data_kwargs.get("ms", 2.0)
         data_kwargs["mec"] = data_kwargs.get("mec", "none")
-        data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
+#         data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
         ax.plot(x, y, "o", zorder=-1, rasterized=True, **data_kwargs)
 
     # Plot the base fill to hide the densest data points.

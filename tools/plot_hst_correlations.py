@@ -363,7 +363,7 @@ if __name__ == '__main__':
                         dest='subfolder',
                         default='4',
                         help='subfolder to be considered. default: 4')
-    parser.add_argument('--subfodler2',
+    parser.add_argument('--subfolder2',
                         dest='subfolder2',
                         default='2',
                         help='if main subfolder is not available, default to this. default: 2')
