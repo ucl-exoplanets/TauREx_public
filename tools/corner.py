@@ -1,36 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, absolute_import, unicode_literals
-
-__all__ = ["corner", "hist2d"]
-__version__ = "1.0.2"
-__author__ = "Dan Foreman-Mackey (danfm@nyu.edu)"
-__copyright__ = "Copyright 2013-2015 Daniel Foreman-Mackey"
-__contributors__ = [
-    # Alphabetical by first name.
-    "Adrian Price-Whelan @adrn",
-    "Brendon Brewer @eggplantbren",
-    "Ekta Patel @ekta1224",
-    "Emily Rice @emilurice",
-    "Geoff Ryan @geoffryan",
-    "Guillaume @ceyzeriat",
-    "Gregory Ashton @ga7g08",
-    "Kelle Cruz @kelle",
-    "Kyle Barbary @kbarbary",
-    "Marco Tazzari @mtazzari",
-    "Matt Pitkin @mattpitkin",
-    "Phil Marshall @drphilmarshall",
-    "Pierre Gratier @pirg",
-    "Stephan Hoyer @shoyer",
-    "Víctor Zabalza @zblz",
-    "Will Vousden @willvousden",
-    "Wolfgang Kerzendorf @wkerzendorf",
-]
+from __future__ import print_function, absolute_import
 
 import logging
 import numpy as np
 import matplotlib.pyplot as pl
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, NullLocator
 from matplotlib.colors import LinearSegmentedColormap, colorConverter
 from matplotlib.ticker import ScalarFormatter
 
@@ -38,6 +13,8 @@ try:
     from scipy.ndimage import gaussian_filter
 except ImportError:
     gaussian_filter = None
+
+__all__ = ["corner", "hist2d", "quantile"]
 
 
 def corner(xs, bins=20, range=None, weights=None, color="k",
@@ -55,95 +32,96 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
     Parameters
     ----------
-    xs : array_like (nsamples, ndim)
+    xs : array_like[nsamples, ndim]
         The samples. This should be a 1- or 2-dimensional array. For a 1-D
         array this results in a simple histogram. For a 2-D array, the zeroth
         axis is the list of samples and the next axis are the dimensions of
         the space.
 
-    bins : int or array_like (ndim,) (optional)
+    bins : int or array_like[ndim,]
         The number of bins to use in histograms, either as a fixed value for
         all dimensions, or as a list of integers for each dimension.
 
-    weights : array_like (nsamples,)
+    weights : array_like[nsamples,]
         The weight of each sample. If `None` (default), samples are given
         equal weight.
 
-    color : str (optional)
+    color : str
         A ``matplotlib`` style color for all histograms.
 
-    smooth, smooth1d : float (optional)
+    smooth, smooth1d : float
        The standard deviation for Gaussian kernel passed to
        `scipy.ndimage.gaussian_filter` to smooth the 2-D and 1-D histograms
        respectively. If `None` (default), no smoothing is applied.
 
-    labels : iterable (ndim,) (optional)
+    labels : iterable (ndim,)
         A list of names for the dimensions. If a ``xs`` is a
         ``pandas.DataFrame``, labels will default to column names.
 
-    label_kwargs : dict (optional)
+    label_kwargs : dict
         Any extra keyword arguments to send to the `set_xlabel` and
         `set_ylabel` methods.
 
-    show_titles : bool (optional)
+    show_titles : bool
         Displays a title above each 1-D histogram showing the 0.5 quantile
         with the upper and lower errors supplied by the quantiles argument.
 
-    title_fmt : string (optional)
+    title_fmt : string
         The format string for the quantiles given in titles. If you explicitly
         set ``show_titles=True`` and ``title_fmt=None``, the labels will be
         shown as the titles. (default: ``.2f``)
 
-    title_kwargs : dict (optional)
+    title_kwargs : dict
         Any extra keyword arguments to send to the `set_title` command.
 
-    range : iterable (ndim,) (optional)
+    range : iterable (ndim,)
         A list where each element is either a length 2 tuple containing
         lower and upper bounds or a float in range (0., 1.)
         giving the fraction of samples to include in bounds, e.g.,
         [(0.,10.), (1.,5), 0.999, etc.].
         If a fraction, the bounds are chosen to be equal-tailed.
 
-    truths : iterable (ndim,) (optional)
+    truths : iterable (ndim,)
         A list of reference values to indicate on the plots.  Individual
         values can be omitted by using ``None``.
 
-    truth_color : str (optional)
+    truth_color : str
         A ``matplotlib`` style color for the ``truths`` makers.
 
-    scale_hist : bool (optional)
+    scale_hist : bool
         Should the 1-D histograms be scaled in such a way that the zero line
         is visible?
 
-    quantiles : iterable (optional)
+    quantiles : iterable
         A list of fractional quantiles to show on the 1-D histograms as
         vertical dashed lines.
 
-    verbose : bool (optional)
+    verbose : bool
         If true, print the values of the computed quantiles.
 
-    plot_contours : bool (optional)
+    plot_contours : bool
         Draw contours for dense regions of the plot.
 
-    use_math_text : bool (optional)
+    use_math_text : bool
         If true, then axis tick labels for very large or small exponents will
         be displayed as powers of 10 rather than using `e`.
 
-    max_n_ticks: int (optional)
+    max_n_ticks: int
         Maximum number of ticks to try to use
 
-    top_ticks : bool (optional)
+    top_ticks : bool
         If true, label the top ticks of each axis
 
-    fig : matplotlib.Figure (optional)
+    fig : matplotlib.Figure
         Overplot onto the provided figure object.
 
-    hist_kwargs : dict (optional)
+    hist_kwargs : dict
         Any extra keyword arguments to send to the 1-D histogram plots.
 
-    **hist2d_kwargs : (optional)
+    **hist2d_kwargs
         Any remaining keyword arguments are sent to `corner.hist2d` to generate
         the 2-D histogram plots.
+
     """
     if quantiles is None:
         quantiles = []
@@ -210,7 +188,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
     # Parse the bin specifications.
     try:
-        bins = [float(bins) for _ in range]
+        bins = [int(bins) for _ in range]
     except TypeError:
         if len(bins) != len(range):
             raise ValueError("Dimension mismatch between bins and range")
@@ -259,12 +237,12 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         # Plot the histograms.
         if smooth1d is None:
             n, _, _ = ax.hist(x, bins=bins[i], weights=weights,
-                              range=range[i], **hist_kwargs)
+                              range=np.sort(range[i]), **hist_kwargs)
         else:
             if gaussian_filter is None:
                 raise ImportError("Please install scipy for smoothing")
             n, b = np.histogram(x, bins=bins[i], weights=weights,
-                                range=range[i])
+                                range=np.sort(range[i]))
             n = gaussian_filter(n, smooth1d)
             x0 = np.array(list(zip(b[:-1], b[1:]))).flatten()
             y0 = np.array(list(zip(n, n))).flatten()
@@ -315,7 +293,12 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         else:
             ax.set_ylim(0, 1.1 * np.max(n))
         ax.set_yticklabels([])
-        ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
+        if max_n_ticks == 0:
+            ax.xaxis.set_major_locator(NullLocator())
+            ax.yaxis.set_major_locator(NullLocator())
+        else:
+            ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
+            ax.yaxis.set_major_locator(NullLocator())
 
         if i < K - 1:
             if top_ticks:
@@ -362,8 +345,14 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
                 if truths[i] is not None:
                     ax.axhline(truths[i], color=truth_color)
 
-            ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
-            ax.yaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
+            if max_n_ticks == 0:
+                ax.xaxis.set_major_locator(NullLocator())
+                ax.yaxis.set_major_locator(NullLocator())
+            else:
+                ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks,
+                                                       prune="lower"))
+                ax.yaxis.set_major_locator(MaxNLocator(max_n_ticks,
+                                                       prune="lower"))
 
             if i < K - 1:
                 ax.set_xticklabels([])
@@ -394,21 +383,55 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
 def quantile(x, q, weights=None):
     """
-    Like numpy.percentile, but:
+    Compute sample quantiles with support for weighted samples.
 
-    * Values of q are quantiles [0., 1.] rather than percentiles [0., 100.]
-    * scalar q not supported (q must be iterable)
-    * optional weights on x
+    Note
+    ----
+    When ``weights`` is ``None``, this method simply calls numpy's percentile
+    function with the values of ``q`` multiplied by 100.
+
+    Parameters
+    ----------
+    x : array_like[nsamples,]
+       The samples.
+
+    q : array_like[nquantiles,]
+       The list of quantiles to compute. These should all be in the range
+       ``[0, 1]``.
+
+    weights : Optional[array_like[nsamples,]]
+        An optional weight corresponding to each sample. These
+
+    Returns
+    -------
+    quantiles : array_like[nquantiles,]
+        The sample quantiles computed at ``q``.
+
+    Raises
+    ------
+    ValueError
+        For invalid quantiles; ``q`` not in ``[0, 1]`` or dimension mismatch
+        between ``x`` and ``weights``.
 
     """
+    x = np.atleast_1d(x)
+    q = np.atleast_1d(q)
+
+    if np.any(q < 0.0) or np.any(q > 1.0):
+        raise ValueError("Quantiles must be between 0 and 1")
+
     if weights is None:
-        return np.percentile(x, [100. * qi for qi in q])
+        return np.percentile(x, list(100.0 * q))
     else:
+        weights = np.atleast_1d(weights)
+        if len(x) != len(weights):
+            raise ValueError("Dimension mismatch: len(weights) != len(x)")
         idx = np.argsort(x)
-        xsorted = x[idx]
-        cdf = np.add.accumulate(weights[idx])
+        sw = weights[idx]
+        cdf = np.cumsum(sw)[:-1]
         cdf /= cdf[-1]
-        return np.interp(q, cdf, xsorted).tolist()
+        cdf = np.append(0, cdf)
+        return np.interp(q, cdf, x[idx]).tolist()
 
 
 def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
@@ -421,41 +444,45 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
 
     Parameters
     ----------
-    x, y : array_like (nsamples,)
+    x : array_like[nsamples,]
+       The samples.
+
+    y : array_like[nsamples,]
        The samples.
 
     levels : array_like
         The contour levels to draw.
 
-    ax : matplotlib.Axes (optional)
+    ax : matplotlib.Axes
         A axes instance on which to add the 2-D histogram.
 
-    plot_datapoints : bool (optional)
+    plot_datapoints : bool
         Draw the individual data points.
 
-    plot_density : bool (optional)
+    plot_density : bool
         Draw the density colormap.
 
-    plot_contours : bool (optional)
+    plot_contours : bool
         Draw the contours.
 
-    no_fill_contours : bool (optional)
+    no_fill_contours : bool
         Add no filling at all to the contours (unlike setting
         ``fill_contours=False``, which still adds a white fill at the densest
         points).
 
-    fill_contours : bool (optional)
+    fill_contours : bool
         Fill the contours.
 
-    contour_kwargs : dict (optional)
+    contour_kwargs : dict
         Any additional keyword arguments to pass to the `contour` method.
 
-    contourf_kwargs : dict (optional)
+    contourf_kwargs : dict
         Any additional keyword arguments to pass to the `contourf` method.
 
-    data_kwargs : dict (optional)
+    data_kwargs : dict
         Any additional keyword arguments to pass to the `plot` method when
         adding the individual data points.
+
     """
     if ax is None:
         ax = pl.gca()
@@ -496,7 +523,8 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     # We'll make the 2D histogram to directly estimate the density.
     try:
         H, X, Y = np.histogram2d(x.flatten(), y.flatten(), bins=bins,
-                                 range=range, weights=weights)
+                                 range=list(map(np.sort, range)),
+                                 weights=weights)
     except ValueError:
         raise ValueError("It looks like at least one of your sample columns "
                          "have no dynamic range. You could try using the "
@@ -512,10 +540,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     inds = np.argsort(Hflat)[::-1]
     Hflat = Hflat[inds]
     sm = np.cumsum(Hflat)
-    try:
-        sm /= sm[-1]
-    except:
-        pass
+    sm /= sm[-1]
     V = np.empty(len(levels))
     for i, v0 in enumerate(levels):
         try:
@@ -562,7 +587,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         data_kwargs["color"] = data_kwargs.get("color", color)
         data_kwargs["ms"] = data_kwargs.get("ms", 2.0)
         data_kwargs["mec"] = data_kwargs.get("mec", "none")
-#         data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
+        data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
         ax.plot(x, y, "o", zorder=-1, rasterized=True, **data_kwargs)
 
     # Plot the base fill to hide the densest data points.

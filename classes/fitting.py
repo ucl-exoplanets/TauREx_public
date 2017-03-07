@@ -224,7 +224,7 @@ class fitting(object):
                 self.fit_TP_nparams = len(self.forwardmodel.atmosphere.P_index) + 1
 
                 self.fit_params_names.append('alpha')
-                self.fit_params_texlabels.append('$\alpha$')
+                self.fit_params_texlabels.append('$\\alpha$')
                 self.fit_bounds.append((self.params.fit_hybrid_alpha_l,self.params.fit_hybrid_alpha_h)) #alpha parameter
                 self.fit_params.append(np.mean((self.params.fit_hybrid_alpha_l,self.params.fit_hybrid_alpha_h)))
 
@@ -259,7 +259,7 @@ class fitting(object):
                 self.fit_params.append(np.mean((np.log10(self.params.fit_tp_guillot_kappa_v2_bounds[0]), np.log10(self.params.fit_tp_guillot_kappa_v2_bounds[1]))))
 
                 self.fit_params_names.append('alpha')
-                self.fit_params_texlabels.append('$\alpha$')
+                self.fit_params_texlabels.append('$\\alpha$')
                 self.fit_bounds.append((self.params.fit_tp_guillot_alpha_bounds[0], self.params.fit_tp_guillot_alpha_bounds[1]))
                 self.fit_params.append(np.mean((self.params.fit_tp_guillot_alpha_bounds[0], self.params.fit_tp_guillot_alpha_bounds[1])))
 

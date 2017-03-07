@@ -466,7 +466,7 @@ class output(object):
         for i in range(nspectra):
             rand_idx = random.randint(0, np.shape(solution['tracedata'])[0])
             fit_params_iter = solution['tracedata'][rand_idx]
-            weights[i] = solution['weights'][i]
+            weights[i] = solution['weights'][rand_idx]
             self.fitting.update_atmospheric_parameters(fit_params_iter)
             model = self.fitting.forwardmodel.model()
             models[i, :] = self.fitting.forwardmodel.model()
@@ -487,28 +487,36 @@ class output(object):
 
         sol_tracedata = solution['tracedata']
         sol_weights = solution['weights']
-        nprofiles = len(sol_tracedata)
+#         nprofiles = len(sol_tracedata)
+        nprofiles = int(self.params.out_sigma_spectrum_frac * np.shape(solution['tracedata'])[0])
+        
         tpprofiles = np.zeros((nprofiles, self.atmosphere.nlayers))
         molprofiles_active = np.zeros((nprofiles, self.atmosphere.nactivegases, self.atmosphere.nlayers))
         molprofiles_inactive = np.zeros((nprofiles, self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+        
+        weights = np.zeros((nprofiles))
         for i in range(nprofiles):
-            fit_params_iter = sol_tracedata[i]
+            rand_idx = random.randint(0, np.shape(solution['tracedata'])[0])
+            fit_params_iter = sol_tracedata[rand_idx]
+            weights[i] = solution['weights'][rand_idx]
             self.fitting.update_atmospheric_parameters(fit_params_iter)
-
             tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
             for j in range(self.atmosphere.nactivegases):
                 molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[j,:]
             for j in range(self.atmosphere.ninactivegases):
                 molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[j,:]
             std_tpprofiles = np.zeros((self.atmosphere.nlayers))
+            
+            
         std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
         std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+        
         for i in range(self.atmosphere.nlayers):
-            std_tpprofiles[i] = weighted_avg_and_std(tpprofiles[:,i], weights=sol_weights, axis=0)[1]
+            std_tpprofiles[i] = weighted_avg_and_std(tpprofiles[:,i], weights=weights, axis=0)[1]
             for j in range(self.atmosphere.nactivegases):
-                std_molprofiles_active[j,i] = weighted_avg_and_std(molprofiles_active[:,j,i], weights=sol_weights, axis=0)[1]
+                std_molprofiles_active[j,i] = weighted_avg_and_std(molprofiles_active[:,j,i], weights=weights, axis=0)[1]
             for j in range(self.atmosphere.ninactivegases):
-                std_molprofiles_inactive[j,i] = weighted_avg_and_std(molprofiles_inactive[:,j,i], weights=sol_weights, axis=0)[1]
+                std_molprofiles_inactive[j,i] = weighted_avg_and_std(molprofiles_inactive[:,j,i], weights=weights, axis=0)[1]
 
         return std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive
 

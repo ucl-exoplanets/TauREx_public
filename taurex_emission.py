@@ -55,11 +55,13 @@ def run(params, options=False):
 
     if params.mcmc_run and pymc_import:
         fittingob.mcmc_fit() # MCMC fit
-        MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+        if MPIimport:
+            MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
   
     if params.nest_run and multinest_import:
         fittingob.multinest_fit() # Nested sampling fit
-        MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
+        if MPIimport:
+            MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
         
     if MPIimport and MPI.COMM_WORLD.Get_rank() != 0:
         exit()
