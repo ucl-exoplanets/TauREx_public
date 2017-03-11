@@ -270,8 +270,8 @@ class data(object):
                     not np.array_equal(bin_centers, ktable['bin_centers']) or \
                     not np.array_equal(bin_edges, ktable['bin_edges']) or \
                     ngauss != ktable['ngauss'] or method != ktable['method'] or wnrange != ktable['wnrange'] or \
-                    wlrange != ktable['wlrange']  or wnrange != ktable['wnrange']  or \
-                    resolution != ktable['resolution']:
+                    wlrange != ktable['wlrange']  or wnrange != ktable['wnrange']:  #or \
+                    #resolution != ktable['resolution']:
                     logging.error('Something is wrong with this ktable: %s. Check that the format of all '
                                   'ktables is consistent' % molpath)
                     exit()
@@ -285,7 +285,7 @@ class data(object):
             bin_edges = ktable['bin_edges']
             wnrange = ktable['wnrange']
             wlrange = ktable['wlrange']
-            resolution = ktable['resolution']
+            #resolution = ktable['resolution']
             kcoeff = ktable['kcoeff']
 
 
