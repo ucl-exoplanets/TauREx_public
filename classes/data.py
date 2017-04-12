@@ -55,9 +55,12 @@ class data(object):
         if self.params.gen_ace:
             self.load_ace_params()
 
+
         # load observed input spectrum
         if self.params.mode == 'retrieval':
             self.load_input_spectrum()
+
+
 
         # Load external active gases profiles
         if self.params.atm_active_gases[0] == 'FILE':
@@ -154,8 +157,8 @@ class data(object):
             elif self.opacity_method == 'ktables':
                 opacity_path = self.params.in_ktab_path
 
-            molpath = glob.glob(os.path.join(opacity_path, '%s_*' % mol_val))+\
-                      glob.glob(os.path.join(opacity_path, '%s.*' % mol_val))
+            molpath = insensitive_glob(os.path.join(opacity_path, '%s_*' % mol_val))+\
+                      insensitive_glob(os.path.join(opacity_path, '%s.*' % mol_val))
             if len(molpath)>0:
                 molpath = molpath[0]
                 if os.path.isfile(molpath):
@@ -177,6 +180,10 @@ class data(object):
         logging.info('ace active absorbers idx: %s' % self.ace_active_gases_idx)
         logging.info('ace inctive absorbers: %s' % self.params.atm_inactive_gases)
         logging.info('ace inactive absorbers idx: %s' % self.ace_inactive_gases_idx)
+
+        if len(self.params.atm_active_gases) == 0:
+            logging.error('There are no enough active absorbers. Check that you have the right cross sections or ktables')
+            exit()
 
     def load_input_spectrum(self):
 
@@ -249,8 +256,8 @@ class data(object):
         for mol_idx, mol_val in enumerate(molecules):
 
             # check that ktable for given molecule exists
-            molpath = glob.glob(os.path.join(self.params.in_ktab_path, '%s_*' % mol_val))+\
-                      glob.glob(os.path.join(self.params.in_ktab_path, '%s.*' % mol_val))
+            molpath = insensitive_glob(os.path.join(self.params.in_ktab_path, '%s_*' % mol_val))+ \
+                      insensitive_glob(os.path.join(self.params.in_ktab_path, '%s.*' % mol_val))
             if len(molpath) > 0:
                 molpath = molpath[0]
             else:
@@ -337,7 +344,7 @@ class data(object):
         for mol_idx, mol_val in enumerate(molecules):
 
             # select xsec for given molecule and all temperatures available
-            molpaths = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T*' % mol_val))
+            molpaths = insensitive_glob(os.path.join(self.params.in_xsec_path, '%s_T*' % mol_val))
             if len(molpaths) == 0:
                 logging.error('There is no cross section for %s. Path: %s ' % (mol_val, self.params.in_xsec_path))
                 exit()
@@ -371,7 +378,7 @@ class data(object):
             # NOTE that here we assume that the largest file has the finest grid!
 
             for temp in temp_list_cut:
-                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%i*' % (mol_val, int(temp))))[0]
+                molpath_val = insensitive_glob(os.path.join(self.params.in_xsec_path, '%s_T%i*' % (mol_val, int(temp))))[0]
                 all_molpaths.append(molpath_val)
 
         logging.info('Beginning loading of cross sections, with interpolation to finest grid. Might take a while...')
@@ -394,7 +401,7 @@ class data(object):
         for mol_idx, mol_val in enumerate(molecules):
             logging.info('Doing %s...' % mol_val)
             for temp_idx, temp_val in enumerate(temp_list_cut):
-                molpath_val = glob.glob(os.path.join(self.params.in_xsec_path, '%s_T%i*' % (mol_val, int(temp))))[0]
+                molpath_val = insensitive_glob(os.path.join(self.params.in_xsec_path, '%s_T%i*' % (mol_val, int(temp))))[0]
 
                 xsec_load = pickle.load(open(molpath_val, 'rb'), encoding='latin1')
 
@@ -439,8 +446,8 @@ class data(object):
         for mol_idx, mol_val in enumerate(molecules):
 
             # check that xsec for given molecule exists
-            molpath = glob.glob(os.path.join(self.params.in_xsec_path, '%s_*' % mol_val))+\
-                      glob.glob(os.path.join(self.params.in_xsec_path, '%s.*' % mol_val))
+            molpath = insensitive_glob(os.path.join(self.params.in_xsec_path, '%s_*' % mol_val))+\
+                      insensitive_glob(os.path.join(self.params.in_xsec_path, '%s.*' % mol_val))
             if len(molpath) > 0:
                 molpath = molpath[0]
             else:
@@ -819,7 +826,7 @@ class data(object):
     def load_star_SED(self):
 
         # reading in phoenix spectra from folder specified in parameter file
-        all_files = glob.glob(os.path.join(self.params.in_star_path, '*.fmt'))
+        all_files = insensitive_glob(os.path.join(self.params.in_star_path, '*.fmt'))
 
         temperatures = []
         for filenm in all_files:
@@ -895,8 +902,8 @@ class data(object):
                     opacity_path = self.params.in_ktab_path
 
                 # check that xsec for given molecule exists
-                molpath = glob.glob(os.path.join(opacity_path, '%s_*' % mol_val))+\
-                          glob.glob(os.path.join(opacity_path, '%s.*' % mol_val))
+                molpath = insensitive_glob(os.path.join(opacity_path, '%s_*' % mol_val))+\
+                          insensitive_glob(os.path.join(opacity_path, '%s.*' % mol_val))
                 if len(molpath) <= 0: # we don't have xsec/ktable for this moluecule
                     excluded_molecules.append(mol_val)
 

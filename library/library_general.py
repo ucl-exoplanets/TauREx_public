@@ -281,3 +281,8 @@ def fast_nearest_interp(xi, x, y):
     y = np.hstack([y, y[-1]])
     return y[np.searchsorted(x, xi)]
 
+def insensitive_glob(pattern):
+    ''' Case insensitive version of glob '''
+    def either(c):
+        return '[%s%s]'%(c.lower(),c.upper()) if c.isalpha() else c
+    return glob.glob(''.join(map(either,pattern)))

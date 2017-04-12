@@ -43,7 +43,9 @@ phi = 1.618
 
 class taurex_plots(object):
 
-    def __init__(self, dbfname=False, multinest_dir=False, multinest_prefix='1-', title=False, prefix='', out_folder=False, spec_instance=False,**kwargs):
+    def __init__(self, plot_type='retrieval', pickle_file=False, pickle_fname=False, multinest_dir=False,
+                 multinest_prefix='1-', title=False, plot_resolution=100,
+                 prefix='', out_folder=False, spec_instance=False,**kwargs):
 
         if 'cmap' in kwargs:
             cmap = kwargs['cmap']
@@ -53,18 +55,32 @@ class taurex_plots(object):
         #norm = mpl.colors.Normalize(vmin=0, vmax=5)
         self.cmap = cm.get_cmap('Paired')
 
-        if dbfname:
+        if pickle_file:
+
+            self.pickle_file = pickle_file
+
+        elif pickle_fname:
+
             try:
-                self.db = pickle.load(open(dbfname, 'rb'), encoding='latin1')
+                self.pickle_file = pickle.load(open(pickle_fname, 'rb'), encoding='latin1')
             except:
-                self.db = pickle.load(open(dbfname))
+                self.pickle_file = pickle.load(open(pickle_fname))
+
             try:
-                self.type = self.db['type']
+                self.retrieval_type = self.pickle_file['type']
             except:
-                self.type = 'nest'
-        elif multinest_dir:
-            self.db = False
-            self.type = 'nest'
+                self.retrieval_type = 'nest'
+
+        elif plot_type=='retrieval' and multinest_dir:
+            self.pickle_file = False
+            self.retrieval_type = 'nest'
+
+        else:
+
+            print('Error! Specify a .pickle input file')
+            exit()
+
+        self.plot_type = plot_type
 
         if multinest_dir:
             self.multinest_dir = multinest_dir
@@ -72,20 +88,19 @@ class taurex_plots(object):
         else:
             self.multinest_dir = False
 
-        if not dbfname and not multinest_dir:
-            print('Specify a NEST_out.pickle filename or a multinest directory')
-            exit()
-        
+
         if spec_instance:
             try: 
                 self.add_spectrum_instance(spec_instance)
             except:
-                db_dir = dbfname.split('/')[:-1]
+                db_dir = self.pickle_file.split('/')[:-1]
                 db_dir[0] = '/'
                 db_dir.append(spec_instance)
                 self.add_spectrum_instance(os.path.join(*db_dir))
 
         self.title = title
+        self.plot_resolution = plot_resolution
+
         if not prefix:
             self.prefix = ''
         else:
@@ -94,8 +109,8 @@ class taurex_plots(object):
         if out_folder:
             self.out_folder = out_folder
         else:
-            if dbfname:
-                self.out_folder = self.db['params']['out_path']
+            if self.pickle_file:
+                self.out_folder = self.pickle_file['params']['out_path']
             elif multinest_dir:
                 self.out_folder = multinest_dir
 
@@ -105,22 +120,25 @@ class taurex_plots(object):
             print('Cannot create output directory: %s' % self.out_folder)
 
             
-    def add_spectrum_instance(self,spec_instance):
-        #function adding SPECTRUM_INSTNANCE_out.pickle to self.db if exists
-        #this is required if plotting truths and it's not been specified already 
-        if 'SPECTRUM_db' in self.db:
+    def add_spectrum_instance(self, spec_instance):
+
+
+        # function adding SPECTRUM_INSTNANCE_out.pickle to self.pickle_file['SPECTRUM_db']
+        # this is required if you want to plot the truths from an external SPECTRUM_ISNTANCE_out and
+        # the output retrieval pickle does not include it already (see taurex.py par key "spectrum_db")
+        if 'SPECTRUM_db' in self.pickle_file:
             print('Instance of SPECTRUM_db already available. Will not overwrite instance.')
         else:
             with open(spec_instance,'r') as f:
                 db_tmp = pickle.load(f)
-            self.db['SPECTRUM_db'] = db_tmp 
+            self.pickle_file['SPECTRUM_db'] = db_tmp 
 #             
 
     def plot_posteriors(self, **kwargs):
 
         if self.multinest_dir:
             self._plot_posteriors_from_multinest(**kwargs)
-        elif self.db:
+        elif self.pickle_file:
             self._plot_posteriors_from_pickle(**kwargs)
 
     def _plot_posteriors_from_multinest(self):
@@ -150,25 +168,25 @@ class taurex_plots(object):
                 fig.gca().annotate(self.title, xy=(0.5, 1.0), xycoords="figure fraction",
                   xytext=(0, -5), textcoords="offset points",
                   ha="center", va="top", fontsize=14)
-        filename = os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type))
+        filename = os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.retrieval_type))
         plt.savefig(filename)
         print('Plot saved in %s' % filename)
 
     def _plot_posteriors_from_pickle(self, plot_truths=True):
 
-        if self.db:
+        if self.pickle_file:
 
-            if self.type.upper() == 'NEST':
+            if self.retrieval_type.upper() == 'NEST':
 
-                labels = self.db['fit_params_texlabels']
+                labels = self.pickle_file['fit_params_texlabels']
                 labels.append('$\mu$ (derived)')
 
-                N = len(self.db['solutions'])
+                N = len(self.pickle_file['solutions'])
 
                 # determine ranges for all solutions
-                ranges_all = np.zeros((len(self.db['solutions']), len(self.db['fit_params_names'])+1, 3))
-                for solution_idx, solution_val in enumerate(self.db['solutions']):
-                    for param_idx, param_val in enumerate(self.db['fit_params_names']):
+                ranges_all = np.zeros((len(self.pickle_file['solutions']), len(self.pickle_file['fit_params_names'])+1, 3))
+                for solution_idx, solution_val in enumerate(self.pickle_file['solutions']):
+                    for param_idx, param_val in enumerate(self.pickle_file['fit_params_names']):
                         val = solution_val['fit_params'][param_val]['value']
                         try:
                             sigma_m = solution_val['fit_params'][param_val]['sigma_m']
@@ -194,25 +212,25 @@ class taurex_plots(object):
 
                 ranges = []
                 # ranges for all fitted parameters
-                for param_idx, param_val in enumerate(self.db['fit_params_names']):
+                for param_idx, param_val in enumerate(self.pickle_file['fit_params_names']):
                     min = np.min(ranges_all[:, param_idx, 1])
                     max = np.max(ranges_all[:, param_idx, 2])
-                    if min < self.db['fit_params_bounds'][param_idx][0]:
-                        min = self.db['fit_params_bounds'][param_idx][0]
-                    if max > self.db['fit_params_bounds'][param_idx][1]:
-                        max = self.db['fit_params_bounds'][param_idx][1]
+                    if min < self.pickle_file['fit_params_bounds'][param_idx][0]:
+                        min = self.pickle_file['fit_params_bounds'][param_idx][0]
+                    if max > self.pickle_file['fit_params_bounds'][param_idx][1]:
+                        max = self.pickle_file['fit_params_bounds'][param_idx][1]
                     ranges.append((min, max))
                 # add range for mean molecular weight
                 ranges.append((np.min(ranges_all[:, param_idx+1, 1]), np.max(ranges_all[:, param_idx+1, 2])))
 
                 # build input value lists if input SPECTRUM_db is in NEST_db
-                if 'SPECTRUM_db' in self.db and plot_truths:
+                if 'SPECTRUM_db' in self.pickle_file and plot_truths:
                     truths = self.build_truths()
                 else:
                     truths = None
                   
                 figs = []
-                for solution_idx, solution_val in enumerate(self.db['solutions']):
+                for solution_idx, solution_val in enumerate(self.pickle_file['solutions']):
 
                     tracedata = solution_val['tracedata']
                     weights = solution_val['weights']
@@ -250,11 +268,11 @@ class taurex_plots(object):
                     figs.append(fig)
 
                 # grey out mean molecular weight row
-                nparams = len(self.db['fit_params_names'])
+                nparams = len(self.pickle_file['fit_params_names'])
                 for i in range((nparams+1)*nparams, (nparams+1)*nparams+nparams+1):
                     gcf().get_axes()[i].set_axis_bgcolor('#EEEEEE')
 
-                plt.savefig(os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.type)))
+                plt.savefig(os.path.join(self.out_folder, '%s%s_posteriors.pdf' % (self.prefix, self.retrieval_type)))
 
     def plot_fitted_spectrum(self, plot_contrib=True):
 
@@ -262,10 +280,11 @@ class taurex_plots(object):
         fig = plt.figure(figsize=(5.3, 3.5))
         ax = fig.add_subplot(111)
         
-        obs = self.db['obs_spectrum']
+        obs = self.pickle_file['obs_spectrum']
+
         plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
-        N = len(self.db['solutions'])
-        for solution_idx, solution_val in enumerate(self.db['solutions']):
+        N = len(self.pickle_file['solutions'])
+        for solution_idx, solution_val in enumerate(self.pickle_file['solutions']):
             if N > 1:
                 label = 'Fitted model (%i)' % (solution_idx + 1)
             else:
@@ -278,22 +297,22 @@ class taurex_plots(object):
             plot_spectrum[:,0] = fit_highres[:,0]
             plot_spectrum[:,1] = fit_highres[:,1]
             plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
-            if self.db['params']['in_opacity_method'][:4] == 'xsec':
+            if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec':
                 plot_spectrum = binspectrum(plot_spectrum, 300)
 
             plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], zorder=0,color=self.cmap(float(solution_idx)/N), label=label)
             plt.scatter(spectra[:,0], spectra[:,3], marker='d',zorder=1,**{'s': 10, 'edgecolors': 'grey','c' : self.cmap(float(solution_idx)/N) })
 
             # add sigma spread
-            if self.db['params']['out_sigma_spectrum']:
+            if self.pickle_file['params']['out_sigma_spectrum']:
 
                 plot_spectrum_std = np.zeros((len(fit_highres[:,0]), 2))
                 plot_spectrum_std[:,0] = fit_highres[:,0]
                 plot_spectrum_std[:,1] = fit_highres[:,2]
                 plot_spectrum_std = plot_spectrum_std[plot_spectrum_std[:,0].argsort(axis=0)]  # sort in wavelength
 
-                if self.db['params']['in_opacity_method'][:4] == 'xsec':
-                    plot_spectrum_std = binspectrum(plot_spectrum_std, 300)
+                if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec' and self.plot_resolution > 0:
+                    plot_spectrum_std = binspectrum(plot_spectrum_std, self.plot_resolution)
 
                 # 1 sigma
                 plt.fill_between(plot_spectrum[:,0], plot_spectrum[:,1]-plot_spectrum_std[:,1],
@@ -307,12 +326,12 @@ class taurex_plots(object):
 
         plt.xlim(np.min(obs[:,0])-0.05*np.min(obs[:,0]), np.max(obs[:,0])+0.05*np.max(obs[:,0]))
         plt.xlabel('Wavelength ($\mu$m)')
-        if self.db['params']['gen_type'] == 'emission':
+        if self.pickle_file['params']['gen_type'] == 'emission':
             plt.ylabel('$F_p/F_*$')
         else:
             plt.ylabel('$(R_p/R_*)^2$')
         # set log scale only if interval is greater than 5 micron
-        if np.max(obs[:,0]) - np.min(obs[:,1]) > 5:
+        if np.max(obs[:,0]) - np.min(obs[:,0]) > 5:
             plt.xscale('log')
             plt.tick_params(axis='x', which='minor')
             ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
@@ -321,12 +340,12 @@ class taurex_plots(object):
         if self.title:
             plt.title(self.title, fontsize=14)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum.pdf'  % (self.prefix, self.type)))
+        plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum.pdf'  % (self.prefix, self.retrieval_type)))
 
         # contribution
         if plot_contrib:
-            N = len(self.db['solutions'][0]['opacity_contrib'])
-            for solution_idx, solution_val in enumerate(self.db['solutions']):
+            N = len(self.pickle_file['solutions'][0]['opacity_contrib'])
+            for solution_idx, solution_val in enumerate(self.pickle_file['solutions']):
                 fig = plt.figure(figsize=(7,3.5))
                 ax = fig.add_subplot(111)
 
@@ -334,16 +353,16 @@ class taurex_plots(object):
                 plot_spectrum[:,0] = fit_highres[:,0]
                 plot_spectrum[:,1] = fit_highres[:,1]
                 plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
-                if self.db['params']['in_opacity_method'][:4] == 'xsec':
-                    plot_spectrum = binspectrum(plot_spectrum, 300)
+                if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec' and self.plot_resolution > 0:
+                    plot_spectrum = binspectrum(plot_spectrum, self.plot_resolution)
                 #plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], alpha=0.7, color='black', label='Fitted model')
 
                 plt.errorbar(obs[:,0], obs[:,1], obs[:,2], lw=1, color='black', alpha=0.5, ls='none', zorder=99, label='Observed')
 
-                for idx, val in enumerate(self.db['solutions'][solution_idx]['opacity_contrib']):
-                    plot_spectrum = self.db['solutions'][solution_idx]['opacity_contrib'][val]
+                for idx, val in enumerate(self.pickle_file['solutions'][solution_idx]['opacity_contrib']):
+                    plot_spectrum = self.pickle_file['solutions'][solution_idx]['opacity_contrib'][val]
                     plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
-                    if self.db['params']['in_opacity_method'][:4] == 'xsec':
+                    if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec':
                         plot_spectrum = binspectrum(plot_spectrum, 300)
                     plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], color=self.cmap(float(idx)/N), label=val)
 
@@ -352,7 +371,7 @@ class taurex_plots(object):
                 plt.ylabel('$(R_p/R_*)^2$')
                 plt.tick_params(axis='x', which='minor')
                 # set log scale only if interval is greater than 5 micron
-                if np.max(obs[:,0]) - np.min(obs[:,1]) > 5:
+                if np.max(obs[:,0]) - np.min(obs[:,0]) > 5:
                     plt.xscale('log')
                     plt.tick_params(axis='x', which='minor')
                     ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
@@ -363,15 +382,127 @@ class taurex_plots(object):
                 ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
                 if self.title:
                     plt.title(self.title, fontsize=14)
-                plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum_contrib_sol%i.pdf' % (self.prefix, self.type, solution_idx)))
+                plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum_contrib_sol%i.pdf' % (self.prefix, self.retrieval_type, solution_idx)))
+
+    def plot_forward_spectrum(self, plot_contrib=True):
+
+        if self.plot_type == 'create_spectrum':
+
+            fig = plt.figure(figsize=(5.3, 3.5))
+            ax = fig.add_subplot(111)
+
+            spectrum = self.pickle_file['data']['spectrum']
+
+            if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec' and self.plot_resolution > 0:
+                # if opacity method is xsec, reduce resolution to plot_resolution
+                spectrum = binspectrum(spectrum, self.plot_resolution)
+
+            plt.plot(spectrum[:, 0], spectrum[:, 1], lw=1, color='black', zorder=99)
+            plt.xlim(np.min(spectrum[:, 0]) - 0.05 * np.min(spectrum[:, 0]), np.max(spectrum[:, 0]) + 0.05 * np.max(spectrum[:, 0]))
+            plt.xlabel('Wavelength ($\mu$m)')
+            if self.pickle_file['params']['gen_type'] == 'emission':
+                plt.ylabel('$F_p/F_*$')
+            else:
+                plt.ylabel('$(R_p/R_*)^2$')
+
+            # set log scale only if interval is greater than 5 micron
+            if np.max(spectrum[:, 0]) - np.min(spectrum[:, 0]) > 5:
+                plt.xscale('log')
+                plt.tick_params(axis='x', which='minor')
+                ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
+                ax.xaxis.set_major_formatter(FormatStrFormatter("%i"))
+
+            plt.legend(loc='best', ncol=2, frameon=False, prop={'size': 11})
+            if self.title:
+                plt.title(self.title, fontsize=14)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum.pdf' % (self.prefix, 'SPECTRUM_PLOT')))
+
+
+            # contribution
+            if plot_contrib:
+
+                # if (self.pickle_file['params']['gen_type'] == 'transmission' and not 'transmittance' in self.pickle_file['data']) or \
+                #    (self.pickle_file['params']['gen_type'] == 'emission' and not 'contrib_func' in self.pickle_file['data']):
+                #     print('Cannot plot opacity contribution function/transmittance function as the specturm instance does not contain it')
+                #     print('Rerun create_spectrum.py with the flag --contrib_func for emission, and --trasmissivity in transmission')
+
+                N = len(self.pickle_file['data']['opacity_contrib'])
+                fig = plt.figure(figsize=(7, 3.5))
+                ax = fig.add_subplot(111)
+
+                plt.plot(spectrum[:,0], spectrum[:,1], alpha=0.7, color='black', label='Forward model')
+
+                for idx, val in enumerate(self.pickle_file['data']['opacity_contrib']):
+                    plot_spectrum = self.pickle_file['data']['opacity_contrib'][val]
+                    plot_spectrum = plot_spectrum[plot_spectrum[:, 0].argsort(axis=0)]  # sort in wavelength
+                    if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec':
+                        # if opacity method is xsec, reduce resolution to plot_resolution
+                        plot_spectrum = binspectrum(plot_spectrum, self.plot_resolution)
+                    plt.plot(plot_spectrum[:, 0], plot_spectrum[:, 1], color=self.cmap(float(idx) / N), label=val)
+
+                plt.xlim(np.min(spectrum[:, 0]) - 0.05 * np.min(spectrum[:, 0]), np.max(spectrum[:, 0]) + 0.05 * np.max(spectrum[:, 0]))
+                plt.xlabel('Wavelength ($\mu$m)')
+                plt.ylabel('$(R_p/R_*)^2$')
+                plt.tick_params(axis='x', which='minor')
+                # set log scale only if interval is greater than 5 micron
+                if np.max(spectrum[:, 0]) - np.min(spectrum[:, 0]) > 5:
+                    plt.xscale('log')
+                    plt.tick_params(axis='x', which='minor')
+                    ax.xaxis.set_minor_formatter(FormatStrFormatter("%i"))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter("%i"))
+                plt.tight_layout()
+                box = ax.get_position()
+                ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+                ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size': 11}, frameon=False)
+                if self.title:
+                    plt.title(self.title, fontsize=14)
+                plt.savefig(os.path.join(self.out_folder, '%s%s_spectrum_contrib.pdf' % (
+                self.prefix, 'SPECTRUM_PLOT')))
+
+    def plot_forward_xp(self):
+
+        # plot mixing ratio profiles
+        fig = plt.figure(figsize=(7, 7 / phi))
+        ax = fig.add_subplot(111)
+        cols_mol = {}
+        N = len(self.pickle_file['params']['atm_active_gases']) + \
+            len(self.pickle_file['params']['atm_inactive_gases'])
+
+        for mol_idx, mol_val in enumerate(self.pickle_file['params']['atm_active_gases']):
+            cols_mol[mol_val] = self.cmap(float(mol_idx) / N)
+            prof = self.pickle_file['data']['active_mixratio_profile'][mol_idx]
+            plt.plot(prof[:, 1], prof[:, 0] / 1e5,
+                     color=self.cmap(float(mol_idx) / N),
+                     label=mol_val, ls='solid')
+
+        for mol_idx, mol_val in enumerate(self.pickle_file['params']['atm_inactive_gases']):
+            prof = self.pickle_file['data']['inactive_mixratio_profile'][mol_idx]
+            plt.plot(prof[:, 1], prof[:, 0] / 1e5, color=self.cmap(
+                float(len(self.pickle_file['params']['atm_active_gases']) + mol_idx) / N), label=mol_val,
+                ls='solid')
+
+        plt.gca().invert_yaxis()
+        plt.yscale('log')
+        plt.xscale('log')
+        plt.xlim(1e-12, 3)
+        plt.xlabel('Mixing ratio')
+        plt.ylabel('Pressure (bar)')
+        plt.tight_layout()
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size': 11}, frameon=False)
+        if self.title:
+            plt.title(self.title, fontsize=14)
+        plt.savefig(os.path.join(self.out_folder, '%s%s_mixratio.pdf' % (self.prefix, 'SPECTRUM_PLOT')))
 
     def plot_fitted_tp(self):
 
         # fitted model
         fig = plt.figure(figsize=(5,3.5))
         ax = fig.add_subplot(111)
-        N = len(self.db['solutions'])
-        for solution_idx, solution_val in enumerate(self.db['solutions']):
+        N = len(self.pickle_file['solutions'])
+        for solution_idx, solution_val in enumerate(self.pickle_file['solutions']):
             if N > 1:
                 label = 'Fitted profile (%i)' % (solution_idx + 1)
             else:
@@ -381,8 +512,8 @@ class taurex_plots(object):
             plt.fill_betweenx(tp[:,0]/1e5,  tp[:,1]-tp[:,2],  tp[:,1]+tp[:,2], color=self.cmap(float(solution_idx)/N), alpha=0.5)
 
         # add input spectrum param if available
-        if 'SPECTRUM_db' in self.db:
-            tp = self.db['SPECTRUM_db']['data']['temperature_profile']
+        if 'SPECTRUM_db' in self.pickle_file:
+            tp = self.pickle_file['SPECTRUM_db']['data']['temperature_profile']
             plt.plot(tp[:,1], tp[:,0]/1e5, color='#C04F55', label='Input profile')
 
         plt.gca().invert_yaxis()
@@ -396,42 +527,42 @@ class taurex_plots(object):
         legend.get_frame().set_alpha(0.8)
         if self.title:
             plt.title(self.title, fontsize=14)
-        plt.savefig(os.path.join(self.out_folder, '%s%s_tp_profile.pdf' % (self.prefix, self.type)))
+        plt.savefig(os.path.join(self.out_folder, '%s%s_tp_profile.pdf' % (self.prefix, self.retrieval_type)))
 
     def plot_fitted_xprofiles(self):
 
         # fitted model
-        for solution_idx, solution_val in enumerate(self.db['solutions']):
+        for solution_idx, solution_val in enumerate(self.pickle_file['solutions']):
             fig = plt.figure(figsize=(7,7/phi))
             ax = fig.add_subplot(111)
-            N = len(self.db['params']['atm_active_gases']+self.db['params']['atm_inactive_gases'])
+            N = len(self.pickle_file['params']['atm_active_gases']+self.pickle_file['params']['atm_inactive_gases'])
             cols_mol = {}
-            for mol_idx, mol_val in enumerate(self.db['params']['atm_active_gases']):
+            for mol_idx, mol_val in enumerate(self.pickle_file['params']['atm_active_gases']):
                 cols_mol[mol_val] = self.cmap(float(mol_idx)/N)
                 prof = solution_val['active_mixratio_profile'][mol_idx]
                 plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], label=mol_val)
                 #plt.fill_betweenx(prof[:,0]/1e5,  prof[:,1]-prof[:,2],  prof[:,1]+prof[:,2], color=self.cmap(float(mol_idx)/N), alpha=0.5)
-            for mol_idx, mol_val in enumerate(self.db['params']['atm_inactive_gases']):
-                cols_mol[mol_val] = self.cmap(float(mol_idx+len(self.db['params']['atm_inactive_gases']))/N)
+            for mol_idx, mol_val in enumerate(self.pickle_file['params']['atm_inactive_gases']):
+                cols_mol[mol_val] = self.cmap(float(mol_idx+len(self.pickle_file['params']['atm_inactive_gases']))/N)
                 prof = solution_val['inactive_mixratio_profile'][mol_idx]
                 plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], label=mol_val)
                 #plt.fill_betweenx(prof[:,0]/1e5,  prof[:,1]-prof[:,2],  prof[:,1]+prof[:,2], color=self.cmap(float(mol_idx)/N), alpha=0.5)
 
         # add input spectrum param if available
-        if 'SPECTRUM_db' in self.db:
-            for mol_idx, mol_val in enumerate(self.db['SPECTRUM_db']['params']['atm_active_gases']):
-                prof = self.db['SPECTRUM_db']['data']['active_mixratio_profile'][mol_idx]
+        if 'SPECTRUM_db' in self.pickle_file:
+            for mol_idx, mol_val in enumerate(self.pickle_file['SPECTRUM_db']['params']['atm_active_gases']):
+                prof = self.pickle_file['SPECTRUM_db']['data']['active_mixratio_profile'][mol_idx]
                 if mol_val in cols_mol:
                     plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], ls='dashed')
                 else:
-                    plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(len(self.db['params']['atm_active_gases'])+len(self.db['params']['atm_inactive_gases'])+mol_idx)/N), label=mol_val, ls='dashed')
+                    plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(len(self.pickle_file['params']['atm_active_gases'])+len(self.pickle_file['params']['atm_inactive_gases'])+mol_idx)/N), label=mol_val, ls='dashed')
 
-            for mol_idx, mol_val in enumerate(self.db['SPECTRUM_db']['params']['atm_inactive_gases']):
-                prof = self.db['SPECTRUM_db']['data']['inactive_mixratio_profile'][mol_idx]
+            for mol_idx, mol_val in enumerate(self.pickle_file['SPECTRUM_db']['params']['atm_inactive_gases']):
+                prof = self.pickle_file['SPECTRUM_db']['data']['inactive_mixratio_profile'][mol_idx]
                 if mol_val in cols_mol:
                     plt.plot(prof[:,1], prof[:,0]/1e5, color=cols_mol[mol_val], ls='dashed')
                 else:
-                    plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(len(self.db['params']['atm_active_gases'])+len(self.db['params']['atm_inactive_gases'])+mol_idx)/N), label=mol_val, ls='dashed')
+                    plt.plot(prof[:,1], prof[:,0]/1e5, color=self.cmap(float(len(self.pickle_file['params']['atm_active_gases'])+len(self.pickle_file['params']['atm_inactive_gases'])+mol_idx)/N), label=mol_val, ls='dashed')
 
         plt.gca().invert_yaxis()
         plt.yscale('log')
@@ -445,13 +576,13 @@ class taurex_plots(object):
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
         if self.title:
             plt.title(self.title, fontsize=14)
-        plt.savefig(os.path.join(self.out_folder, '%s%s_mixratio.pdf' % (self.prefix, self.type)))
+        plt.savefig(os.path.join(self.out_folder, '%s%s_mixratio.pdf' % (self.prefix, self.retrieval_type)))
 
     def build_truths(self):
 
         truths = []
-        in_params = self.db['SPECTRUM_db']['params']
-        for param in self.db['fit_params_names']:
+        in_params = self.pickle_file['SPECTRUM_db']['params']
+        for param in self.pickle_file['fit_params_names']:
             if param in in_params['atm_active_gases']:
                 mol_idx = in_params['atm_active_gases'].index(param)
                 truths.append(in_params['atm_active_gases_mixratios'][mol_idx])

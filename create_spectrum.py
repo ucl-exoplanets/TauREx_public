@@ -260,19 +260,14 @@ if __name__ == '__main__':
                       help = 'Specify a custom file path and filename for the output spectrum instance dictionary (stored'
                              'in Python pickle format.')
 
-    parser.add_argument('--plot',
-                      dest='plot_spectrum',
-                      action='store_true',
-                      default=False,
-                      help='Display an instantanous plot after the spectrum is computed.')
-
-    parser.add_argument('--opacity_contrib',  # calculates the opacity contribution for each opacity source.
-                      dest='opacity_contrib', # stored in SPECTRUM_INSTANCE_out.pickle, so use '--save_instance' as well
-                      action='store_true',
-                      default=False,
-                      help = 'Calculates the opacity contribution for each opacity source. It computes one spectrum for '
-                             'each opacity source, suppressing the contribution from all the other sources. Stored in the instance'
-                             'dictionary (see option --save_instance) under ["data"]["opacity_contrib"][<opacity_source>]')
+    # default to true
+    # parser.add_argument('--opacity_contrib',  # calculates the opacity contribution for each opacity source.
+    #                   dest='opacity_contrib', # stored in SPECTRUM_INSTANCE_out.pickle, so use '--save_instance' as well
+    #                   action='store_true',
+    #                   default=False,
+    #                   help = 'Calculates the opacity contribution for each opacity source. It computes one spectrum for '
+    #                          'each opacity source, suppressing the contribution from all the other sources. Stored in the instance'
+    #                          'dictionary (see option --save_instance) under ["data"]["opacity_contrib"][<opacity_source>]')
 
     parser.add_argument('--contrib_func',
                       dest='contrib_func',
@@ -297,6 +292,48 @@ if __name__ == '__main__':
                        type=int,
                        help = 'Run forward model in multithreaded mode (using NTHREADS cores). NTHREADS should not '
                               'be larger than the number of cores available.')
+
+    # plotting parameters
+    parser.add_argument('--plot',
+                      dest='plot_spectrum',
+                      action='store_true',
+                      default=False,
+                      help='Display an instantanous plot after the spectrum is computed.')
+
+    parser.add_argument('--save_plots',
+                      dest='save_plots',
+                      action='store_true',
+                      default=False,
+                      help='Save a range of plots in the Output folder specified.')
+
+    parser.add_argument('--plot_profiles',
+                        action='store_true',
+                        dest='plot_profiles',
+                        default=False)
+
+    parser.add_argument('--plot_resolution',
+                        dest='plot_resolution',
+                        default=100,
+                        help='Output plot spectrum resolution. Set to 0 for native resolution.')
+
+    parser.add_argument('--plot_contrib',
+                        action='store_true',
+                        dest='plot_contrib',
+                        default=False,
+                        help='Plot the contribution of each molecule to the spectrum')
+
+    parser.add_argument('--plot_title',
+                        dest='plot_title',
+                        default=False)
+
+    parser.add_argument('--plot_prefix',
+                        dest='plot_prefix',
+                        default=False)
+
+    parser.add_argument('--plot_out_folder',
+                        dest='plot_out_folder',
+                        default=False)
+
     # add command line interface to parameter file
 
     params_tmp = parameters(mpi=False, log=False)
@@ -351,13 +388,33 @@ if __name__ == '__main__':
 
     spectrumob = create_spectrum(params=params, nthreads=options.nthreads)
 
-    spectrumob.generate_spectrum(save_instance=options.save_instance,
-                                 instance_filename=options.instance_filename,
-                                 opacity_contrib=options.opacity_contrib,
-                                 contrib_func=options.contrib_func,
-                                 transmittance=options.transmittance)
+    sp_instance = spectrumob.generate_spectrum(save_instance=options.save_instance,
+                                                 instance_filename=options.instance_filename,
+                                                 opacity_contrib=True,
+                                                 contrib_func=options.contrib_func,
+                                                 transmittance=options.transmittance)
 
     spectrumob.save_spectrum(sp_filename=options.sp_filename, pickled=options.pickle_save_sp)
+
+    # plotting
+    if options.save_plots:
+        sys.path.append('./tools')
+        from taurex_plots import taurex_plots
+
+        logging.info('Initialising plotting')
+        plot = taurex_plots(plot_type='create_spectrum',pickle_file=sp_instance, title=options.plot_title,
+                            prefix=options.plot_prefix, out_folder=options.plot_out_folder,
+                            plot_resolution=options.plot_resolution)
+
+        # plot spectrum
+        plot.plot_forward_spectrum(plot_contrib=options.plot_contrib)
+
+        # plot mixing ratio profiles
+        if options.plot_profiles:
+            plot.plot_forward_xp()
+
+            # do plot transmissivity contrib funct
+
 
     if options.plot_spectrum:
         logging.info('Plot spectrum... Close the Plot window to terminate the script.')
