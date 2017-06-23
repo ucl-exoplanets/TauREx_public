@@ -55,8 +55,8 @@ c.read_dict()
 #writing run script and submitting to queue
 for IDs in c.IDs:
     scriptname = c.generate_script(IDs)
-    os.system('qsub {}'.format(scriptname))  #script submit command for cobweb/legion
-    os.system('rm {}'.format(scriptname))
+#     os.system('qsub {}'.format(scriptname))  #script submit command for cobweb/legion
+#     os.system('rm {}'.format(scriptname))
 #     time.sleep(5)
 
 #   the equivalent if to be run on pingu

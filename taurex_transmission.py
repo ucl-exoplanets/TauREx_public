@@ -75,6 +75,6 @@ def run(params, options=False):
 
     # initiating output instance with fitted data from fitting class
     # running inteprolations with nthreads = MPIsize
-    outputob = output(fittingob, nthreads=MPIsize)
+    outputob = output(fittingob)
 
     return outputob

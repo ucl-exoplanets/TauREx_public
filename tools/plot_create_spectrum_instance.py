@@ -11,6 +11,8 @@ from matplotlib import cm
 from matplotlib import rc
 import matplotlib as mpl
 from __builtin__ import False
+from matplotlib.ticker import ScalarFormatter
+
 
 #some global matplotlib vars
 mpl.rcParams['axes.linewidth'] = 1 #set the value globally
@@ -33,7 +35,10 @@ class plot_spectrum(object):
         self.G = 6.67384e-11
         self.KBOLTZ = 1.380648813e-23
         self.cmap = cm.get_cmap('Paired')
+        self.cmap2 = cm.get_cmap('gray')
         self.BINRES = BINRES
+        
+        
         
         #reading in instance file 
         print 'reading in spectrum: {}'.format(FILENAME)
@@ -41,6 +46,15 @@ class plot_spectrum(object):
         self.read_instance_file(self.FILEIO)
         self.fn_type = self.data['params']['gen_type']
         self.highres_spec = self.data['data']['spectrum'][::-1]
+        
+        #setting xaxis bounds 
+        self.xmin = 0.4
+        self.xmax = 25.0
+        if np.min(self.highres_spec[:,0]) > self.xmin:
+            self.xmin = np.min(self.highres_spec[:,0])
+        if np.max(self.highres_spec[:,0]) < self.xmax:
+            self.xmax = np.max(self.highres_spec[:,0])
+        
         
         #binning down internal high resolution spectrum to ariel grid 
         if self.bin_spec:
@@ -109,13 +123,8 @@ class plot_spectrum(object):
         else:
             pl.plot(self.highres_spec[:,0],self.highres_spec[:,1],'k',label='high-res')
         pl.legend(loc=0)
-        xmin = 0.4
-        xmax = 25.0
-        if np.min(self.highres_spec[:,0]) > xmin:
-            xmin = np.min(self.highres_spec[:,0])
-        if np.max(self.highres_spec[:,0]) < xmax:
-            xmax = np.max(self.highres_spec[:,0])
-        pl.xlim([xmin,xmax])
+      
+        pl.xlim([self.xmin,self.xmax])
         pl.title('Spectrum')
         if self.spec_log:
             pl.xscale('log')
@@ -169,7 +178,8 @@ class plot_spectrum(object):
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
-     
+        pl.xlim([self.xmin,self.xmax])
+    
         
     def plot_tp_profile(self):
         #plotting temperature-pressure profile 
@@ -214,6 +224,54 @@ class plot_spectrum(object):
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, prop={'size':11}, frameon=False)
         pl.title('Mixing ratios', fontsize=14)
+        
+    def plot_transmittance(self):
+        
+        #getting wavelength grid 
+        wave = self.data['data']['spectrum'][:,0]
+        if wave[0] > wave[-1]:
+            wave = wave[::-1]
+        
+        #getting pressure grid 
+        pressure_alt = self.data['data']['altitude_profile']
+        pressure = pressure_alt[:,0][::-1]
+#         print(pressure)
+        
+        #getting transmittance grid
+        transmit = self.data['data']['transmittance']
+        
+        #dumping to file 
+        np.savetxt('transmittance_wave.dat',wave)
+        np.savetxt('transmittance_pressure.dat',pressure)
+        np.savetxt('transmittance.dat',transmit)
+        
+        
+        fig = pl.figure(figsize=(10,5))
+        ax = fig.add_subplot(111)
+        mesh = ax.pcolormesh(wave, pressure/1e2,transmit, cmap=cm.coolwarm)
+        
+#         pl.xlim(0.3, 50)
+#         pl.ylim(100, 1e-7)
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlabel('Wavelength ($\mu$m)')
+        ax.set_ylabel('Pressure (mbar)')
+        ax.get_xaxis().set_major_formatter(ScalarFormatter())
+        ax.invert_yaxis()
+#         pl.gca().annotate('Hot Jupiter spectral transmittance', xy=(.05, .94),
+#                 xycoords='axes fraction', color='white',
+#                 horizontalalignment='left', verticalalignment='top',
+#                 fontsize=12)
+        
+        ax.set_xlim([self.xmin,self.xmax])
+        cbar = pl.colorbar(mesh,ax=ax)
+        cbar.set_label('Transmittance')
+#         pl.savefig('Transmittance.pdf', format='pdf')
+        
+#         pl.gca().xaxis.set_ticks([0.5, 1, 5, 10, 20 , 30, 40 , 50])
+#         pl.gca().xaxis.set_ticklabels(['0.5', '1', '5', '10', '20', '30', '40', '50'])
+#         pl.gca().invert_yaxis()
+#         pl.yscale('log')
         
         
     def save_spectrum(self,OUTPATH,OUTFILE='SPECTRUM_ARIEL.dat'):
@@ -361,4 +419,9 @@ if __name__ == '__main__':
         plot_ob.plot_contributions()
     except KeyError:
         pass
+    try: 
+        plot_ob.plot_transmittance()
+    except KeyError:
+        pass
+    
     pl.show()

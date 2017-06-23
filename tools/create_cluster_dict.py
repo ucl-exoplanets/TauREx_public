@@ -41,9 +41,14 @@ from cluster import cluster
 # alpha_l = [0.0,0.25,0.5,0.75,1.0]  #emission alpha parameter gridded from 0 - 1 in RNUM steps
 # alpha_h = [1.0,0.75,0.5,0.25,0.0]
 
-datalist = glob.glob('../Input/observations/excite/*.dat')
+datalist = glob.glob('../Input/comparison/superearth_highmmw/*.dat')
 
-# print datalist
+list2 = []
+for file in datalist: 
+    list2.append(file.split('/')[-1].split('.')[0])
+
+# print(list2)
+print(datalist)
 # exit()
 
 with open('datalist.txt','wb') as ofile:
@@ -56,11 +61,11 @@ RNUM = len(datalist)
 #defining general run parameters
 GENERAL = {}
 GENERAL['NODES']      = 1
-GENERAL['CPUS']       = 32
-GENERAL['WALLTIME']   = '36:00:00'
+GENERAL['CPUS']       = 24
+GENERAL['WALLTIME']   = '30:00:00'
 GENERAL['MEMORY']     = 10
-GENERAL['PARFILE']    = 'Parfiles/excite/WASP18b.par'
-GENERAL['CLUSTER']    = 'legion'
+GENERAL['PARFILE']    = 'Parfiles/comparison/superearth_highmmw/taurex_superearth-highmmw_jwst_30.par'
+GENERAL['CLUSTER']    = 'cobweb'
 GENERAL['USERNAME']   = 'ucapipw'
 GENERAL['DISKMEM']    = 10
 
@@ -74,7 +79,7 @@ elif GENERAL['CLUSTER'] is 'cobweb':
     #cobweb directories (all must be absolute paths)
     GENERAL['DATA_DIR']   = '/share/data/ingo/repos/TauREx'
     GENERAL['SCRATCH_DIR']= '/scratch/ingo/run'
-    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/excite'
+    GENERAL['OUTPUT_DIR'] = '/share/data/ingo/taurex/comparison'
     
 
 
@@ -86,10 +91,11 @@ ID = 0
 for i in range(RNUM): #this may be changed with a more informative ID... e.g. date
     DICT[ID] = {}
     DICT[ID]['GENERAL'] = GENERAL.copy()        #different run setups per run can be provided here
-    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID)
+    DICT[ID]['GENERAL']['OUTPUT_DIR'] = GENERAL['OUTPUT_DIR']+'/{}'.format(list2[ID])
+    print('/{}'.format(list2[ID]))
     DICT[ID]['in_spectrum_file'] = datalist[i][3:]  #setting parameter for run
     if GENERAL['CLUSTER'] is 'legion':
-        DICT[ID]['out_path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(ID) #must be provided for legion but not for cobweb
+        DICT[ID]['out_path'] = GENERAL['OUTPUT_DIR']+'/{}'.format(list2[ID]) #must be provided for legion but not for cobweb
     ID += 1
 
 # ID = 0
