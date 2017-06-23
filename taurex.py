@@ -181,7 +181,8 @@ if  options.plot:
     for val in outputob.dbfilename:
         logging.info('Initialising plotting')
         dbfilename = outputob.dbfilename[val]
-        plot = taurex_plots(dbfilename, options.plot_title, options.plot_prefix, options.plot_out_folder)
+        plot = taurex_plots(pickle_file=dbfilename, title=options.plot_title, prefix=options.plot_prefix,
+                            out_folder=options.plot_out_folder)
         logging.info('Plot posterior distributions')
         plot.plot_posteriors()
         logging.info('Plot fitted spectrum')
