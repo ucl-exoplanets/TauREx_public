@@ -692,7 +692,7 @@ if __name__ == '__main__':
 
     for db_idx, db_val in enumerate(db_filenames):
 
-        plot = taurex_plots(dbfname=db_val,
+        plot = taurex_plots(pickle_fname=db_val,
                             multinest_dir = options.multinest_dir,
                             multinest_prefix = options.multinest_prefix,
                             title=options.title,
