@@ -176,6 +176,9 @@ cia_pairs = H2-H2, H2-He
 #Mie scattering, will override rayleigh opacities 
 mie = False 
 
+#Flat (grey) Mie scattering model 
+mie_flat = False
+
 #Mie scattering cloud particle size (microns)
 mie_r = 7e-5
 
@@ -254,6 +257,9 @@ fit_mie_scattering = True
 
 #fit mie cloud composition
 fit_mie_composition = False
+
+#fit mie particle size 
+fit_mie_radius = False
 
 #Mie scattering, cloud particle size prior (microns)
 mie_r_bounds = 1e-10, 10.0

@@ -191,6 +191,7 @@ class parameters(object):
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
         
         self.atm_mie                = self.getpar('Atmosphere','mie','bool')
+        self.atm_mie_flat           = self.getpar('Atmosphere', 'mie_flat','bool')
         if self.atm_mie: 
             self.atm_rayleigh = False #Mie replaces Rayleigh
         self.atm_mie_r              = self.getpar('Atmosphere','mie_r','float')
@@ -249,6 +250,9 @@ class parameters(object):
         self.fit_clouds_pressure_bounds = self.getpar('Fitting', 'clouds_pressure_bounds', 'list-float')
         
         self.fit_fit_mie                = self.getpar('Fitting', 'fit_mie', 'bool')
+        self.fit_fit_mie_composition    = self.getpar('Fitting','fit_mie_composition','bool')
+        self.fit_fit_mie_radius         = self.getpar('Fitting','fit_mie_radius','bool')
+        
         self.fit_mie_r_bounds           = self.getpar('Fitting','mie_r_bounds','list-float') 
         self.fit_mie_q_bounds           = self.getpar('Fitting','mie_q_bounds','list-float')
         self.fit_mie_f_bounds           = self.getpar('Fitting','mie_f_bounds','list-float')
@@ -257,7 +261,7 @@ class parameters(object):
         self.fit_mie_topP_bounds        = self.getpar('Fitting','mie_ptop_bounds','list-float')
         self.fit_fit_mie_cloud_bottomP  = self.getpar('Fitting','fit_mie_Pbottom','bool')
         self.fit_mie_bottomP_bounds     = self.getpar('Fitting','mie_pbottom_bounds','list-float')
-        self.fit_fit_mie_composition    = self.getpar('Fitting','fit_mie_composition','bool')
+        
         
         self.fit_ace_metallicity_bounds = self.getpar('Fitting', 'ace_metallicity_bounds', 'list-float')
         self.fit_ace_co_bounds          = self.getpar('Fitting', 'ace_co_bounds', 'list-float')
