@@ -297,8 +297,9 @@ class taurex_plots(object):
             plot_spectrum[:,0] = fit_highres[:,0]
             plot_spectrum[:,1] = fit_highres[:,1]
             plot_spectrum = plot_spectrum[plot_spectrum[:,0].argsort(axis=0)] # sort in wavelength
+            
             if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec':
-                plot_spectrum = binspectrum(plot_spectrum, 300)
+                plot_spectrum = binspectrum(plot_spectrum, self.plot_resolution)
 
             plt.plot(plot_spectrum[:,0], plot_spectrum[:,1], zorder=0,color=self.cmap(float(solution_idx)/N), label=label)
             plt.scatter(spectra[:,0], spectra[:,3], marker='d',zorder=1,**{'s': 10, 'edgecolors': 'grey','c' : self.cmap(float(solution_idx)/N) })
@@ -314,6 +315,9 @@ class taurex_plots(object):
                 if self.pickle_file['params']['in_opacity_method'][:4] == 'xsec' and self.plot_resolution > 0:
                     plot_spectrum_std = binspectrum(plot_spectrum_std, self.plot_resolution)
 
+                
+                
+                
                 # 1 sigma
                 plt.fill_between(plot_spectrum[:,0], plot_spectrum[:,1]-plot_spectrum_std[:,1],
                                  plot_spectrum[:,1]+plot_spectrum_std[:,1],
