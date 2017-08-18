@@ -86,6 +86,9 @@ class data(object):
 
         # Load CIA cross sections
         self.load_sigma_cia_dict()
+        
+        # Load MIE coefficients 
+        self.load_mie_indices()
 
         # Load Phoenix stellar model library or star blackbody
         if self.params.gen_type.upper() == 'EMISSION':
@@ -633,6 +636,30 @@ class data(object):
         del sigma_tmp, t, wno
 
         self.sigma_cia_dict = sigma_dict
+
+    def load_mie_indices(self):
+        '''
+        Loading the refractive indices (real/imaginary) for the BH Mie model. 
+        The input path is given by mie_path in parameter file. 
+        File format: 
+        #comment
+        microns nreal nimag
+        '''
+        
+        #loading file 
+        mie_raw = np.loadtxt(self.params.in_mie_path,skiprows=1)
+        
+        #interpolating to native grid 
+#         mie_interp = np.zeros((self.int_nwlgrid_native,2), dtype=np.float64, order='C')
+#         mie_interp[:,0] = np.interp(self.int_wlgrid_native[::-1],mie_raw[:,0],mie_raw[:,1]) #real
+#         mie_interp[:,1] = np.interp(self.int_wlgrid_native[::-1],mie_raw[:,0],mie_raw[:,1]) #imaginary
+        
+        #saving to memory
+        ref_name = self.params.in_mie_path.split('/')[-1].split('.')[0]
+        logging.info('Preloading Mie refractive indices for %s' % ref_name)
+        self.mie_indices = mie_raw
+
+        
 
     def load_wavenumber_grid(self):
 
