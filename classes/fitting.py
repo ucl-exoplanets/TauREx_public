@@ -632,7 +632,7 @@ class fitting(object):
             # Note that if gen_ace is True, set_altitude_gravity_scaleheight_profile is called from the
             # transmission/emission object
         if self.params.fit_fit_mie: #updates mie scattering slope
-            self.forwardmodel.atmosphere.set_sigma_mie_array()
+            self.forwardmodel.atmosphere.get_mie_opacities()
 
 
     #@profile
@@ -660,8 +660,8 @@ class fitting(object):
             res = np.nan
 
            
-#         ion()
-#         figure(1)
+        ion()
+        figure(1)
 #         clf()
 #         plot(self.forwardmodel.atmosphere.temperature_profile, self.forwardmodel.atmosphere.pressure_profile)
 #         gca().invert_yaxis()
@@ -682,7 +682,7 @@ class fitting(object):
 #         xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
 #         draw()
 #         pause(0.0001)
-# # # 
+# # # # 
 #         print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
 #             self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
 #             self.forwardmodel.atmosphere.planet_radius/RJUP), \
