@@ -4,7 +4,7 @@
  using the Bohren-Huffman Mie scattering subroutine to calculate scattering and absorption
  by a homogenous isotropic sphere.
  
- COMPILE WITH: gcc -lm bhmie.c complex.c nrutil.c -o bhmie
+ COMPILE WITH: gcc -fPIC -shared bhmie_lib.c complex.c nrutil.c -o bhmie_lib.so
  
  Enter filename: e.g., mie675.csv
  Enter complex refractive index: e.g., 1.50,0.1

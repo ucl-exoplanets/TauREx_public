@@ -122,6 +122,9 @@ class data(object):
                       'library/ACE/Md_Constantes.f90 '
                       'library/ACE/Md_Types_Numeriques.f90 library/ACE/Md_Utilitaires.f90 '
                       'library/ACE/Md_numerical_recipes.f90')
+            
+        if self.params.atm_mie and self.params.atm_mie_type == 'bh':
+            os.system('gcc -fPIC -shared library/MIE/bhmie_lib.c library/MIE/complex.c library/MIE/nrutil.c -o library/MIE/bhmie_lib.so')
 
     def get_opacity_method(self):
 
@@ -655,9 +658,10 @@ class data(object):
 #         mie_interp[:,1] = np.interp(self.int_wlgrid_native[::-1],mie_raw[:,0],mie_raw[:,1]) #imaginary
         
         #saving to memory
-        ref_name = self.params.in_mie_path.split('/')[-1].split('.')[0]
-        logging.info('Preloading Mie refractive indices for %s' % ref_name)
+        species_name = self.params.in_mie_path.split('/')[-1].split('.')[0]
+        logging.info('Preloading Mie refractive indices for %s' % species_name)
         self.mie_indices = mie_raw
+        self.mie_species = species_name
 
         
 
