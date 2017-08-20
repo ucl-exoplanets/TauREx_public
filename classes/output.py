@@ -354,7 +354,8 @@ class output(object):
             self.fitting.forwardmodel.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
             self.fitting.forwardmodel.params.atm_rayleigh = False
             self.fitting.forwardmodel.params.atm_cia = False
-            #self.fitting.forwardmodel.params.atm_clouds = False
+            self.fitting.forwardmodel.params.atm_mie = False
+            self.fitting.forwardmodel.params.atm_clouds = False
             solution['opacity_contrib'][val] = np.zeros((self.atmosphere.int_nwlgrid, 2))
             solution['opacity_contrib'][val][:,0] = self.atmosphere.int_wlgrid
             solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model(mixratio_mask=mask)

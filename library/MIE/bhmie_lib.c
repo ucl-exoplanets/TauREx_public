@@ -22,7 +22,7 @@
 #include <math.h>
 #include "complex.h"
 #include "nrutil.h"
-#define mxnang 1000	/* defines max number of angles between 0 and 90 degrees */
+#define mxnang 5000	/* defines max number of angles between 0 and 90 degrees */
 #define nmxx 3000	/* define max number of iterations */
 #define CXONE Complex(1.0, 0.0)	/* definition of complex 1 */
 #define PI 3.141592654	/* definition of PI */

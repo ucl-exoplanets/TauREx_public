@@ -619,6 +619,7 @@ class atmosphere(object):
             out= np.zeros((len(wavegrid)), dtype=np.float64, order='C')
             bhmie.compute_sigma_mie(ai,len(wavegrid),wavegrid,nreal,nimag,C.c_void_p(out.ctypes.data))
             sig_out[:,i] = out
+            del(out)
     
         #average mie cross section weighted by particle size distribution
         sig_out_aver = np.average(sig_out,weights=na_clip,axis=1)
