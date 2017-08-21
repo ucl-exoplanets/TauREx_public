@@ -562,10 +562,14 @@ class atmosphere(object):
         if self.params.atm_mie_flat:
             sigma_mie = np.ones(len(self.int_wngrid))*self.mie_f
         else:
-            wltmp = (10000./self.int_wngrid)       
-            x = 2.0 * np.pi * self.mie_r/ wltmp
+            wltmp = self.int_wlgrid #getting wavelength grid 
+            a = self.mie_r
+            wltmp *= 1e-4 #microns to cm 
+            a *= 1e-4 #microns to cm
+     
+            x = 2.0 * np.pi * a/ wltmp
             Qext = 5.0 / (self.mie_q * x**(-4.0) + x**(0.2))
-            sigma_mie = Qext * np.pi * (self.mie_r)**(2.0) * self.mie_f 
+            sigma_mie = Qext * np.pi * (a)**(2.0) * self.mie_f 
         
         return sigma_mie 
     
