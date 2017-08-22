@@ -412,6 +412,7 @@ class output(object):
         self.fitting.forwardmodel.params.atm_rayleigh = atm_rayleigh
         self.fitting.forwardmodel.params.atm_cia = atm_cia
         self.fitting.forwardmodel.params.atm_clouds = atm_clouds
+        self.fitting.forwardmodel.params.atm_mie = atm_mie
 
         return solution
 
