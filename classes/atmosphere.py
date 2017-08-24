@@ -562,10 +562,11 @@ class atmosphere(object):
     
         wltmp = self.int_wlgrid #getting wavelength grid 
         a = self.mie_r
-        wltmp *= 1e-4 #microns to cm 
-        a *= 1e-4 #microns to cm
-          
+        
         x = 2.0 * np.pi * a/ wltmp
+#         wltmp *= 1e-4 #microns to cm 
+        a *= 1e-4 #microns to cm
+       
         Qext = 5.0 / (self.mie_q * x**(-4.0) + x**(0.2))
         sigma_mie = Qext * np.pi * (a**2.0)  
         
