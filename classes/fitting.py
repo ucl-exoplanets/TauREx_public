@@ -355,8 +355,8 @@ class fitting(object):
         ##########################################################################
         # Cloud pressure
         if self.params.fit_fit_clouds_pressure:
-            self.fit_params_names.append('clouds_pressure')
-            self.fit_params_texlabels.append('$P_\mathrm{clouds}$')
+            self.fit_params_names.append('log_clouds_pressure')
+            self.fit_params_texlabels.append('$log(P_\mathrm{clouds})$')
             self.fit_params.append(np.mean((np.log10(self.params.fit_clouds_pressure_bounds[0]),
                                             np.log10(self.params.fit_clouds_pressure_bounds[1]))))
             self.fit_bounds.append((np.log10(self.params.fit_clouds_pressure_bounds[0]),
