@@ -547,7 +547,7 @@ class atmosphere(object):
         return kcoeff_array
 
     def get_sigma_rayleigh_array(self):
-        logging.info('Interpolate Ryleigh sigma array to pressure profile')
+        logging.info('Interpolate Rayleigh sigma array to pressure profile')
         sigma_rayleigh_array = np.zeros((self.nactivegases+self.ninactivegases, self.int_nwngrid))
         for mol_idx, mol_val in enumerate(self.active_gases+self.inactive_gases):
             sigma_rayleigh_array[mol_idx,:] =  self.data.sigma_rayleigh_dict[mol_val]\
