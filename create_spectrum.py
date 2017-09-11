@@ -121,7 +121,7 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = True
                 self.fmob.params.atm_cia = False
                 self.fmob.params.atm_mie = False
-                #self.fmob.params.atm_clouds = False
+                self.fmob.params.atm_clouds = False
                 instance_data['opacity_contrib']['rayleigh'] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 2))
                 instance_data['opacity_contrib']['rayleigh'][:,0] = self.fmob.atmosphere.int_wlgrid
                 instance_data['opacity_contrib']['rayleigh'][:,1] = self.fmob.model()
@@ -131,7 +131,7 @@ class create_spectrum(object):
                 self.fmob.params.atm_rayleigh = False
                 self.fmob.params.atm_cia = True
                 self.fmob.params.atm_mie = False
-                #self.fmob.params.atm_clouds = False
+                self.fmob.params.atm_clouds = False
                 instance_data['opacity_contrib']['cia'] = np.zeros((self.fmob.atmosphere.int_nwlgrid, 2))
                 instance_data['opacity_contrib']['cia'][:,0] = self.fmob.atmosphere.int_wlgrid
                 instance_data['opacity_contrib']['cia'][:,1] = self.fmob.model()
