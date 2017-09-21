@@ -383,7 +383,7 @@ if __name__ == '__main__':
                       )
     parser.add_argument('--outfile',
                         dest='out_file',
-                        default='SPECTRUM_ARIEL.dat',
+                        default='SPECTRUM_OUT.dat',
                         help='output filename'
                         )
     parser.add_argument('--outdir',

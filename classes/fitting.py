@@ -385,7 +385,7 @@ class fitting(object):
                 self.fit_bounds.append((np.log10(self.params.fit_mie_r_bounds[0]),
                                         np.log10(self.params.fit_mie_r_bounds[1])))
             
-            if self.params.fit_fit_mie_composition:
+            if self.params.fit_fit_mie_composition and self.params.atm_mie_type == 'lee':
                 self.fit_params_names.append('clouds_composition')
                 self.fit_params_texlabels.append('$Q_\mathrm{clouds}$')
                 self.fit_params.append(np.mean((self.params.fit_mie_q_bounds[0],
@@ -632,7 +632,7 @@ class fitting(object):
             # Note that if gen_ace is True, set_altitude_gravity_scaleheight_profile is called from the
             # transmission/emission object
         if self.params.fit_fit_mie: #updates mie scattering slope
-            self.forwardmodel.atmosphere.set_sigma_mie_array()
+            self.forwardmodel.atmosphere.get_mie_opacities()
 
 
     #@profile
@@ -682,7 +682,7 @@ class fitting(object):
 #         xlim((min(self.data.obs_spectrum[:,0]), max(self.data.obs_spectrum[:,0])))
 #         draw()
 #         pause(0.0001)
-# # # 
+# # # # # 
 #         print('res=%.1f - T=%.1f, mu=%.2f, R=%.4f,' % (res, self.forwardmodel.atmosphere.temperature_profile[0], \
 #             self.forwardmodel.atmosphere.mu_profile[0]/AMU, \
 #             self.forwardmodel.atmosphere.planet_radius/RJUP), \

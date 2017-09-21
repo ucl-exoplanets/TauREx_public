@@ -275,7 +275,7 @@ class atmosphere(object):
             self.mie_topP    = self.params.atm_mie_topP
             self.mie_bottomP = self.params.atm_mie_bottomP
             
-            self.sigma_mie_array = self.get_sigma_mie_array()
+            self.sigma_mie_array = self.get_mie_opacities()
 #             print self.sigma_mie_array
 #             plt.figure()
 #             plt.plot(self.sigma_mie_array)
@@ -554,27 +554,108 @@ class atmosphere(object):
                 [self.int_wngrid_idxmin:self.int_wngrid_idxmax]
         return sigma_rayleigh_array
     
-    def get_sigma_mie_array(self):
+    def get_sigma_mie_lee(self):
         ''' 
         Mie approximation, replaces rayleigh scattering. 
         Formalism taken from: Lee et al. 2013, ApJ, 778, 97
         '''
-        if self.params.atm_mie_flat:
-            sigma_mie = np.ones(len(self.int_wngrid))*self.mie_f
-        else:
-            wltmp = self.int_wlgrid #getting wavelength grid 
-            a = self.mie_r
-            x = 2.0 * np.pi * a/ wltmp
-            
-#             wltmp *= 1e-4 #microns to cm 
-            a *= 1e-4 #microns to cm
-            Qext = 5.0 / (self.mie_q * x**(-4.0) + x**(0.2))
-            sigma_mie = Qext * np.pi * (a)**(2.0) * self.mie_f 
+    
+        wltmp = self.int_wlgrid #getting wavelength grid 
+        a = self.mie_r
+        
+        x = 2.0 * np.pi * a/ wltmp
+#         wltmp *= 1e-4 #microns to cm 
+        a *= 1e-4 #microns to cm
+       
+        Qext = 5.0 / (self.mie_q * x**(-4.0) + x**(0.2))
+        sigma_mie = Qext * np.pi * (a**2.0)  
         
         return sigma_mie 
     
-    def set_sigma_mie_array(self):
-        self.sigma_mie_array = self.get_sigma_mie_array()
+    def get_sigma_mie_bh(self):
+        ''' 
+        Mie approximation replaces rayleigh scattering.
+        Calling external bhmie routine based on 
+        Bohren and Huffman (1983), Appendix A
+        Modified by B.T.Draine, Princeton Univ. Obs., 90/10/26
+        '''
+        
+        bhmie = C.CDLL('library/mie/bhmie_lib.so', mode=C.RTLD_GLOBAL) #loading MIE subroutine
+        #setting argument types 
+        bhmie.compute_sigma_mie.argtypes = [ 
+                C.c_double,
+                C.c_int,
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
+                C.c_void_p
+                ]
+        
+        wavegrid = np.ascontiguousarray(self.data.mie_indices[:,0],np.float64) 
+        nreal = np.ascontiguousarray(self.data.mie_indices[:,1],np.float64) 
+        nimag = np.ascontiguousarray(self.data.mie_indices[:,2],np.float64) 
+        
+        a = self.mie_r #particle radius
+        
+        wavegrid *= 1e-4 #micron to cm
+        a *= 1e-4 #micron to cm
+#         agrid *= 1e-4 #micron to cm
+        
+        #getting particle size distribution 
+        if self.params.atm_mie_dist_type == 'cloud':
+            agrid = np.linspace(1e-7,a*3,30) #particle size distribution micron grid
+            na = (agrid/a)**6 * np.exp((-6.0*(agrid/a)))  #earth clouds equ. 36 Sharp & Burrows 2007
+        elif self.params.atm_mie_dist_type == 'haze':
+            agrid = np.linspace(1e-7,a*15,50) #particle size distribution micron grid
+            na = agrid/a * np.exp((-2.0*(agrid/a)**0.5)) #haze distributino equ. 37 Sharp & Burrows 2007
+            
+        na /= np.max(na) #normalise into weigtings
+        na_clip = na[na>1e-3] #curtails wings
+        agrid_clip = agrid[na>1e-3]
+        
+                
+        #running Mie model for particle sizes in distribution 
+        sig_out = np.zeros((len(wavegrid),len(agrid_clip)))
+        for i,ai in enumerate(agrid_clip):
+            out= np.zeros((len(wavegrid)), dtype=np.float64, order='C')
+            bhmie.compute_sigma_mie(ai,len(wavegrid),wavegrid,nreal,nimag,C.c_void_p(out.ctypes.data))
+            sig_out[:,i] = out
+            del(out)
+    
+        #average mie cross section weighted by particle size distribution
+        sig_out_aver = np.average(sig_out,weights=na_clip,axis=1)
+        
+        #interpolating to wavelength grid and reverse order
+        sig_out_interp = np.interp(self.int_wlgrid[::-1],wavegrid*1e4,sig_out_aver)[::-1]
+   
+#         
+#         plt.figure()
+#         plt.plot(self.int_wlgrid,mie_out_interp)
+#         plt.gca().set_yscale('log')
+#         plt.gca().set_xscale('log')
+#         
+#         plt.figure()
+#         plt.plot(agrid_clip,na_clip)
+
+#         plt.show()
+#         exit()
+        
+        return sig_out_interp
+    
+    def get_mie_opacities(self):
+        '''
+        Wrapper for various Mie model types. 
+        '''
+        if self.params.atm_mie_type == 'flat':
+            sigma_mie = np.ones(self.int_nwngrid) #simple flat line
+        elif self.params.atm_mie_type == 'lee':
+            sigma_mie = self.get_sigma_mie_lee()
+        elif self.params.atm_mie_type == 'bh':
+            sigma_mie = self.get_sigma_mie_bh()
+        
+        #multiply cross section with mixing ratio             
+        self.mie_opacity = sigma_mie * self.mie_f
+  
 
     def get_sigma_cia_array(self):
         logging.info('Interpolate CIA sigma array to pressure profile')

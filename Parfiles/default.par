@@ -54,6 +54,9 @@ custom_temp_range = None
 # Path where cia pairs are stored as pickled files
 cia_path = Input/cia/HITRAN/
 
+#Mie scattering refractive indices file for bh model
+mie_path = Input/mie/MgSiO3.dat
+
 # Path to Phoenix/Atlas stellar models
 star_path = Input/star_spectra
 
@@ -176,11 +179,18 @@ cia_pairs = H2-H2, H2-He
 #Mie scattering, will override rayleigh opacities 
 mie = False 
 
-#Flat (grey) Mie scattering model 
-mie_flat = False
+#Type of mie model: flat, lee, bh
+#flat: assumes grey haze (i.e. no spectral modulation). Required parameters: mie_f
+#lee: Use fromalism from Lee et al. 2013, ApJ, 778, 97. Required parameters: mie_r, mie_f,mie_q
+#bh: Use formalism from Bohren and Huffman (1983) appendix A for homogenous and isotropic scattering of 
+#spherical particles. Required parameters: mie_r, mie_f, mie_refract, mie_dist_type
+mie_type = lee
+
+#Mie scattering particle distribution for bh model: cloud/haze
+mie_dist_type = cloud
 
 #Mie scattering cloud particle size (microns)
-mie_r = 7e-5
+mie_r = 0.01
 
 #Mie scattering cloud mixing ratio 
 mie_f = 1e-10
@@ -255,7 +265,7 @@ fit_radius = True
 #fit mie scattering 
 fit_mie_scattering = True
 
-#fit mie cloud composition
+#fit mie cloud composition. Only applicable if mie_type = lee 
 fit_mie_composition = False
 
 #fit mie particle size 
@@ -267,7 +277,7 @@ mie_r_bounds = 1e-10, 10.0
 #Mie scattering, cloud mixing ratio
 mie_f_bounds = 1e-40, 1e-4
 
-#Mie scattering, composition parameter 
+#Mie scattering, composition parameter
 mie_q_bounds = 1.0, 100.0
 
 #Mie scattering fitting top pressure 

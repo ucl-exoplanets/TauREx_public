@@ -135,6 +135,7 @@ class parameters(object):
         self.in_custom_temp_range  = self.getpar('Input','custom_temp_range', 'list-float')
 
         self.in_cia_path           = self.getpar('Input','cia_path')
+        self.in_mie_path           = self.getpar('Input','mie_path')
         self.in_star_path          = self.getpar('Input','star_path')
 
         # section Output
@@ -191,6 +192,8 @@ class parameters(object):
         self.atm_rayleigh           = self.getpar('Atmosphere','rayleigh', 'bool')
         
         self.atm_mie                = self.getpar('Atmosphere','mie','bool')
+        self.atm_mie_type           = self.getpar('Atmosphere','mie_type')
+        self.atm_mie_dist_type      = self.getpar('Atmosphere','mie_dist_type')
         self.atm_mie_flat           = self.getpar('Atmosphere', 'mie_flat','bool')
 #         if self.atm_mie: 
 #             self.atm_rayleigh = False #Mie replaces Rayleigh
