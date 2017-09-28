@@ -1,13 +1,13 @@
 [Input]
-opacity_method = xsec
-ktab_path = Input/ktables/new/R100/
-xsec_path = Input/xsec/sampling/R7000
+opacity_method = ktables
+ktab_path = Input/ktables/R100/
+xsec_path = Input/xsec/xsec_sampled_R10000_0.3-15/
 spectrum_file = tests/test_0_transmission/SPECTRUM_fit.dat
 
 [Output]
 path = tests/test_0_transmission
 sigma_spectrum = True
-sigma_spectrum_frac = 0.5
+sigma_spectrum_frac = 0.1
 
 [Star]
 radius = 1

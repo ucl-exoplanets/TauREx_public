@@ -1,6 +1,8 @@
 # TauREx version 2.5
 
-TauREx (Tau Retrieval for Exoplanets) is a fully bayesian inverse atmospheric retrieval framework. A full documentation of the code is still to come but here are installation instructions and worked examples for now. 
+TauREx (Tau Retrieval for Exoplanets) is a fully bayesian inverse atmospheric retrieval framework. 
+TauREx is a very extensive retrieval framework with a wide range of functionalities. Here are installation instructions and worked examples whilst we write a more exhaustive manual.  
+Already existing documentation can be found in the *Documentation* folder. 
 
 For any questions on how to run the code, features and bugs, please email Ingo Waldmann (ingo@star.ucl.ac.uk).
 
@@ -184,6 +186,41 @@ We will add documentation for this mode soon. If you want to use it, please just
 
 
 ### Retrieval
+Retrievals can be run in transmission and emission modes (currently this version only supports transiting planets but directly imaged planets can also be modeled)
 
+To run a retrieval on a spectrum, specify the spectrum path in the parameter file 
+
+```
+[Input]
+spectrum_file = PATH_TO_SPECTRUM
+```
+
+The spectrum file should have 3 to 4 columns: wavelength (microns), (Rp/Rs)^2 or Fp/Fs, Error, wavelength bin width (microns, optional)
+The parameter file should contain all necessary attributes to model the spectrum. We have provided examples for 30 planets in transmission in the Tsiaras et al. (2017, arXiv: ) paper. 
+The data, parameter files and corresponding retrievals can be found here: http://bit.ly/HSTDATA
+
+The /tests folder provides transmission and emission examples. To run the tranmission retrieval case: 
+
+```python
+python taurex.py -p tests/test_0_transmission/test_retrieval.par --plot
+```
+
+The --plot flag will plot a standard set of output results (posterior distirbutions, fitted spectrum, opacity contribution breakdown). To plot all available data (e.g. TP-profiles), plots can be 
+generated after the retrieval has terminated using the created nest_out.pickle files. All parameters can be specified in the parameter file or given as flags in the command line. To print available paramters:
+
+```python
+python taurex.py --help
+```
+
+To generate all available plots: 
+
+```python
+python tools/taurex_plots.py --db_dir tests/tests_0_transmission/ --plot_all
+```
+
+where --db_dir is the directory containing the nest_out.pickle file. For the data structure of the nest_out.pickle file and the data contained within, we refer you to the documentation in the *Documentation* folder.
+
+There are obviously many many topics that are not covered here, like the various temperature-pressure profile parameterisations, the various Mie and grey cloud models, Ktables and cross-sections, etc. 
+More info will be available in the upcoming documentation. Until then, please just ask me (ingo@star.ucl.ac.uk). Your questions will actually prompt me to get on with writing the manual. 
 
 
