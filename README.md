@@ -9,8 +9,12 @@ For any questions on how to run the code, features and bugs, please email Ingo W
 Waldmann et al. (2015a), “Tau-REx I: A Next Generation Retrieval Code for Exoplanetary Atmospheres”, ApJ, 802, 107
 Waldmann et al. (2015b), “Tau-REx II: Retrieval of Emission Spectra, ApJ, 813, 13
 
+---
+
 ## License: 
 This work is licensed under the Creative Commons Attribution 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+---
 
 ## Installation:
 
@@ -121,6 +125,7 @@ That’s it. Now you should be able to run TauREx.
 TauREx requires input data such as ktables/cross-sections/cia/mie etc. These cannot be provided on GitHub due to size. The required Input folder can be downloaded here: 
 http://bit.ly/2y7XkKq
 
+---
 
 ## Running TauREx
 
@@ -130,21 +135,55 @@ TauREx has two modes in which it can be run: Forward model and Retrieval.
 In the forward model mode, we can create individual spectra through either the provision of a 
 parameter file and listed abundances or C/O and metallicity, or by providing external temperature-pressure and chemical profile files. 
 
-
-#### Standard example
-
 For a standard example, we provide example parameter files in the /tests folder. 
 
+#### For a transmisison/emission case:
 
 ```python
-python create_spectrum.py -p tests/
+python create_spectrum.py -p tests/test_0_transmission/test_fm.par --plot
 ```
+The spectrum is saved as ascii in SPECTRUM_out.dat in the Output folder specified in the parameter file. 
+Note these parameter files are minimal files and modify the default parameter in Parfiles/default.par. You can add as many paramters in your minimal par file
+as required.
+
+Flags:
+-p : path to parameter file 
+--plot : creates plot of spectrum 
+--save_instance : saves the spectrum, together with other data (e.g. temperature-pressure profiles, transmissivity, etc) in a numpy pickle file. 
+
 To get a list of parameters that can be set on command line:
 
 ```python
 python create_spectrum.py --help
 ```
 
-For C/O equilibrium chemistry models 
+For the emission example, use 
+
+```python
+python create_spectrum.py -p tests/test_0_emission/test_fm.par --plot
+```
+
+#### For C/O equilibrium chemistry models 
+
+TauREx uses the Atmospheric Chemical Equilibrium (ACE) model (Agundez et al. 2012, A&A, 548, A73) using the thermochemical data by Venot et al (2012, A&A,546,A43).
+To run the C/O forward model:
+
+```python
+python create_spectrum.py -p tests/test_0_transmission_ace/test_fm.par --plot
+```
 
 #### External input files 
+
+External input files for temperature-pressure profiles and chemical abundance profiles can be provided using the following routine
+
+```python
+create_spectrum_chemprofile.py
+```
+
+We will add documentation for this mode soon. If you want to use it, please just email ingo@star.ucl.ac.uk for now.
+
+
+### Retrieval
+
+
+
