@@ -120,6 +120,18 @@ Finally, add the multinest libraries to your LD_LIBRARY_PATH variable. Best is i
 export LD_LIBRARY_PATH=/usr/local/multinest/lib:$LD_LIBRARY_PATH
 ```
 
+Finally, the TauREx C++ and fortran libraries need to be compiled. In the /library folder 
+
+```
+sh comipile.sh
+```
+
+Optional: if the chemical equilibrium model is required, it must be compiled separately first. In the /library/ACE folder
+
+```
+gfortran -shared -fPIC  -o ACE.so Md_ACE.f90 Md_Constantes.f90 Md_Types_Numeriques.f90 Md_Utilitaires.f90 Md_numerical_recipes.f90
+```
+
 That’s it. Now you should be able to run TauREx. 
 
 ## Adding Input folder data
