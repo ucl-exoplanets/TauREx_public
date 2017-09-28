@@ -139,6 +139,10 @@ That’s it. Now you should be able to run TauREx.
 TauREx requires input data such as ktables/cross-sections/cia/mie etc. These cannot be provided on GitHub due to size. The required Input folder can be downloaded here: 
 http://bit.ly/2y7XkKq
 
+## Downloading from Dropbox
+
+Alternatively, you can download the full code with its Input files in place from here: http://bit.ly/2wmPjMV
+
 ---
 
 ## Running TauREx
