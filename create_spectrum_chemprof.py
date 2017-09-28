@@ -1,7 +1,7 @@
 #! /usr/bin/python 
 
 '''
-TauREx script to read-in and caluclate Olivia Venot type chemical profile and 
+TauREx script to read-in and caluclate chemical profile and 
 temperature-pressure files and to create a forward model. 
 '''
 import sys

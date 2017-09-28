@@ -5,8 +5,8 @@ wavemax = 10.
 
 [Input]
 opacity_method = ktables
-ktab_path = Input/ktables/new/R100/
-xsec_path = Input/xsec/sampling/R7000
+ktab_path = Input/ktables/R100/
+xsec_path = Input/xsec/xsec_sampled_R10000_0.3-15/
 cia_path = Input/cia/HITRAN/
 
 [Output]
@@ -20,7 +20,7 @@ radius = 1
 mass = 1
 
 [Atmosphere]
-nlayers = 30
+nlayers = 100
 max_pressure = 1e6
 min_pressure = 1e-5
 tp_type = isothermal
@@ -37,5 +37,5 @@ cia_pairs = H2-H2, H2-He
 rayleigh = True
 cia = True
 
-clouds = True
+clouds = False
 clouds_pressure = 0.001

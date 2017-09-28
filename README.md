@@ -5,14 +5,14 @@ TauREx (Tau Retrieval for Exoplanets) is a fully bayesian inverse atmospheric re
 For any questions on how to run the code, features and bugs, please email Ingo Waldmann (ingo@star.ucl.ac.uk).
 
 
-### References:
+## References:
 Waldmann et al. (2015a), “Tau-REx I: A Next Generation Retrieval Code for Exoplanetary Atmospheres”, ApJ, 802, 107
 Waldmann et al. (2015b), “Tau-REx II: Retrieval of Emission Spectra, ApJ, 813, 13
 
-### License: 
+## License: 
 This work is licensed under the Creative Commons Attribution 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
-### Installation:
+## Installation:
 
 These are some preliminary sets of instructions to install TauREx on your system. They are very Mac centric but most of it should apply to a linux installation as well. To install things easily and smoothly for Mac, I strongly recommend to use macports (https://www.macports.org). For ubuntu, most of the work will be the same using apt-get but the individual commands will obviously be different. 
 
@@ -116,4 +116,35 @@ export LD_LIBRARY_PATH=/usr/local/multinest/lib:$LD_LIBRARY_PATH
 
 That’s it. Now you should be able to run TauREx. 
 
+## Adding Input folder data
 
+TauREx requires input data such as ktables/cross-sections/cia/mie etc. These cannot be provided on GitHub due to size. The required Input folder can be downloaded here: 
+http://bit.ly/2y7XkKq
+
+
+## Running TauREx
+
+TauREx has two modes in which it can be run: Forward model and Retrieval. 
+
+### Forward model
+In the forward model mode, we can create individual spectra through either the provision of a 
+parameter file and listed abundances or C/O and metallicity, or by providing external temperature-pressure and chemical profile files. 
+
+
+#### Standard example
+
+For a standard example, we provide example parameter files in the /tests folder. 
+
+
+```python
+python create_spectrum.py -p tests/
+```
+To get a list of parameters that can be set on command line:
+
+```python
+python create_spectrum.py --help
+```
+
+For C/O equilibrium chemistry models 
+
+#### External input files 
