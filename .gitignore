@@ -13,6 +13,9 @@ setup.sh
 .settings
 test-code/
 Input/
+Parfiles/
+gpu_all_complete_nf_high_wasp76b_submit.sh
+nodes
 Preselector/
 backup/
 Output/
