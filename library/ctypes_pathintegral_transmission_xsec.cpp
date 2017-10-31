@@ -203,72 +203,75 @@ extern "C" {
          }
 
         // calculate absorption
-        #pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
-        for (int wn=0; wn < nwngrid; wn++) {
-            count = 0;
-            integral = 0.0;
-            //cout << " integral 0 " << integral << endl;
-            //cout << " count 0 " << count << endl;
-    		for (int j=0; j<(nlayers); j++) { 	// loop through atmosphere layers, z[0] to z[nlayers]
-    			tautmp = 0.0;
-                if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
-                    //cout << j << " YES " << pressure[j] << endl;
-                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                        count += 1;
-                    }
-                    //exptau = exp(-tautmp);
-                    integral += ((planet_radius+z[j])*(1.0)*dz[j]);
-                    tau[wn + j*nwngrid] = 1.0;
-                    //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
-                } else {
-                    //cout << j << " NO " << pressure[j] << endl;
+        //#pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
+        #pragma acc kernels
+        {
+            for (int wn=0; wn < nwngrid; wn++) {
+                count = 0;
+                integral = 0.0;
+                //cout << " integral 0 " << integral << endl;
+                //cout << " count 0 " << count << endl;
+                for (int j=0; j<(nlayers); j++) {     // loop through atmosphere layers, z[0] to z[nlayers]
+                    tautmp = 0.0;
+                    if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
+                        //cout << j << " YES " << pressure[j] << endl;
+                        for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                            count += 1;
+                        }
+                        //exptau = exp(-tautmp);
+                        integral += ((planet_radius+z[j])*(1.0)*dz[j]);
+                        tau[wn + j*nwngrid] = 1.0;
+                        //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
+                    } else {
+                        //cout << j << " NO " << pressure[j] << endl;
 
-                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                        for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
 
 
-                        // calculate optical depth due to clouds
-                        // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
-                        for (int l=0;l<nactive;l++) {
-                            sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
-                            tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
-                            //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
-                            //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
+                            // calculate optical depth due to clouds
+                            // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
+                            for (int l=0;l<nactive;l++) {
+                                sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
+                                tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
+                                //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
+                                //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
+                                if (rayleigh == 1) {
+                                    tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                }
+                            }
+
+                            // calculating optical depth due inactive gases (rayleigh scattering)
                             if (rayleigh == 1) {
-                                tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                for (int l=0; l<ninactive; l++) {
+                                    //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
+                                    //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                    tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                }
                             }
-                        }
+                            // calculating optical depth due to collision induced absorption
+                            if (cia == 1) {
+                                for (int c=0; c<cia_npairs;c++) {
+                                    tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
+                                }
+                            }
+                            //calculating mie scattering model
+                            if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
+                                tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
+                            }
 
-                        // calculating optical depth due inactive gases (rayleigh scattering)
-                        if (rayleigh == 1) {
-                            for (int l=0; l<ninactive; l++) {
-                                //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
-                                //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                                tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                            }
+                            count += 1;
                         }
-                        // calculating optical depth due to collision induced absorption
-                        if (cia == 1) {
-                            for (int c=0; c<cia_npairs;c++) {
-                                tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
-                            }
-                        }
-                        //calculating mie scattering model
-                        if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
-                        	tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
-                        }
-
-                        count += 1;
+                        exptau = exp(-tautmp);
+                        integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
+                        tau[wn + j*nwngrid] =  exptau;
+                        //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
                     }
-                    exptau = exp(-tautmp);
-                    integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
-                    tau[wn + j*nwngrid] =  exptau;
-                    //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
                 }
+                integral *= 2.0;
+                //cout << integral << endl;
+                absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
+                //cout << wn << " " << absorption[wn] << endl;
             }
-            integral *= 2.0;
-            //cout << integral << endl;
-            absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
-            //cout << wn << " " << absorption[wn] << endl;
         }
 //        cout << "END" << endl;
 
