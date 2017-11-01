@@ -204,6 +204,10 @@ extern "C" {
 
         // calculate absorption
         //#pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
+        #pragma acc data copyin(nwngrid,nlayers,clouds,pressure,cloud_topP,\
+        planet_radius,z,dz,tau,nactive,sigma_interp,active_mixratio,density,\
+        dlarray,rayleigh,ninactive,inactive_mixratio,cia,cia_npairs,sigma_cia,\
+        x1_idx,x2_idx,miemie_topP,mie_bottomP,sigma_mie) copyout(absorption)
         #pragma acc kernels
         {
             for (int wn=0; wn < nwngrid; wn++) {
