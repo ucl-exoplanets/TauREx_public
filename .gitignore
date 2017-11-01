@@ -5,6 +5,8 @@
 *.so
 *.mod
 *.o
+library/compile_new.sh
+.gitignore
 setup.sh
 .metadata/
 .project
