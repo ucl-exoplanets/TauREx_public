@@ -131,13 +131,17 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
-                            for (int wn=0; wn<nwngrid; wn++) {
-                                for (int l=0;l<nactive;l++) {
-                                    sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
-                                    sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
-                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
-                                    sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                            
+                            #pragma acc kernels
+                            {
+                            #pragma acc loop tile(32,4) device_type(nvidia)
+                                for (int wn=0; wn<nwngrid; wn++) {
+                                    for (int l=0;l<nactive;l++) {
+                                        sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
+                                        sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
+                                        sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                                    }
                                 }
                             }
                         }
@@ -170,13 +174,16 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_cia_ntemp; t++) {
                         if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-                            #pragma omp parallel for private(sigma_l, sigma_r, sigma)
-                            for (int wn=0; wn<nwngrid; wn++) {
-                                for (int l=0;l<cia_npairs;l++) {
-                                    sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
-                                    sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
-                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                            #pragma acc kernels
+                            {
+                            #pragma acc loop tile(32,4) device_type(nvidia)
+                                for (int wn=0; wn<nwngrid; wn++) {
+                                    for (int l=0;l<cia_npairs;l++) {
+                                        sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                                        sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                                        sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
+                                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                                    }
                                 }
                             }
                         }
@@ -204,9 +211,9 @@ extern "C" {
 
         // calculate absorption
         //#pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
-        #pragma acc data copyin(nwngrid,nlayers,clouds,pressure,cloud_topP,planet_radius,z,dz,tau,nactive,sigma_interp,active_mixratio,density,dlarray,rayleigh,ninactive,inactive_mixratio,cia,cia_npairs,sigma_cia,x1_idx,x2_idx,mie,mie_topP,mie_bottomP,sigma_mie) copyout(absorption)
         #pragma acc kernels
         {
+        #pragma acc loop tile(32,4) device_type(nvidia)
             for (int wn=0; wn < nwngrid; wn++) {
                 count = 0;
                 integral = 0.0;
