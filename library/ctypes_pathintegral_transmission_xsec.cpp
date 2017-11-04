@@ -131,7 +131,8 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-                            
+                            #pragma acc data copyin(nwngrid,nactive,sigma_ntemp,nlayers,temperature,sigma_temp)
+                            #pragma acc data copyout(sigma_interp)
                             #pragma acc kernels
                             {
                             #pragma acc loop tile(32,4) device_type(nvidia)
@@ -174,6 +175,8 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_cia_ntemp; t++) {
                         if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                            #pragma acc data copyin(nwngrid,npairs,sigma_cia_ntemp,nlayers,temperature,sigma_cia_temp)
+                            #pragma acc data copyout(sigma_cia_interp)
                             #pragma acc kernels
                             {
                             #pragma acc loop tile(32,4) device_type(nvidia)
@@ -211,6 +214,11 @@ extern "C" {
 
         // calculate absorption
         //#pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
+        #pragma acc data copyin(nwngrid,nlayers,clouds,pressure,cloud_topP,planet_radius,star_radius)
+        #pragma acc data copyin(dz,tau,nactive,sigma_interp,active_mixratio,density,dlarray)
+        #pragma acc data copyin(rayleigh,sigma_rayleigh,ninactive,inactive_mixratio,cia)
+        #pragma acc data copyin(cia_npairs,sigma_cia,x1_idx,x2_idx,mie,mie_topP,mie_bottomP,sigma_mie)
+        #pragma acc data create(exptau,integral,tau,absorption)
         #pragma acc kernels
         {
         #pragma acc loop tile(32,4) device_type(nvidia)
