@@ -15,6 +15,10 @@
 
              icc -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
              icc -fPIC -shared -openmp -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+ 
+    For a PGI compiler debugging:
+ 
+             pgc++ -fast -ta=tesla -Minfo=all ctypes_pathintegral_transmission_xsec.cpp
 
  */
 
@@ -81,9 +85,8 @@ extern "C" {
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
         double tautmp, exptau,  integral;
-        double cld_factor, cld_rho;
         double p;
-        int count, count2, t_idx;
+        int count;
 
         //dz array
         for (int j=0; j<(nlayers); j++) {
@@ -175,7 +178,7 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_cia_ntemp; t++) {
                         if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-                            #pragma acc data copyin(nwngrid,npairs,sigma_cia_ntemp,nlayers,temperature,sigma_cia_temp)
+                            #pragma acc data copyin(nwngrid,cia_npairs,sigma_cia_ntemp,nlayers,temperature,sigma_cia_temp)
                             #pragma acc data copyout(sigma_cia_interp)
                             #pragma acc kernels
                             {
@@ -217,7 +220,9 @@ extern "C" {
         #pragma acc data copyin(nwngrid,nlayers,clouds,pressure,cloud_topP,planet_radius,star_radius)
         #pragma acc data copyin(dz,tau,nactive,sigma_interp,active_mixratio,density,dlarray)
         #pragma acc data copyin(rayleigh,sigma_rayleigh,ninactive,inactive_mixratio,cia)
-        #pragma acc data copyin(cia_npairs,sigma_cia,x1_idx,x2_idx,mie,mie_topP,mie_bottomP,sigma_mie)
+        #pragma acc data copyin(cia_npairs,sigma_cia)
+//        #pragma acc data copyin(x1_idx,x2_idx)
+        #pragma acc data copyin(mie,mie_topP,mie_bottomP,sigma_mie)
         #pragma acc data create(exptau,integral,tau,absorption)
         #pragma acc kernels
         {
