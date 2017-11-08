@@ -16,6 +16,7 @@ setup.sh
 test-code/
 Input/
 Parfiles/
+Hubble_Retrievals/
 gpu_all_complete_nf_high_wasp76b_submit.sh
 nodes
 Preselector/
