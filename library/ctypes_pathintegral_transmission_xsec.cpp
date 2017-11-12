@@ -136,8 +136,8 @@ extern "C" {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
 // #pragma omp parallel for private(sigma_l, sigma_r, sigma)
-#pragma acc data copy(sigma_l,sigma_r,sigma,sigma_interp[nwngrid*nlayers*nactive])
-#pragma acc kernels
+//                            #pragma acc data copy(sigma_l,sigma_r,sigma,sigma_interp[nwngrid*nlayers*nactive])
+                            #pragma acc kernels
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<nactive;l++) {
                                     sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
@@ -177,8 +177,8 @@ extern "C" {
                     for (int t=1; t<sigma_cia_ntemp; t++) {
                         if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
 // #pragma omp parallel for private(sigma_l, sigma_r, sigma)
-#pragma acc data copy(sigma_l,sigma_r,sigma,sigma_cia_interp[nwngrid * nlayers * cia_npairs])
-#pragma acc kernels
+//                            #pragma acc data copy(sigma_l,sigma_r,sigma,sigma_cia_interp[nwngrid * nlayers * cia_npairs])
+                            #pragma acc kernels
                             for (int wn=0; wn<nwngrid; wn++) {
                                 for (int l=0;l<cia_npairs;l++) {
                                     sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
@@ -244,37 +244,59 @@ extern "C" {
                         
                         // calculate optical depth due to clouds
                         // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
+//                        #pragma acc data copyin(nactive,sigma_interp[:nwngrid],nwngrid,nlayers)
+//                        #pragma acc data copyin(active_mixratio[k+j+nlayers*nactive],density[nlayers], dlarray[nlayers*nlayers])
+//                        #pragma acc data copyin(rayleigh, sigma_rayleigh[:nwngrid])
+//                        #pragma acc data copy(tautmp, sigma)
                         #pragma acc kernels
-                        for (int l=0;l<nactive;l++) {
-                            sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
-                            tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
-                            //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
-                            //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
-                            if (rayleigh == 1) {
-                                tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                        {
+                            for (int l=0;l<nactive;l++) {
+                                sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
+                                tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
+                                //cout << " j " << j  << " k " << k  << " count " << count << " sigma " << sigma << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << " tau " << (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]) << endl;
+                                //cout << " j " << j  << " k " << k  << " count " << count << " sigma_rayleigh " << sigma_rayleigh[wn + nwngrid*l] << " active_mixratio " << active_mixratio[k+j+nlayers*l] << " density " << density[k+j] << " dlarray " << dlarray[count] << endl;
+                                if (rayleigh == 1) {
+                                    tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                }
                             }
                         }
                         
                         // calculating optical depth due inactive gases (rayleigh scattering)
+//                        #pragma acc data copyin(rayleigh, ninactive, sigma_rayleigh[:nwngrid], wn, nwngrid)
+//                        #pragma acc data copyin(inactive_mixratio[k+j+nlayers*nactive], density[:nlayers], dlarray[nlayers*nlayers])
+//                        #pragma acc data copy(tautmp)
                         #pragma acc kernels
-                        if (rayleigh == 1) {
-                            for (int l=0; l<ninactive; l++) {
-                                //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
-                                //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                                tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                        {
+                            if (rayleigh == 1) {
+                                for (int l=0; l<ninactive; l++) {
+                                    //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
+                                    //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                    tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                }
                             }
                         }
                         // calculating optical depth due to collision induced absorption
+//                        #pragma acc data copyin(cia, cia_npairs, sigma_cia[wn+ nwngrid*cia_npairs])
+//                        #pragma acc data copyin(x1_idx[k+j], x2_idx[k+j])
+//                        #pragma acc data copyin(density[nlayers], dlarray[nlayers*nlayers])
+//                        #pragma acc data copy(tautmp)
                         #pragma acc kernels
-                        if (cia == 1) {
-                            for (int c=0; c<cia_npairs;c++) {
-                                tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
+                        {
+                            if (cia == 1) {
+                                for (int c=0; c<cia_npairs;c++) {
+                                    tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
+                                }
                             }
                         }
                         //calculating mie scattering model
+//                        #pragma acc data copyin(mie, pressure[nlayers], mie_topP, pressure[nlayers], mie_bottomP)
+//                        #pragma acc data copyin(sigma_mie[nwngrid], density[nlayers], dlarray[nlayers*nlayers])
+//                        #pragma acc data copy(tautmp)
                         #pragma acc kernels
-                        if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
-                            tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
+                        {
+                            if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
+                                tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
+                            }
                         }
                         
                         count += 1;
