@@ -1,10 +1,13 @@
 #!/bin/bash
 
 # Compile supporting libraries
+# compilers: g++, pgc++
 
+# openACC flag: -fopenacc
+# openMP flag: -fopenmp
 
-COMPILER=g++
-OPENMP_FLAG=-fopenamp
+COMPILER=pgc++
+FLAG=-fopenacc
 
 # COMPILER=icc
 # OPENMP_FLAG=-openmp
@@ -14,7 +17,7 @@ OPENMP_FLAG=-fopenamp
 # $COMPILER -fPIC -shared $OPENMP_FLAG -o ctypes_pathintegral_transmission_ktab.so ctypes_pathintegral_transmission_ktab.cpp
 
 # transmission, xsec
-$COMPILER -fPIC -shared -fopenacc -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+$COMPILER -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
 
 # emission, xsec
 # $COMPILER -fPIC -shared $OPENMP_FLAG -o ctypes_pathintegral_emission.so ctypes_pathintegral_emission.cpp

@@ -135,15 +135,19 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_ntemp; t++) {
                         if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-// #pragma omp parallel for private(sigma_l, sigma_r, sigma)
-//                            #pragma acc data copy(sigma_l,sigma_r,sigma,sigma_interp[nwngrid*nlayers*nactive])
-                            #pragma acc kernels
-                            for (int wn=0; wn<nwngrid; wn++) {
-                                for (int l=0;l<nactive;l++) {
-                                    sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
-                                    sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
-                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
-                                    sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+
+                            #pragma acc data copyin(sigma_interp[nwngrid],sigma_array[nwngrid],sigma_temp[t-1:2],temperature[j])
+                            #pragma acc region
+                            {
+                                #pragma acc loop independent vector(16)
+                                for (int wn=0; wn<nwngrid; wn++) {
+                                    #pragma acc loop independent vector(16)
+                                    for (int l=0;l<nactive;l++) {
+                                        sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
+                                        sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
+                                        sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                                    }
                                 }
                             }
                         }
@@ -176,15 +180,18 @@ extern "C" {
                 } else {
                     for (int t=1; t<sigma_cia_ntemp; t++) {
                         if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-// #pragma omp parallel for private(sigma_l, sigma_r, sigma)
-//                            #pragma acc data copy(sigma_l,sigma_r,sigma,sigma_cia_interp[nwngrid * nlayers * cia_npairs])
-                            #pragma acc kernels
-                            for (int wn=0; wn<nwngrid; wn++) {
-                                for (int l=0;l<cia_npairs;l++) {
-                                    sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
-                                    sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                                    sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
-                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                            #pragma acc data copyin(sigma_interp[nwngrid],sigma_cia_interp[nwngrid],sigma_cia[nwngrid],temperature[j],sigma_cia_temp[t-1:2])
+                            #pragma acc region
+                            {
+                                #pragma acc loop independent vector(16)
+                                for (int wn=0; wn<nwngrid; wn++) {
+                                    #pragma acc loop independent vector(16)
+                                    for (int l=0;l<cia_npairs;l++) {
+                                        sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                                        sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                                        sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
+                                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                                    }
                                 }
                             }
                         }
@@ -209,26 +216,14 @@ extern "C" {
                 }
             }
         }
-// calculate absorption
-// #pragma omp parallel for schedule(dynamic) private(tautmp, sigma, count, integral, exptau)
-//#pragma acc data copyin(tautmp, sigma, count, integral, exptau)
-//#pragma acc data copyin(nwngrid, nlayers, clouds, pressure[:nlayers], cloud_topP)
-//#pragma acc data copyin(planet_radius, dz[:nlayers])
-//#pragma acc data copyin(sigma_interp[:nwngrid], active_mixratio[:nlayers], density[:nlayers], dlarray[:nlayers*nlayers])
-//#pragma acc data copyin(rayleigh, sigma_rayleigh[:nwngrid])
-//#pragma acc data copyin(cia, sigma_cia[:nwngrid], mie, mie_topP, mie_bottomP, sigma_mie[:nwngrid])
-//#pragma acc data copyout(tau[:nwngrid], absorption[:nwngrid])
-
+        // calculate absorption
         for (int wn=0; wn < nwngrid; wn++) {
             count = 0;
             integral = 0.0;
-            //cout << " integral 0 " << integral << endl;
-            //cout << " count 0 " << count << endl;
 
             for (int j=0; j<(nlayers); j++) {     // loop through atmosphere layers, z[0] to z[nlayers]
                 tautmp = 0.0;
                 if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
-                    //cout << j << " YES " << pressure[j] << endl;
                     for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
                         count += 1;
                     }
@@ -244,10 +239,7 @@ extern "C" {
                         
                         // calculate optical depth due to clouds
                         // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
-//                        #pragma acc data copyin(nactive,sigma_interp[:nwngrid],nwngrid,nlayers)
-//                        #pragma acc data copyin(active_mixratio[k+j+nlayers*nactive],density[nlayers], dlarray[nlayers*nlayers])
-//                        #pragma acc data copyin(rayleigh, sigma_rayleigh[:nwngrid])
-//                        #pragma acc data copy(tautmp, sigma)
+                        #pragma acc data copyin(dlarray[count],density[j+k],sigma_rayleigh[nwngrid],sigma_interp[nwngrid],active_mixratio[nwngrid])
                         #pragma acc kernels
                         {
                             for (int l=0;l<nactive;l++) {
@@ -262,9 +254,7 @@ extern "C" {
                         }
                         
                         // calculating optical depth due inactive gases (rayleigh scattering)
-//                        #pragma acc data copyin(rayleigh, ninactive, sigma_rayleigh[:nwngrid], wn, nwngrid)
-//                        #pragma acc data copyin(inactive_mixratio[k+j+nlayers*nactive], density[:nlayers], dlarray[nlayers*nlayers])
-//                        #pragma acc data copy(tautmp)
+                        #pragma acc data copyin(sigma_rayleigh[nwngrid],inactive_mixratio[nwngrid],dlarray[count],density[j+k])
                         #pragma acc kernels
                         {
                             if (rayleigh == 1) {
@@ -276,10 +266,7 @@ extern "C" {
                             }
                         }
                         // calculating optical depth due to collision induced absorption
-//                        #pragma acc data copyin(cia, cia_npairs, sigma_cia[wn+ nwngrid*cia_npairs])
-//                        #pragma acc data copyin(x1_idx[k+j], x2_idx[k+j])
-//                        #pragma acc data copyin(density[nlayers], dlarray[nlayers*nlayers])
-//                        #pragma acc data copy(tautmp)
+                        #pragma acc data copyin(density[j+k],dlarray[count],sigma_cia[nwngrid])
                         #pragma acc kernels
                         {
                             if (cia == 1) {
@@ -289,9 +276,6 @@ extern "C" {
                             }
                         }
                         //calculating mie scattering model
-//                        #pragma acc data copyin(mie, pressure[nlayers], mie_topP, pressure[nlayers], mie_bottomP)
-//                        #pragma acc data copyin(sigma_mie[nwngrid], density[nlayers], dlarray[nlayers*nlayers])
-//                        #pragma acc data copy(tautmp)
                         #pragma acc kernels
                         {
                             if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
