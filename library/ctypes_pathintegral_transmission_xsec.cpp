@@ -111,137 +111,176 @@ extern "C" {
                 count += 1;
             }
         }
-        // interpolate sigma array to the temperature profile
-        for (int j=0; j<nlayers; j++) {
-            if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
-                for (int wn=0; wn<nwngrid; wn++) {
-                    for (int l=0;l<nactive;l++) {
-                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
-                    }
-                }
-            } else if (temperature[j] < sigma_temp[0]) {
-                for (int wn=0; wn<nwngrid; wn++) {
-                    for (int l=0;l<nactive;l++) {
-                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
-                    }
-                }
-            } else {
-                if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
-                    for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<nactive;l++) {
-                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
-                        }
-                    }
-                } else {
-                    for (int t=1; t<sigma_ntemp; t++) {
-                        if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
-
-                            #pragma acc data copyin(sigma_interp[nwngrid],sigma_array[nwngrid],sigma_temp[t-1:2],temperature[j])
-                            #pragma acc region
-                            {
-                                #pragma acc loop independent vector(16)
-                                for (int wn=0; wn<nwngrid; wn++) {
-                                    #pragma acc loop independent vector(16)
-                                    for (int l=0;l<nactive;l++) {
-                                        sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
-                                        sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
-                                        sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
-                                        sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
-                                    }
-                                }
+        #pragma acc declare copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
+//        #pragma acc declare copyin(x1_idx[:cia_npairs][:nlayers],x2_idx[:cia_npairs][:nlayers])
+        #pragma acc declare copyout(tau[nwngrid], absorption[nwngrid])
+        #pragma acc declare copyin(sigma_rayleigh[nwngrid],active_mixratio[nwngrid])
+        #pragma acc declare copyin(inactive_mixratio[nwngrid], dlarray[nlayers*nlayers])
+        #pragma acc declare copyin(density[nlayers],x1_idx[cia_npairs],x2_idx[cia_npairs])
+        {
+            // interpolate sigma array to the temperature profile
+            for (int j=0; j<nlayers; j++) {
+                if (temperature[j] > sigma_temp[sigma_ntemp-1]) {
+                    #pragma acc region
+                    {
+                        #pragma acc loop independent vector
+                        for (int wn=0; wn<nwngrid; wn++) {
+                            #pragma acc loop independent vector
+                            for (int l=0;l<nactive;l++) {
+                                sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp-1 + sigma_ntemp*(j + l*nlayers))];
                             }
                         }
                     }
-                }
-            }
-        }
-    
-        // interpolate sigma CIA array to the temperature profile
-        for (int j=0; j<nlayers; j++) {
-            if (sigma_cia_ntemp == 1) { //
-                for (int wn=0; wn<nwngrid; wn++) {
-                    for (int l=0;l<cia_npairs;l++) {
-                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
-                    }
-                }
-            } else {
-                if (temperature[j] > sigma_cia_temp[sigma_cia_ntemp-1]) {
-                    for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<cia_npairs;l++) {
-                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp-1 + sigma_cia_ntemp*l)];
-                        }
-                    }
-                } else if  (temperature[j] <  sigma_cia_temp[0]) {
-                    for (int wn=0; wn<nwngrid; wn++) {
-                        for (int l=0;l<cia_npairs;l++) {
-                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
-                        }
-                    }
-                } else {
-                    for (int t=1; t<sigma_cia_ntemp; t++) {
-                        if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
-                            #pragma acc data copyin(sigma_interp[nwngrid],sigma_cia_interp[nwngrid],sigma_cia[nwngrid],temperature[j],sigma_cia_temp[t-1:2])
-                            #pragma acc region
-                            {
-                                #pragma acc loop independent vector(16)
-                                for (int wn=0; wn<nwngrid; wn++) {
-                                    #pragma acc loop independent vector(16)
-                                    for (int l=0;l<cia_npairs;l++) {
-                                        sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
-                                        sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
-                                        sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
-                                        sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
-                                    }
-                                }
+                } else if (temperature[j] < sigma_temp[0]) {
+                    #pragma acc region
+                    {
+                        #pragma acc loop independent vector
+                        for (int wn=0; wn<nwngrid; wn++) {
+                            #pragma acc loop independent vector
+                            for (int l=0;l<nactive;l++) {
+                                sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
                             }
                         }
                     }
-                }
-            }
-        }
-    
-    
-        // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
-        for (int c=0; c<cia_npairs;c++) {
-            if (int(cia_idx[c*2]) >= nactive) {
-                for (int j=0;j<nlayers;j++) {
-                    
-                    x1_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2])-nactive)];
-                    x2_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2+1])-nactive)];
-                }
-            } else {
-                for (int j=0;j<nlayers;j++) {
-                    x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
-                    x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
-                }
-            }
-        }
-        // calculate absorption
-        for (int wn=0; wn < nwngrid; wn++) {
-            count = 0;
-            integral = 0.0;
-
-            for (int j=0; j<(nlayers); j++) {     // loop through atmosphere layers, z[0] to z[nlayers]
-                tautmp = 0.0;
-                if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
-                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                        count += 1;
-                    }
-                    //exptau = exp(-tautmp);
-                    integral += ((planet_radius+z[j])*(1.0)*dz[j]);
-                    tau[wn + j*nwngrid] = 1.0;
-                    //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
                 } else {
-                    //cout << j << " NO " << pressure[j] << endl;
-                    
-                    for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
-                        
-                        
-                        // calculate optical depth due to clouds
-                        // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
-                        #pragma acc data copyin(dlarray[count],density[j+k],sigma_rayleigh[nwngrid],sigma_interp[nwngrid],active_mixratio[nwngrid])
-                        #pragma acc kernels
+                    if (sigma_ntemp == 1) { // This only happens for create_spectrum (when temperature is part of sigma_t)
+                        #pragma acc region
                         {
+                            #pragma acc loop independent vector
+                            for (int wn=0; wn<nwngrid; wn++) {
+                                #pragma acc loop independent vector
+                                for (int l=0;l<nactive;l++) {
+                                    sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma_array[wn + nwngrid*(sigma_ntemp*(j + l*nlayers))];
+                                }
+                            }
+                        }
+                    } else {
+                        for (int t=1; t<sigma_ntemp; t++) {
+                            if ((temperature[j] >= sigma_temp[t-1]) && (temperature[j] < sigma_temp[t])) {
+
+                                #pragma acc declare copyin(sigma_temp[t-1:2],temperature[j])
+                                #pragma acc region
+                                {
+                                    #pragma acc loop independent vector
+                                    for (int wn=0; wn<nwngrid; wn++) {
+                                        #pragma acc loop independent vector
+                                        for (int l=0;l<nactive;l++) {
+                                            sigma_l = sigma_array[wn + nwngrid*(t-1 + sigma_ntemp*(j + l*nlayers))];
+                                            sigma_r = sigma_array[wn + nwngrid*(t + sigma_ntemp*(j + l*nlayers))];
+                                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_temp[t-1])/(sigma_temp[t]-sigma_temp[t-1]);
+                                            sigma_interp[wn + nwngrid*(j + l*nlayers)] = sigma;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        
+            // interpolate sigma CIA array to the temperature profile
+            for (int j=0; j<nlayers; j++) {
+                if (sigma_cia_ntemp == 1) { //
+                    #pragma acc region
+                    {
+                        #pragma acc loop independent vector
+                        for (int wn=0; wn<nwngrid; wn++) {
+                            #pragma acc loop independent vector
+                            for (int l=0;l<cia_npairs;l++) {
+                                sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
+                            }
+                        }
+                    }
+                } else {
+                    if (temperature[j] > sigma_cia_temp[sigma_cia_ntemp-1]) {
+                        #pragma acc region
+                        {
+                            #pragma acc loop independent vector
+                            for (int wn=0; wn<nwngrid; wn++) {
+                                #pragma acc loop independent vector
+                                for (int l=0;l<cia_npairs;l++) {
+                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp-1 + sigma_cia_ntemp*l)];
+                                }
+                            }
+                        }
+                    } else if  (temperature[j] <  sigma_cia_temp[0]) {
+                        #pragma acc region
+                        {
+                            #pragma acc loop independent vector
+                            for (int wn=0; wn<nwngrid; wn++) {
+                                #pragma acc loop independent vector
+                                for (int l=0;l<cia_npairs;l++) {
+                                    sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma_cia[wn + nwngrid*(sigma_cia_ntemp*l)];
+                                }
+                            }
+                        }
+                    } else {
+                        for (int t=1; t<sigma_cia_ntemp; t++) {
+                            if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
+                                
+                                #pragma acc declare copyin(temperature[j],sigma_cia_temp[t-1:2])
+                                #pragma acc region
+                                {
+                                    #pragma acc loop independent vector
+                                    for (int wn=0; wn<nwngrid; wn++) {
+                                        #pragma acc loop independent vector
+                                        for (int l=0;l<cia_npairs;l++) {
+                                            sigma_l = sigma_cia[wn + nwngrid*(t-1 + sigma_cia_ntemp*l)];
+                                            sigma_r = sigma_cia[wn + nwngrid*(t + sigma_cia_ntemp*l)];
+                                            sigma = sigma_l + (sigma_r-sigma_l)*(temperature[j]-sigma_cia_temp[t-1])/(sigma_cia_temp[t]-sigma_cia_temp[t-1]);
+                                            sigma_cia_interp[wn +  nwngrid*(j + l*nlayers)] = sigma;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+        
+        
+        
+            // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
+            for (int c=0; c<cia_npairs;c++) {
+                if (int(cia_idx[c*2]) >= nactive) {
+                    for (int j=0;j<nlayers;j++) {
+                        
+                        x1_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2])-nactive)];
+                        x2_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2+1])-nactive)];
+                    }
+                } else {
+                    for (int j=0;j<nlayers;j++) {
+                        x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
+                        x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
+                    }
+                }
+            }
+            
+            // calculate absorption
+            #pragma acc parallel loop
+            for (int wn=0; wn < nwngrid; wn++) {
+                count = 0;
+                integral = 0.0;
+                #pragma acc loop independent vector
+                for (int j=0; j<(nlayers); j++) {     // loop through atmosphere layers, z[0] to z[nlayers]
+                    tautmp = 0.0;
+                    if ((clouds == 1) && (pressure[j] >= cloud_topP)) {
+                        for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                            count += 1;
+                        }
+                        //exptau = exp(-tautmp);
+                        integral += ((planet_radius+z[j])*(1.0)*dz[j]);
+                        tau[wn + j*nwngrid] = 1.0;
+                        //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
+                    } else {
+                        //cout << j <1< " NO " << pressure[j] << endl;
+//
+                        #pragma acc loop independent vector
+                        for (int k=0; k < (nlayers-j); k++) { // loop through each layer to sum up path length
+                            // calculate optical depth due to clouds
+                            // calculate optical depths due to active absorbing gases (absorption + rayleigh scattering)
+//                            #pragma acc loop independent vector
                             for (int l=0;l<nactive;l++) {
                                 sigma = sigma_interp[wn + nwngrid*((k+j) + l*nlayers)];
                                 tautmp += (sigma * active_mixratio[k+j+nlayers*l] * density[k+j] * dlarray[count]);
@@ -251,12 +290,9 @@ extern "C" {
                                     tautmp += sigma_rayleigh[wn + nwngrid*l] * active_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
                                 }
                             }
-                        }
                         
-                        // calculating optical depth due inactive gases (rayleigh scattering)
-                        #pragma acc data copyin(sigma_rayleigh[nwngrid],inactive_mixratio[nwngrid],dlarray[count],density[j+k])
-                        #pragma acc kernels
-                        {
+                            
+                            // calculating optical depth due inactive gases (rayleigh scattering)
                             if (rayleigh == 1) {
                                 for (int l=0; l<ninactive; l++) {
                                     //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
@@ -264,38 +300,35 @@ extern "C" {
                                     tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
                                 }
                             }
-                        }
-                        // calculating optical depth due to collision induced absorption
-                        #pragma acc data copyin(density[j+k],dlarray[count],sigma_cia[nwngrid])
-                        #pragma acc kernels
-                        {
+                            // calculating optical depth due to collision induced absorption
                             if (cia == 1) {
+//                                    #pragma acc enter data copyin(density[j+k], x1_idx[cia_npairs][k+j] x2_idx[cia_npairs][k+j])
+//                                    #pragma acc loop independent vector
                                 for (int c=0; c<cia_npairs;c++) {
                                     tautmp += sigma_cia[wn + nwngrid*c] * x1_idx[c][k+j]*x2_idx[c][k+j] * density[j+k]*density[j+k] * dlarray[count];
                                 }
                             }
-                        }
-                        //calculating mie scattering model
-                        #pragma acc kernels
-                        {
+                            //calculating mie scattering model
                             if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){
                                 tautmp += sigma_mie[wn] * density[j+k] *dlarray[count];
                             }
                         }
-                        
                         count += 1;
                     }
                     exptau = exp(-tautmp);
                     integral += ((planet_radius+z[j])*(1.0-exptau)*dz[j]);
                     tau[wn + j*nwngrid] =  exptau;
                     //cout << count << " j " << j << " z " << z[j] << " dz " << dz[j] << " exptau  " << exptau << " integral " << integral << endl;
+                    
                 }
+                integral *= 2.0;
+                //cout << integral << endl;
+                absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
+                //cout << wn << " " << absorption[wn] << endl;
             }
-            integral *= 2.0;
-            //cout << integral << endl;
-            absorption[wn] = ((planet_radius*planet_radius) + integral) / (star_radius*star_radius);
-            //cout << wn << " " << absorption[wn] << endl;
         }
+        
+        
         //        cout << "END" << endl;
         
         delete[] dlarray;
