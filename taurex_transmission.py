@@ -8,6 +8,7 @@
 '''
 
 import sys
+import os
 import numpy as np #nummerical array library 
 import logging
 
@@ -28,7 +29,8 @@ try:
 except ImportError:
     MPIimport = False
 
-def run(params, options=False):
+
+def run(params, options=False, gpu=False):
 
     # initialising data object
     dataob = data(params)
@@ -37,11 +39,12 @@ def run(params, options=False):
     atmosphereob = atmosphere(dataob)
         
     #initialising transmission radiative transfer code instance
-    forwardmodelob = transmission(atmosphereob)
+    forwardmodelob = transmission(atmosphereob, gpu=gpu)
         
     #initialising fitting object 
     fittingob = fitting(forwardmodelob)
-        
+
+
     #fit data
     if params.downhill_run:
         if MPIimport:
@@ -49,6 +52,8 @@ def run(params, options=False):
                 fittingob.downhill_fit()  # simplex downhill fit, only on first core
         else:
             fittingob.downhill_fit()  # simplex downhill fit, only on first core
+
+
 
     if MPIimport:
         MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here

@@ -53,6 +53,33 @@ sys.path.append('./library')
 from parameters import *
 from library_constants import *
 
+def node_architecture():
+    """
+    Check the presenze of GPU cards or cpu in the using node
+    :return: boolean list for gpu and cpu accessible components
+    """
+    hard_list=[]
+    # Check for an existing GPU first
+    gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
+    gpu_list = os.popen(gpu_check).read()
+
+    if 'Tesla K40c' in gpu_list:
+        hard_list.append(True)
+    else:
+        hard_list.append(False)
+
+    #Check for cpu cores
+    cpu_check = "lscpu | egrep '^CPU\('"
+    cpu_number = int(os.popen(cpu_check).read()[8:])
+    # print "Available cpu cores: ", cpu_number
+
+    hard_list.append([True]*cpu_number)
+    return hard_list
+
+
+processors = node_architecture()
+
+
 
 #loading parameter file parser
 parser = argparse.ArgumentParser()
@@ -159,6 +186,7 @@ if options.cluster_dictionary is not 'None':
     params = c.modify_params(params,options.cluster_procid)
 
 
+
 if params.gen_type == 'transmission':
     from taurex_transmission import run
 elif params.gen_type == 'emission':
@@ -173,7 +201,11 @@ if MPIimport:
     MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
 #running Tau-REx
-outputob = run(params, options)
+if MPIimport:
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        outputob = run(params, options, gpu=True)
+else:
+    outputob = run(params, options, gpu=False)
 
 # plotting
 if  options.plot:
