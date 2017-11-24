@@ -12,6 +12,31 @@ import numpy
 import ctypes as C
 import numpy as np
 
+# setting some parameters to global
+global MPIimport, MPIverbose, MPImaster, multinest_import
+
+#trying to initiate MPI parallelisation
+try:
+    from mpi4py import MPI
+    MPIrank = MPI.COMM_WORLD.Get_rank()
+    MPIsize = MPI.COMM_WORLD.Get_size()
+    if MPIsize > 1:
+        MPIimport = True
+        if MPIrank == 0:
+            MPImaster = True
+            MPIverbose= True
+        else:
+            MPImaster = False
+            MPIverbose= False
+    else:
+        MPIverbose = True
+        MPImaster  = True
+        MPIimport  = False
+except ImportError:
+    MPIimport = False
+    MPImaster = True
+    MPIverbose= True
+
 from library_constants import *
 from library_general import *
 import logging
@@ -21,7 +46,32 @@ try:
 except:
     import pickle
 
-import matplotlib.pylab as plt
+def node_architecture():
+    """
+    Check the presenze of GPU cards or cpu in the using node
+    :return: boolean list for gpu and cpu accessible components
+    """
+    hard_list=[]
+    # Check for an existing GPU first
+    gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
+    gpu_list = os.popen(gpu_check).read()
+
+    if 'Tesla K40c' in gpu_list:
+        hard_list.append(True)
+    else:
+        hard_list.append(False)
+
+    #Check for cpu cores
+    cpu_check = "lscpu | egrep '^CPU\('"
+    cpu_number = int(os.popen(cpu_check).read()[8:])
+    # print "Available cpu cores: ", cpu_number
+
+    hard_list.append([True]*cpu_number)
+    return hard_list
+
+
+processors = node_architecture()
+
 
 class transmission(object):
 
@@ -43,11 +93,16 @@ class transmission(object):
             # loading c++ pathintegral library
             if self.atmosphere.nthreads > 1:
                 # load openacc version. Remember to set OMP_NUM_THREADS to number of threads
-                logging.info('Load openacc version of transmission model')
-                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
+                logging.info('Load openacc/MPI version of transmission model')
+
+                if processors[0]: # if there is a gpu use it
+                    self.pathintegral_lib = C.CDLL('./library/gpu_ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
+                else: # in absence of a gpu just use the cpu version of the forward model
+                    self.pathintegral_lib = C.CDLL('./library/cpu_ctypes_pathintegral_transmission_xsec.so',mode=C.RTLD_GLOBAL)
+
             else:
                 logging.info('Load single-core version of transmission model')
-                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
+                self.pathintegral_lib = C.CDLL('./library/cpu_ctypes_pathintegral_transmission_xsec.so', mode=C.RTLD_GLOBAL)
 
             self.model = self.ctypes_pathintegral_xsec
             # set arguments for ctypes libraries

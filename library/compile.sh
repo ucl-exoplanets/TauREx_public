@@ -16,8 +16,10 @@ FLAG=-fopenacc
 # transmission, ktab
 # $COMPILER -fPIC -shared $OPENMP_FLAG -o ctypes_pathintegral_transmission_ktab.so ctypes_pathintegral_transmission_ktab.cpp
 
-# transmission, xsec
-$COMPILER -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
+# transmission, xsec, gpu compiler
+pgc++ -fPIC -shared -o gpu_ctypes_pathintegral_transmission_xsec.so gpu_ctypes_pathintegral_transmission_xsec.cpp
+# transmission, xsec, cpu compiler
+g++ -fPIC -shared -fopenmp -o cpu_ctypes_pathintegral_transmission_xsec.so cpu_ctypes_pathintegral_transmission_xsec.cpp
 
 # emission, xsec
 # $COMPILER -fPIC -shared $OPENMP_FLAG -o ctypes_pathintegral_emission.so ctypes_pathintegral_emission.cpp

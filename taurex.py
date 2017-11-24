@@ -38,33 +38,6 @@ except ImportError:
     MPImaster = True
     MPIverbose= True
 
-def node_architecture():
-    """
-    Check the presenze of GPU cards or cpu in the using node
-    :return: boolean list for gpu and cpu accessible components
-    """
-    hard_list=[]
-    # Check for an existing GPU first
-    gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
-    gpu_list = os.popen(gpu_check).read()
-    print gpu_list
-    if 'Tesla K40c' in gpu_list:
-        hard_list.append(True)
-    else:
-        hard_list.append(False)
-
-    #Check for cpu cores
-    cpu_check = "lscpu | egrep '^CPU\('"
-    cpu_number = int(os.popen(cpu_check).read()[8:])
-    print "Available cpu cores: ", cpu_number
-
-    hard_list.append([True]*cpu_number)
-    print hard_list
-
-
-node_architecture()
-sys.exit()
-
 
 # checking for multinest library
 try: 
