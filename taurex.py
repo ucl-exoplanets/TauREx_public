@@ -202,10 +202,13 @@ if MPIimport:
 
 #running Tau-REx
 if MPIimport:
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        outputob = run(params, options, gpu=True)
-else:
-    outputob = run(params, options, gpu=False)
+    if processors[0]:
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            outputob = run(params, options, gpu=True)
+        else:
+            outputob = run(params, options, gpu=False)
+    else:
+        outputob = run(params, options, gpu=False)
 
 # plotting
 if  options.plot:
