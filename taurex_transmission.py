@@ -66,6 +66,7 @@ def run(params, options=False):
         fittingob.NEST = True
 
     # exit if the rank of MPI process is > 0 (.e. leave only master process running)
+    # Useful to get just one output and not N (where N is the number of processes)
     if MPIimport:
         MPIsize = MPI.COMM_WORLD.Get_size()
         if MPI.COMM_WORLD.Get_rank() > 0:
