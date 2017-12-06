@@ -63,7 +63,7 @@ def node_architecture():
     gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
     gpu_list = os.popen(gpu_check).read()
 
-    if 'Tesla K40c' in gpu_list:
+    if ('Tesla K40c' in gpu_list) or ('Tesla M60' in gpu_list):
         hard_list.append(True)
     else:
         hard_list.append(False)
