@@ -63,7 +63,6 @@ def node_architecture():
     # Check for an existing GPU first
     gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
     gpu_list = os.popen(gpu_check).read()
-    gpu_list = gpu_list.split('\n')
 
     # Check the gpu model in the server
     gpu1 = 'Tesla K40c'
@@ -73,7 +72,10 @@ def node_architecture():
         gpu_card = gpu1
     elif gpu2 in gpu_list:
         gpu_card = gpu2
-
+    else:
+        gpu_card='None78236'
+    
+    gpu_list = gpu_list.split('\n')
     # count the number of gpus
     gpu_count = 0
     for card in gpu_list:
@@ -219,9 +221,14 @@ if MPIimport:
 #running Tau-REx
 if MPIimport:
     if gpu_count > 0:
-        for i in range(0, min(MPIrank, gpu_count)):
-            if MPI.COMM_WORLD.Get_rank() == i:
-                outputob = run(params, options, gpu=True)
+        if gpu_count > MPIrank:
+            gpu_ranks = range(0, int(MPIrank))
+        else:
+            gpu_ranks = range(0, gpu_count)
+        if MPI.COMM_WORLD.Get_rank() in gpu_ranks:
+            outputob = run(params, options, gpu=True)
+        else:
+            outputob = run(params, options, gpu=False)
     else:
         outputob = run(params, options, gpu=False)
 
