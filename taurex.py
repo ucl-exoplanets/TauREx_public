@@ -58,14 +58,30 @@ def node_architecture():
     Check the presenze of GPU cards or cpu in the using node
     :return: boolean list for gpu and cpu accessible components
     """
+
     hard_list=[]
     # Check for an existing GPU first
     gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
     gpu_list = os.popen(gpu_check).read()
+    gpu_list = gpu_list.split('\n')
 
-    if ('Tesla K40c' in gpu_list) or ('Tesla M60' in gpu_list):
-        hard_list.append(True)
-    else:
+    # Check the gpu model in the server
+    gpu1 = 'Tesla K40c'
+    gpu2 = 'Tesla M60'
+
+    if gpu1 in gpu_list:
+        gpu_card = gpu1
+    elif gpu2 in gpu_list:
+        gpu_card = gpu2
+
+    # count the number of gpus
+    gpu_count = 0
+    for card in gpu_list:
+        if gpu_card in card:
+            gpu_count += 1
+            hard_list.append(True)
+
+    if gpu_count == 0:
         hard_list.append(False)
 
     #Check for cpu cores
@@ -74,10 +90,10 @@ def node_architecture():
     # print "Available cpu cores: ", cpu_number
 
     hard_list.append([True]*cpu_number)
-    return hard_list
+    return hard_list, gpu_count
 
 
-processors = node_architecture()
+processors, gpu_count = node_architecture()
 
 
 
@@ -202,28 +218,27 @@ if MPIimport:
 
 #running Tau-REx
 if MPIimport:
-    if processors[0]:
-        if MPI.COMM_WORLD.Get_rank() == 0:
-            outputob = run(params, options, gpu=True)
-        else:
-            outputob = run(params, options, gpu=False)
+    if gpu_count > 0:
+        for i in range(0, min(MPIrank, gpu_count)):
+            if MPI.COMM_WORLD.Get_rank() == i:
+                outputob = run(params, options, gpu=True)
     else:
         outputob = run(params, options, gpu=False)
 
 # plotting
-if  options.plot:
-    sys.path.append('./tools')
-    from taurex_plots import taurex_plots
-    for val in outputob.dbfilename:
-        logging.info('Initialising plotting')
-        dbfilename = outputob.dbfilename[val]
-        plot = taurex_plots(pickle_fname=dbfilename, title=options.plot_title, prefix=options.plot_prefix,
+if options.plot:
+   sys.path.append('./tools')
+   from taurex_plots import taurex_plots
+   for val in outputob.dbfilename:
+       logging.info('Initialising plotting')
+       dbfilename = outputob.dbfilename[val]
+       plot = taurex_plots(pickle_fname=dbfilename, title=options.plot_title, prefix=options.plot_prefix,
                             out_folder=options.plot_out_folder)
-        logging.info('Plot posterior distributions')
-        plot.plot_posteriors()
-        logging.info('Plot fitted spectrum')
-        plot.plot_fitted_spectrum()
-        if params.gen_type == 'emission' or params.gen_ace or options.plot_profiles:
-            logging.info('Plot mixing ratio profiles and temperature pressure profile')
-            plot.plot_fitted_xprofiles()
-            plot.plot_fitted_tp()
+       logging.info('Plot posterior distributions')
+       plot.plot_posteriors()
+       logging.info('Plot fitted spectrum')
+       plot.plot_fitted_spectrum()
+       if params.gen_type == 'emission' or params.gen_ace or options.plot_profiles:
+           logging.info('Plot mixing ratio profiles and temperature pressure profile')
+           plot.plot_fitted_xprofiles()
+           plot.plot_fitted_tp()
