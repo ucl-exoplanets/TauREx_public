@@ -20,6 +20,9 @@ Input/
 Parfiles/
 Hubble_Retrievals/
 gpu_all_complete_nf_high_wasp76b_submit.sh
+compute_convergence_test.sh
+gpu_convergence_test.sh
+old_gpu_test.sh
 nodes
 Preselector/
 backup/
