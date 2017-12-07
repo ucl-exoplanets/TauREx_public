@@ -32,7 +32,8 @@
 #include <string>
 #include <sstream>
 #include "openacc.h"
-#include <mpi.h>
+#include "mp.h"
+
 
 using namespace std;
 
@@ -90,15 +91,8 @@ extern "C" {
         double p;
         int count;
         int numgpus;
-        int argc;
-        char *argv[];
-        int rank,size;
-        /* Initialize the MPI library */
-        MPI_Init(&argc,&argv);
-        /* Determine the calling rank and total number of ranks */
-        MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-        MPI_Comm_size(MPI_COMM_WORLD,&size);
-        /* Call MPI routines like MPI_Send, MPI_Recv, ... */
+        int gpunum;
+        int tnum;
         
         
         
@@ -124,8 +118,15 @@ extern "C" {
                 count += 1;
             }
         }
-        numgpus = acc_get_num_devices( acc_device_nvidia );
-        acc_set_device_num( numgpus, acc_device_nvidia );
+        tnum = omp_get_thread_num();
+        ngpus = acc_get_num_devices( acc_device_nvidia );
+        if( ngpus ){
+            gpunum = tnum % ngpus;
+            acc_set_device_num( gpunum, acc_device_nvidia );
+        }else{
+            /* no NVIDIA GPUs available */
+            acc_set_device_type( acc_device_host );
+        }
         #pragma acc declare copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
         #pragma acc declare copyout(tau[nwngrid], absorption[nwngrid])
         #pragma acc declare copyin(sigma_rayleigh[nwngrid],active_mixratio[nwngrid])
@@ -344,8 +345,6 @@ extern "C" {
         
         
         //        cout << "END" << endl;
-        /* Shutdown MPI library */
-        MPI_Finalize();
         
         delete[] dlarray;
         delete[] sigma_interp;
