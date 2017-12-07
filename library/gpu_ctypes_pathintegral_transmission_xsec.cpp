@@ -32,7 +32,7 @@
 #include <string>
 #include <sstream>
 #include "openacc.h"
-#include "mp.h"
+#include "omp.h"
 
 
 using namespace std;
@@ -90,7 +90,7 @@ extern "C" {
         double tautmp, exptau,  integral;
         double p;
         int count;
-        int numgpus;
+        int ngpus;
         int gpunum;
         int tnum;
         
