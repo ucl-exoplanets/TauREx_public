@@ -58,32 +58,14 @@ def node_architecture():
     Check the presenze of GPU cards or cpu in the using node
     :return: boolean list for gpu and cpu accessible components
     """
-
     hard_list=[]
     # Check for an existing GPU first
     gpu_check = "lspci | grep -i 'vga\|3d\|2d'"
     gpu_list = os.popen(gpu_check).read()
 
-    # Check the gpu model in the server
-    gpu1 = 'Tesla K40c'
-    gpu2 = 'Tesla M60'
-
-    if gpu1 in gpu_list:
-        gpu_card = gpu1
-    elif gpu2 in gpu_list:
-        gpu_card = gpu2
+    if ('Tesla K40c' in gpu_list) or ('Tesla M60' in gpu_list):
+        hard_list.append(True)
     else:
-        gpu_card='None78236'
-    
-    gpu_list = gpu_list.split('\n')
-    # count the number of gpus
-    gpu_count = 0
-    for card in gpu_list:
-        if gpu_card in card:
-            gpu_count += 1
-            hard_list.append(True)
-
-    if gpu_count == 0:
         hard_list.append(False)
 
     #Check for cpu cores
@@ -92,10 +74,10 @@ def node_architecture():
     # print "Available cpu cores: ", cpu_number
 
     hard_list.append([True]*cpu_number)
-    return hard_list, gpu_count
+    return hard_list
 
 
-processors, gpu_count = node_architecture()
+processors = node_architecture()
 
 
 
@@ -220,12 +202,8 @@ if MPIimport:
 
 #running Tau-REx
 if MPIimport:
-    if gpu_count > 0:
-        if gpu_count > MPIrank:
-            gpu_ranks = range(0, int(MPIrank))
-        else:
-            gpu_ranks = range(0, gpu_count)
-        if MPI.COMM_WORLD.Get_rank() in gpu_ranks:
+    if processors[0]:
+        if MPI.COMM_WORLD.Get_rank() == 0:
             outputob = run(params, options, gpu=True)
         else:
             outputob = run(params, options, gpu=False)
@@ -248,8 +226,4 @@ if options.plot:
        if params.gen_type == 'emission' or params.gen_ace or options.plot_profiles:
            logging.info('Plot mixing ratio profiles and temperature pressure profile')
            plot.plot_fitted_xprofiles()
-<<<<<<< HEAD
            plot.plot_fitted_tp()
-=======
-           plot.plot_fitted_tp()
->>>>>>> c85938448241dfa80888006ad47ca974496763b4
