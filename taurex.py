@@ -3,7 +3,7 @@
 
     TauREx execution code
 
-    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+    Developers: Ingo Waldmann, Marco Rocchetto, Tiziano Zingales (University College London)
 
 '''
 

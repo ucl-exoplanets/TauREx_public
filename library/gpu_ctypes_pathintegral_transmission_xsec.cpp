@@ -4,7 +4,7 @@
  
  Forward model for transmission
  
- Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+ Developers: Ingo Waldmann, Marco Rocchetto, Tiziano Zingales (University College London)
  
  For both openmp and single core versions compile with g++:
  
