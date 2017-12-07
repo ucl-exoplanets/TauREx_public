@@ -211,19 +211,19 @@ if MPIimport:
         outputob = run(params, options, gpu=False)
 
 # plotting
-if  options.plot:
-    sys.path.append('./tools')
-    from taurex_plots import taurex_plots
-    for val in outputob.dbfilename:
-        logging.info('Initialising plotting')
-        dbfilename = outputob.dbfilename[val]
-        plot = taurex_plots(pickle_fname=dbfilename, title=options.plot_title, prefix=options.plot_prefix,
+if options.plot:
+   sys.path.append('./tools')
+   from taurex_plots import taurex_plots
+   for val in outputob.dbfilename:
+       logging.info('Initialising plotting')
+       dbfilename = outputob.dbfilename[val]
+       plot = taurex_plots(pickle_fname=dbfilename, title=options.plot_title, prefix=options.plot_prefix,
                             out_folder=options.plot_out_folder)
-        logging.info('Plot posterior distributions')
-        plot.plot_posteriors()
-        logging.info('Plot fitted spectrum')
-        plot.plot_fitted_spectrum()
-        if params.gen_type == 'emission' or params.gen_ace or options.plot_profiles:
-            logging.info('Plot mixing ratio profiles and temperature pressure profile')
-            plot.plot_fitted_xprofiles()
-            plot.plot_fitted_tp()
+       logging.info('Plot posterior distributions')
+       plot.plot_posteriors()
+       logging.info('Plot fitted spectrum')
+       plot.plot_fitted_spectrum()
+       if params.gen_type == 'emission' or params.gen_ace or options.plot_profiles:
+           logging.info('Plot mixing ratio profiles and temperature pressure profile')
+           plot.plot_fitted_xprofiles()
+           plot.plot_fitted_tp()
