@@ -27,6 +27,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <omp.h>
 
 using namespace std;
 

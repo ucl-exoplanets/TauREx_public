@@ -32,6 +32,8 @@
 #include <string>
 #include <sstream>
 #include "openacc.h"
+#include <omp.h>
+
 using namespace std;
 
 extern "C" {
