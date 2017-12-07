@@ -32,6 +32,7 @@
 #include <string>
 #include <sstream>
 #include "openacc.h"
+#include <mpi.h>
 
 using namespace std;
 
@@ -89,6 +90,15 @@ extern "C" {
         double p;
         int count;
         int numgpus;
+        int argc;
+        char *argv[];
+        int rank,size;
+        /* Initialize the MPI library */
+        MPI_Init(&argc,&argv);
+        /* Determine the calling rank and total number of ranks */
+        MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+        MPI_Comm_size(MPI_COMM_WORLD,&size);
+        /* Call MPI routines like MPI_Send, MPI_Recv, ... */
         
         
         
@@ -334,6 +344,8 @@ extern "C" {
         
         
         //        cout << "END" << endl;
+        /* Shutdown MPI library */
+        MPI_Finalize();
         
         delete[] dlarray;
         delete[] sigma_interp;
