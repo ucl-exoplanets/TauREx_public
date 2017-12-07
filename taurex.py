@@ -221,11 +221,7 @@ if MPIimport:
 #running Tau-REx
 if MPIimport:
     if gpu_count > 0:
-        if gpu_count > MPIrank:
-            gpu_ranks = range(0, int(MPIrank))
-        else:
-            gpu_ranks = range(0, gpu_count)
-        if MPI.COMM_WORLD.Get_rank() in gpu_ranks:
+        if MPI.COMM_WORLD.Get_rank() == 0:
             outputob = run(params, options, gpu=True)
         else:
             outputob = run(params, options, gpu=False)
