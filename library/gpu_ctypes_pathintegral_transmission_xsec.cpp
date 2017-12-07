@@ -31,7 +31,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-
+#include "openacc.h"
 using namespace std;
 
 extern "C" {
@@ -87,6 +87,9 @@ extern "C" {
         double tautmp, exptau,  integral;
         double p;
         int count;
+        int numgpus;
+        int gpunum;
+        
         
         
         //dz array
@@ -114,7 +117,7 @@ extern "C" {
         numgpus = acc_get_num_devices( acc_device_nvidia );
         #pragma omp parallel num_threads(numgpus)
         {
-            gpunum = omp_get_thread_num();
+            gpunum = numgpus;
             acc_set_device_num( gpunum, acc_device_nvidia ); 
             #pragma acc declare copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
             #pragma acc declare copyout(tau[nwngrid], absorption[nwngrid])
