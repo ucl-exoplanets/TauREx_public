@@ -249,7 +249,11 @@ if options.plot:
            logging.info('Plot mixing ratio profiles and temperature pressure profile')
            plot.plot_fitted_xprofiles()
 <<<<<<< HEAD
+<<<<<<< HEAD
            plot.plot_fitted_tp()
+=======
+           plot.plot_fitted_tp()
+>>>>>>> c85938448241dfa80888006ad47ca974496763b4
 =======
            plot.plot_fitted_tp()
 >>>>>>> c85938448241dfa80888006ad47ca974496763b4
