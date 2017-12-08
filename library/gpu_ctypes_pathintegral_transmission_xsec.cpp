@@ -127,11 +127,11 @@ extern "C" {
             /* no NVIDIA GPUs available */
             acc_set_device_type( acc_device_host );
         }
-        #pragma acc declare copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
+        #pragma acc declare present_or_copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
         #pragma acc declare copyout(tau[nwngrid], absorption[nwngrid])
-        #pragma acc declare copyin(sigma_rayleigh[nwngrid],active_mixratio[nwngrid])
-        #pragma acc declare copyin(inactive_mixratio[nwngrid], dlarray[nlayers*nlayers])
-        #pragma acc declare copyin(density[nlayers],x1_idx[cia_npairs],x2_idx[cia_npairs])
+        #pragma acc declare present_or_copyin(sigma_rayleigh[nwngrid],active_mixratio[nwngrid])
+        #pragma acc declare present_or_copyin(inactive_mixratio[nwngrid], dlarray[nlayers*nlayers])
+        #pragma acc declare present_or_copyin(density[nlayers],x1_idx[cia_npairs],x2_idx[cia_npairs])
         {
             // interpolate sigma array to the temperature profile
             for (int j=0; j<nlayers; j++) {
