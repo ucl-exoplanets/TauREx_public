@@ -213,9 +213,10 @@ else:
 if MPIimport:
     MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
 
+processors, gpu_count = node_architecture()
+
 #running Tau-REx
 if MPIimport:
-
     if params.include_gpu:
         if gpu_count > 0:
             if MPI.COMM_WORLD.Get_rank() == 0:
