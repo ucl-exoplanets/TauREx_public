@@ -16,6 +16,9 @@ compile_cpp = False
 compiler = g++
 openmp_flag = -fopenmp
 
+# Recognise gpu card in node architecture and use it
+gpu = True
+
 # These settings are used when running create_spectrum.py
 
 # manually set wavelength range (if False, the max range available in the cross sections is used)

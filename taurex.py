@@ -94,11 +94,6 @@ def node_architecture():
     hard_list.append([True]*cpu_number)
     return hard_list, gpu_count
 
-
-processors, gpu_count = node_architecture()
-
-
-
 #loading parameter file parser
 parser = argparse.ArgumentParser()
 parser.add_argument('-p',
@@ -220,11 +215,13 @@ if MPIimport:
 
 #running Tau-REx
 if MPIimport:
-    if gpu_count > 0:
-        if MPI.COMM_WORLD.Get_rank() == 0:
-            outputob = run(params, options, gpu=True)
-        else:
-            outputob = run(params, options, gpu=False)
+
+    if params.include_gpu:
+        if gpu_count > 0:
+            if MPI.COMM_WORLD.Get_rank() == 0:
+                outputob = run(params, options, gpu=True)
+            else:
+                outputob = run(params, options, gpu=False)
     else:
         outputob = run(params, options, gpu=False)
 

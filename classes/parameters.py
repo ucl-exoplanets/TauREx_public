@@ -121,6 +121,7 @@ class parameters(object):
         self.gen_ace              = self.getpar('General','ace', 'bool')
         self.gen_compile_cpp       = self.getpar('General','compile_cpp', 'bool')
         self.gen_run_gui           = False
+        self.include_gpu = self.getpar('General', 'gpu', 'bool')
 
         # section Input
         self.in_spectrum_file      = self.getpar('Input','spectrum_file')
