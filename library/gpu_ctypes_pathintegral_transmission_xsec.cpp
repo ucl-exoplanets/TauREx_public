@@ -70,9 +70,8 @@ extern "C" {
                        const double planet_radius,
                        const double star_radius,
                        void * absorptionv,
-                       void * tauv
+                       void * tauv,
                        const int rank) {
-        setenv
         
         //        double mie_topP;
         //        mie_topP = 1e-5;
