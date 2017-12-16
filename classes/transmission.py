@@ -57,6 +57,7 @@ class transmission(object):
         self.params = atmosphere.params #get params object from atmosphere
         self.data = atmosphere.data    # get data object from atmosphere
         self.atmosphere = atmosphere
+        self.rank = rank
 
         if self.params.gen_ace:
             # loading Fortran code for chemically consistent model
@@ -113,7 +114,7 @@ class transmission(object):
                 C.c_double,
                 C.c_void_p,
                 C.c_void_p,
-                rank]
+                C.c_int]
 
 
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']: # using k tables
@@ -200,7 +201,8 @@ class transmission(object):
                                             self.atmosphere.planet_radius,
                                             self.params.star_radius,
                                             C.c_void_p(absorption.ctypes.data),
-                                            C.c_void_p(tau.ctypes.data))
+                                            C.c_void_p(tau.ctypes.data),
+                                            self.rank)
 
         out = np.zeros((len(absorption)))
         out[:] = absorption
