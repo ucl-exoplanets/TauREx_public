@@ -49,7 +49,7 @@ except:
 
 class transmission(object):
 
-    def __init__(self, atmosphere, gpu=False):
+    def __init__(self, atmosphere, gpu=False, rank=0):
 
         logging.info('Initialise object transmission')
 
@@ -112,7 +112,8 @@ class transmission(object):
                 C.c_double,
                 C.c_double,
                 C.c_void_p,
-                C.c_void_p]
+                C.c_void_p,
+                rank]
 
 
         elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']: # using k tables

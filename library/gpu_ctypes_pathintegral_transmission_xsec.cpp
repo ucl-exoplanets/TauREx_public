@@ -32,6 +32,7 @@
 #include <string>
 #include <sstream>
 #include "openacc.h"
+#include "mpi.h"
 #include "omp.h"
 
 
@@ -70,7 +71,9 @@ extern "C" {
                        const double planet_radius,
                        const double star_radius,
                        void * absorptionv,
-                       void * tauv) {
+                       void * tauv
+                       const int rank) {
+        setenv
         
         //        double mie_topP;
         //        mie_topP = 1e-5;
@@ -91,11 +94,7 @@ extern "C" {
         double p;
         int count;
         int ngpus;
-        int gpunum;
-        int tnum;
-        
-        
-        
+       
         //dz array
         for (int j=0; j<(nlayers); j++) {
             if ((j+1) == nlayers) {
@@ -118,14 +117,14 @@ extern "C" {
                 count += 1;
             }
         }
-        tnum = omp_get_thread_num();
-        ngpus = acc_get_num_devices( acc_device_nvidia );
-        if( ngpus ){
-            gpunum = tnum % ngpus;
-            acc_set_device_num( gpunum, acc_device_nvidia );
+        ngpus = acc_get_num_devices(acc_device_nvidia);
+        /* if there a (o more) NVIDIA gpu cards*/
+        if(ngpus){
+            // gpu devices are univocally called by ordinal names
+            acc_set_device_num(rank, acc_device_nvidia);
         }else{
             /* no NVIDIA GPUs available */
-            acc_set_device_type( acc_device_host );
+            acc_set_device_type(acc_device_host);
         }
         #pragma acc declare present_or_copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
         #pragma acc declare copyout(tau[nwngrid], absorption[nwngrid])

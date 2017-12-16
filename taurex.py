@@ -74,7 +74,7 @@ def node_architecture():
         gpu_card = gpu2
     else:
         gpu_card='None78236'
-    
+
     gpu_list = gpu_list.split('\n')
     # count the number of gpus
     gpu_count = 0
@@ -219,12 +219,13 @@ processors, gpu_count = node_architecture()
 if MPIimport:
     if params.include_gpu:
         if gpu_count > 0:
-            if MPI.COMM_WORLD.Get_rank() == 0:
-                outputob = run(params, options, gpu=True)
+            if MPI.COMM_WORLD.Get_rank() < gpu_count:
+                # here the rank defines the types of gpu device, ordered by ordinal numbers
+                outputob = run(params, options, gpu=True, rank=MPI.COMM_WORLD.Get_rank())
             else:
-                outputob = run(params, options, gpu=False)
+                outputob = run(params, options, gpu=False, rank=MPI.COMM_WORLD.Get_rank())
     else:
-        outputob = run(params, options, gpu=False)
+        outputob = run(params, options, gpu=False, rank=MPI.COMM_WORLD.Get_rank())
 
 # plotting
 if options.plot:

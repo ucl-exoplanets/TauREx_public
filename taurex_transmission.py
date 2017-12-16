@@ -30,7 +30,7 @@ except ImportError:
     MPIimport = False
 
 
-def run(params, options=False, gpu=False):
+def run(params, options=False, gpu=False, rank=0):
 
     # initialising data object
     dataob = data(params)
@@ -39,7 +39,7 @@ def run(params, options=False, gpu=False):
     atmosphereob = atmosphere(dataob)
         
     #initialising transmission radiative transfer code instance
-    forwardmodelob = transmission(atmosphereob, gpu=gpu)
+    forwardmodelob = transmission(atmosphereob, gpu=gpu, rank=rank)
         
     #initialising fitting object 
     fittingob = fitting(forwardmodelob)
