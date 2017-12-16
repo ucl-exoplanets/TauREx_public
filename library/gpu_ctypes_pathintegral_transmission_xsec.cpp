@@ -32,7 +32,6 @@
 #include <string>
 #include <sstream>
 #include "openacc.h"
-#include "mpi.h"
 #include "omp.h"
 
 
