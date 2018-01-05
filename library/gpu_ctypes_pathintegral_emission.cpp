@@ -77,15 +77,14 @@ extern "C" {
         double* sigma_interp = new double[nwngrid*nlayers*nactive];
         double* sigma_cia_interp = new double[nwngrid * nlayers * cia_npairs];
         double sigma, sigma_l, sigma_r;
-        double tau, tau_cia, dtau, dtau1, tau_sum1, tau_sum2, dtau_cia, mu, tau_tot,eta;
-        double p;
+        double dtau, tau_sum1, tau_sum2, eta;
         double mu1, mu2, mu3, mu4, w1, w2, w3, w4;
-        int count, count2, t_idx;
         double F_total, BB_wl, exponent;
         double I1, I2, I3, I4;
         double h, c, kb, pi;
         double x1_idx[cia_npairs][nlayers];
         double x2_idx[cia_npairs][nlayers];
+        int ngpus;
 
         h = 6.62606957e-34;
         c = 299792458;
@@ -104,11 +103,15 @@ extern "C" {
         w4 = 0.1012885;
 
         //dz array
-        for (int j=0; j<(nlayers); j++) {
-            if ((j+1) == nlayers) {
-                dz[j] = z[j] - z[j-1];
-            } else {
-                dz[j] = z[j+1] - z[j];
+        #pragma acc region
+        {
+            #pragma acc loop independent vector
+            for (int j=0; j<(nlayers); j++) {
+                if ((j+1) == nlayers) {
+                    dz[j] = z[j] - z[j-1];
+                } else {
+                    dz[j] = z[j+1] - z[j];
+                }
             }
         }
         ngpus = acc_get_num_devices(acc_device_nvidia);
@@ -120,11 +123,11 @@ extern "C" {
             /* no NVIDIA GPUs available */
             acc_set_device_type(acc_device_host);
         }
-        #pragma acc declarepresent_or_copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
-        #pragma acc declare copyout(tau[nwngrid], absorption[nwngrid])
+        #pragma acc declare present_or_copyin(sigma_interp[nwngrid*nlayers*nactive],sigma_array[nwngrid], sigma_cia_interp[nwngrid*nlayers*cia_npairs],sigma_cia[nwngrid])
+        #pragma acc declare present_or_copyin(dz[nlayers], sigma_mie[nwngrid], contrib[nwngrid])
         #pragma acc declare present_or_copyin(sigma_rayleigh[nwngrid],active_mixratio[nwngrid])
-        #pragma acc declare present_or_copyin(inactive_mixratio[nwngrid], dlarray[nlayers*nlayers])
-        #pragma acc declare present_or_copyin(density[nlayers],x1_idx[cia_npairs],x2_idx[cia_npairs])
+        #pragma acc declare present_or_copyin(inactive_mixratio[nwngrid], pressure[nlayers])
+        #pragma acc declare present_or_copyin(density[nlayers],x1_idx[cia_npairs],x2_idx[cia_npairs],cia_idx[cia_npairs*2+1])
         {
             // interpolate sigma array to the temperature profile
             for (int j=0; j<nlayers; j++) {
@@ -224,6 +227,7 @@ extern "C" {
                             }
                         }
                     } else {
+                        #pragma acc loop independent vector
                         for (int t=1; t<sigma_cia_ntemp; t++) {
                             if ((temperature[j] > sigma_cia_temp[t-1]) && (temperature[j] < sigma_cia_temp[t])) {
                                 #pragma acc declare copyin(temperature[j],sigma_cia_temp[t-1:2])
@@ -248,147 +252,154 @@ extern "C" {
 
 
             // get mixing ratio of individual molecules in the collision induced absorption (CIA) pairs
-            for (int c=0; c<cia_npairs;c++) {
-                 if (int(cia_idx[c*2]) >= nactive) {
+
+            for (int cnp=0; cnp<cia_npairs;cnp++) {
+                 if (int(cia_idx[cnp*2]) >= nactive) {
                     for (int j=0;j<nlayers;j++) {
 
-                        x1_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2])-nactive)];
-                        x2_idx[c][j] = inactive_mixratio[j+nlayers*(int(cia_idx[c*2+1])-nactive)];
+                        x1_idx[cnp][j] = inactive_mixratio[j+nlayers*(int(cia_idx[cnp*2])-nactive)];
+                        x2_idx[cnp][j] = inactive_mixratio[j+nlayers*(int(cia_idx[cnp*2+1])-nactive)];
                     }
                  } else {
                     for (int j=0;j<nlayers;j++) {
-                        x1_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2])];
-                        x2_idx[c][j] = active_mixratio[j+nlayers*int(cia_idx[c*2+1])];
+                        x1_idx[cnp][j] = active_mixratio[j+nlayers*int(cia_idx[cnp*2])];
+                        x2_idx[cnp][j] = active_mixratio[j+nlayers*int(cia_idx[cnp*2+1])];
                     }
                 }
              }
+            
 
 
             // calculate emission
 
-            #pragma acc parallel loop
-            for (int wn=0; wn < nwngrid; wn++) {
+            #pragma acc region
+            {
+                #pragma acc for independent
+                for (int wn=0; wn < nwngrid; wn++) {
 
-                F_total = 0.0;
+                    F_total = 0.0;
 
-                 // Contribution from the surface.
+                     // Contribution from the surface.
 
-                I1 = 0;
-                I2 = 0;
-                I3 = 0;
-                I4 = 0;
+                    I1 = 0;
+                    I2 = 0;
+                    I3 = 0;
+                    I4 = 0;
 
-                tau_sum1 = 0.;
-                tau_sum2 = 0.;
-                eta = 1.0;
-
-                // calculate BB for temperature of layer 0
-                exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
-                BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
-                for (int l=0;l<nactive;l++) { // active gases
-                    tau_sum1 += (sigma_interp[wn + nwngrid*(l*nlayers)] * active_mixratio[nlayers*l] * density[0] * dz[0]);
-                }
-                if (cia == 1) { // cia
-                    for (int c=0; c<cia_npairs;c++) {
-                        tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
-                    }
-                }
-                if ((mie == 1) && (pressure[0] >= mie_topP) && (pressure[0] <= mie_bottomP)){ //mie
-                    tau_sum1 += sigma_mie[wn] * density[0] *dz[0];
-                }
-
-                for (int k=0; k<(nlayers); k++) {
-
-                    // calculate tau from j+1 to TOA
-                        for (int l=0;l<nactive;l++) { // active gases
-                            tau_sum2 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
-                        }
-                        if (cia == 1) { // cia
-                            for (int c=0; c<cia_npairs;c++) {
-                                tau_sum2 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
-                            }
-                        }
-                        if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
-                            tau_sum2 += sigma_mie[wn] * density[k] *dz[k];
-                        }
-                    }
-
-                // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
-                I1 += BB_wl * ( exp(-tau_sum2/mu1)) * eta;
-                I2 += BB_wl * ( exp(-tau_sum2/mu2))* eta;
-                I3 += BB_wl * ( exp(-tau_sum2/mu3))* eta;
-                I4 += BB_wl * ( exp(-tau_sum2/mu4))* eta;
-
-                // loop through layers from bottom to TOA
-                for (int j=0; j<(nlayers-1); j++) {
-
-                    // calculate BB for temperature of layer j
-                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
-                    BB_wl = ((2.0*h*pow(c,2))/pow((10000./wngrid[wn])*1e-6,5) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
-
-                    // calculate tau from j+1 to TOA
                     tau_sum1 = 0.;
-                    for (int k=j+1; k < nlayers; k++) { // loop through layers to add dtau[k]
-                        for (int l=0;l<nactive;l++) { // active gases
-                            tau_sum1 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
-                        }
-                        // calculating optical depth due inactive gases (rayleigh scattering)
-                        if (rayleigh == 1) {
-                            for (int l=0; l<ninactive; l++) {
-                                //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
-                                //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
-                                tau_sum1 += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+nlayers*l] * density[k] * dz[k];
-                            }
-                        }
-                        if (cia == 1) { // cia
-                            for (int c=0; c<cia_npairs;c++) {
-                                tau_sum1 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
-                            }
-                        }
-                        if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
-                            tau_sum1 += sigma_mie[wn] * density[k] *dz[k];
-                        }
-                    }
+                    tau_sum2 = 0.;
+                    eta = 1.0;
 
-                    // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
-                    dtau = 0;
+                    // calculate BB for temperature of layer 0
+                    exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[0]));
+                    BB_wl = ((2.0*h*c*c)/(((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6))* (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
                     for (int l=0;l<nactive;l++) { // active gases
-                        dtau +=  (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
+                        tau_sum1 += (sigma_interp[wn + nwngrid*(l*nlayers)] * active_mixratio[nlayers*l] * density[0] * dz[0]);
                     }
                     if (cia == 1) { // cia
                         for (int c=0; c<cia_npairs;c++) {
-                            dtau += sigma_cia_interp[wn + nwngrid*(j + c*nlayers)] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+                            tau_sum1 += sigma_cia_interp[wn + nwngrid*(c*nlayers)] * x1_idx[c][0]*x2_idx[c][0] * density[0]*density[0] * dz[0];
                         }
                     }
-                    if (rayleigh == 1) { // rayleigh
-                        for (int l=0; l<ninactive; l++) {
-                            dtau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[j+nlayers*l] * density[j] * dz[j];
+                    if ((mie == 1) && (pressure[0] >= mie_topP) && (pressure[0] <= mie_bottomP)){ //mie
+                        tau_sum1 += sigma_mie[wn] * density[0] *dz[0];
+                    }
+                    #pragma acc for independent
+                    for (int k=0; k<(nlayers); k++) {
+
+                        // calculate tau from j+1 to TOA
+                            for (int l=0;l<nactive;l++) { // active gases
+                                tau_sum2 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
+                            }
+                            if (cia == 1) { // cia
+                                for (int c=0; c<cia_npairs;c++) {
+                                    tau_sum2 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+                                }
+                            }
+                            if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
+                                tau_sum2 += sigma_mie[wn] * density[k] *dz[k];
+                            }
                         }
-                    }
-                    if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){ //mie
-                        dtau += sigma_mie[wn] * density[j] *dz[j];
-                    }
-
-                    tau_sum2 = tau_sum1 + dtau;
-
-                    // contribution function
-                    contrib[wn + j*nwngrid] = (exp(-tau_sum1) - exp(-tau_sum2));
 
                     // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
-                    I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
-                    I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
-                    I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
-                    I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
+                    I1 += BB_wl * ( exp(-tau_sum2/mu1)) * eta;
+                    I2 += BB_wl * ( exp(-tau_sum2/mu2))* eta;
+                    I3 += BB_wl * ( exp(-tau_sum2/mu3))* eta;
+                    I4 += BB_wl * ( exp(-tau_sum2/mu4))* eta;
+
+                    // loop through layers from bottom to TOA
+                    #pragma acc for independent
+                    for (int j=0; j<(nlayers-1); j++) {
+
+                        // calculate BB for temperature of layer j
+                        exponent = exp((h * c) / ((10000./wngrid[wn])*1e-6  * kb * temperature[j]));
+                        BB_wl = ((2.0*h*c*c)/(((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)*((10000./wngrid[wn])*1e-6)) * (1.0/(exponent - 1)))* 1e-6; // (W/m^2/micron)
+
+                        // calculate tau from j+1 to TOA
+                        tau_sum1 = 0.;
+                        #pragma acc for independent
+                        for (int k=j+1; k < nlayers; k++) { // loop through layers to add dtau[k]
+                            for (int l=0;l<nactive;l++) { // active gases
+                                tau_sum1 += (sigma_interp[wn + nwngrid*(k + l*nlayers)] * active_mixratio[k+nlayers*l] * density[k] * dz[k]);
+                            }
+                            // calculating optical depth due inactive gases (rayleigh scattering)
+                            if (rayleigh == 1) {
+                                for (int l=0; l<ninactive; l++) {
+                                    //cout << sigma_rayleigh[wn + nwngrid*(l+nactive)] << " " << inactive_mixratio[k+j+nlayers*l] << " " << density[j+k] << " " << dlarray[count] << endl;
+                                    //tautmp += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+j+nlayers*l] * density[j+k] * dlarray[count];
+                                    tau_sum1 += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[k+nlayers*l] * density[k] * dz[k];
+                                }
+                            }
+                            if (cia == 1) { // cia
+                                for (int c=0; c<cia_npairs;c++) {
+                                    tau_sum1 += sigma_cia_interp[wn + nwngrid*(k + c*nlayers)] * x1_idx[c][k]*x2_idx[c][k] * density[k]*density[k] * dz[k];
+                                }
+                            }
+                            if ((mie == 1) && (pressure[k] >= mie_topP) && (pressure[k] <= mie_bottomP)){ //mie
+                                tau_sum1 += sigma_mie[wn] * density[k] *dz[k];
+                            }
+                        }
+
+                        // calculate tau from j to TOA  (just add dtau[j] to tau_sum1 calculated above)
+                        dtau = 0;
+                        for (int l=0;l<nactive;l++) { // active gases
+                            dtau +=  (sigma_interp[wn + nwngrid*(j + l*nlayers)] * active_mixratio[j+nlayers*l] * density[j] * dz[j]);
+                        }
+                        if (cia == 1) { // cia
+                            for (int c=0; c<cia_npairs;c++) {
+                                dtau += sigma_cia_interp[wn + nwngrid*(j + c*nlayers)] * x1_idx[c][j]*x2_idx[c][j] * density[j]*density[j] * dz[j];
+                            }
+                        }
+                        if (rayleigh == 1) { // rayleigh
+                            for (int l=0; l<ninactive; l++) {
+                                dtau += sigma_rayleigh[wn + nwngrid*(l+nactive)] * inactive_mixratio[j+nlayers*l] * density[j] * dz[j];
+                            }
+                        }
+                        if ((mie == 1) && (pressure[j] >= mie_topP) && (pressure[j] <= mie_bottomP)){ //mie
+                            dtau += sigma_mie[wn] * density[j] *dz[j];
+                        }
+
+                        tau_sum2 = tau_sum1 + dtau;
+
+                        // contribution function
+                        contrib[wn + j*nwngrid] = (exp(-tau_sum1) - exp(-tau_sum2));
+
+                        // calculate individual intensities at zenith angles sampled at 4 gaussian quadrature points
+                        I1 += BB_wl * ( exp(-tau_sum1/mu1) - exp(-tau_sum2/mu1));
+                        I2 += BB_wl * ( exp(-tau_sum1/mu2) - exp(-tau_sum2/mu2));
+                        I3 += BB_wl * ( exp(-tau_sum1/mu3) - exp(-tau_sum2/mu3));
+                        I4 += BB_wl * ( exp(-tau_sum1/mu4) - exp(-tau_sum2/mu4));
+
+                    }
+
+
+                    // Integrating over zenith angle by summing the 4 intensities multiplied by the zenith angle and the
+                    // four quadrature weights. Get flux by multiplying by 2 pi
+                    F_total =  2.0*pi*(I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4) ;
+
+                    FpFs[wn] = (F_total/star_sed[wn]) * (planet_radius/star_radius)*(planet_radius/star_radius);
 
                 }
-
-
-                // Integrating over zenith angle by suming the 4 intensities multiplied by the zenith angle and the
-                // four quadrature weights. Get flux by multiplying by 2 pi
-                F_total =  2.0*pi*(I1*mu1*w1 + I2*mu2*w2 + I3*mu3*w3 + I4*mu4*w4) ;
-
-                FpFs[wn] = (F_total/star_sed[wn]) * pow((planet_radius/star_radius), 2);
-
             }
         }
 
