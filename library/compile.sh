@@ -21,6 +21,11 @@ pgc++ -fPIC -shared -o gpu_ctypes_pathintegral_transmission_xsec.so gpu_ctypes_p
 # transmission, xsec, cpu compiler
 g++ -fPIC -shared -fopenmp -o cpu_ctypes_pathintegral_transmission_xsec.so cpu_ctypes_pathintegral_transmission_xsec.cpp
 
+# emission, xsec, gpu compiler
+pgc++ -fPIC -shared -o gpu_ctypes_pathintegral_emission.so gpu_ctypes_pathintegral_emission.cpp
+# emission, xsec, cpu compiler
+g++ -fPIC -shared -fopenmp -o cpu_ctypes_pathintegral_transmission_xsec.so cpu_ctypes_pathintegral_transmission_xsec.cpp
+
 # emission, xsec
 # $COMPILER -fPIC -shared $OPENMP_FLAG -o ctypes_pathintegral_emission.so ctypes_pathintegral_emission.cpp
 

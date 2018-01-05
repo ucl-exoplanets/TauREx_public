@@ -16,7 +16,7 @@
  icc -fPIC -shared -o ctypes_pathintegral_transmission_xsec.so ctypes_pathintegral_transmission_xsec.cpp
  icc -fPIC -shared -openmp -o ctypes_pathintegral_transmission_parallel_xsec.so ctypes_pathintegral_transmission_xsec.cpp
  
- If you want to use a PGI compiler:
+ If you want to use a PGI compiler wirth a NVIDIA tesla gpu card:
  
  pgc++ -fast -ta=tesla -Minfo=all ctypes_pathintegral_transmission_xsec.cpp
  

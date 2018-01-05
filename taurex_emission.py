@@ -26,7 +26,7 @@ sys.path.append('./library')
 
 from library_emission import *
 
-def run(params, options=False):
+def run(params, options=False, gpu=False, rank=0):
 
     out_path_orig = params.out_path
 
@@ -44,7 +44,7 @@ def run(params, options=False):
     atmosphereob = atmosphere(dataob)
 
     #initialising emission radiative transfer code instance
-    forwardmodelob = emission(atmosphereob, stage=0)
+    forwardmodelob = emission(atmosphereob, gpu=gpu, rank=rank, stage=0)
 
     #initialising fitting object
     fittingob = fitting(forwardmodelob)

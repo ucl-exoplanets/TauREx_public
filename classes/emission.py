@@ -22,13 +22,14 @@ import matplotlib.pylab as plt
 
 class emission(object):
 
-    def __init__(self, atmosphere, stage=0):
+    def __init__(self, atmosphere, gpu=False, rank=0):
 
         logging.info('Initialise object emission')
 
         self.params = atmosphere.params # get params object from atmosphere
         self.data = atmosphere.data    # get data object from atmosphere
         self.atmosphere = atmosphere
+        self.rank = rank
 
         self.stage = 0
 
@@ -39,10 +40,17 @@ class emission(object):
         if self.params.in_opacity_method in ['xsec_lowres', 'xsec_highres', 'xsec_sampled', 'xsec']: # using cross sections
 
             if self.atmosphere.nthreads > 1:
-                # load openmp version. Remember to set OMP_NUM_THREADS to number of threads
-                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
+                # load openacc version. Remember to set OMP_NUM_THREADS to number of threads
+                logging.info('Load openacc/MPI version of emission model')
+
+                if gpu: # if there is a gpu use it
+                    self.pathintegral_lib = C.CDLL('./library/gpu_ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
+                else: # in absence of a gpu just use the cpu version of the forward model
+                    self.pathintegral_lib = C.CDLL('./library/cpu_ctypes_pathintegral_emission.so',mode=C.RTLD_GLOBAL)
+
             else:
-                self.pathintegral_lib = C.CDLL('./library/ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
+                logging.info('Load single-core version of emission model')
+                self.pathintegral_lib = C.CDLL('./library/cpu_ctypes_pathintegral_emission.so', mode=C.RTLD_GLOBAL)
 
             # set forward model function
             self.model = self.ctypes_pathintegral
@@ -78,7 +86,8 @@ class emission(object):
                  C.c_double,
                  C.c_double,
                  np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
-                 C.c_void_p]
+                 C.c_void_p,
+                 C.c_int]
 
 
 
@@ -163,7 +172,8 @@ class emission(object):
                                              self.params.star_radius,
                                              self.atmosphere.star_sed,
                                              C.c_void_p(FpFs.ctypes.data),
-                                             C.c_void_p(tau.ctypes.data))
+                                             C.c_void_p(tau.ctypes.data).
+                                             self.rank)
 
 
 
