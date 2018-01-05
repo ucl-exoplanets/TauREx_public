@@ -22,7 +22,7 @@ import matplotlib.pylab as plt
 
 class emission(object):
 
-    def __init__(self, atmosphere, gpu=False, rank=0):
+    def __init__(self, atmosphere, gpu=False, rank=0, stage=0):
 
         logging.info('Initialise object emission')
 
