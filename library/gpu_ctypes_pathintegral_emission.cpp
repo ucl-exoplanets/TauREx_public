@@ -4,7 +4,7 @@
 
     Forward model for emission
 
-    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+    Developers: Ingo Waldmann, Marco Rocchetto, Tiziano Zingales (University College London)
 
 
     For both openmp and single core versions compile with g++:
@@ -16,6 +16,12 @@
 
              icc -fPIC -shared -o ctypes_pathintegral_emission.so ctypes_pathintegral_emission.cpp
              icc -fPIC -shared -openmp -o ctypes_pathintegral_emission_parallel.so ctypes_pathintegral_emission.cpp
+ 
+    Using a PGI compiler:
+        - test phase with all the acceleration information:
+            pgc++ -fast -ta=tesla -Minfo=all gpu_ctypes_pathintegral_emission.cpp
+        - compiling to run TauREx:
+            pgc++ -fPIC -shared -o gpu_ctypes_pathintegral_emission.so gpu_ctypes_pathintegral_emission.cpp
 
  */
 

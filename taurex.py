@@ -221,11 +221,11 @@ if MPIimport:
         if gpu_count > 0:
             if MPI.COMM_WORLD.Get_rank() < gpu_count:
                 # here the rank defines the types of gpu device, ordered by ordinal numbers
-                outputob = run(params, options, gpu=True, rank=MPI.COMM_WORLD.Get_rank())
+                outputob = run(params, options, gpu=True, rank=int(MPI.COMM_WORLD.Get_rank()))
             else:
-                outputob = run(params, options, gpu=False, rank=MPI.COMM_WORLD.Get_rank())
+                outputob = run(params, options, gpu=False, rank=int(MPI.COMM_WORLD.Get_rank()))
     else:
-        outputob = run(params, options, gpu=False, rank=MPI.COMM_WORLD.Get_rank())
+        outputob = run(params, options, gpu=False, rank=int(MPI.COMM_WORLD.Get_rank()))
 
 # plotting
 if options.plot:
