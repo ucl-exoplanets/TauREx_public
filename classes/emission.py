@@ -172,7 +172,7 @@ class emission(object):
                                              self.params.star_radius,
                                              self.atmosphere.star_sed,
                                              C.c_void_p(FpFs.ctypes.data),
-                                             C.c_void_p(tau.ctypes.data).
+                                             C.c_void_p(tau.ctypes.data),
                                              self.rank)
 
 
