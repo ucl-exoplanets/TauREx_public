@@ -87,7 +87,7 @@ class emission(object):
                  C.c_double,
                  np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                  C.c_void_p,
-                 C.c_int]
+                 C.c_int16]
 
 
 
@@ -130,7 +130,7 @@ class emission(object):
                  C.c_double,
                  np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags='C_CONTIGUOUS'),
                  C.c_void_p,
-                 C.c_int]
+                 C.c_int16]
 
     def ctypes_pathintegral(self, return_tau=False, mixratio_mask=False):
         
@@ -174,7 +174,7 @@ class emission(object):
                                              self.atmosphere.star_sed,
                                              C.c_void_p(FpFs.ctypes.data),
                                              C.c_void_p(tau.ctypes.data),
-                                             int(self.rank))
+                                             self.rank)
 
 
 
