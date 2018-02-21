@@ -1,4 +1,4 @@
-# TauREx version 2.5
+# TauREx version 2.6
 
 TauREx (Tau Retrieval for Exoplanets) is a fully bayesian inverse atmospheric retrieval framework. 
 TauREx is a very extensive retrieval framework with a wide range of functionalities. Here are installation instructions and worked examples whilst we write a more exhaustive manual.  
@@ -21,10 +21,6 @@ Waldmann et al. (2015b), “Tau-REx II: Retrieval of Emission Spectra, ApJ, 813,
 ---
 
 ## License: 
-
-<!---
-// License for public version of TauREx. Make sure to change license to below before publishing. 
-
 This work is licensed under the Creative Commons Attribution 4.0 International License. 
 
 We would like to draw your attention to Section 3 of the license and to:
@@ -32,10 +28,6 @@ We would like to draw your attention to Section 3 of the license and to:
 - indicate if You modified the Licensed Material and retain an indication of any previous modifications
 
 To view a copy of this license, visit http://creativecommons.org/licenses/by/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
-
-// License for private version of TauREx. Keep for private repository
-
-Work contained in this private repository cannot be copied or distributed without the express permission of the authors. All rights reserved.  
 
 ---
 
