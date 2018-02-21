@@ -1,0 +1,54 @@
+[General]
+type = transmission
+manual_waverange = False
+wavemin = 0.5
+wavemax = 10.
+
+[Input]
+spectrum_file = Input/observations/ariel/october16/HD189733b_clear_all_SNR10_te_1.dat
+opacity_method = xsec_sampled
+ktab_path = Input/ktables/R100/
+xsec_path = Input/xsec/R7000
+cia_path = Input/cia/HITRAN/
+
+[Output]
+path = Output/ariel/october16
+
+[Star]
+radius = 0.805
+
+[Planet]
+radius = 1.138
+mass = 1.138
+
+[Atmosphere]
+nlayers = 50
+max_pressure = 1e6
+min_pressure = 1e-5
+tp_type = isothermal
+tp_iso_temp = 1400
+
+tp_Npoint_T_list = 2500, 2200, 1800, 1800
+tp_Npoint_P_list = -1, 1e4, 100.0, -1
+
+
+active_gases = H2O, CO, CH4, NH3, CO2
+active_gases_mixratios = 2e-3, 2e-3,1e-5, 1e-6, 1e-7
+
+#active_gases = H2O
+#active_gases_mixratios = 2e-3
+
+N2_mixratio = 0.
+He_H2_ratio = 0.17647
+
+cia_pairs = H2-H2, H2-He
+
+rayleigh = True
+cia = True
+
+clouds = False
+clouds_pressure = 1e3
+
+[MultiNest]
+run = True
+n_live_points = 1000

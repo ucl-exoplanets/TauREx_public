@@ -1,0 +1,59 @@
+[General]
+manual_waverange = False
+wavemin = 0.5
+wavemax = 10.
+ace = True
+
+
+[Input]
+spectrum_file = Input/observations/ariel/october16/HD209458b_co_11_all_SNR20_te_3.dat
+opacity_method = xsec_sampled
+ktab_path = Input/ktables/R100/
+xsec_path = Input/xsec/R7000
+cia_path = Input/cia/HITRAN/
+
+[Output]
+path = Output/ariel/october16
+
+[Star]
+radius = 1.15
+temp = 6075
+
+[Planet]
+radius = 1.35
+mass = 0.714
+
+[Atmosphere]
+nlayers = 200
+max_pressure = 1e6
+min_pressure = 1e-5
+tp_type = isothermal
+tp_iso_temp = 1400
+
+#active_gases = H2O, CO, CH4, NH3, CO2
+#active_gases_mixratios = 2e-3, 2e-3,1e-5, 1e-6, 1e-7
+
+active_gases = H2O, CO, CH4, NH3, CO2
+active_gases_mixratios = 2e-3, 2e-3,1e-5, 1e-6, 1e-7
+
+
+N2_mixratio = 0.
+He_H2_ratio = 0.17647
+
+cia_pairs = H2-H2, H2-He
+
+rayleigh = True
+cia = True
+
+clouds = False
+clouds_pressure = 1e-2
+
+ace_metallicity = 1
+ace_co = 0.8
+
+[Fitting]
+fit_ace_co = True
+
+[MultiNest]
+run = True
+n_live_points = 1000

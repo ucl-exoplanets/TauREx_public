@@ -1,0 +1,61 @@
+[General]
+type = emission
+
+[Input]
+opacity_method = ktables
+ktab_path = Input/ktables/R100/
+xsec_path = Input/xsec/xsec_sampled_R10000_0.3-15/
+spectrum_file = tests/test_0_emission/SPECTRUM_fit.dat
+
+[Output]
+path = tests/test_0_emission
+sigma_spectrum = True
+sigma_spectrum_frac = 0.5
+
+[Star]
+radius = 1
+
+[Planet]
+radius = 1
+mass = 1
+
+[Atmosphere]
+nlayers = 30
+max_pressure = 1e6
+min_pressure = 1e-5
+
+tp_type = guillot
+tp_guillot_T_irr = 1500
+tp_guillot_kappa_ir = 0.5
+tp_guillot_kappa_v1 = 0.05
+tp_guillot_kappa_v2 = 0.05
+tp_guillot_alpha = 0.005
+
+
+active_gases = H2O
+active_gases_mixratios = 1e-4
+
+N2_mixratio = 1e-12
+He_H2_ratio = 0.17
+
+cia_pairs = H2-H2, H2-He
+
+rayleigh = True
+cia = True
+
+clouds = False
+cld_topP = 200
+
+[Fitting]
+fit_active_gases = True
+fit_N2_mixratio = False
+fit_He_H2_ratio = False
+fit_temp = False
+fit_radius = False
+
+[Downhill]
+run = True
+
+[MultiNest]
+run = False
+n_live_points = 100

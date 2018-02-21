@@ -1,0 +1,41 @@
+[General]
+manual_waverange = False
+wavemin = 1
+wavemax = 10.
+
+[Input]
+opacity_method = ktables
+ktab_path = Input/ktables/R100/
+xsec_path = Input/xsec/xsec_sampled_R10000_0.3-15/
+cia_path = Input/cia/HITRAN/
+
+[Output]
+path = tests/test_0_transmission
+
+[Star]
+radius = 1
+
+[Planet]
+radius = 1
+mass = 1
+
+[Atmosphere]
+nlayers = 100
+max_pressure = 1e6
+min_pressure = 1e-5
+tp_type = isothermal
+tp_iso_temp = 1500
+
+active_gases = H2O, CH4
+active_gases_mixratios = 1e-4, 1e-4
+
+N2_mixratio = 0.
+He_H2_ratio = 0.17647
+
+cia_pairs = H2-H2, H2-He
+
+rayleigh = True
+cia = True
+
+clouds = False
+clouds_pressure = 0.001

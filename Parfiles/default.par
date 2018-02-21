@@ -1,0 +1,432 @@
+[General]
+
+# Defines general parameters
+
+#verbose or not
+verbose = True
+verbose_all_threads = False
+
+# specturm type (emission, transmission)
+type = transmission
+# chemically consistent model ACE (Atmospheric Chemical Equilibrium)
+ace = False
+
+# recompile cpp code at each run
+compile_cpp = False
+compiler = g++
+openmp_flag = -fopenmp
+
+# These settings are used when running create_spectrum.py
+
+# manually set wavelength range (if False, the max range available in the cross sections is used)
+manual_waverange = False
+# short wavelength cut-off (in microns) if manual_waverange = True
+wavemin = 0.4
+# long wavelength cut-off (in microns) if manual_waverange = True
+wavemax = 20.0
+
+[Input]
+
+# Defines input parameters
+
+#Observed spectrum to be fitted (Format: wavelength (micron), (Rp/R*)^2, error[, bin width (micron)])
+spectrum_file = False
+
+# append SPECTRUM_out.db to output. Useful to keep track of synthetic observations created with TauREx
+spectrum_db = False
+
+# opacity computation method: 'xsec_sampled', 'xsec_highres' or 'ktables'.
+opacity_method = ktables
+# path to pickled cross sections
+xsec_path = Input/xsec/sampling/R7000
+# path to pickled ktables
+ktab_path = Input/ktables/R100/
+
+# CAREFUL IN USING THIS PARAM! Keep it to False if you don't know what you're doing :)
+# Force TauREx to load xsec or ktables in this range of temperatures.
+# If set to None or False the temperature range loaded will be automatically determined
+# according to the fitting TP boundaries or the input TP profile (if profile is isothermal).
+# Might be useful when using TP profile different from isothermal, as in this case
+# all available temperatures will be used and loaded into memory. This might be problematic when
+# you use high resolution cross sections, as several hundreds of GB of RAM would be needed.
+custom_temp_range = None
+
+# Path where cia pairs are stored as pickled files
+cia_path = Input/cia/HITRAN/
+
+#Mie scattering refractive indices file for bh model
+mie_path = Input/mie/MgSiO3.dat
+
+# Path to Phoenix/Atlas stellar models
+star_path = Input/star_spectra
+
+[Output]
+
+# Defines output parameters
+
+#path for output files
+path = Output/
+
+# Calculate one sigma of fitted spectrum. Note that this spectrum extends over the entire range available in the input
+# cross section, so it might take a while!
+sigma_spectrum = False
+# fraction of total samples from which to calculate the one sigma spectrum
+sigma_spectrum_frac = 0.1
+
+
+[Star]
+
+# Defines stellar specific parameters
+
+#Stellar radius (R_sun)
+radius =  1
+#Stellar temperature (K)
+temp   = 5800
+
+# use black body instead of stellar model (see Input > star_path)
+use_blackbody = False
+
+[Planet]
+
+# Defines planet specific parameters
+
+# Pressure planetary radius (R_jupiter) referenced at max_pressure (default is 10 bar)
+radius = 1
+# Planetary mass (M_jupiter)
+mass = 1
+
+[Atmosphere]
+
+# Defines atmosphere specific parameters
+
+# number of atmospheric levels
+nlayers = 100
+
+# Set maximum pressure level in Pascal
+# Remember that the planet_radius will be referenced against max_pressure. Leave to 1e6 if you're using the 10 bar pressure radius
+max_pressure = 1e6
+min_pressure = 1e-4
+
+# TP profile type to be selected (only sets for emission, tranmission = isothermal)
+# available profiles are: isothermal, guillot, hybrid, 2point, 3point, Npoint, file)
+# If using 'file', specify the external file from which the TP profile is loaded (see tp_file)
+# Note that if you use 'file' during fitting, TauREx will not fit the TP profile, but use the provided profile
+tp_type = isothermal
+
+# Load TP profile from external file. File must contain two columns: Pressure (Pascalà), Temperature (K)
+# Note that the provided TP profile will be interpolated to the internal pressure grid (between min_pressure and max_pressure)
+tp_file = Input/EXAMPLE_tp_profile.dat
+
+# isothermal temperature
+tp_iso_temp = 1500
+
+# guillot params
+tp_guillot_T_irr = 1500
+tp_guillot_kappa_ir = 0.05
+tp_guillot_kappa_v1 = 0.05
+tp_guillot_kappa_v2 = 0.05
+tp_guillot_alpha = 0.005
+
+#2point params
+#surface temperature 
+tp_2point_T_surf = 1500
+#troposphere temperature as difference to surface 
+#T_trop = T_surf - T_trop_diff
+tp_2point_T_trop_diff = 500
+#troposphere pressure (PA)
+tp_2point_P_trop = 100
+
+#Npoint params (accepts arbitrary lists of Temp. Pressure. nodes)
+#list of temperature points (surface -> top) 
+tp_Npoint_T_list = 2500, 2200, 1800, 1800
+#list of corresponding pressure points (Pa)
+#if first and last points are set to -1, it replaces these with 
+#the maximum and minimum pressure grid values in TauREx
+tp_Npoint_P_list = -1, 1e4, 100.0, -1
+#smoothing factor (no. of layers)
+tp_Npoint_smooth = 10
+
+# correlation length of TP profile for Rodgers2000 and Hybrid
+tp_corr_length = 5.0
+
+# active absorbers and absolute mixing ratios (if ace = False). Set to 'file' to load external profiles (see active_gases_file)
+active_gases = H2O
+active_gases_mixratios = 1e-5
+
+# Load active gases mixing ratio profiles from external file.
+# The first row must be a list of molecules corresponding to the mixing ratios profile, separated by a space
+# From second row: first column is the pressure in Pascal, other columns gases mixing ratios (sorted in the same
+# order as in the first row)
+active_gases_file = Input/EXAMPLE_active_gases_profile.dat
+
+# mixing ratio of N2
+N2_mixratio = 0
+
+# He/H2 ratio (default is 0.85 H2, 0.15 He)
+He_H2_ratio = 0.17647
+
+# include Ryleigh scattering opacities
+rayleigh = True
+
+# include CIA opacities
+cia = True
+
+# Name of the pairs to include (use dash "-" between elements). The names are used to load the pickled files
+# inside cia_path (e.g. "h2-h2" loads H2-H2.db).
+cia_pairs = H2-H2, H2-He
+
+
+#Mie scattering, will override rayleigh opacities 
+mie = False 
+
+#Type of mie model: flat, lee, bh
+#flat: assumes grey haze (i.e. no spectral modulation). Required parameters: mie_f
+#lee: Use fromalism from Lee et al. 2013, ApJ, 778, 97. Required parameters: mie_r, mie_f,mie_q
+#bh: Use formalism from Bohren and Huffman (1983) appendix A for homogenous and isotropic scattering of 
+#spherical particles. Required parameters: mie_r, mie_f, mie_refract, mie_dist_type
+mie_type = lee
+
+#Mie scattering particle distribution for bh model: cloud/haze
+mie_dist_type = cloud
+
+#Mie scattering cloud particle size (microns)
+mie_r = 0.01
+
+#Mie scattering cloud mixing ratio 
+mie_f = 1e-10
+
+#Mie scattering cloud composition 
+mie_q = 40 
+
+#Mie upper atmospheric pressure bound (PA). Set to -1 to assume top of atmospehre 
+mie_topP = -1 
+
+#Mie bottom atmospheric pressure bound (PA). Set to -1 to assume top of atmospehre 
+mie_bottomP = -1 
+
+# include cloud opacities. True/False
+clouds = False
+# cloud top pressure in Pascal
+clouds_pressure = 1e3
+
+# metallicity (1 = solar metallicity, 10 = 10x solar metallicity etc)
+ace_metallicity = 1
+# co ratio (value given below is solar)
+ace_co = 0.54954
+
+
+[Fitting]
+
+# Defines general fittings parameters, independent of method
+# Note that fitting runs only if one of the fitting modes is active. (E.g. MultiNest->run = True)
+
+# DISABLED. They cause some conflicts with General->type. Might be useful to get them back when we will try to combine
+# transmission and emission
+#fit transmission model
+#transmission = True
+# fit emission model
+#emission     = False
+
+
+# fit emission in 2 stage mode (General->type must be emission)
+emission_stage2 = True
+
+# use the chemically consistent fit
+ace = False
+
+# fit mixing ratios in log space
+mixratio_log = True
+
+# NOT SUPPORTED
+# centered log ratio transformation for mixing ratios.
+# clr_trans = False
+
+
+
+# Fit/fix parameters. True means the parameter is fitted, False the parameter is fixed to its input value
+
+# Fit the active gases mixing ratios, defined in Planet > active_gases. Bounds set in mixratio_bounds
+fit_active_gases = True
+
+# Fit the mixing ratio of N2, defined in Planet > N2_mixratio. Bounds set in mixratio_bounds
+fit_N2_mixratio = False
+
+# Fit the He/H2 cotent ratio, defined in Planet > H2_He_ratio
+fit_He_H2_ratio = False
+
+
+# fit the temperature profile (working with isothermal, guillot, 2point, 3point; not yet tested with rodgers;
+# not implemented for n-point)
+fit_temp = True
+
+# fit radius at atm_max_pressure (defined in Planet > radius)
+fit_radius = True
+
+#fit mie scattering 
+fit_mie_scattering = True
+
+#fit mie cloud composition. Only applicable if mie_type = lee 
+fit_mie_composition = False
+
+#fit mie particle size 
+fit_mie_radius = False
+
+#Mie scattering, cloud particle size prior (microns)
+mie_r_bounds = 1e-10, 10.0
+
+#Mie scattering, cloud mixing ratio
+mie_f_bounds = 1e-40, 1e-4
+
+#Mie scattering, composition parameter
+mie_q_bounds = 1.0, 100.0
+
+#Mie scattering fitting top pressure 
+fit_mie_Ptop = False
+
+#Mie top pressure bounds min-max (Pa). Set to -1 to assume top/bottom atmosphere
+mie_ptop_bounds = -1,-1
+
+#Mie scattering fitting bottom pressure 
+fit_mie_Pbottom = False
+
+#Mie bottom pressure bounds min-max (Pa). Set to -1 to assume top/bottom atmosphere
+mie_pbottom_bounds = -1,-1
+
+# fit cloud top pressure
+fit_clouds_pressure = False
+
+# ace: chemical consistent fitting
+fit_ace_metallicity = False
+fit_ace_co = False
+
+# Set prior bounds (always assume uniform priors)
+
+# upper and lower bounds for active gases mixing ratios (in linear space). This includes N2 (see fit_N2_mixratio)
+# IMPORTANT: never set mixratio_bounds to zero, otherwise log conversion (mixratio_log = True) will break
+mixratio_bounds = 1.0e-12, 1.0
+
+# upper and lower bounds for the clr ratios
+# NOT SUPPORTED
+#clr_bounds = -20, 20
+
+# He to H2 ratio. Fitted in log space. Do not set bounds to zero!
+He_H2_ratio_bounds = 1e-12, 1e12
+
+# Upper and lower bounds of the radius (but see also radius_bounds_factor)
+radius_bounds = 0.9, 1.1
+
+# The upper and lower bounds of the radius are defined as a factor of the input radius (Planet->radius).
+# E.g. if you set radius_bounds_factor = 0.1, and Planet->radius = 1, the radius bounderies will be 0.9 - 1.0
+# This parameter overrides radius_bounds. You can set this to None or False, and then radius_bounds will be used.
+radius_bounds_factor = 0.1
+
+# cloud top pressure bounds ( in Pascal ) ). Fit is in log space
+clouds_pressure_bounds = 1.e-3, 1.e6
+
+# tp profile bounds
+
+#isothermal
+tp_iso_bounds  = 300, 2000
+
+# guillot [kappa params fitted in log space, don't set to zero]
+tp_guillot_T_irr_bounds = 1300, 2500
+tp_guillot_kappa_ir_bounds = 1e-10, 10
+tp_guillot_kappa_v1_bounds =  1e-10, 10
+tp_guillot_kappa_v2_bounds =  1e-10, 10
+tp_guillot_alpha_bounds = 0., 1.
+
+#lower and upper bounds for TP-profile hybrid alpha parameter
+hybrid_alpha_bounds  = 0.0, 1.0
+
+# ace specific parameters
+ace_metallicity_bounds = 1.e-1, 1.e4
+ace_co_bounds = 0, 2
+
+[Downhill]
+
+# Defines parameters for minimisation
+
+# run minimisation routine on data
+run = False
+# type of minimisation to use: Nelder-Mead, Powell, CG, BFGS, Newton-CG, L-BFGS-B, TNC, COBYLA, SLSQP, dogleg, trust-ncg
+# see scipy.optimize.minimize documentation
+type = L-BFGS-B
+# Supply extra parameters using options parameter. See scipy docu
+options = {‘verbose’:False}
+# pickle DOWN_out location (default params.out_path/DOWN_out.db)
+out_filename = default
+
+[MCMC]
+
+###### MCMC OUTPUT CURRENTLY NOT SUPPORTED ######
+
+#MCMC will likely be dropped completely from the next version in favour of multinest.
+
+# Defines MCMC specific parameters
+
+# run MCMC analysis on data
+run = False
+# update data standard deviation from dynamic fit.
+update_std = True
+# MCMC number of total iterations
+iter = 10000
+# MCMC burn in period
+burn = 1000
+# MCMC thinning factor
+thin = 1
+# toggle verbose
+verbose = True
+# show progress bar
+progressbar = True
+# pickle MCMC_out location
+out_filename = default
+
+[MultiNest]
+
+# Defines MultiNest specific parameters
+
+# run Nested Sampling analysis on data
+run = False
+# resume from previous run
+resume = True
+# verbose
+verbose = False
+# sampling chains directory
+nest_path = chains/
+# sampling efficiency (parameter, ...)
+sampling_eff = parameter
+# number of live points
+n_live_points = 1000
+# maximum no. of iterations (0=inf)
+max_iter = 0
+# search for multiple modes
+multimodes = True
+# maximum number of modes
+max_modes = 100
+# run in constant efficiency mode
+const_eff = False
+# set log likelihood tolerance. If change is smaller, multinest will have converged
+evidence_tolerance = 0.5
+mode_tolerance = -1e90
+# importance nested sampling
+imp_sampling = False
+# pickle NEST_out location (default params.out_path/NEST_out.db)
+out_filename = default
+
+[PolyChord]
+#Defines PolyChord specific paramters
+
+#run PolyChord analysis on data
+run = False
+#resume from previous run 
+resume = True
+#sampling chains directory
+path = poly_chains/
+#root file prefix
+file_root = 1-
+#attempt clustering of likelihood
+clustering = True
+#Likelihood convergence precision
+precision = 0.001
+# pickle NEST_poly_out location (default params.out_path/NEST_out.db)
+out_filename = default

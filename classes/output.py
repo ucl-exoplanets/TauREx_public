@@ -1,0 +1,679 @@
+'''
+    TauREx v2 - Development version - DO NOT DISTRIBUTE
+
+    Output class
+
+    Developers: Ingo Waldmann, Marco Rocchetto (University College London)
+
+'''
+
+# loading libraries
+import copy
+import glob
+import ctypes as C
+import numpy as np
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
+from library_constants import *
+from library_general import *
+import logging
+
+import matplotlib.pylab as plt
+
+try:
+    import pymultinest
+    multinest_import = True
+except:
+    multinest_import = False
+
+class output(object):
+
+    def __init__(self, fitting, out_path = None, nthreads=1):
+
+        self.params = fitting.params
+        self.data = fitting.data
+        self.atmosphere = fitting.atmosphere
+        self.forwardmodel = fitting.forwardmodel
+        self.fitting = fitting
+
+        if out_path is None:
+            self.out_path = self.params.out_path
+        else:
+            self.out_path = out_path
+
+        self.nthreads = nthreads
+
+        types = ['downhill', 'mcmc', 'nest','nest_poly']
+        func_types = [self.store_downhill_solution,
+                      self.store_mcmc_solutions,
+                      self.store_nest_solutions,
+                      self.store_polychord_solutions]
+        run = [self.fitting.DOWN, self.fitting.MCMC, self.fitting.NEST,self.fitting.NEST_POLY]
+        out_filenames = [self.params.downhill_out_filename,
+                         self.params.mcmc_out_filename,
+                         self.params.nest_out_filename,
+                         self.params.nest_poly_out_filename]
+        self.dbfilename = {}
+        for idx, val in enumerate(types):
+            if run[idx]:
+
+                logging.info('Storing %s solution' % val)
+
+                outdb = self.initialize_output(val)
+                outdb = func_types[idx](outdb)
+                outdb = self.add_data_from_solutions(outdb)
+
+                if out_filenames[idx] == 'default':
+                    filename = os.path.join(self.out_path, '%s_out.pickle' % types[idx])
+                else:
+                    filename = out_filenames[idx]
+                self.dbfilename[val] = filename
+                pickle.dump(outdb, open(filename, 'wb'), protocol=2)
+
+        logging.info('Output object correctly initialised')
+
+    def initialize_output(self, fitting_type):
+
+        outdb = {'type': fitting_type,
+                 'obs_spectrum': self.data.obs_spectrum,
+                 'params': self.params.params_to_dict(),
+                 'fit_params_names': self.fitting.fit_params_names,
+                 'fit_params_bounds': self.fitting.fit_bounds,
+                 'fit_params_texlabels': self.fitting.fit_params_texlabels,
+                 'solutions': []}
+
+        if os.path.isfile(self.params.in_spectrum_db):
+
+            try:
+                SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db, 'rb'), encoding='latin1')
+            except:
+                SPECTRUM_db = pickle.load(open(self.params.in_spectrum_db))
+            outdb['SPECTRUM_db'] = SPECTRUM_db
+
+        return outdb
+
+    def store_downhill_solution(self, DOWN_out):
+
+        logging.info('Store the downhill results')
+
+        dict = {}
+        for idx, param_name in enumerate(self.fitting.fit_params_names):
+            dict[param_name] = {'value': self.fitting.DOWN_fit_output[idx] }
+
+        DOWN_out['solutions'].append({'type': 'downhill', 'fit_params': dict})
+
+        return DOWN_out
+
+    def store_mcmc_solutions(self, MCMC_out):
+
+        logging.info('Store the MCMC results')
+
+        # read individual traces from PyMCMC output and combine them into a single array
+        for thread in glob.glob(os.path.join(self.fitting.dir_mcmc, '*')):
+            chainlist = glob.glob(os.path.join(thread, 'Chain_0', 'PFIT*'))
+            tracedata = [np.loadtxt(trace) for trace in chainlist]
+        tracedata = np.transpose(tracedata)
+
+        # todo MCMC output not supported at the moment...
+
+    def store_nest_solutions(self, NEST_out):
+
+        logging.info('Store the multinest results')
+
+        data = np.loadtxt(os.path.join(self.fitting.dir_multinest, '1-.txt'))
+
+        NEST_analyzer = pymultinest.Analyzer(n_params=len(self.fitting.fit_params),
+                                             outputfiles_basename=os.path.join(self.fitting.dir_multinest, '1-'))
+        NEST_stats = NEST_analyzer.get_stats()
+        NEST_out['NEST_stats'] = NEST_stats
+        NEST_out['global_logE'] = (NEST_out['NEST_stats']['global evidence'], NEST_out['NEST_stats']['global evidence error'])
+
+        modes = []
+        modes_weights = []
+        chains = []
+        chains_weights = []
+
+        if self.params.nest_multimodes:
+
+            # separate modes. get individual samples for each mode
+
+            # get parameter values and sample probability (=weight) for each mode
+            with open(os.path.join(self.fitting.dir_multinest, '1-post_separate.dat')) as f:
+                lines = f.readlines()
+                for idx, line in enumerate(lines):
+                    if idx > 2: # skip the first two lines
+                        if lines[idx-1] == '\n' and lines[idx-2] == '\n':
+                            modes.append(chains)
+                            modes_weights.append(chains_weights)
+                            chains = []
+                            chains_weights = []
+                    chain = [float(x) for x in line.split()[2:]]
+                    if len(chain) > 0:
+                        chains.append(chain)
+                        chains_weights.append(float(line.split()[0]))
+                modes.append(chains)
+                modes_weights.append(chains_weights)
+            modes_array = []
+            for mode in modes:
+                mode_array = np.zeros((len(mode), len(mode[0])))
+                for idx, line in enumerate(mode):
+                    mode_array[idx, :] = line
+                modes_array.append(mode_array)
+        else:
+            # not running in multimode. Get chains directly from file 1-.txt
+            modes_array = [data[:,2:]]
+            chains_weights = [data[:,0]]
+            modes_weights.append(chains_weights)
+
+        modes_weights = np.asarray(modes_weights)
+
+        for nmode in range(len(modes)):
+
+            dict = {'type': 'nest',
+                    'local_logE': (NEST_out['NEST_stats']['modes'][0]['local log-evidence'],  NEST_out['NEST_stats']['modes'][0]['local log-evidence error']),
+                    'weights': np.asarray(modes_weights[nmode]),
+                    'tracedata': modes_array[nmode],
+                    'fit_params': {}}
+
+            for idx, param_name in enumerate(self.fitting.fit_params_names):
+
+                trace = modes_array[nmode][:,idx]
+                q_16, q_50, q_84 = quantile_corner(trace, [0.16, 0.5, 0.84],
+                            weights=np.asarray(modes_weights[nmode]))
+                dict['fit_params'][param_name] = {
+                    'value' : q_50,
+                    'sigma_m' : q_50-q_16,
+                    'sigma_p' : q_84-q_50,
+                    'nest_map': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
+                    'nest_mean': NEST_stats['modes'][nmode]['mean'][idx],
+                    'nest_sigma': NEST_stats['modes'][nmode]['sigma'][idx],
+                    'trace': trace,
+                }
+
+            # if self.params.fit_clr_trans == True:
+
+                # NOT WORKING!
+                #
+                # nallgases = self.fitting.forwardmodel.atmosphere.nallgases
+                #
+                # # if centered-log-ratio transformation is True, transform the traces of the log ratios back to abundances
+                # mixing_ratios_clr = modes_array[nmode][:, :nallgases-1] # get traces of log-ratios
+                # mixing_ratios_clr = np.c_[mixing_ratios_clr, -sum(mixing_ratios_clr, axis=1)] #add last clr (= -sum(clr) )
+                # mixing_ratios_clr_inv, coupled_mu_trace = inverse_clr_transform(mixing_ratios_clr)
+                #
+                # self.NEST_data_clr_inv = np.c_[mixing_ratios_clr_inv, coupled_mu_trace]
+                #
+                # # get means
+                # clr = np.asarray([NEST_stats['modes'][nmode]['maximum a posterior'][i] for i in range(nallgases-1)])
+                # clr = np.append(clr, -np.sum(clr))
+                #
+                # # add last CLR to dictionary. This is not fitted, as it is equal to minus the sum of all the other CLRs
+                # # Note that that the sum of all CLR is equal to zero
+                # dict['fit_params']['%s_CLR' % self.forwardmodel.atmosphere.inactive_gases[-1]] = {
+                #     'map': clr[nallgases-1],
+                #     'sigma': weighted_avg_and_std(mixing_ratios_clr[:, nallgases-1], modes_weights[nmode])[1], # weighted std
+                #     'trace': mixing_ratios_clr[:, nallgases-1],
+                # }
+                #
+                # mixing_means = np.exp(clr) # add log-ratio (= -sum(other log ratios)
+                # mixing_means /= sum(mixing_means) # closure operation
+                #
+                # # get coupled std of means
+                # absorbing_gases_X = mixing_means[:len(self.params.atm_active_gases)]
+                # inactive_gases_X = mixing_means[len(self.params.atm_inactive_gases)+1:]
+                #
+                # coupled_mu = None self.fitting.forwardmodel.atmosphere.get_coupled_planet_mu(absorbing_gases_X, inactive_gases_X)
+                #
+                # # convert mixing means to log space # todo consider new parameter X_log
+                # mixing_means = np.log10(mixing_means)
+                #
+                # # set new list of params names, including the clr inv mixing ratios
+                # self.clrinv_params_names = []
+                # for idx, gasname in enumerate(self.params.atm_active_gases +
+                #         self.params.atm_inactive_gases):
+                #     self.clrinv_params_names.append(gasname)
+                # self.clrinv_params_names.append('coupled_mu')
+                # for i in range(self.fitting.forwardmodel.atmosphere.nallgases-1, len(self.fitting.fit_params_names)):
+                #      self.clrinv_params_names.append(self.fitting.fit_params_names[i])
+                #
+                # for idx in range(self.fitting.forwardmodel.atmosphere.nallgases+1): # all gases + coupled_mu
+                #     if self.clrinv_params_names[idx] == 'coupled_mu':
+                #         trace = coupled_mu_trace
+                #         value = coupled_mu
+                #     else:
+                #         trace = mixing_ratios_clr_inv[:,idx]
+                #         value = mixing_means[idx]
+                #     std = weighted_avg_and_std(trace, modes_weights[nmode])[1]
+                #     dict['fit_params'][self.clrinv_params_names[idx]] = {
+                #         'value': value,
+                #         'sigma': std,
+                #         'trace': trace,
+                #     }
+
+            NEST_out['solutions'].append(dict)
+
+        return NEST_out
+
+
+    def store_polychord_solutions(self, NEST_out):
+
+        logging.info('Store the polychord results')
+
+        data = np.loadtxt(os.path.join(self.fitting.dir_polychord, '1-.txt'))
+
+        self.get_poly_cluster_number(self.fitting.dir_polychord)
+        NEST_stats = self.get_poly_stats(self.fitting.dir_polychord)
+        NEST_out['NEST_POLY_stats'] = NEST_stats
+        NEST_out['global_logE'] = (NEST_out['NEST_POLY_stats']['global evidence'], NEST_out['NEST_POLY_stats']['global evidence error'])
+
+        modes_array = []
+        modes_weights = []
+        num_fit_params = len(self.fitting.fit_params_names)
+        if self.params.nest_poly_clustering:
+            #if clustering is switched on, checking how many clusters exist
+            num_clusters = self.get_poly_cluster_number(self.fitting.dir_polychord)
+            if num_clusters == 1:
+                # Get chains directly from file 1-.txt
+                modes_array = [data[:,2:num_fit_params+2]]
+                modes_weights = [data[:,0]]
+            else:
+                #cycle through clusters                          
+                for midx in range(num_clusters):
+                    data = np.loadtxt(os.path.join(self.fitting.dir_polychord, 'clusters/1-_{0}.txt'.format(midx+1)))
+                    modes_array.append(data[:,2:num_fit_params+2])
+                    modes_weights.append(data[:,0])
+        else:    
+            # Get chains directly from file 1-.txt
+            modes_array = [data[:,2:num_fit_params+2]]
+            modes_weights = [data[:,0]]
+
+        modes_array = np.asarray(modes_array)
+        modes_weights = np.asarray(modes_weights)
+
+
+        for nmode in range(num_clusters):
+
+            dict = {'type': 'nest_poly',
+                    'local_logE': (NEST_out['NEST_POLY_stats']['modes'][0]['local log-evidence'],  NEST_out['NEST_POLY_stats']['modes'][0]['local log-evidence error']),
+                    'weights': np.asarray(modes_weights[nmode]),
+                    'tracedata': modes_array[nmode],
+                    'fit_params': {}}
+
+            for idx, param_name in enumerate(self.fitting.fit_params_names):
+
+                trace = modes_array[nmode][:,idx]
+                q_16, q_50, q_84 = quantile_corner(trace, [0.16, 0.5, 0.84],
+                            weights=np.asarray(modes_weights[nmode]))
+                dict['fit_params'][param_name] = {
+                    'value' : q_50,
+                    'sigma_m' : q_50-q_16,
+                    'sigma_p' : q_84-q_50,
+                    'nest_map': NEST_stats['modes'][nmode]['maximum a posterior'][idx],
+                    'nest_mean': NEST_stats['modes'][nmode]['mean'][idx],
+                    'nest_sigma': NEST_stats['modes'][nmode]['sigma'][idx],
+                    'trace': trace,
+                }
+
+ 
+            NEST_out['solutions'].append(dict)
+
+        return NEST_out
+    
+    def get_poly_cluster_number(self,dir):
+        '''counts polychord cluster files in 'clusters' folder'''
+        cluster_list = glob.glob(os.path.join(dir,'clusters/1-*.txt'))
+        c_idx = []
+        for file in cluster_list:
+            if file[-5].isdigit():
+                c_idx.append(int(file[-5]))
+        return np.max(c_idx)
+    
+    def get_poly_stats(self,dir):
+        '''replicates some of PyMultiNest.Analyzer for PolyChord'''
+        stats = {}
+        stats['modes'] ={}
+        
+        #re-count number of cluster files
+        num_clusters = self.get_poly_cluster_number(dir)
+       
+        nmode = 0 #mode index
+        #open .stats file and reading global/local evidences
+        with open(os.path.join(self.fitting.dir_polychord, '1-.stats')) as f:
+                lines = f.readlines()
+                for idx, line in enumerate(lines):
+                    if idx == 8: # skip to global evidence line
+                        tmp_line = line.split()
+                        gL_mu = tmp_line[2]
+                        gL_sig= tmp_line[-1]
+                        stats['global evidence'] = gL_mu
+                        stats['global evidence error'] = gL_sig
+                    if idx > 13: #skip to local evidence
+                        tmp_line = line.split()
+                        stats['modes'][nmode] = {}
+                        stats['modes'][nmode]['local log-evidence'] = tmp_line[3]
+                        stats['modes'][nmode]['local log-evidence error'] = tmp_line[5]
+                        nmode += 1
+                        if idx == (13 + num_clusters): #stopping reading file when clusters are exhausted
+                            break
+                        
+        #opening cluster files (or global file if no clustering) and get MAP, mean, sigma for parameters
+        if self.params.nest_poly_clustering:
+            for midx in range(num_clusters):
+                #cycling through cluster files 
+                data = np.loadtxt(os.path.join(self.fitting.dir_polychord, 'clusters/1-_{0}.txt'.format(midx+1)))
+                #find maximum likelihood index 
+                mL_idx = np.where(data[:,1] == np.min(data[:,1]))
+                stats['modes'][midx]['maximum a posterior'] = {}
+                stats['modes'][midx]['mean'] = {}
+                stats['modes'][midx]['sigma'] = {}
+                for idx in range(len(self.fitting.fit_params_names)):
+                    #cycle through parameters 
+                    #maximum likelihood values
+                    stats['modes'][midx]['maximum a posterior'][idx] = data[mL_idx,2+idx] 
+                    #weighted average and sigma 
+                    mu,sig = weighted_avg_and_std(data[:,2+idx], data[:,0])
+                    stats['modes'][midx]['mean'][idx] = mu
+                    stats['modes'][midx]['sigma'][idx] = sig
+                        
+        return stats
+        
+        
+
+    def add_data_from_solutions(self, fitting_out):
+
+
+        for idx, solution in enumerate(fitting_out['solutions']):
+
+            logging.info('Solution %i' % idx)
+
+            fit_params = [solution['fit_params'][param]['nest_map'] for param in self.fitting.fit_params_names]
+            solution = fitting_out['solutions'][idx]
+            solution = self.get_spectra(solution)  # compute spectra, contribution from opacities, and contribution function
+            solution = self.get_profiles(solution) # compute mixing ratio and tp profiles
+            solution = self.get_mu_posterior(solution) # derive trace, best fit value and uncertainties of mean molecular weight
+            fitting_out['solutions'][idx] = solution
+
+        return fitting_out
+
+    def get_spectra(self, solution):
+
+        fit_params = [solution['fit_params'][param]['nest_map'] for param in self.fitting.fit_params_names]
+
+        # load model using extended or manual wavenumber range
+        if self.params.gen_manual_waverange:
+            wngrid = 'manual'
+        else:
+            wngrid = 'extended'
+
+        self.fitting.forwardmodel.atmosphere.load_opacity_arrays(wngrid, nthreads=self.nthreads)
+
+        wavegrid  = self.atmosphere.int_wngrid
+        nwavegrid = self.atmosphere.int_nwngrid
+        bingrid   = self.atmosphere.int_bingrididx
+        nbingrid = self.atmosphere.int_nbingrid
+
+        # update atmospheric parameters to current solution
+        self.fitting.update_atmospheric_parameters(fit_params)
+
+        model = self.fitting.forwardmodel.model()
+        model[np.isnan(model)] = 0.0
+        model[np.isinf(model)] = 0.0
+
+
+        # store observed spectrum
+        solution['obs_spectrum'] = np.zeros((self.data.obs_nwlgrid, 6))
+        solution['obs_spectrum'][:,0] = self.data.obs_spectrum[:,0]
+        solution['obs_spectrum'][:,1] = self.data.obs_spectrum[:,1]
+        solution['obs_spectrum'][:,2] = self.data.obs_spectrum[:,2]
+
+        #append fitted spectrum to observed spectrum array
+
+        if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+            # bin if using sampled cross sections
+            solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
+                                                       for i in range(1, nbingrid+1)])
+        elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+            # interpolate if using ktables @todo interpolation doesnt work very well, temporarily switched it to binning 
+            solution['obs_spectrum'][:,3] = np.asarray([model[bingrid == i].mean()
+                                                       for i in range(1, nbingrid+1)])
+#             solution['obs_spectrum'][:,3] =  np.interp(self.data.obs_wlgrid[::-1], self.atmosphere.int_wlgrid[::-1], model)
+            
+
+        solution['fit_spectrum_xsecres'] = np.zeros((nwavegrid, 3))
+        solution['fit_spectrum_xsecres'][:,0] = self.atmosphere.int_wlgrid
+        solution['fit_spectrum_xsecres'][:,1] = model
+
+        # calculate 1 sigma spectrum
+        if self.params.out_sigma_spectrum and solution['type'] in ('nest','nest_poly'):
+            sigmasp = self.get_one_sigma_spectrum(solution)
+            solution['fit_spectrum_xsecres'][:,2] = sigmasp
+
+            if self.params.in_opacity_method in ['xsec_sampled', 'xsec_lowres', 'xsec']:
+                # bin if using sampled cross sections
+                solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
+                                                           for i in range(1, nbingrid+1)])
+            elif self.params.in_opacity_method in ['ktab', 'ktable', 'ktables']:
+                # interpolate if using ktables @todo interpolation doesnt work very well, temporarily switched it to binning 
+                solution['obs_spectrum'][:,4] = np.asarray([sigmasp[bingrid == i].mean()
+                                                           for i in range(1, nbingrid+1)])
+#                 solution['obs_spectrum'][:,4] =  np.interp(self.data.obs_wlgrid[::-1], self.atmosphere.int_wlgrid[::-1], sigmasp)
+
+        # calculate contribution function
+        contrib_func = self.fitting.forwardmodel.model(return_tau=True)
+        solution['contrib_func'] = contrib_func
+
+        # calculate spectral contribution from individual opacity sources
+        solution['opacity_contrib'] = {}
+        active_mixratio_profile = self.fitting.forwardmodel.atmosphere.active_mixratio_profile
+        atm_rayleigh = self.fitting.forwardmodel.params.atm_rayleigh
+        atm_cia = self.fitting.forwardmodel.params.atm_cia
+        atm_clouds = self.fitting.forwardmodel.params.atm_clouds
+        atm_mie = self.fitting.forwardmodel.params.atm_mie
+        
+        # opacity from molecules
+        for idx, val in enumerate(self.atmosphere.active_gases):
+            mask = np.ones(len(self.atmosphere.active_gases), dtype=bool)
+            mask[idx] = 0
+
+            active_mixratio_profile_mask = np.copy(active_mixratio_profile)
+            active_mixratio_profile_mask[mask, :] = 0
+            self.fitting.forwardmodel.atmosphere.active_mixratio_profile = active_mixratio_profile_mask
+            self.fitting.forwardmodel.params.atm_rayleigh = False
+            self.fitting.forwardmodel.params.atm_cia = False
+            self.fitting.forwardmodel.params.atm_mie = False
+            self.fitting.forwardmodel.params.atm_clouds = False
+            solution['opacity_contrib'][val] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+            solution['opacity_contrib'][val][:,0] = self.atmosphere.int_wlgrid
+            solution['opacity_contrib'][val][:,1] = self.fitting.forwardmodel.model(mixratio_mask=mask)
+            
+
+        self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
+
+        if self.params.gen_type == 'transmission':
+
+            self.fitting.forwardmodel.atmosphere.active_mixratio_profile[:, :] = 0
+
+            # opacity from rayleigh
+            if atm_rayleigh:
+                self.fitting.forwardmodel.params.atm_rayleigh = True
+                self.fitting.forwardmodel.params.atm_cia = False
+                self.fitting.forwardmodel.params.atm_mie = False
+                self.fitting.forwardmodel.params.atm_clouds = False
+                solution['opacity_contrib']['rayleigh'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['rayleigh'][:,0] = self.atmosphere.int_wlgrid
+                solution['opacity_contrib']['rayleigh'][:,1] = self.fitting.forwardmodel.model()
+
+            # opacity from cia
+            if atm_cia:
+                self.fitting.forwardmodel.params.atm_rayleigh = False
+                self.fitting.forwardmodel.params.atm_cia = True
+                self.fitting.forwardmodel.params.atm_mie = False
+                self.fitting.forwardmodel.params.atm_clouds = False
+                solution['opacity_contrib']['cia'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['cia'][:,0] = self.atmosphere.int_wlgrid
+                solution['opacity_contrib']['cia'][:,1] = self.fitting.forwardmodel.model()
+
+            # opacity from clouds
+            if atm_clouds:
+                self.fitting.forwardmodel.params.atm_rayleigh = False
+                self.fitting.forwardmodel.params.atm_cia = False
+                self.fitting.forwardmodel.params.atm_mie = False
+                self.fitting.forwardmodel.params.atm_clouds = True
+                solution['opacity_contrib']['clouds'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['clouds'][:,0] = self.atmosphere.int_wlgrid
+                solution['opacity_contrib']['clouds'][:,1] = self.fitting.forwardmodel.model()
+                
+            #opacity from mie clouds
+            if atm_mie:
+                self.fitting.forwardmodel.params.atm_rayleigh = False
+                self.fitting.forwardmodel.params.atm_cia = False
+                self.fitting.forwardmodel.params.atm_clouds = False
+                self.fitting.forwardmodel.params.atm_mie = True
+                solution['opacity_contrib']['mie_clouds'] = np.zeros((self.atmosphere.int_nwlgrid, 2))
+                solution['opacity_contrib']['mie_clouds'][:,0] = self.atmosphere.int_wlgrid
+                solution['opacity_contrib']['mie_clouds'][:,1] = self.fitting.forwardmodel.model()
+
+            self.fitting.forwardmodel.atmosphere.active_mixratio_profile = np.copy(active_mixratio_profile)
+
+        self.fitting.forwardmodel.params.atm_rayleigh = atm_rayleigh
+        self.fitting.forwardmodel.params.atm_cia = atm_cia
+        self.fitting.forwardmodel.params.atm_clouds = atm_clouds
+        self.fitting.forwardmodel.params.atm_mie = atm_mie
+
+        return solution
+
+    def get_profiles(self, solution):
+
+        logging.info('Store TP profile and mixing ratios')
+
+        # best solution
+        fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
+
+        if solution['type'] in ('nest','nest_poly'):
+            # compute standard deviation for mixing ratio and tp profiles
+            std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive = self.get_one_sigma_profiles(solution)
+
+        # update atmospheric parameters to best solution
+        self.fitting.update_atmospheric_parameters(fit_params)
+
+        # tp profile
+        solution['tp_profile'] = np.zeros((self.atmosphere.nlayers, 3))
+        solution['tp_profile'][:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
+        solution['tp_profile'][:,1] = self.fitting.forwardmodel.atmosphere.temperature_profile
+        if solution['type'] in ('nest','nest_poly'):
+            solution['tp_profile'][:,2] = std_tpprofiles
+
+        # mixing ratios
+        solution['active_mixratio_profile'] = np.zeros((len(self.atmosphere.active_gases), self.atmosphere.nlayers, 3))
+        solution['inactive_mixratio_profile'] = np.zeros((len(self.atmosphere.inactive_gases), self.atmosphere.nlayers, 3))
+        for i in range(len(self.atmosphere.active_gases)):
+            solution['active_mixratio_profile'][i,:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
+            solution['active_mixratio_profile'][i,:,1] =  self.fitting.forwardmodel.atmosphere.active_mixratio_profile[i,:]
+            if solution['type'] in ('nest','nest_poly'):
+                solution['active_mixratio_profile'][i,:,2] =  std_molprofiles_active[i,:]
+        for i in range(len(self.atmosphere.inactive_gases)):
+            solution['inactive_mixratio_profile'][i,:,0] = self.fitting.forwardmodel.atmosphere.pressure_profile
+            solution['inactive_mixratio_profile'][i,:,1] =  self.fitting.forwardmodel.atmosphere.inactive_mixratio_profile[i,:]
+            if solution['type'] in ('nest','nest_poly'):
+                solution['inactive_mixratio_profile'][i,:,2] =  std_molprofiles_inactive[i,:]
+
+        return solution
+
+    def get_one_sigma_spectrum(self, solution):
+
+        logging.info('Compute 1 sigma model spectrum spread')
+
+        # best solution
+        fit_params = [solution['fit_params'][param]['value'] for param in self.fitting.fit_params_names]
+
+        weights = []
+        nspectra = int(self.params.out_sigma_spectrum_frac * np.shape(solution['tracedata'])[0])
+
+        models = np.zeros((nspectra, self.atmosphere.int_nwngrid)) # number of possible combinations
+        weights = np.zeros((nspectra))
+        for i in range(nspectra):
+            rand_idx = random.randint(0, np.shape(solution['tracedata'])[0])
+            fit_params_iter = solution['tracedata'][rand_idx]
+            weights[i] = solution['weights'][rand_idx]
+            self.fitting.update_atmospheric_parameters(fit_params_iter)
+            model = self.fitting.forwardmodel.model()
+            models[i, :] = self.fitting.forwardmodel.model()
+
+        std_spectrum = np.zeros((self.atmosphere.int_nwngrid))
+        for i in range(self.atmosphere.int_nwngrid):
+            std_spectrum[i] =  weighted_avg_and_std(models[:,i], weights=weights, axis=0)[1]
+
+        # update atmospheric parameters to best solution
+        self.fitting.update_atmospheric_parameters(fit_params)
+
+        return std_spectrum
+
+
+    def get_one_sigma_profiles(self, solution):
+
+        logging.info('Compute 1 sigma mixing ratios and tp profiles')
+
+        sol_tracedata = solution['tracedata']
+        sol_weights = solution['weights']
+#         nprofiles = len(sol_tracedata)
+        nprofiles = int(self.params.out_sigma_spectrum_frac * np.shape(solution['tracedata'])[0])
+        
+        tpprofiles = np.zeros((nprofiles, self.atmosphere.nlayers))
+        molprofiles_active = np.zeros((nprofiles, self.atmosphere.nactivegases, self.atmosphere.nlayers))
+        molprofiles_inactive = np.zeros((nprofiles, self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+        
+        weights = np.zeros((nprofiles))
+        for i in range(nprofiles):
+            rand_idx = random.randint(0, np.shape(solution['tracedata'])[0])
+            fit_params_iter = sol_tracedata[rand_idx]
+            weights[i] = solution['weights'][rand_idx]
+            self.fitting.update_atmospheric_parameters(fit_params_iter)
+            tpprofiles[i, :] = self.fitting.forwardmodel.atmosphere.temperature_profile
+            for j in range(self.atmosphere.nactivegases):
+                molprofiles_active[i,j,:] = self.atmosphere.active_mixratio_profile[j,:]
+            for j in range(self.atmosphere.ninactivegases):
+                molprofiles_inactive[i,j,:] = self.atmosphere.inactive_mixratio_profile[j,:]
+            std_tpprofiles = np.zeros((self.atmosphere.nlayers))
+            
+            
+        std_molprofiles_active = np.zeros((self.atmosphere.nactivegases, self.atmosphere.nlayers))
+        std_molprofiles_inactive = np.zeros((self.atmosphere.ninactivegases, self.atmosphere.nlayers))
+        
+        for i in range(self.atmosphere.nlayers):
+            std_tpprofiles[i] = weighted_avg_and_std(tpprofiles[:,i], weights=weights, axis=0)[1]
+            for j in range(self.atmosphere.nactivegases):
+                std_molprofiles_active[j,i] = weighted_avg_and_std(molprofiles_active[:,j,i], weights=weights, axis=0)[1]
+            for j in range(self.atmosphere.ninactivegases):
+                std_molprofiles_inactive[j,i] = weighted_avg_and_std(molprofiles_inactive[:,j,i], weights=weights, axis=0)[1]
+
+        return std_tpprofiles, std_molprofiles_active, std_molprofiles_inactive
+
+    def get_mu_posterior(self, solution):
+
+        if solution['type'] in ('nest','nest_poly'):
+
+            logging.info('Compute trace for mean molecular weight (of 1st layer)')
+
+            sol_tracedata = solution['tracedata']
+            sol_weights = solution['weights']
+            nsamples = len(sol_tracedata)
+            mu_trace = np.zeros(nsamples)
+            for i in range(nsamples):
+                fit_params_iter = sol_tracedata[i]
+                self.fitting.update_atmospheric_parameters(fit_params_iter)
+                mu_trace[i] = self.fitting.atmosphere.mu_profile[0]/AMU
+
+            q_16, q_50, q_84 = quantile_corner(mu_trace, [0.16, 0.5, 0.84],
+                        weights=np.asarray(sol_weights))
+
+            solution['fit_params']['mu_derived'] =  {
+                'value' : q_50,
+                'sigma_m' : q_50-q_16,
+                'sigma_p' : q_84-q_50,
+                'trace': mu_trace,
+            }
+
+        return solution
