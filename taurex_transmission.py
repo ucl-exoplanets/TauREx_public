@@ -64,14 +64,12 @@ def run(params, options=False):
         fittingob.multinest_fit() # Nested sampling fit
     elif options and (params.nest_run and multinest_import and options.no_multinest):
         fittingob.NEST = True
-<<<<<<< HEAD
-=======
         
     if params.nest_poly_run and polychord_import:
         fittingob.polychord_fit() #Polychord sampling fit
         if MPIimport:
             MPI.COMM_WORLD.Barrier() # wait for everybody to synchronize here
->>>>>>> 9073908c73e020b83e481417ddb6d9b0c52f3858
+
 
     # exit if the rank of MPI process is > 0 (.e. leave only master process running)
     if MPIimport:
