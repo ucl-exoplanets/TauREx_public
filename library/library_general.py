@@ -5,6 +5,9 @@ from scipy.special import wofz
 import ctypes as C
 import numpy as np
 import math
+# from tensorflow.python.client import device_lib
+import os
+import multiprocessing
 
 from library_constants import *
 
@@ -188,6 +191,10 @@ def get_molecular_weight(gasname):
         mu = 2.
     elif gasname == 'N2':
         mu = 28.
+    elif gasname == 'Na':
+        mu = 23.
+    elif gasname == 'K':
+        mu = 39.0983
     elif gasname == 'O2':
         mu = 32.
     elif gasname == 'CO2':
@@ -206,6 +213,18 @@ def get_molecular_weight(gasname):
         mu = 27.0253
     elif gasname == 'H2S':
         mu = 34.0809
+    elif gasname == 'SIO':
+        mu = 44.084
+    elif gasname == 'SIO2':
+        mu = 60.08
+    elif gasname == 'SO':
+        mu = 48.064
+    elif gasname == 'SO2':
+        mu = 64.066
+    elif gasname == 'TIO':
+        mu = 79.866
+    elif gasname == 'VO':
+        mu = 66.9409
     else:
         mu = 0
 
@@ -237,6 +256,10 @@ def tex_gas_label(gasname):
         return 'HCN'
     elif gasname == 'H2S':
         return 'H$_2$S'
+    elif gasname == 'SIO2':
+        return 'SiO$_2$'
+    elif gasname == 'SO2':
+        return 'SO$_2$'
     else:
         return gasname
 
@@ -286,3 +309,36 @@ def insensitive_glob(pattern):
     def either(c):
         return '[%s%s]'%(c.lower(),c.upper()) if c.isalpha() else c
     return glob.glob(''.join(map(either,pattern)))
+
+
+def node_architecture():
+    """
+    Check for the presence of GPU cards or cpu in the using node
+    :return: boolean list for gpu and cpu accessible components
+    """
+    # def get_available_gpus():
+    #     """
+    #     use it with tensorflow
+    #     """
+    #   local_device_protos = device_lib.list_local_devices()
+    #   return [x.name for x in local_device_protos if x.device_type == 'GPU']
+    def get_available_gpus():
+        if 'gpu' in os.environ.values():
+            return ['Tesla-K40']
+        else:
+            return ['']
+
+    available_gpus = get_available_gpus()
+    ngpus = len(available_gpus)
+
+    hard_list = []
+    hard_list.append([True]*ngpus)
+    if ngpus == 0:
+        hard_list.append([False])
+
+    # Check for cpu cores
+    cpu_number = multiprocessing.cpu_count()
+    # print "Available cpu cores: ", cpu_number
+
+    hard_list.append([True] * cpu_number)
+    return hard_list, ngpus
