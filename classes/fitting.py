@@ -115,7 +115,7 @@ class fitting(object):
         self.DOWN = False
         self.MCMC = False
         self.NEST = False
-        self.NEST_POLY = True
+        self.NEST_POLY = False
 
     def build_fit_params(self):
 
